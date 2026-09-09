@@ -19,8 +19,23 @@ function People() {
 
   useEffect(() => {
     let live = true;
+    // People with a picture first, so a live site shows real avatars; the rest fill the row.
+    const fields = ['name', 'image', 'sg_status_list'];
     client
-      .search('HumanUser', { fields: ['name', 'image', 'sg_status_list'], page: { size: 6 } })
+      .search('HumanUser', {
+        filters: { logical_operator: 'and', conditions: [['image', 'is_not', null]] },
+        fields,
+        page: { size: 6 },
+      })
+      .then(async (withImage) => {
+        if (withImage.data.length >= 6) return withImage;
+        const rest = await client.search('HumanUser', {
+          filters: { logical_operator: 'and', conditions: [['image', 'is', null]] },
+          fields,
+          page: { size: 6 - withImage.data.length },
+        });
+        return { data: [...withImage.data, ...rest.data] };
+      })
       .then((result) => {
         if (!live) return;
         setPeople(

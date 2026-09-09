@@ -4,11 +4,23 @@
 
 	const client = setDemoClient();
 
+	// People with a picture first, so a live site shows real avatars; the rest fill the row.
 	async function load() {
-		const people = await client.search('HumanUser', {
-			fields: ['name', 'image', 'sg_status_list'],
+		const fields = ['name', 'image', 'sg_status_list'];
+		const withImage = await client.search('HumanUser', {
+			filters: { logical_operator: 'and', conditions: [['image', 'is_not', null]] },
+			fields,
 			page: { size: 6 }
 		});
+		const rest =
+			withImage.data.length < 6
+				? await client.search('HumanUser', {
+						filters: { logical_operator: 'and', conditions: [['image', 'is', null]] },
+						fields,
+						page: { size: 6 - withImage.data.length }
+					})
+				: { data: [] };
+		const people = { data: [...withImage.data, ...rest.data] };
 		return people.data.map((row) => ({
 			name: String(row.attributes['name'] ?? ''),
 			image: (row.attributes['image'] as string | null) ?? null,

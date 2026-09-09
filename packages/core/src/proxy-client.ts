@@ -15,6 +15,7 @@
  * ```
  */
 import type {
+  EntityRow,
   EntityTypeInfo,
   SearchOptions,
   SearchResult,
@@ -99,5 +100,9 @@ export class ProxyClient implements SgClient {
 
   statuses(): Promise<StatusRecord[]> {
     return this.post('statuses', {});
+  }
+
+  update(entityType: string, id: number, patch: Record<string, unknown>): Promise<EntityRow> {
+    return this.post('update', { entityType, id, patch });
   }
 }

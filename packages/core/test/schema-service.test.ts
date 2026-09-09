@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { MockClient } from '../src/mock.js';
 import { createQueryCache } from '../src/query.js';
 import { createSchemaService } from '../src/schema-service.js';
-import type { EntityTypeInfo, SearchOptions, SearchResult, SgClient, TextSearchRow } from '../src/client.js';
+import type { EntityRow, EntityTypeInfo, SearchOptions, SearchResult, SgClient, TextSearchRow } from '../src/client.js';
 import type { WireGroup } from '../src/filter.js';
 import type { FieldSchema } from '../src/schema.js';
 import type { StatusRecord } from '../src/status.js';
@@ -34,6 +34,10 @@ function counting(inner: SgClient): { client: SgClient; calls: string[] } {
     statuses(): Promise<StatusRecord[]> {
       calls.push('statuses');
       return inner.statuses();
+    },
+    update(entityType: string, id: number, patch: Record<string, unknown>): Promise<EntityRow> {
+      calls.push(`update ${entityType} ${id}`);
+      return inner.update(entityType, id, patch);
     },
   };
   return { client, calls };

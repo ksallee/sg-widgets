@@ -901,6 +901,26 @@ export class MockClient implements SgClient {
     return hits.slice((number - 1) * size, (number - 1) * size + size).map(({ sortName: _sortName, ...row }) => row);
   }
 
+  async update(entityType: string, id: number, patch: Record<string, unknown>): Promise<EntityRow> {
+    await this.gate();
+    const spec = this.schemaOf(entityType);
+    const row = this.fixtures.index.get(`${entityType}:${id}`);
+    // The 404 names the type and the id (put_entity_type_id).
+    if (!row) throw new SgApiError(404, null, `Entity of type [${entityType}] with id=${id} does not exist.`);
+    for (const [name, value] of Object.entries(patch)) {
+      const field = spec[name];
+      // `API create() Reply.project doesn't exist.` is the create spelling of this 400
+      // (entity_types/Reply); a write to a read-only field is `is read only.` (entity_types/Sequence).
+      if (!field) throw new SgApiError(400, null, `API update() ${entityType}.${name} doesn't exist.`);
+      if (field.editable === false) throw new SgApiError(400, null, `API update() ${entityType}.${name} is read only.`);
+      // Writing "" to a text field stores null: the two are one value (field_types/text).
+      row.values[name] = field.dataType === 'text' && value === '' ? null : value;
+    }
+    if (Object.keys(patch).length > 0) row.values['updated_at'] = isoDateTime(0);
+    // A PUT answers the whole record, changed fields and untouched ones alike (024_read_after_write).
+    return this.project(row, spec);
+  }
+
   async statuses(): Promise<StatusRecord[]> {
     await this.gate();
     return (this.fixtures.rows.get('Status') ?? []).map((row) => {

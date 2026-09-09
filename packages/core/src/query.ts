@@ -10,9 +10,11 @@
  * is 48KB and ~330ms a type and must never be looped (probe 002), and a picker
  * that re-asks for the same page on every keystroke pays ~270ms a call
  * (probe 053). Nothing here writes, so no invalidation happens by itself: a
- * caller that mutates rows calls `invalidate()`.
+ * caller that mutates rows calls `invalidate()`. `update` is the exception: it
+ * is a write, so it is never cached and it drops every cached row read of the
+ * type it touched before it returns.
  */
-import type { EntityTypeInfo, SearchOptions, SearchResult, SgClient, TextSearchRow } from './client.js';
+import type { EntityRow, EntityTypeInfo, SearchOptions, SearchResult, SgClient, TextSearchRow } from './client.js';
 import type { WireGroup } from './filter.js';
 import type { FieldSchema } from './schema.js';
 import type { StatusRecord } from './status.js';
@@ -91,6 +93,13 @@ export function createQueryCache(client: SgClient, options: QueryCacheOptions = 
     return promise;
   }
 
+  function invalidateSearches(entityType: string): void {
+    const prefix = `search:[${JSON.stringify(entityType)}`;
+    for (const key of [...entries.keys()]) if (key.startsWith(prefix)) entries.delete(key);
+    for (const key of [...inFlight.keys()]) if (key.startsWith(prefix)) inFlight.delete(key);
+    for (const key of [...entries.keys()]) if (key.startsWith('textSearch')) entries.delete(key);
+  }
+
   return {
     entityTypes(): Promise<EntityTypeInfo[]> {
       return run('entityTypes', [], () => client.entityTypes());
@@ -114,6 +123,13 @@ export function createQueryCache(client: SgClient, options: QueryCacheOptions = 
     },
     statuses(): Promise<StatusRecord[]> {
       return run('statuses', [], () => client.statuses());
+    },
+    async update(entityType: string, id: number, patch: Record<string, unknown>): Promise<EntityRow> {
+      const row = await client.update(entityType, id, patch);
+      // Every cached page of the type is now stale, including one whose filter or sort
+      // the change moved the row out of.
+      invalidateSearches(entityType);
+      return row;
     },
     invalidate(prefix?: string): void {
       if (prefix === undefined) {

@@ -63,6 +63,14 @@ export interface SgClient {
   textSearch(text: string, entityTypes: Record<string, WireGroup | null>, page?: { size?: number; number?: number }): Promise<TextSearchRow[]>;
   /** Status entities with colour and icon. */
   statuses(): Promise<StatusRecord[]>;
+  /**
+   * Change the named fields of one row and answer the whole record.
+   *
+   * A key left out of `patch` is unchanged, not cleared, and an empty patch is a
+   * no-op (put_entity_type_id). The answer never resolves a dotted path, so a
+   * caller that shows one re-reads the row (024_read_after_write).
+   */
+  update(entityType: string, id: number, patch: Record<string, unknown>): Promise<EntityRow>;
 }
 
 export interface RestClientOptions {
@@ -99,14 +107,20 @@ export class RestClient implements SgClient {
     this.fetchFn = options.fetch ?? globalThis.fetch;
   }
 
-  private async request<T>(method: string, path: string, body?: unknown, params?: Record<string, string | number | undefined>): Promise<T> {
+  private async request<T>(
+    method: string,
+    path: string,
+    body?: unknown,
+    params?: Record<string, string | number | undefined>,
+    contentType: string = API3_HASH,
+  ): Promise<T> {
     const url = new URL(this.base + path);
     for (const [k, v] of Object.entries(params ?? {})) if (v !== undefined) url.searchParams.set(k, String(v));
     const headers: Record<string, string> = {
       Accept: 'application/json',
       Authorization: `Bearer ${await this.options.token()}`,
     };
-    if (body !== undefined) headers['Content-Type'] = API3_HASH;
+    if (body !== undefined) headers['Content-Type'] = contentType;
     const init: RequestInit = { method, headers };
     if (body !== undefined) init.body = JSON.stringify(body);
     const res = await this.fetchFn(url, init);
@@ -162,6 +176,14 @@ export class RestClient implements SgClient {
       projectId: (row['project_id'] as number | null | undefined) ?? null,
       status: (row['status'] as string | null | undefined) ?? null,
     }));
+  }
+
+  async update(entityType: string, id: number, patch: Record<string, unknown>): Promise<EntityRow> {
+    // A write takes plain JSON; the vendor types are a `_search` requirement (probe 004). There is
+    // no PATCH, and this PUT is already partial: it does not replace the record with the body
+    // (put_entity_type_id). `?fields` is accepted and ignored, so nothing is asked for here.
+    const res = await this.request<{ data: EntityRow }>('PUT', `/entity/${pluralPath(entityType)}/${id}`, patch, undefined, 'application/json');
+    return res.data;
   }
 
   async statuses(): Promise<StatusRecord[]> {

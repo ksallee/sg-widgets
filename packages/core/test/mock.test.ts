@@ -471,3 +471,46 @@ describe('demo hooks', () => {
     expect(Date.now() - started).toBeGreaterThanOrEqual(10);
   });
 });
+
+describe('update', () => {
+  it('changes only the named fields and answers the whole record', async () => {
+    const c = client();
+    const before = (await c.search('Shot', { fields: ['code', 'description'], page: { size: 1 } })).data[0];
+    if (!before) throw new Error('no shot');
+    const row = await c.update('Shot', before.id, { description: 'written by a test' });
+    expect(row.attributes['description']).toBe('written by a test');
+    // A key left out of the body is unchanged, not cleared (put_entity_type_id).
+    expect(row.attributes['code']).toBe(before.attributes['code']);
+    // The answer is the whole record, not the change (024_read_after_write).
+    expect(Object.keys(row.attributes).length).toBeGreaterThan(2);
+  });
+
+  it('is a no-op on an empty patch', async () => {
+    const c = client();
+    const row = await c.update('Shot', 862, {});
+    expect(row.id).toBe(862);
+  });
+
+  it('stores null for an empty string on a text field', async () => {
+    const c = client();
+    const row = await c.update('Shot', 862, { description: '' });
+    expect(row.attributes['description']).toBeNull();
+  });
+
+  it('refuses a read-only field and an unknown one', async () => {
+    const c = client();
+    await expect(c.update('Shot', 862, { created_at: '2026-01-01T00:00:00Z' })).rejects.toMatchObject({
+      status: 400,
+      message: 'API update() Shot.created_at is read only.',
+    });
+    await expect(c.update('Shot', 862, { sg_not_a_field: 1 })).rejects.toBeInstanceOf(SgApiError);
+  });
+
+  it('404s on an id that is not there', async () => {
+    const c = client();
+    await expect(c.update('Shot', 999999999, { description: 'x' })).rejects.toMatchObject({
+      status: 404,
+      message: 'Entity of type [Shot] with id=999999999 does not exist.',
+    });
+  });
+});

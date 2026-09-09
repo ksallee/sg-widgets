@@ -33,6 +33,9 @@ describe('round trip', () => {
       await direct.fieldWithProject('Shot', 'sg_status_list', 70),
     );
     expect(await client.statuses()).toEqual(await direct.statuses());
+
+    const written = await client.update('Shot', 862, { description: 'through the proxy' });
+    expect(written.attributes['description']).toBe('through the proxy');
   });
 
   it('carries search options and paging', async () => {

@@ -1,22 +1,59 @@
 import type * as React from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
-import type { CollectionColumn, EntityRef, EntityRow, EntitySource, FieldSchema, SortSpec, StatusRecord } from '@sg-widgets/core';
-import { cellValue, groupRows, rowKey } from '@sg-widgets/core';
+import type {
+  CollectionColumn,
+  EntityRef,
+  EntityRow,
+  EntitySource,
+  FieldSchema,
+  SgContext,
+  SortSpec,
+  StatusRecord,
+} from '@sg-widgets/core';
+import { cellValue, describePaging, isEditableType, rowKey } from '@sg-widgets/core';
 import {
+  columnGroupingFeature,
   columnOrderingFeature,
+  columnPinningFeature,
   columnResizingFeature,
   columnSizingFeature,
+  createExpandedRowModel,
+  createGroupedRowModel,
+  rowExpandingFeature,
   rowSelectionFeature,
   tableFeatures,
   useTable,
 } from '@tanstack/react-table';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { ArrowDown, ArrowUp, ChevronRight, CircleAlert, Inbox } from 'lucide-react';
+import {
+  ArrowDown,
+  ArrowLeftToLine,
+  ArrowUp,
+  ArrowUpDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsUpDown,
+  CircleAlert,
+  EllipsisVertical,
+  EyeOff,
+  Inbox,
+  PinOff,
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
+import { FieldEditor } from '@/registry/sg/components/field-editor';
 import { FieldValue } from '@/registry/sg/components/field-value';
 
 export type EntityTableDensity = 'compact' | 'default';
@@ -34,8 +71,8 @@ export interface CellEditorProps {
 
 /**
  * The integration point for the per-type field editors: given a `data_type`,
- * return the component to open in a cell. Anything it does not answer for falls
- * back to a plain text input.
+ * return the component to open in a cell. Anything it does not answer for opens
+ * FieldEditor.
  */
 export type EditorFor = (dataType: string) => React.ComponentType<CellEditorProps> | null | undefined;
 
@@ -43,19 +80,19 @@ export type EditorFor = (dataType: string) => React.ComponentType<CellEditorProp
 const ROW_HEIGHT: Record<EntityTableDensity, number> = { compact: 33, default: 41 };
 const CELL: Record<EntityTableDensity, string> = { compact: 'px-3 py-1', default: 'px-3 py-2' };
 
-interface Item {
-  key: string;
-  group: { value: unknown; count: number; collapsed: boolean } | null;
-  row: { key: string; ref: EntityRef; data: EntityRow } | null;
-}
+/** The select column's id, which is never a field path. */
+const SELECT = '__select';
 
 export interface EntityTableProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'children'> {
-  /** The rows, the filter and the sort behind them. Created with core's `createEntitySource`. */
+  /** The rows, the filter, the sort and the page behind them. Created with core's `createEntitySource`. */
   source: EntitySource;
-  /** Columns in display order. Core's `resolveColumns` fills them in from the schema. */
+  /** Columns in display order, from `resolveColumns`. Two-way: hiding a column writes the shorter list back. */
   columns: CollectionColumn[];
+  onColumnsChange?: (columns: CollectionColumn[]) => void;
   /** `Status` rows by code, for status cells (probe 010). */
   statuses?: Record<string, StatusRecord> | null;
+  /** The widget context. An entity cell links to the row's page when this carries a site. */
+  context?: SgContext;
   density?: EntityTableDensity;
   /** Draws a checkbox column and reports the selection. */
   selectable?: boolean;
@@ -65,19 +102,32 @@ export interface EntityTableProps extends Omit<React.HTMLAttributes<HTMLDivEleme
   /** Opens an editor on a double-click or Enter in an editable cell. */
   editable?: boolean;
   editorFor?: EditorFor;
+  /** Show the programmatic field path beside the header's display name. */
+  showCode?: boolean;
+  /** Rows per page offered in the footer. `pages` mode only. */
+  pageSizes?: number[];
   /** Height of the scrolling body. */
   maxHeight?: string;
   /** Rows above which the body is virtualised. */
   virtualizeAfter?: number;
   emptyLabel?: string;
+  /** Left region of the toolbar above the table. */
+  toolbarStart?: React.ReactNode;
+  /** Right region of the toolbar above the table. */
+  toolbarEnd?: React.ReactNode;
 }
 
-// Sorting is the server's and grouping follows the order it produced, so neither
-// feature is registered here: this table owns sizing, ordering and selection.
+// Sorting and paging are the server's, so neither feature is registered: this table
+// owns sizing, resizing, ordering, pinning, grouping and selection.
 const features = tableFeatures({
   columnOrderingFeature,
   columnSizingFeature,
   columnResizingFeature,
+  columnPinningFeature,
+  columnGroupingFeature,
+  groupedRowModel: createGroupedRowModel(),
+  rowExpandingFeature,
+  expandedRowModel: createExpandedRowModel(),
   rowSelectionFeature,
 });
 
@@ -87,12 +137,17 @@ const stateClass = 'text-muted-foreground flex items-center justify-center gap-2
  * A page of rows, one column per field path.
  *
  * Columns are schema-driven: the header is the field's display name and the cell
- * rendering comes from its `data_type` through FieldValue. Sorting is the server's -
- * a header click sets the source's sort and reads the first page again - because a
- * sort applied to one loaded page would order the page and not the set, and because
- * a sort on a field that cannot be sorted is a silent 200 no-op (026_result_order).
- * Grouping follows that same order and collapses the contiguous runs, so a group's
- * count is the rows loaded so far and grows as more arrive.
+ * rendering comes from its `data_type` through FieldValue. Sizing, resizing,
+ * ordering, pinning, grouping and selection are TanStack Table's; sorting and paging
+ * are the server's - a header click sets the source's sort and reads the page again,
+ * because a sort applied to one loaded page would order the page and not the set, and
+ * because a sort on a field that cannot be sorted is a silent 200 no-op
+ * (026_result_order).
+ *
+ * In `pages` mode the footer walks the set with an explicit page number and reads
+ * "n to m of N" once `_summarize` has counted it; a read carries no total of its own
+ * (006_pagination, 020_summarize). In `infinite` mode the last row loads the next
+ * page and the footer counts what is loaded.
  *
  * An edit writes one field through `updateRow`, which follows the write with a
  * re-read: the write's own answer is the whole record but resolves no dotted path
@@ -102,16 +157,22 @@ const stateClass = 'text-muted-foreground flex items-center justify-center gap-2
 export function EntityTable({
   source,
   columns,
+  onColumnsChange,
   statuses = null,
+  context,
   density = 'default',
   selectable = false,
   onSelectionChange,
   groupBy = null,
   editable = false,
   editorFor,
+  showCode = false,
+  pageSizes = [25, 50, 100],
   maxHeight = '28rem',
   virtualizeAfter = 100,
   emptyLabel = 'No rows',
+  toolbarStart,
+  toolbarEnd,
   className,
   ...rest
 }: EntityTableProps) {
@@ -126,8 +187,8 @@ export function EntityTable({
     if (source.status === 'idle') void source.load();
   }, [source]);
   useEffect(() => {
-    // Grouping reads the contiguous runs of the order the server produced, so the group
-    // path has to lead the sort. Setting it re-reads the first page.
+    // A group is only whole when the server put its rows together, so the group path
+    // leads the sort. Setting it reads the first page again.
     if (groupBy && snapshot.sort[0]?.path !== groupBy) {
       void source.setSort([{ path: groupBy, descending: false }, ...snapshot.sort.filter((k) => k.path !== groupBy)]);
     }
@@ -135,20 +196,28 @@ export function EntityTable({
 
   const rows = snapshot.rows;
   const sort = snapshot.sort;
+  const paging = describePaging(snapshot);
   const rowHeight = ROW_HEIGHT[density];
   const cellClass = CELL[density];
+  const byPath = useMemo(() => new Map(columns.map((column) => [column.path, column])), [columns]);
 
-  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [editing, setEditing] = useState<{ key: string; path: string } | null>(null);
+  // Enter can arrive in the same tick as the change that produced the value, before a
+  // re-render, so the committed value is read off a ref rather than off state.
+  const draft = useRef<unknown>(null);
+  const [draftValue, setDraftValue] = useState<unknown>(null);
   const [cellError, setCellError] = useState<{ key: string; path: string; message: string } | null>(null);
   const [dragging, setDragging] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<string | null>(null);
+  const [pageDraft, setPageDraft] = useState('');
 
   /* the table ------------------------------------------------------------ */
 
   const columnDefs = useMemo(
     () => [
-      ...(selectable ? [{ id: '__select', size: 40, minSize: 40, maxSize: 40, enableResizing: false }] : []),
+      ...(selectable
+        ? [{ id: SELECT, size: 40, minSize: 40, maxSize: 40, enableResizing: false, enablePinning: false, enableGrouping: false }]
+        : []),
       ...columns.map((column) => ({
         id: column.path,
         accessorFn: (row: EntityRow) => cellValue(row, column.path),
@@ -159,59 +228,58 @@ export function EntityTable({
     [columns, selectable],
   );
 
+  const grouping = useMemo(() => (groupBy && byPath.has(groupBy) ? [groupBy] : []), [groupBy, byPath]);
+
   const table = useTable<typeof features, EntityRow>({
     features,
     data: rows,
     columns: columnDefs,
+    state: { grouping },
+    // A group draws its own full-width header row, so the grouped column stays where
+    // the caller put it.
+    groupedColumnMode: false,
+    initialState: { expanded: true },
     getRowId: (row: EntityRow) => rowKey(row),
     columnResizeMode: 'onChange',
     enableRowSelection: selectable,
   });
 
   const selection = table.state.rowSelection;
-  const order = table.state.columnOrder;
   useEffect(() => {
-    void order;
-    void selection;
-    onSelectionChange?.(table.getSelectedRowModel().rows.map((row) => ({ type: row.original.type, id: row.original.id })));
-    // The table instance is stable; the selection and the order are what move.
+    onSelectionChange?.(
+      table
+        .getSelectedRowModel()
+        .flatRows.filter((row) => !row.getIsGrouped())
+        .map((row) => ({ type: row.original.type, id: row.original.id })),
+    );
+    // The table instance is stable; the selection is what moves.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selection, order]);
+  }, [selection]);
 
-  const leafColumns = table.getAllLeafColumns();
+  /** Leaf columns in render order: pinned to the start first, the rest as ordered. */
+  const rank = (id: string, pinned: false | 'start' | 'end'): number =>
+    id === SELECT ? -1 : pinned === 'start' ? 0 : 1;
+  const leafColumns = [...table.getAllLeafColumns()].sort(
+    (a, b) => rank(a.id, a.getIsPinned()) - rank(b.id, b.getIsPinned()),
+  );
+  const headersById = new Map((table.getHeaderGroups()[0]?.headers ?? []).map((header) => [header.column.id, header]));
   const totalWidth = table.getTotalSize();
 
   /* rows, grouped or flat ------------------------------------------------ */
 
   const modelRows = table.getRowModel().rows;
-  const byKey = useMemo(() => new Map(modelRows.map((row) => [row.id, row])), [modelRows]);
 
-  const items = useMemo((): Item[] => {
-    const asItem = (row: EntityRow): Item => ({
-      key: rowKey(row),
-      group: null,
-      row: { key: rowKey(row), ref: { type: row.type, id: row.id }, data: row },
-    });
-    if (!groupBy) return rows.map(asItem);
-    const out: Item[] = [];
-    // The run index keeps the key unique while a page whose order does not yet lead with
-    // the group path is on screen.
-    let run = 0;
-    for (const bucket of groupRows(rows, groupBy)) {
-      const key = `group:${run++}:${JSON.stringify(bucket.value ?? null)}`;
-      const shut = collapsed[key] === true;
-      out.push({ key, group: { value: bucket.value, count: bucket.rows.length, collapsed: shut }, row: null });
-      if (!shut) out.push(...bucket.rows.map(asItem));
-    }
-    return out;
-  }, [rows, groupBy, collapsed]);
+  /** Rows under one group header, however deep. Render order is not the count. */
+  function leafCount(row: (typeof modelRows)[number]): number {
+    return row.subRows.reduce((n, child) => n + (child.subRows.length > 0 ? leafCount(child) : 1), 0);
+  }
 
   /* virtual rows --------------------------------------------------------- */
 
   const scrollRef = useRef<HTMLDivElement | null>(null);
-  const virtualized = items.length > virtualizeAfter;
+  const virtualized = modelRows.length > virtualizeAfter;
   const virtualizer = useVirtualizer({
-    count: virtualized ? items.length : 0,
+    count: virtualized ? modelRows.length : 0,
     getScrollElement: () => scrollRef.current,
     estimateSize: () => rowHeight,
     overscan: 12,
@@ -221,27 +289,36 @@ export function EntityTable({
   const first = virtualItems[0];
   const last = virtualItems[virtualItems.length - 1];
   const window_ = !virtualized
-    ? { before: 0, after: 0, slice: items }
+    ? { before: 0, after: 0, slice: modelRows }
     : !first || !last
-      ? { before: 0, after: 0, slice: items.slice(0, 20) }
+      ? { before: 0, after: 0, slice: modelRows.slice(0, 20) }
       : {
           before: first.start,
           after: virtualizer.getTotalSize() - last.end,
-          slice: items.slice(first.index, last.index + 1),
+          slice: modelRows.slice(first.index, last.index + 1),
         };
 
   /* sorting -------------------------------------------------------------- */
 
   const sortOf = (path: string): SortSpec | undefined => sort.find((key) => key.path === path);
 
+  /** The group path stays the first sort key: a split group is not a group. */
+  function applySort(next: SortSpec[]): void {
+    void source.setSort(groupBy && next[0]?.path !== groupBy ? [{ path: groupBy, descending: false }, ...next] : next);
+  }
+
   /** Ascending, then descending, then unsorted, which is the server's id ascending. */
   function toggleSort(path: string): void {
     const current = sortOf(path);
-    const next: SortSpec[] =
-      current === undefined ? [{ path, descending: false }] : current.descending ? [] : [{ path, descending: true }];
-    // Grouping only reads as grouping over an order the server produced, so the group
-    // path stays the first sort key.
-    void source.setSort(groupBy && next[0]?.path !== groupBy ? [{ path: groupBy, descending: false }, ...next] : next);
+    applySort(
+      current === undefined ? [{ path, descending: false }] : current.descending ? [] : [{ path, descending: true }],
+    );
+  }
+
+  /* column menu ---------------------------------------------------------- */
+
+  function hideColumn(path: string): void {
+    onColumnsChange?.(columns.filter((column) => column.path !== path));
   }
 
   /* column reorder ------------------------------------------------------- */
@@ -259,51 +336,86 @@ export function EntityTable({
 
   /* inline edit ---------------------------------------------------------- */
 
-  function openEditor(key: string, column: CollectionColumn): void {
-    if (!editable || !column.editable) return;
+  function canEditColumn(column: CollectionColumn): boolean {
+    return editable && column.editable && (Boolean(editorFor?.(column.dataType)) || isEditableType(column.dataType));
+  }
+
+  function openEditor(key: string, column: CollectionColumn, value: unknown): void {
+    if (!canEditColumn(column)) return;
     setCellError(null);
+    draft.current = value;
+    setDraftValue(value);
     setEditing({ key, path: column.path });
   }
 
-  async function commit(item: NonNullable<Item['row']>, column: CollectionColumn, value: unknown): Promise<void> {
-    const before = cellValue(item.data, column.path);
+  async function commit(row: EntityRow, column: CollectionColumn, value: unknown): Promise<void> {
+    const key = rowKey(row);
+    const before = cellValue(row, column.path);
     setEditing(null);
     if (value === before) return;
     try {
-      await source.updateRow(item.ref, { [column.path]: value });
+      await source.updateRow({ type: row.type, id: row.id }, { [column.path]: value });
       setCellError(null);
     } catch (error) {
       // The write is refused, so the cell goes back to what the row still holds and
       // says why beside it.
-      setCellError({ key: item.key, path: column.path, message: error instanceof Error ? error.message : String(error) });
+      setCellError({ key, path: column.path, message: error instanceof Error ? error.message : String(error) });
     }
   }
 
-  function onCellKeyDown(event: React.KeyboardEvent, key: string, column: CollectionColumn): void {
+  function onCellKeyDown(event: React.KeyboardEvent, row: EntityRow, column: CollectionColumn): void {
     // Only when the cell itself has focus. An editor's own Enter reaches this on the way
     // up, after the commit has already closed it, and must not open it again.
     if (event.key !== 'Enter' || editing || (event.target as HTMLElement).dataset['slot'] !== 'table-cell') return;
     event.preventDefault();
-    openEditor(key, column);
+    openEditor(rowKey(row), column, cellValue(row, column.path));
   }
 
-  function fallbackKeyDown(event: React.KeyboardEvent<HTMLInputElement>, item: NonNullable<Item['row']>, column: CollectionColumn): void {
-    // The input is read off `target`: a delegated handler does not own `currentTarget`.
-    const input = event.target as HTMLInputElement;
+  function editorKeyDown(event: React.KeyboardEvent, row: EntityRow, column: CollectionColumn): void {
     if (event.key === 'Enter') {
       event.preventDefault();
-      void commit(item, column, input.value);
+      void commit(row, column, draft.current);
     } else if (event.key === 'Escape') {
       event.preventDefault();
       setEditing(null);
     }
   }
 
+  const focusEditor = (element: HTMLDivElement | null): void => {
+    element?.querySelector<HTMLElement>('input,textarea,button')?.focus({ preventScroll: true });
+  };
+
   const isEditing = (key: string, path: string): boolean => editing?.key === key && editing.path === path;
-  const groupColumn = columns.find((c) => c.path === groupBy);
+
+  /* paging --------------------------------------------------------------- */
+
+  function goToPage(value: string): void {
+    const wanted = Number(value);
+    setPageDraft('');
+    if (!Number.isFinite(wanted) || wanted < 1) return;
+    void source.setPage(paging.pageCount === null ? wanted : Math.min(wanted, paging.pageCount));
+  }
+
+  /** Sticky offset for a column pinned to the start; nothing for the rest. */
+  function pinStyle(column: (typeof leafColumns)[number]): React.CSSProperties | undefined {
+    return column.getIsPinned() === 'start'
+      ? { position: 'sticky', insetInlineStart: `${column.getStart('start')}px`, zIndex: 3 }
+      : undefined;
+  }
 
   return (
     <div data-slot="entity-table" className={cn('flex w-full min-w-0 flex-col gap-2', className)} {...rest}>
+      {toolbarStart || toolbarEnd ? (
+        <div data-slot="entity-table-toolbar" className="flex w-full min-w-0 flex-wrap items-center justify-between gap-2">
+          <div data-slot="entity-table-toolbar-start" className="flex min-w-0 flex-wrap items-center gap-2">
+            {toolbarStart}
+          </div>
+          <div data-slot="entity-table-toolbar-end" className="flex min-w-0 flex-wrap items-center gap-2">
+            {toolbarEnd}
+          </div>
+        </div>
+      ) : null}
+
       <div
         ref={scrollRef}
         data-slot="entity-table-scroll"
@@ -318,15 +430,19 @@ export function EntityTable({
           </colgroup>
           <TableHeader className="bg-background sticky top-0 z-10">
             <TableRow>
-              {(table.getHeaderGroups()[0]?.headers ?? []).map((header) => {
-                const column = columns.find((c) => c.path === header.column.id);
+              {leafColumns.map((leaf) => {
+                const header = headersById.get(leaf.id);
+                const column = byPath.get(leaf.id);
+                const pinned = leaf.getIsPinned() === 'start';
                 return (
                   <TableHead
-                    key={header.id}
-                    data-column={header.column.id}
+                    key={leaf.id}
+                    data-column={leaf.id}
+                    data-pinned={pinned ? 'start' : undefined}
+                    style={pinStyle(leaf)}
                     className={cn('bg-background relative border-b p-0', column?.align === 'right' && 'text-right')}
                   >
-                    {header.column.id === '__select' ? (
+                    {leaf.id === SELECT ? (
                       <span className="flex h-10 items-center justify-center">
                         <Checkbox
                           aria-label="Select all loaded rows"
@@ -337,42 +453,96 @@ export function EntityTable({
                       </span>
                     ) : column ? (
                       <>
-                        <button
-                          type="button"
-                          draggable
-                          aria-label={`Sort by ${column.header}`}
-                          onDragStart={() => setDragging(column.path)}
-                          onDragOver={(event) => {
-                            event.preventDefault();
-                            setDropTarget(column.path);
-                          }}
-                          onDragLeave={() => setDropTarget(null)}
-                          onDrop={(event) => {
-                            event.preventDefault();
-                            onDrop(column.path);
-                          }}
-                          onClick={() => column.sortable && toggleSort(column.path)}
-                          aria-disabled={column.sortable ? undefined : 'true'}
-                          data-sortable={column.sortable ? 'true' : 'false'}
-                          title={column.sortable ? undefined : `${column.header} cannot be sorted`}
-                          className={cn(
-                            'focus-visible:ring-ring focus-visible:ring-offset-background flex h-10 w-full min-w-0 items-center gap-1.5 px-3 text-sm font-medium outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2',
-                            column.sortable ? 'hover:bg-accent hover:text-accent-foreground' : 'cursor-default',
-                            column.align === 'right' && 'justify-end',
-                            dropTarget === column.path && 'border-ring border-l-2',
-                            dragging === column.path && 'opacity-50',
-                          )}
-                        >
-                          <span className="truncate" title={column.header}>
-                            {column.header}
-                          </span>
-                          {sortOf(column.path)?.descending === false ? (
-                            <ArrowUp aria-hidden="true" className="size-4 shrink-0" />
-                          ) : sortOf(column.path)?.descending === true ? (
-                            <ArrowDown aria-hidden="true" className="size-4 shrink-0" />
-                          ) : null}
-                        </button>
-                        {header.column.getCanResize() ? (
+                        <div data-slot="entity-table-head" className="flex h-10 w-full min-w-0 items-center">
+                          <button
+                            type="button"
+                            draggable
+                            aria-label={`Sort by ${column.header}`}
+                            onDragStart={() => setDragging(column.path)}
+                            onDragOver={(event) => {
+                              event.preventDefault();
+                              setDropTarget(column.path);
+                            }}
+                            onDragLeave={() => setDropTarget(null)}
+                            onDrop={(event) => {
+                              event.preventDefault();
+                              onDrop(column.path);
+                            }}
+                            onClick={() => column.sortable && toggleSort(column.path)}
+                            aria-disabled={column.sortable ? undefined : 'true'}
+                            data-sortable={column.sortable ? 'true' : 'false'}
+                            title={column.sortable ? undefined : `${column.header} cannot be sorted`}
+                            className={cn(
+                              'focus-visible:ring-ring focus-visible:ring-offset-background flex h-10 min-w-0 flex-1 items-center gap-1.5 px-3 text-sm font-medium outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2',
+                              column.sortable ? 'hover:bg-accent hover:text-accent-foreground' : 'cursor-default',
+                              column.align === 'right' && 'justify-end',
+                            )}
+                          >
+                            <span className="truncate" title={column.header}>
+                              {column.header}
+                            </span>
+                            {showCode && column.path !== column.header ? (
+                              <span className="text-muted-foreground truncate font-mono text-xs">{column.path}</span>
+                            ) : null}
+                            {sortOf(column.path)?.descending === false ? (
+                              <ArrowUp aria-hidden="true" className="size-4 shrink-0" />
+                            ) : sortOf(column.path)?.descending === true ? (
+                              <ArrowDown aria-hidden="true" className="size-4 shrink-0" />
+                            ) : column.sortable ? (
+                              <ChevronsUpDown aria-hidden="true" className="size-4 shrink-0 opacity-50" />
+                            ) : null}
+                          </button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger
+                              aria-label={`${column.header} column menu`}
+                              className="text-muted-foreground hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring focus-visible:ring-offset-background data-[state=open]:bg-accent data-[state=open]:text-accent-foreground mr-1 flex size-6 shrink-0 items-center justify-center rounded-md outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2"
+                            >
+                              <EllipsisVertical aria-hidden="true" className="size-4" />
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="start" className="w-44">
+                              <DropdownMenuItem
+                                disabled={!column.sortable}
+                                onClick={() => applySort([{ path: column.path, descending: false }])}
+                              >
+                                <ArrowUp aria-hidden="true" />
+                                Sort ascending
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                disabled={!column.sortable}
+                                onClick={() => applySort([{ path: column.path, descending: true }])}
+                              >
+                                <ArrowDown aria-hidden="true" />
+                                Sort descending
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                disabled={!column.sortable || sortOf(column.path) === undefined}
+                                onClick={() => applySort([])}
+                              >
+                                <ArrowUpDown aria-hidden="true" />
+                                Clear sort
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem onClick={() => hideColumn(column.path)}>
+                                <EyeOff aria-hidden="true" />
+                                Hide column
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => leaf.pin(pinned ? false : 'start')}>
+                                {pinned ? (
+                                  <>
+                                    <PinOff aria-hidden="true" />
+                                    Unpin
+                                  </>
+                                ) : (
+                                  <>
+                                    <ArrowLeftToLine aria-hidden="true" />
+                                    Pin left
+                                  </>
+                                )}
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                        {header && header.column.getCanResize() ? (
                           <span
                             role="separator"
                             aria-orientation="vertical"
@@ -381,6 +551,8 @@ export function EntityTable({
                             className={cn(
                               'hover:bg-ring absolute top-0 right-0 h-full w-1 cursor-col-resize touch-none select-none',
                               header.column.getIsResizing() && 'bg-ring',
+                              dropTarget === column.path && 'bg-ring',
+                              dragging === column.path && 'opacity-50',
                             )}
                           />
                         ) : null}
@@ -412,7 +584,7 @@ export function EntityTable({
                   </span>
                 </TableCell>
               </TableRow>
-            ) : items.length === 0 ? (
+            ) : modelRows.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={leafColumns.length}>
                   <span className={stateClass}>
@@ -424,140 +596,243 @@ export function EntityTable({
             ) : (
               <>
                 {window_.before > 0 ? <tr aria-hidden="true" style={{ height: `${window_.before}px` }} /> : null}
-                {window_.slice.map((item) =>
-                  item.group ? (
+                {window_.slice.map((modelRow) => {
+                  if (modelRow.getIsGrouped()) {
+                    const groupColumn = byPath.get(modelRow.groupingColumnId ?? '');
+                    return (
+                      <TableRow
+                        key={modelRow.id}
+                        data-slot="entity-table-group"
+                        className="bg-muted/50 hover:bg-muted/50"
+                        style={virtualized ? { height: `${rowHeight}px` } : undefined}
+                      >
+                        <TableCell colSpan={leafColumns.length} className="p-0">
+                          <button
+                            type="button"
+                            aria-expanded={modelRow.getIsExpanded()}
+                            onClick={() => modelRow.toggleExpanded()}
+                            className="focus-visible:ring-ring focus-visible:ring-offset-background flex w-full items-center gap-1.5 px-3 py-1.5 text-left text-sm font-medium outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+                          >
+                            <ChevronRight
+                              aria-hidden="true"
+                              className={cn(
+                                'size-4 shrink-0 transition-transform duration-150 ease-out',
+                                modelRow.getIsExpanded() && 'rotate-90',
+                              )}
+                            />
+                            <span className="truncate">
+                              <FieldValue
+                                value={modelRow.groupingValue}
+                                dataType={groupColumn?.dataType ?? 'text'}
+                                field={groupColumn?.field}
+                                statuses={statuses}
+                                context={context}
+                              />
+                            </span>
+                            <span className="text-muted-foreground font-mono text-xs tabular-nums">
+                              {leafCount(modelRow)}
+                            </span>
+                          </button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  }
+                  const row = modelRow.original;
+                  const key = modelRow.id;
+                  const selected = modelRow.getIsSelected();
+                  return (
                     <TableRow
-                      key={item.key}
-                      data-slot="entity-table-group"
-                      className="bg-muted/50 hover:bg-muted/50"
+                      key={key}
+                      data-row-key={key}
+                      data-state={selected ? 'selected' : undefined}
+                      className={selected ? 'bg-accent text-accent-foreground' : 'bg-background'}
                       style={virtualized ? { height: `${rowHeight}px` } : undefined}
                     >
-                      <TableCell colSpan={leafColumns.length} className="p-0">
-                        <button
-                          type="button"
-                          aria-expanded={!item.group.collapsed}
-                          onClick={() => setCollapsed((was) => ({ ...was, [item.key]: !was[item.key] }))}
-                          className="focus-visible:ring-ring focus-visible:ring-offset-background flex w-full items-center gap-1.5 px-3 py-1.5 text-left text-sm font-medium outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
-                        >
-                          <ChevronRight
-                            aria-hidden="true"
-                            className={cn(
-                              'size-4 shrink-0 transition-transform duration-150 ease-out',
-                              !item.group.collapsed && 'rotate-90',
-                            )}
-                          />
-                          <span className="truncate">
-                            <FieldValue
-                              value={item.group.value}
-                              dataType={groupColumn?.dataType ?? 'text'}
-                              field={groupColumn?.field}
-                              statuses={statuses}
-                            />
-                          </span>
-                          <span className="text-muted-foreground font-mono text-xs tabular-nums">{item.group.count}</span>
-                        </button>
-                      </TableCell>
-                    </TableRow>
-                  ) : item.row ? (
-                    (() => {
-                      const entry = item.row;
-                      const modelRow = byKey.get(entry.key);
-                      return (
-                        <TableRow
-                          key={item.key}
-                          data-row-key={entry.key}
-                          data-state={modelRow?.getIsSelected() ? 'selected' : undefined}
-                          className={modelRow?.getIsSelected() ? 'bg-accent text-accent-foreground' : undefined}
-                          style={virtualized ? { height: `${rowHeight}px` } : undefined}
-                        >
-                          {selectable ? (
-                            <TableCell className={cn(cellClass, 'text-center')}>
+                      {leafColumns.map((leaf) => {
+                        const pinned = leaf.getIsPinned() === 'start';
+                        if (leaf.id === SELECT) {
+                          return (
+                            <TableCell
+                              key={leaf.id}
+                              data-pinned={pinned ? 'start' : undefined}
+                              style={pinStyle(leaf)}
+                              className={cn(cellClass, 'bg-inherit text-center')}
+                            >
                               <Checkbox
                                 aria-label="Select row"
-                                checked={modelRow?.getIsSelected() ?? false}
-                                onCheckedChange={(value) => modelRow?.toggleSelected(value === true)}
+                                checked={selected}
+                                onCheckedChange={(value) => modelRow.toggleSelected(value === true)}
                               />
                             </TableCell>
-                          ) : null}
-                          {columns.map((column) => {
-                            const canEdit = editable && column.editable;
-                            const Editor = editorFor?.(column.dataType) ?? null;
-                            return (
-                              <TableCell
-                                key={column.path}
-                                data-column={column.path}
-                                tabIndex={canEdit ? 0 : undefined}
-                                onDoubleClick={() => openEditor(entry.key, column)}
-                                onKeyDown={(event) => canEdit && onCellKeyDown(event, entry.key, column)}
-                                className={cn(
-                                  cellClass,
-                                  'focus-visible:ring-ring focus-visible:ring-offset-background overflow-hidden outline-none focus-visible:ring-2 focus-visible:ring-inset',
-                                  column.align === 'right' && 'text-right',
-                                  canEdit && 'cursor-text',
-                                )}
-                              >
-                                {isEditing(entry.key, column.path) ? (
-                                  Editor ? (
-                                    <Editor
-                                      value={cellValue(entry.data, column.path)}
-                                      dataType={column.dataType}
-                                      field={column.field}
-                                      commit={(value) => void commit(entry, column, value)}
-                                      cancel={() => setEditing(null)}
-                                    />
-                                  ) : (
-                                    // No editor for this type: a plain input, which every text-like field takes.
-                                    <Input
-                                      defaultValue={String(cellValue(entry.data, column.path) ?? '')}
-                                      autoFocus
-                                      aria-label={column.header}
-                                      onKeyDown={(event) => fallbackKeyDown(event, entry, column)}
-                                      onBlur={() => setEditing(null)}
-                                    />
-                                  )
-                                ) : (
-                                  <>
-                                    <FieldValue
-                                      value={cellValue(entry.data, column.path)}
-                                      dataType={column.dataType}
-                                      field={column.field}
-                                      statuses={statuses}
-                                    />
-                                    {cellError && cellError.key === entry.key && cellError.path === column.path ? (
-                                      <span className="text-destructive block truncate text-xs" title={cellError.message}>
-                                        {cellError.message}
-                                      </span>
-                                    ) : null}
-                                  </>
-                                )}
-                              </TableCell>
-                            );
-                          })}
-                        </TableRow>
-                      );
-                    })()
-                  ) : null,
-                )}
+                          );
+                        }
+                        const column = byPath.get(leaf.id);
+                        if (!column) return null;
+                        const canEdit = canEditColumn(column);
+                        const Editor = editorFor?.(column.dataType) ?? null;
+                        return (
+                          <TableCell
+                            key={leaf.id}
+                            data-column={column.path}
+                            data-pinned={pinned ? 'start' : undefined}
+                            style={pinStyle(leaf)}
+                            tabIndex={canEdit ? 0 : undefined}
+                            onDoubleClick={() => openEditor(key, column, cellValue(row, column.path))}
+                            onKeyDown={(event) => canEdit && onCellKeyDown(event, row, column)}
+                            className={cn(
+                              cellClass,
+                              'focus-visible:ring-ring focus-visible:ring-offset-background bg-inherit overflow-hidden outline-none focus-visible:ring-2 focus-visible:ring-inset',
+                              column.align === 'right' && 'text-right',
+                              canEdit && 'cursor-text',
+                            )}
+                          >
+                            {isEditing(key, column.path) ? (
+                              Editor ? (
+                                <Editor
+                                  value={cellValue(row, column.path)}
+                                  dataType={column.dataType}
+                                  field={column.field}
+                                  commit={(value) => void commit(row, column, value)}
+                                  cancel={() => setEditing(null)}
+                                />
+                              ) : (
+                                // The default editor is the type's own control from the field-editor item.
+                                <div
+                                  role="presentation"
+                                  ref={focusEditor}
+                                  onKeyDown={(event) => editorKeyDown(event, row, column)}
+                                >
+                                  <FieldEditor
+                                    value={draftValue}
+                                    onValueChange={(next) => {
+                                      draft.current = next;
+                                      setDraftValue(next);
+                                    }}
+                                    dataType={column.dataType}
+                                    field={column.field}
+                                    statuses={statuses}
+                                    mode="edit"
+                                    size="sm"
+                                  />
+                                </div>
+                              )
+                            ) : (
+                              <>
+                                <FieldValue
+                                  value={cellValue(row, column.path)}
+                                  dataType={column.dataType}
+                                  field={column.field}
+                                  statuses={statuses}
+                                  context={context}
+                                />
+                                {cellError && cellError.key === key && cellError.path === column.path ? (
+                                  <span className="text-destructive block truncate text-xs" title={cellError.message}>
+                                    {cellError.message}
+                                  </span>
+                                ) : null}
+                              </>
+                            )}
+                          </TableCell>
+                        );
+                      })}
+                    </TableRow>
+                  );
+                })}
                 {window_.after > 0 ? <tr aria-hidden="true" style={{ height: `${window_.after}px` }} /> : null}
+                {paging.mode === 'infinite' && snapshot.hasMore ? (
+                  <TableRow data-slot="entity-table-load-more" className="hover:bg-transparent">
+                    <TableCell colSpan={leafColumns.length} className="p-2 text-center">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={snapshot.status === 'loadingMore'}
+                        onClick={() => void source.loadMore()}
+                      >
+                        {snapshot.status === 'loadingMore' ? 'Loading…' : 'Load more'}
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ) : null}
               </>
             )}
           </TableBody>
         </Table>
       </div>
 
-      <div className="text-muted-foreground flex items-center gap-2 text-xs">
-        <span className="tabular-nums">{rows.length} loaded</span>
-        {snapshot.count !== null ? <span className="tabular-nums">of {snapshot.count}</span> : null}
-        {snapshot.hasMore ? (
-          <button
-            type="button"
-            onClick={() => void source.loadMore()}
-            disabled={snapshot.status === 'loadingMore'}
-            className="hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring focus-visible:ring-offset-background border-border h-8 rounded-md border px-2 outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 motion-safe:active:scale-[0.98]"
-          >
-            {snapshot.status === 'loadingMore' ? 'Loading…' : 'Load more'}
-          </button>
-        ) : null}
+      <div
+        data-slot="entity-table-footer"
+        className="text-muted-foreground flex w-full min-w-0 flex-wrap items-center justify-between gap-2 text-xs"
+      >
+        {paging.mode === 'pages' ? (
+          <>
+            <div data-slot="entity-table-page-size" className="flex items-center gap-2">
+              <span>Rows per page</span>
+              <Select
+                value={String(paging.pageSize)}
+                onValueChange={(value) => void source.setPageSize(Number(value))}
+              >
+                <SelectTrigger aria-label="Rows per page" className="h-7 w-auto min-w-16">
+                  <span data-slot="select-value" className="tabular-nums">
+                    {paging.pageSize}
+                  </span>
+                </SelectTrigger>
+                <SelectContent>
+                  {pageSizes.map((option) => (
+                    <SelectItem key={option} value={String(option)}>
+                      {option}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div data-slot="entity-table-pager" className="flex items-center gap-2">
+              <span data-slot="entity-table-range" className="tabular-nums">
+                {paging.rangeLabel}
+              </span>
+              <Button
+                variant="outline"
+                size="icon-sm"
+                aria-label="Previous page"
+                disabled={!paging.hasPrevious || snapshot.status === 'loading'}
+                onClick={() => void source.setPage(paging.page - 1)}
+              >
+                <ChevronLeft aria-hidden="true" />
+              </Button>
+              <Input
+                type="number"
+                min="1"
+                inputMode="numeric"
+                aria-label="Page number"
+                className="h-7 w-14 text-center tabular-nums"
+                value={pageDraft === '' ? String(paging.page) : pageDraft}
+                onChange={(event) => setPageDraft(event.currentTarget.value)}
+                onKeyDown={(event) => {
+                  if (event.key !== 'Enter') return;
+                  event.preventDefault();
+                  goToPage(event.currentTarget.value);
+                }}
+                onBlur={(event) => goToPage(event.currentTarget.value)}
+              />
+              {paging.pageCount !== null ? <span className="tabular-nums">of {paging.pageCount}</span> : null}
+              <Button
+                variant="outline"
+                size="icon-sm"
+                aria-label="Next page"
+                disabled={!paging.hasNext || snapshot.status === 'loading'}
+                onClick={() => void source.setPage(paging.page + 1)}
+              >
+                <ChevronRight aria-hidden="true" />
+              </Button>
+            </div>
+          </>
+        ) : (
+          <>
+            <span data-slot="entity-table-loaded" className="tabular-nums">
+              {paging.loadedLabel}
+            </span>
+            {snapshot.status === 'loadingMore' ? <span>Loading…</span> : null}
+          </>
+        )}
       </div>
     </div>
   );

@@ -561,10 +561,14 @@
       ],
       "registryDependencies": [
         "local:field-value",
+        "local:field-editor",
         "table",
         "checkbox",
         "skeleton",
-        "input"
+        "input",
+        "button",
+        "dropdown-menu",
+        "select"
       ],
       "files": [
         {
@@ -587,7 +591,10 @@
         "local:status-badge",
         "local:thumbnail",
         "checkbox",
-        "skeleton"
+        "skeleton",
+        "input",
+        "button",
+        "select"
       ],
       "files": [
         {
@@ -607,8 +614,12 @@
       ],
       "registryDependencies": [
         "local:field-value",
+        "local:thumbnail",
         "checkbox",
-        "skeleton"
+        "skeleton",
+        "input",
+        "button",
+        "select"
       ],
       "files": [
         {

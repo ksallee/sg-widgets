@@ -20,7 +20,8 @@
 		fields: FIELDS,
 		// The mock's rows are one project's already; a real site's are not.
 		filters: context.live ? condition('project', 'is', { type: 'Project', id: context.projectId }) : null,
-		pageSize: 50
+		mode: 'pages',
+		pageSize: 25
 	});
 
 	let statusTable = $state<Record<string, StatusRecord>>({});
@@ -66,9 +67,11 @@
 		</div>
 		<GroupedList
 			{source}
+			{context}
 			groupBy={columns[0]!}
-			subLabel={columns[1]!}
-			secondary={columns[2]!}
+			labelField="content"
+			subLabelField={columns[1]!}
+			secondaryField={columns[2]!}
 			{statuses}
 			{leading}
 			selectable

@@ -681,10 +681,14 @@
       ],
       "registryDependencies": [
         "https://sg-widgets.dev/r/react/field-value.json",
-        "@shadcn/table",
-        "@shadcn/checkbox",
-        "@shadcn/skeleton",
-        "@shadcn/input"
+        "https://sg-widgets.dev/r/react/field-editor.json",
+        "table",
+        "checkbox",
+        "skeleton",
+        "input",
+        "button",
+        "dropdown-menu",
+        "select"
       ],
       "docs": "Takes an entity source and resolved columns from @sg-widgets/core. Sorting and grouping go through the server; an edit writes one field and re-reads the row.",
       "files": [
@@ -711,8 +715,11 @@
         "https://sg-widgets.dev/r/react/field-value.json",
         "https://sg-widgets.dev/r/react/status-badge.json",
         "https://sg-widgets.dev/r/react/thumbnail.json",
-        "@shadcn/checkbox",
-        "@shadcn/skeleton"
+        "checkbox",
+        "skeleton",
+        "input",
+        "button",
+        "select"
       ],
       "docs": "Takes an entity source. A Version card carries a play overlay; scrolling to the end asks the source for the next page.",
       "files": [
@@ -737,8 +744,12 @@
       ],
       "registryDependencies": [
         "https://sg-widgets.dev/r/react/field-value.json",
-        "@shadcn/checkbox",
-        "@shadcn/skeleton"
+        "https://sg-widgets.dev/r/react/thumbnail.json",
+        "checkbox",
+        "skeleton",
+        "input",
+        "button",
+        "select"
       ],
       "docs": "Groups the contiguous runs of the order the server produced, so the source is sorted on the same path.",
       "files": [

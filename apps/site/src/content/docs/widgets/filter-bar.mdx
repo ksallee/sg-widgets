@@ -1,0 +1,70 @@
+---
+title: FilterBar
+description: Quick facet pills over one entity type, bound to a filter tree.
+---
+
+import Demo from '../../../components/Demo.astro';
+
+A row of facet pills. Each lists one field's values with a count and ticking them adds an `in`
+condition to the bound tree. A More filters pill opens the same tree in the full editor.
+
+## Install
+
+```sh
+pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/filter-bar.json
+pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/filter-bar.json
+```
+
+<Demo name="filter-bar" title="FilterBar: status, sequence and shot type over Shot" />
+
+A pill with nothing ticked shows the field name. With values ticked it shows what its condition
+says, in the same wording the editor uses.
+
+## Props
+
+| prop | type | default | meaning |
+|---|---|---|---|
+| `entityType` | `string` | required | Type the pills and the counts read on. |
+| `client` | `SgClient` | required | Reads the schema and the rows the counts are tallied from. |
+| `schema` | `SchemaService` | one built from `client` | Share one across a page. |
+| `facets` | `string[]` | required | Field names to offer as pills, in order. |
+| `value` | `FilterGroup` | `emptyFilter()` | The tree the pills write into. Two-way in Svelte through `bind:value`. |
+| `counts` | `(field, filters) => Promise<Record<string, number>>` | — | Counts per value for one facet. Wire it to a `_summarize` grouping call. |
+| `sampleSize` | `number` | `200` | Rows read for the tally when `counts` is not given. |
+| `hidePaths` | `string[]` | `[]` | Passed through to the dialog. |
+| `disabled` | `boolean` | `false` | Blocks every pill. |
+| `class` / `className` | `string` | — | Merged after the widget's own classes. |
+
+## Events
+
+| event | React | Svelte | payload |
+|---|---|---|---|
+| change | `onChange` | `onChange`, `bind:value` | The tree, on every tick and on Apply in the dialog. |
+
+## Slots
+
+None. The dialog behind More filters takes the editor's slots.
+
+## Keyboard
+
+| key | does |
+|---|---|
+| `Enter`, `Space` | Opens the pill's list. |
+| `Arrow` keys | Move the cursor in the list. |
+| `Enter` | Ticks or unticks the value under the cursor. |
+| `Escape` | Closes the list. |
+
+## API behaviour
+
+`POST /entity/<type>/_summarize` answers one group per distinct value with a count, and its
+`group_value` is the raw value while `group_name` is the server's rendering, which is not unique on
+an entity field (020_summarize). Pass `counts` to use it. Without it the bar reads one page of rows
+and tallies them, so a value outside that page is missing and the numbers are counts of what was
+read.
+
+Counts are taken against the tree with every facet's own conditions stripped, so ticking one value
+does not empty its neighbours.
+
+A status or list value is the raw code, never the display label, and a code outside `valid_values`
+matches nothing rather than erroring (field_types/status_list). An entity value is a `{type, id}`
+hash (field_types/entity).

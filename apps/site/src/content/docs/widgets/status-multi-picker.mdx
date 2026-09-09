@@ -15,7 +15,7 @@ pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/status-multi-picker.js
 pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/status-multi-picker.json
 ```
 
-<Demo name="status-multi-picker" title="StatusMultiPicker: per-project options, unknown codes, states and sizes" />
+<Demo name="status-multi-picker" title="StatusMultiPicker: per-project options, trigger summaries, unknown codes, states and sizes" />
 
 ## Props
 
@@ -35,13 +35,16 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/status-multi-p
 | `disabled` | `boolean` | `false` | Greys the control and takes it out of the tab order. |
 | `invalid` | `boolean` | `false` | Sets `aria-invalid` and the destructive ring. |
 | `showCode` | `boolean` | `false` | Shows the raw code instead of the label. The other one stays in the tooltip. |
+| `summary` | `'icons' \| 'names' \| 'both' \| 'count'` | `'both'` | What the closed trigger shows for the selection. |
+| `max` | `number` | `3` | Above this many selected, the trigger reads as a count. `icons` collapses at twice this. |
 | `siteUrl` | `string` | — | Passed to every badge, for a sprite cell outside the status icon set. |
 | `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Heights 8, 9 and 10. |
 | `class` / `className` | `string` | — | Merged after the widget's own classes. |
 
-One selection shows as its badge, several as a count. Without a project the options are the site
-vocabulary, which hides nothing. `projectIds` offers the intersection of what each project allows, in
-the first project's order.
+The closed trigger shows the selection as badges, as icon-only badges, as the names joined by commas
+or as a count, and reads as a count above `max` selected, or above twice `max` in `icons`. Without a
+project the options are the site vocabulary, which hides nothing. `projectIds` offers the intersection
+of what each project allows, in the first project's order.
 
 The root carries the size and, while the options load, `data-loading`.
 

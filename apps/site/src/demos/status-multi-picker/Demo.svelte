@@ -10,6 +10,10 @@
 	let project = $state<string[]>(['Active', 'Bidding']);
 	let unknown = $state<string[]>(['zz_retired', 'rev']);
 
+	const MODES = ['icons', 'names', 'both', 'count'] as const;
+	const TWO = ['ip', 'apr'];
+	const FIVE = ['ip', 'apr', 'rev', 'fin', 'vwd'];
+
 	const group = 'flex flex-col gap-2';
 	const label = 'text-muted-foreground text-xs font-medium tracking-wide uppercase';
 	const row = 'flex flex-wrap items-start gap-3';
@@ -67,6 +71,53 @@
 					projectId={70}
 					value={['ip', 'fin']}
 					showCode
+					clearable={false}
+				/>
+			</div>
+		</div>
+	</section>
+
+	<section class={group}>
+		<h4 class={label}>What the closed trigger shows, with two and with five selected</h4>
+		<div class={row}>
+			{#each MODES as mode (mode)}
+				<div class={group}>
+					<span class={readout}>{mode}</span>
+					<div class={box} data-demo="summary-{mode}-2">
+						<StatusMultiPicker
+							{client}
+							entityType="Version"
+							projectId={70}
+							value={TWO}
+							summary={mode}
+							clearable={false}
+						/>
+					</div>
+					<div class={box} data-demo="summary-{mode}-5">
+						<StatusMultiPicker
+							{client}
+							entityType="Version"
+							projectId={70}
+							value={FIVE}
+							summary={mode}
+							clearable={false}
+						/>
+					</div>
+				</div>
+			{/each}
+		</div>
+	</section>
+
+	<section class={group}>
+		<h4 class={label}>Two selected, collapsing above one</h4>
+		<div class={row}>
+			<div class={box} data-demo="max-one">
+				<StatusMultiPicker
+					{client}
+					entityType="Version"
+					projectId={70}
+					value={TWO}
+					max={1}
 					clearable={false}
 				/>
 			</div>

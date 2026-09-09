@@ -34,7 +34,20 @@ export default defineConfig({
     // instead of re-bundling on first visit and answering the in-flight requests with 504.
     optimizeDeps: {
       entries: ['src/demos/**/*.{svelte,tsx,ts}', 'src/components/**/*.astro'],
-      include: ['react', 'react-dom', 'react-dom/client', 'lucide-react', 'cn', 'clsx', 'tailwind-merge', 'bits-ui'],
+      include: [
+        'react',
+        'react-dom',
+        'react-dom/client',
+        'lucide-react',
+        'cn',
+        'clsx',
+        'tailwind-merge',
+        'bits-ui',
+        '@tanstack/react-table',
+        '@tanstack/react-virtual',
+        '@tanstack/svelte-table',
+        '@tanstack/virtual-core',
+      ],
     },
     resolve: {
       // Demo islands import registry sources straight out of the workspace packages,

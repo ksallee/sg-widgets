@@ -1,0 +1,61 @@
+---
+title: ProjectPicker
+description: Projects, chosen by server-side search, with the project thumbnail and its status.
+---
+
+import Demo from '../../../components/Demo.astro';
+
+Searches projects on the server, showing each one's thumbnail and status.
+
+## Install
+
+```sh
+pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/project-picker.json
+pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/project-picker.json
+```
+
+The item holds both variants. React installs one file exporting `ProjectPicker` and
+`ProjectMultiPicker`; Svelte installs `project-picker.svelte` and `project-multi-picker.svelte`.
+Both configure the generic pickers, which are installed alongside.
+
+<Demo name="project-picker" title="ProjectPicker and ProjectMultiPicker: archived projects, hydration, sizes, states" />
+
+## Props
+
+Every prop of [EntityPicker](/widgets/entity-picker/) and
+[EntityMultiPicker](/widgets/entity-multi-picker/) except `entityTypes`, plus:
+
+| prop | type | default | meaning |
+|---|---|---|---|
+| `includeArchived` | `boolean` | `false` | Offer projects whose `archived` checkbox is set. |
+
+`placeholder` defaults to `Search for a project`, or `Search for projects` on the multi picker.
+
+The sub-label is the project's status, so an active project can be told from a bidding one.
+
+## Events
+
+| event | React | Svelte | payload |
+|---|---|---|---|
+| change | `onValueChange` | `onValueChange` | The new reference or array, and the full rows. |
+| error | `onError` | `onerror` | The failure. The list shows it inline as well. |
+
+## Slots
+
+None.
+
+## Keyboard
+
+The same as [EntityPicker](/widgets/entity-picker/) and
+[EntityMultiPicker](/widgets/entity-multi-picker/).
+
+## API behaviour
+
+Project's status field is `sg_status`, a plain list with no Status row behind it, where every other
+type uses `sg_status_list` (entity_types/Project).
+
+`sg_status` is not a liveness filter and is null on most projects; `archived`, `is_template` and
+`is_demo` are the discriminators, which is why hiding archived projects filters on `archived`
+(018_project_listing).
+
+Project is site-wide and has no `project` field, so `projectId` adds nothing on this picker.

@@ -722,6 +722,115 @@
           "type": "registry:component"
         }
       ]
+    },
+    {
+      "name": "entity-picker",
+      "type": "registry:component",
+      "title": "Entity Picker",
+      "description": "One Flow Production Tracking entity, chosen by server-side search across one or more types.",
+      "categories": [
+        "flow-production-tracking",
+        "picker"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "https://sg-widgets.dev/r/react/entity-chip.json",
+        "https://sg-widgets.dev/r/react/thumbnail.json",
+        "https://sg-widgets.dev/r/react/user-avatar.json",
+        "popover",
+        "command",
+        "skeleton"
+      ],
+      "docs": "Server-side search only. Pass a cached client; a query past minQueryLength becomes one contains condition per word.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/entity-picker.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "entity-multi-picker",
+      "type": "registry:component",
+      "title": "Entity Multi Picker",
+      "description": "Several Flow Production Tracking entities, chosen by server-side search, with checkbox rows and removable chips.",
+      "categories": [
+        "flow-production-tracking",
+        "picker"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "https://sg-widgets.dev/r/react/entity-chip.json",
+        "https://sg-widgets.dev/r/react/thumbnail.json",
+        "https://sg-widgets.dev/r/react/user-avatar.json",
+        "popover",
+        "command",
+        "checkbox",
+        "skeleton"
+      ],
+      "docs": "Selected rows stay pinned to the end of the option list, so they can be unticked whatever the query.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/entity-multi-picker.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "user-picker",
+      "type": "registry:component",
+      "title": "User Picker",
+      "description": "People and script accounts, chosen by server-side search across name, login and email.",
+      "categories": [
+        "flow-production-tracking",
+        "picker"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "https://sg-widgets.dev/r/react/entity-picker.json",
+        "https://sg-widgets.dev/r/react/entity-multi-picker.json"
+      ],
+      "docs": "One file exporting UserPicker and UserMultiPicker. Both configure the generic pickers; neither forks them.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/user-picker.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "project-picker",
+      "type": "registry:component",
+      "title": "Project Picker",
+      "description": "Projects, chosen by server-side search, with the project thumbnail and its status.",
+      "categories": [
+        "flow-production-tracking",
+        "picker"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "https://sg-widgets.dev/r/react/entity-picker.json",
+        "https://sg-widgets.dev/r/react/entity-multi-picker.json"
+      ],
+      "docs": "One file exporting ProjectPicker and ProjectMultiPicker. Archived projects are left out unless includeArchived is set.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/project-picker.tsx",
+          "type": "registry:component"
+        }
+      ]
     }
   ]
 }

@@ -1,0 +1,68 @@
+---
+title: UserPicker
+description: People and script accounts, chosen by server-side search across name, login and email.
+---
+
+import Demo from '../../../components/Demo.astro';
+
+Searches people, and optionally script accounts, on the server, with an avatar and a login on every
+row.
+
+## Install
+
+```sh
+pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/user-picker.json
+pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/user-picker.json
+```
+
+The item holds both variants. React installs one file exporting `UserPicker` and `UserMultiPicker`;
+Svelte installs `user-picker.svelte` and `user-multi-picker.svelte`. Both configure the generic
+pickers, which are installed alongside.
+
+<Demo name="user-picker" title="UserPicker and UserMultiPicker: scripts, inactive people, hydration, sizes, states" />
+
+## Props
+
+Every prop of [EntityPicker](/widgets/entity-picker/) and
+[EntityMultiPicker](/widgets/entity-multi-picker/) except `entityTypes`, plus:
+
+| prop | type | default | meaning |
+|---|---|---|---|
+| `includeApiUsers` | `boolean` | `true` | Search script accounts alongside people. |
+| `includeInactive` | `boolean` | `false` | Offer people whose status is `dis`. |
+
+`placeholder` defaults to `Search for a person`, or `Search for people` on the multi picker.
+
+The query is matched against the display-name chain plus `login` and `email`, and those two fields
+are requested so the row can show them. A person's sub-label is their login; a script account's is
+`API user`.
+
+## Events
+
+| event | React | Svelte | payload |
+|---|---|---|---|
+| change | `onValueChange` | `onValueChange` | The new reference or array, and the full rows. |
+| error | `onError` | `onerror` | The failure. The list shows it inline as well. |
+
+## Slots
+
+None.
+
+## Keyboard
+
+The same as [EntityPicker](/widgets/entity-picker/) and
+[EntityMultiPicker](/widgets/entity-multi-picker/).
+
+## API behaviour
+
+`login` is the only unique field on HumanUser and is what impersonation matches; `email` is not
+unique, and `code` does not exist at all, so a filter on it is a 400
+(entity_types/HumanUser).
+
+`sg_status_list` on HumanUser is two codes, `act` and `dis`, with `act` the default
+(entity_types/HumanUser). Active-only is that condition, and it is dropped on ApiUser, which has no
+status field: the same name in a filter on a type that lacks it would be a 400
+(017_filter_operators).
+
+HumanUser is site-wide and has no `project` field; a person's membership is the `projects`
+multi-entity on the row, so `projectId` scopes through that instead (entity_types/HumanUser).

@@ -1,0 +1,417 @@
+import { describe, expect, it, vi } from 'vitest';
+import { createQueryCache } from '../src/query.js';
+import { MockClient } from '../src/mock.js';
+import type { WireGroup } from '../src/filter.js';
+import { condition, group, toApi3Hash } from '../src/filter.js';
+import type { PickerRow } from '../src/picker.js';
+import {
+  asFilterGroup,
+  createEntitySearch,
+  entityKey,
+  flattenRow,
+  highlightRuns,
+  isBareRef,
+  mergeFilters,
+  nameSearchFilter,
+  placeholderName,
+  pruneFilterToFields,
+  queryTokens,
+  withSelectedPinned,
+} from '../src/picker.js';
+
+const tick = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/** Wait until `read` stops being null, or give up. */
+async function until<T>(read: () => T | null | undefined, timeoutMs = 2000): Promise<T> {
+  const deadline = Date.now() + timeoutMs;
+  for (;;) {
+    const value = read();
+    if (value !== null && value !== undefined && value !== false) return value as T;
+    if (Date.now() > deadline) throw new Error('timed out');
+    await tick(5);
+  }
+}
+
+describe('queryTokens', () => {
+  it('splits on any run of whitespace and drops the empties', () => {
+    expect(queryTokens('  pub   an \n x ')).toEqual(['pub', 'an', 'x']);
+    expect(queryTokens('   ')).toEqual([]);
+  });
+});
+
+describe('nameSearchFilter', () => {
+  it('requires every word, on one field', () => {
+    expect(nameSearchFilter('pub an', ['name'])).toEqual({
+      kind: 'group',
+      logicalOperator: 'and',
+      conditions: [
+        { kind: 'condition', path: 'name', operator: 'contains', value: 'pub' },
+        { kind: 'condition', path: 'name', operator: 'contains', value: 'an' },
+      ],
+    });
+  });
+
+  it('ors the per-field groups so a word may sit in any of them', () => {
+    const filter = nameSearchFilter('ada', ['name', 'login']);
+    expect(filter.logicalOperator).toBe('or');
+    expect(filter.conditions).toHaveLength(2);
+    expect(toApi3Hash(filter)).toEqual({
+      logical_operator: 'or',
+      conditions: [
+        { logical_operator: 'and', conditions: [['name', 'contains', 'ada']] },
+        { logical_operator: 'and', conditions: [['login', 'contains', 'ada']] },
+      ],
+    });
+  });
+
+  it('is an empty group for an empty query or no fields, which matches every row', () => {
+    expect(nameSearchFilter('   ', ['name']).conditions).toEqual([]);
+    expect(nameSearchFilter('ada', []).conditions).toEqual([]);
+    expect(toApi3Hash(nameSearchFilter('   ', ['name']))).toBeNull();
+  });
+
+  it('keeps every word against every field, not one word per field', () => {
+    const filter = nameSearchFilter('ada love', ['name', 'login']);
+    expect(toApi3Hash(filter)).toEqual({
+      logical_operator: 'or',
+      conditions: [
+        {
+          logical_operator: 'and',
+          conditions: [
+            ['name', 'contains', 'ada'],
+            ['name', 'contains', 'love'],
+          ],
+        },
+        {
+          logical_operator: 'and',
+          conditions: [
+            ['login', 'contains', 'ada'],
+            ['login', 'contains', 'love'],
+          ],
+        },
+      ],
+    });
+  });
+});
+
+describe('mergeFilters and asFilterGroup', () => {
+  it('drops the parts that would serialise to nothing', () => {
+    const merged = mergeFilters(nameSearchFilter('', ['name']), nameSearchFilter('ada', ['name']), null);
+    expect(merged.conditions).toHaveLength(1);
+  });
+
+  it('takes the wire shape as well as the tree', () => {
+    const wire: WireGroup = { logical_operator: 'and', conditions: [['id', 'is', 7]] };
+    expect(asFilterGroup(wire)).toEqual({
+      kind: 'group',
+      logicalOperator: 'and',
+      conditions: [{ kind: 'condition', path: 'id', operator: 'is', value: 7 }],
+    });
+    expect(asFilterGroup(null)).toBeNull();
+  });
+});
+
+describe('pruneFilterToFields', () => {
+  it('drops a condition on a field the type does not have', () => {
+    const filter = group('and', [condition('sg_status_list', 'is', 'act'), condition('login', 'contains', 'a')]);
+    const pruned = pruneFilterToFields(filter, new Set(['login']));
+    expect(pruned).toEqual(group('and', [condition('login', 'contains', 'a')]));
+  });
+
+  it('checks only the root of a dotted path', () => {
+    const filter = group('and', [condition('project.Project.name', 'is', 'x')]);
+    expect(pruneFilterToFields(filter, new Set(['project']))).not.toBeNull();
+    expect(pruneFilterToFields(filter, new Set(['projects']))).toBeNull();
+  });
+
+  it('drops a group left with nothing in it', () => {
+    const filter = group('and', [group('or', [condition('archived', 'is', false)])]);
+    expect(pruneFilterToFields(filter, new Set(['code']))).toBeNull();
+  });
+});
+
+describe('highlightRuns', () => {
+  it('marks every occurrence of every word', () => {
+    expect(highlightRuns('Published Anna', 'pub an')).toEqual([
+      { text: 'Pub', match: true },
+      { text: 'lished ', match: false },
+      { text: 'An', match: true },
+      { text: 'na', match: false },
+    ]);
+  });
+
+  it('merges overlapping words into one run', () => {
+    expect(highlightRuns('abcdef', 'abc bcd')).toEqual([
+      { text: 'abcd', match: true },
+      { text: 'ef', match: false },
+    ]);
+  });
+
+  it('matches case-insensitively and repeats', () => {
+    expect(highlightRuns('shot sh010', 'SH')).toEqual([
+      { text: 'sh', match: true },
+      { text: 'ot ', match: false },
+      { text: 'sh', match: true },
+      { text: '010', match: false },
+    ]);
+  });
+
+  it('is one unmatched run with no query, and empty for an empty label', () => {
+    expect(highlightRuns('sh010_0010', '  ')).toEqual([{ text: 'sh010_0010', match: false }]);
+    expect(highlightRuns('sh010', 'zzz')).toEqual([{ text: 'sh010', match: false }]);
+    expect(highlightRuns('', 'sh')).toEqual([]);
+  });
+
+  it('rebuilds the label exactly, so nothing is lost or escaped', () => {
+    const label = 'A <b>bold</b> & brassy name';
+    expect(
+      highlightRuns(label, 'bold &')
+        .map((run) => run.text)
+        .join(''),
+    ).toBe(label);
+  });
+});
+
+describe('keys and references', () => {
+  it('keys on type and id together', () => {
+    expect(entityKey({ type: 'Shot', id: 1 })).toBe('Shot:1');
+    expect(entityKey({ type: 'Asset', id: 1 })).not.toBe(entityKey({ type: 'Shot', id: 1 }));
+  });
+
+  it('treats a missing name and the Type id placeholder alike', () => {
+    expect(isBareRef({ type: 'Shot', id: 862 })).toBe(true);
+    expect(isBareRef({ type: 'Shot', id: 862, name: '' })).toBe(true);
+    expect(isBareRef({ type: 'Shot', id: 862, name: placeholderName({ type: 'Shot', id: 862 }) })).toBe(true);
+    expect(isBareRef({ type: 'Shot', id: 862, name: 'sh010_0010' })).toBe(false);
+  });
+});
+
+describe('flattenRow', () => {
+  it('lifts type and id, unwraps relationships and keeps a dotted key literal', () => {
+    const row = flattenRow({
+      type: 'Shot',
+      id: 862,
+      attributes: { code: 'sh010_0010', 'project.Project.name': 'Blue Moon Rising' },
+      relationships: { project: { data: { type: 'Project', id: 70, name: 'Blue Moon Rising' } } },
+    });
+    expect(row).toEqual({
+      type: 'Shot',
+      id: 862,
+      name: 'sh010_0010',
+      values: {
+        code: 'sh010_0010',
+        'project.Project.name': 'Blue Moon Rising',
+        project: { type: 'Project', id: 70, name: 'Blue Moon Rising' },
+      },
+    });
+  });
+
+  it('falls through the display-name chain and then to Type id', () => {
+    expect(flattenRow({ type: 'Task', id: 5700, attributes: { content: 'FX' }, relationships: {} }).name).toBe('FX');
+    expect(flattenRow({ type: 'Version', id: 17055, attributes: {}, relationships: {} }).name).toBe('Version 17055');
+  });
+
+  it('prefers an explicit label field', () => {
+    const row = flattenRow({ type: 'Shot', id: 862, attributes: { code: 'sh010_0010', description: 'A shot' }, relationships: {} }, 'description');
+    expect(row.name).toBe('A shot');
+  });
+});
+
+describe('withSelectedPinned', () => {
+  const row = (type: string, id: number, name: string): PickerRow => ({ type, id, name, values: {} });
+
+  it('appends selected rows the results do not hold, in selection order', () => {
+    const rows = [row('Shot', 1, 'a'), row('Shot', 2, 'b')];
+    const known = new Map([['Asset:1', row('Asset', 1, 'charAda')]]);
+    const out = withSelectedPinned(rows, [{ type: 'Shot', id: 2 }, { type: 'Asset', id: 1 }], known);
+    expect(out.map(entityKey)).toEqual(['Shot:1', 'Shot:2', 'Asset:1']);
+    expect(out[2]?.name).toBe('charAda');
+  });
+
+  it('falls back to Type id for a selection nothing has resolved', () => {
+    const out = withSelectedPinned([], [{ type: 'Shot', id: 9 }], new Map());
+    expect(out[0]?.name).toBe('Shot 9');
+  });
+});
+
+describe('createEntitySearch', () => {
+  function harness(overrides: Record<string, unknown> = {}) {
+    const mock = new MockClient({ seed: 1 });
+    const client = createQueryCache(mock);
+    const search = createEntitySearch({
+      client,
+      entityTypes: ['Shot'],
+      debounceMs: 5,
+      pageSize: 5,
+      ...overrides,
+    });
+    return { mock, client, search };
+  }
+
+  it('runs nothing under the minimum query length and clears the rows', async () => {
+    const { search } = harness();
+    search.setQuery('sh010');
+    await until(() => search.state.rows.length > 0);
+    search.setQuery('s');
+    expect(search.state.tooShort).toBe(true);
+    expect(search.state.rows).toEqual([]);
+  });
+
+  it('finds rows whose label holds every word', async () => {
+    const { search } = harness();
+    search.setQuery('sh010 0010');
+    await until(() => search.state.rows.length > 0);
+    expect(search.state.rows.map((r) => r.name)).toEqual(['sh010_0010']);
+  });
+
+  it('keys the rows it remembers on type and id', async () => {
+    const { search } = harness({ entityTypes: ['Shot', 'Asset'] });
+    search.setQuery('char');
+    await until(() => search.state.rows.length > 0);
+    for (const key of search.known.keys()) expect(key).toMatch(/^[A-Za-z]+:\d+$/);
+  });
+
+  it('never lets a slow earlier response overwrite a later one', async () => {
+    const mock = new MockClient({ seed: 1 });
+    const delays = [80, 0];
+    const slow = {
+      ...mock,
+      search: async (type: string, options: Parameters<MockClient['search']>[1]) => {
+        await tick(delays.shift() ?? 0);
+        return mock.search(type, options);
+      },
+      entityTypes: () => mock.entityTypes(),
+      fields: (t: string, p?: number) => mock.fields(t, p),
+      fieldWithProject: (t: string, f: string, p: number) => mock.fieldWithProject(t, f, p),
+      textSearch: (t: string, e: Record<string, never>) => mock.textSearch(t, e),
+      statuses: () => mock.statuses(),
+    } as unknown as MockClient;
+    const search = createEntitySearch({ client: createQueryCache(slow), entityTypes: ['Shot'], debounceMs: 0, pageSize: 5 });
+
+    search.setQuery('sh010');
+    await tick(1);
+    search.setQuery('sh020');
+    await until(() => !search.state.loading && search.state.rows.length > 0);
+    await tick(150);
+    expect(search.state.query).toBe('sh020');
+    expect(search.state.rows.every((r) => r.name.startsWith('sh020'))).toBe(true);
+  });
+
+  it('pages, appending the next page to the rows already shown', async () => {
+    const { search } = harness({ pageSize: 3 });
+    search.setQuery('sh0');
+    await until(() => search.state.rows.length > 0);
+    expect(search.state.rows).toHaveLength(3);
+    expect(search.state.hasMore).toBe(true);
+    search.loadMore();
+    await until(() => search.state.rows.length > 3);
+    expect(search.state.rows).toHaveLength(6);
+    expect(new Set(search.state.rows.map(entityKey)).size).toBe(6);
+  });
+
+  it('pushes an exclusion into the server filter', async () => {
+    const { search } = harness();
+    search.setQuery('sh010');
+    const first = await until(() => (search.state.rows.length > 0 ? search.state.rows : null));
+    const dropped = first[0] as PickerRow;
+    search.update({ exclude: [{ type: 'Shot', id: dropped.id }] });
+    await until(() => search.state.rows.length > 0 && !search.state.rows.some((r) => r.id === dropped.id));
+    expect(search.state.rows.some((r) => r.id === dropped.id)).toBe(false);
+  });
+
+  it('scopes by project through the field the type actually has', async () => {
+    const { search } = harness({ entityTypes: ['Shot'], projectId: 71 });
+    search.setQuery('hb0');
+    await until(() => search.state.rows.length > 0);
+    expect(search.state.rows.length).toBeGreaterThan(0);
+    search.update({ projectId: 70 });
+    await until(() => !search.state.loading);
+    expect(search.state.rows).toEqual([]);
+  });
+
+  it('scopes a site-wide type through its projects field rather than 400ing', async () => {
+    const { search } = harness({ entityTypes: ['HumanUser'], projectId: 70 });
+    search.setQuery('ada');
+    await until(() => search.state.rows.length > 0 || search.state.error !== null);
+    expect(search.state.error).toBeNull();
+    expect(search.state.rows.map((r) => r.name)).toEqual(['Ada Lovelace']);
+  });
+
+  it('searches the fields a caller adds on top of the display-name chain', async () => {
+    const { search } = harness({ entityTypes: ['HumanUser'], searchFields: ['login', 'email'] });
+    search.setQuery('bo.chen');
+    await until(() => search.state.rows.length > 0);
+    expect(search.state.rows.map((r) => r.name)).toEqual(['Bo Chen']);
+  });
+
+  it('drops a search field the type does not have instead of failing the request', async () => {
+    const { search } = harness({ entityTypes: ['HumanUser', 'ApiUser'], searchFields: ['login'] });
+    search.setQuery('pipeline');
+    await until(() => search.state.rows.length > 0 || search.state.error !== null);
+    expect(search.state.error).toBeNull();
+    expect(search.state.rows.map((r) => r.name)).toEqual(['pipeline_bot']);
+  });
+
+  it('applies a pre-filter only to the types that have the field', async () => {
+    const { search } = harness({
+      entityTypes: ['HumanUser', 'ApiUser'],
+      // ApiUser has no status field, so the condition is dropped there rather than 400ing.
+      filters: group('and', [condition('sg_status_list', 'is', 'act')]),
+    });
+    search.setQuery('o');
+    search.update({ minQueryLength: 1 });
+    await until(() => search.state.rows.length > 0 || search.state.error !== null);
+    expect(search.state.error).toBeNull();
+    const names = search.state.rows.map((r) => r.name);
+    expect(names).toContain('pipeline_bot');
+    expect(names).not.toContain('Bo Chen');
+  });
+
+  it('surfaces a failure instead of swallowing it', async () => {
+    const { mock, search } = harness();
+    const onError = vi.fn();
+    search.update({ onError });
+    mock.failNext({ status: 500, message: 'Flow PT API error 500' });
+    search.setQuery('sh010');
+    await until(() => search.state.error !== null);
+    expect(search.state.error?.message).toBe('Flow PT API error 500');
+    expect(onError).toHaveBeenCalledTimes(1);
+    expect(search.state.loading).toBe(false);
+  });
+
+  it('hydrates bare references with one request per type', async () => {
+    const { search } = harness({ entityTypes: ['Shot', 'Asset'] });
+    search.hydrate([
+      { type: 'Shot', id: 862 },
+      { type: 'Shot', id: 863 },
+      { type: 'Asset', id: 1226 },
+    ]);
+    await until(() => search.known.size >= 3);
+    expect(search.known.get('Shot:862')?.name).toBe('sh010_0010');
+    expect(search.known.get('Asset:1226')?.name).toBe('charAda');
+  });
+
+  it('does not overwrite a hydrated row with a bare reference handed in later', async () => {
+    const { search } = harness();
+    search.hydrate([{ type: 'Shot', id: 862 }]);
+    await until(() => search.known.get('Shot:862')?.name === 'sh010_0010');
+    search.hydrate([{ type: 'Shot', id: 862 }]);
+    await tick(20);
+    expect(search.known.get('Shot:862')?.name).toBe('sh010_0010');
+  });
+
+  it('leaves a reference that cannot be resolved as Type id', async () => {
+    const { search } = harness();
+    search.hydrate([{ type: 'Shot', id: 999999 }]);
+    await until(() => search.known.has('Shot:999999'));
+    expect(search.known.get('Shot:999999')?.name).toBe('Shot 999999');
+  });
+
+  it('keeps a hydration failure visible and still names the row', async () => {
+    const { mock, search } = harness();
+    mock.failNext({ status: 503, message: 'Flow PT API error 503' });
+    search.hydrate([{ type: 'Shot', id: 862 }]);
+    await until(() => search.state.error !== null);
+    expect(search.known.get('Shot:862')?.name).toBe('Shot 862');
+  });
+});

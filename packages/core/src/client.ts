@@ -385,7 +385,8 @@ export class RestClient implements SgClient {
     if (iconIds.size > 0) {
       const iconRes = await this.request<{ data: EntityRow[] }>('POST', '/entity/icons/_search', {
         filters: { logical_operator: 'and', conditions: [['id', 'in', [...iconIds]]] },
-        fields: 'display_type,image_map_key,url,html',
+        // `url` is empty unless `image_data` is asked for beside it (010_status_icons).
+        fields: 'display_type,image_map_key,url,html,image_data',
         page: { size: 500, number: 1 },
       });
       for (const i of iconRes.data) icons.set(i.id, i);
@@ -467,11 +468,12 @@ function toStatusIcon(a: Record<string, unknown>): StatusRecord['icon'] {
     case 'image_map':
       return { displayType: 'image_map', imageMapKey: String(a['image_map_key'] ?? '') };
     case 'image': {
-      // The data URL comes with embedded newlines that must be stripped (probe 010).
-      const dataUrl = String(a['url'] ?? '').replace(/\s+/g, '');
-      // A site can hold an `image` icon whose `url` is empty; it is no icon, and an
-      // empty `src` makes the browser re-request the page.
-      return dataUrl === '' ? null : { displayType: 'image', dataUrl };
+      // The data URL comes with embedded newlines that must be stripped; `image_data` holds the
+      // same bytes and is what a narrowed projection still fills (010_status_icons).
+      const url = String(a['url'] ?? '').replace(/\s+/g, '');
+      const data = String(a['image_data'] ?? '').replace(/\s+/g, '');
+      const dataUrl = url || (data ? `data:image/png;base64,${data}` : '');
+      return dataUrl ? { displayType: 'image', dataUrl } : null;
     }
     case 'html':
       return { displayType: 'html', html: String(a['html'] ?? '') };

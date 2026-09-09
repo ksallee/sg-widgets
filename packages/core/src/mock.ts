@@ -51,6 +51,8 @@ export interface MockClientOptions {
   latencyMs?: number;
   /** Arm a failure for the very first call, for demoing an error state without extra wiring. */
   failNext?: MockFailure | null;
+  /** How many rows of the scaled types to generate. Default 60 Versions. */
+  counts?: { versions?: number };
 }
 
 /* -------------------------------------------------------------------------- */
@@ -439,7 +441,7 @@ function pick<T>(rng: () => number, items: readonly T[]): T {
   return item ?? (items[0] as T);
 }
 
-function buildFixtures(seed: number): Fixtures {
+function buildFixtures(seed: number, counts: { versions?: number } = {}): Fixtures {
   const rng = mulberry32(seed);
   const rows = new Map<string, Row[]>();
   const index = new Map<string, Row>();
@@ -720,13 +722,14 @@ function buildFixtures(seed: number): Fixtures {
 
   /* versions --------------------------------------------------------------- */
   let versionId = 17055;
-  for (let i = 0; i < 60; i += 1) {
+  const versionCount = counts.versions ?? 60;
+  for (let i = 0; i < versionCount; i += 1) {
     // 005_link_usage: on the sample project every Version links through `entity`, almost all to a Shot.
     const target = i % 7 === 6 ? (assets[i % assets.length] as Row) : (shots[i % shots.length] as Row);
     const targetTasks = (target.values['tasks'] as EntityRef[]) ?? [];
     const task = targetTasks[0];
     const stepName = task ? String(index.get(`Task:${task.id}`)?.values['content'] ?? 'comp') : 'comp';
-    const revision = 1 + (i % 3);
+    const revision = 1 + Math.floor(i / shots.length) * 3 + (i % 3);
     const code = `${String(target.values['code'])}_${stepName.toLowerCase().replace(/\s+/g, '')}_v${String(revision).padStart(3, '0')}`;
     const first = 1001;
     const last = first + 40 + Math.floor(rng() * 120);
@@ -774,7 +777,7 @@ export class MockClient implements SgClient {
   private pendingFailure: MockFailure | null;
 
   constructor(options: MockClientOptions = {}) {
-    this.fixtures = buildFixtures(options.seed ?? 1);
+    this.fixtures = buildFixtures(options.seed ?? 1, options.counts ?? {});
     this.latencyMs = options.latencyMs ?? 0;
     this.pendingFailure = options.failNext ?? null;
   }

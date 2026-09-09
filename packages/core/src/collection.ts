@@ -14,8 +14,11 @@
  * sort path against the schema before offering it (026_result_order).
  */
 import type { EntityRow, SearchResult, SgClient } from './client.js';
+import { isNumericType } from './field-types.js';
 import type { EntityRef, FilterNode, WireGroup } from './filter.js';
 import { toApi3Hash } from './filter.js';
+import type { SchemaService } from './schema-service.js';
+import type { FieldSchema } from './schema.js';
 
 /** One sort key. Serialised as `path` or `-path` (026_result_order). */
 export interface SortSpec {
@@ -269,4 +272,94 @@ export function createEntitySource(options: EntitySourceOptions): EntitySource {
   };
 
   return source;
+}
+
+/* -------------------------------------------------------------------------- */
+/* columns                                                                    */
+/* -------------------------------------------------------------------------- */
+
+/** A column as a caller writes it: a path, and anything the schema should not decide. */
+export interface ColumnSpec {
+  /** Plain or dotted path, e.g. `entity.Shot.code`. */
+  path: string;
+  header?: string;
+  dataType?: string;
+  /** Starting width in pixels. */
+  width?: number;
+  editable?: boolean;
+  align?: 'left' | 'right';
+  field?: FieldSchema | null;
+}
+
+/** A column with every question answered, which is what a collection widget takes. */
+export interface CollectionColumn {
+  path: string;
+  header: string;
+  dataType: string;
+  width?: number;
+  /** True when a cell may open an editor. A projection is never writable. */
+  editable: boolean;
+  align: 'left' | 'right';
+  /** The schema of the field the path lands on, for a status label out of `display_values`. */
+  field: FieldSchema | null;
+}
+
+/**
+ * Fill in headers, data types and editability from the schema.
+ *
+ * The header of a dotted path is the display name of the field it lands on. A
+ * projection is never writable: a write names one field of one row
+ * (put_entity_type_id), so only a plain path can open an editor.
+ */
+export async function resolveColumns(
+  schema: SchemaService,
+  entityType: string,
+  columns: ReadonlyArray<string | ColumnSpec>,
+): Promise<CollectionColumn[]> {
+  return Promise.all(
+    columns.map(async (entry) => {
+      const spec: ColumnSpec = typeof entry === 'string' ? { path: entry } : entry;
+      const segments = await schema.resolvePath(entityType, spec.path);
+      const last = segments[segments.length - 1];
+      const field = spec.field ?? last?.field ?? null;
+      const dataType = spec.dataType ?? last?.dataType ?? 'text';
+      const column: CollectionColumn = {
+        path: spec.path,
+        header: spec.header ?? last?.displayName ?? spec.path,
+        dataType,
+        editable: spec.editable ?? (segments.length === 1 && (field?.editable ?? false)),
+        align: spec.align ?? (isNumericType(dataType) ? 'right' : 'left'),
+        field,
+      };
+      if (spec.width !== undefined) column.width = spec.width;
+      return column;
+    }),
+  );
+}
+
+/**
+ * Contiguous runs of rows sharing a value at `path`.
+ *
+ * Grouping a paged read is only honest over an order the server produced, so a
+ * caller sorts on the same path and this walks the runs. A group whose rows
+ * continue on the next page grows when that page arrives.
+ */
+export interface RowGroup {
+  /** The raw value the run shares. */
+  value: unknown;
+  rows: EntityRow[];
+}
+
+export function groupRows(rows: readonly EntityRow[], path: string): RowGroup[] {
+  const groups: RowGroup[] = [];
+  let key: string | null = null;
+  for (const row of rows) {
+    const value = cellValue(row, path);
+    const next = JSON.stringify(value ?? null);
+    const last = groups[groups.length - 1];
+    if (last && next === key) last.rows.push(row);
+    else groups.push({ value, rows: [row] });
+    key = next;
+  }
+  return groups;
 }

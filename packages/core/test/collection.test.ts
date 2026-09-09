@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { MockClient } from '../src/mock.js';
-import { createEntitySource, cellValue, rowKey, serializeSort } from '../src/collection.js';
+import { createEntitySource, cellValue, groupRows, resolveColumns, rowKey, serializeSort } from '../src/collection.js';
+import { createSchemaService } from '../src/schema-service.js';
 import { condition, group } from '../src/filter.js';
 import type { EntitySource } from '../src/collection.js';
 
@@ -180,5 +181,53 @@ describe('updateRow', () => {
     await expect(s.updateRow({ type: 'Version', id: row.id }, { created_at: 'x' })).rejects.toMatchObject({ status: 400 });
     expect(s.rows).toBe(before);
     expect(s.status).toBe('ready');
+  });
+});
+
+describe('columns', () => {
+  it('takes headers, data types and editability off the schema', async () => {
+    const schema = createSchemaService(new MockClient());
+    const columns = await resolveColumns(schema, 'Version', ['code', 'sg_status_list', 'entity.Shot.code', 'created_at', 'frame_count']);
+    expect(columns.map((c) => c.header)).toEqual(['Version Name', 'Status', 'Shot Code', 'Date Created', 'Frame Count']);
+    expect(columns.map((c) => c.dataType)).toEqual(['text', 'status_list', 'text', 'date_time', 'number']);
+    // A projection is never writable, and neither is a field the schema calls read-only.
+    expect(columns.map((c) => c.editable)).toEqual([true, true, false, false, true]);
+    // Numbers are right-aligned.
+    expect(columns.map((c) => c.align)).toEqual(['left', 'left', 'left', 'left', 'right']);
+    expect(columns[1]?.field?.displayValues?.['ip']).toBe('In Progress');
+  });
+
+  it('lets a caller overrule any of it', async () => {
+    const schema = createSchemaService(new MockClient());
+    const [column] = await resolveColumns(schema, 'Version', [{ path: 'code', header: 'Name', width: 220, align: 'right' }]);
+    expect(column).toMatchObject({ header: 'Name', width: 220, align: 'right' });
+  });
+
+  it('names the whole path when a segment does not resolve', async () => {
+    const schema = createSchemaService(new MockClient());
+    await expect(resolveColumns(schema, 'Version', ['entity.Task.code'])).rejects.toThrow(/entity.Task.code/);
+  });
+});
+
+describe('groupRows', () => {
+  it('walks contiguous runs of the sorted order', async () => {
+    const s = source({ fields: ['code', 'sg_status_list'], pageSize: 60 });
+    await s.setSort([{ path: 'sg_status_list', descending: false }]);
+    const groups = groupRows(s.rows, 'sg_status_list');
+    expect(groups.length).toBeGreaterThan(1);
+    expect(groups.reduce((n, g) => n + g.rows.length, 0)).toBe(s.rows.length);
+    // One run per value, because the server put them together.
+    const values = groups.map((g) => g.value);
+    expect(new Set(values).size).toBe(values.length);
+  });
+
+  it('splits an unsorted list wherever the value changes', () => {
+    const rows = ['a', 'b', 'a'].map((v, i) => ({
+      type: 'Version',
+      id: i,
+      attributes: { sg_status_list: v },
+      relationships: {},
+    }));
+    expect(groupRows(rows, 'sg_status_list').map((g) => g.value)).toEqual(['a', 'b', 'a']);
   });
 });

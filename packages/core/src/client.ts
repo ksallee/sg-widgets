@@ -7,8 +7,8 @@
  * the REST API itself, for tests, tools and apps that can hold a token.
  */
 import type { WireGroup } from './filter.js';
-import type { FieldSchema, RawFieldsResponse } from './schema.js';
-import { normalizeFields } from './schema.js';
+import type { FieldSchema, RawFieldSchema, RawFieldsResponse } from './schema.js';
+import { normalizeField, normalizeFields } from './schema.js';
 import type { StatusRecord } from './status.js';
 import type { EntityRef } from './filter.js';
 
@@ -53,6 +53,11 @@ export interface SgClient {
   entityTypes(): Promise<EntityTypeInfo[]>;
   /** All fields of a type. Pass `projectId` to get `hiddenValues` on status and list fields. */
   fields(entityType: string, projectId?: number): Promise<Record<string, FieldSchema>>;
+  /**
+   * One field at project scope, 1.2KB against 48KB for the whole type (probe 002).
+   * Only `hiddenValues` differs from the site-scope read (probe 009).
+   */
+  fieldWithProject(entityType: string, field: string, projectId: number): Promise<FieldSchema>;
   search(entityType: string, options: SearchOptions): Promise<SearchResult>;
   /** Free-text search across several types. Every word must match. Page size is 1 to 25. */
   textSearch(text: string, entityTypes: Record<string, WireGroup | null>, page?: { size?: number; number?: number }): Promise<TextSearchRow[]>;
@@ -122,6 +127,13 @@ export class RestClient implements SgClient {
   async fields(entityType: string, projectId?: number): Promise<Record<string, FieldSchema>> {
     const res = await this.request<RawFieldsResponse>('GET', `/schema/${entityType}/fields`, undefined, { project_id: projectId });
     return normalizeFields(res);
+  }
+
+  async fieldWithProject(entityType: string, field: string, projectId: number): Promise<FieldSchema> {
+    const res = await this.request<{ data: RawFieldSchema }>('GET', `/schema/${entityType}/fields/${field}`, undefined, {
+      project_id: projectId,
+    });
+    return normalizeField(field, res.data);
   }
 
   async search(entityType: string, options: SearchOptions): Promise<SearchResult> {

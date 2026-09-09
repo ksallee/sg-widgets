@@ -294,7 +294,7 @@ export function EntityPicker({
     : null;
   const options = withSelectedPinned(state.rows, value ? [value] : [], search.known);
   const polymorphic = entityTypes.length > 1;
-  const hasSubLabel = Boolean(subLabelField || subLabel || polymorphic);
+  const hasSubLabel = Boolean(subLabelField || subLabel);
   const interactive = !disabled && !readOnly;
   const showClear = clearable && Boolean(value) && interactive;
   /** An id is a code, and codes are the mono treatment of `docs/design-rules.md`. */
@@ -317,7 +317,7 @@ export function EntityPicker({
       const raw = row.values[subLabelField];
       return raw === null || raw === undefined ? '' : String(raw);
     }
-    return polymorphic ? row.type : '';
+    return '';
   }
 
   /** The id is on the row itself, not among the attributes a read returns. */
@@ -426,7 +426,7 @@ export function EntityPicker({
                   {options.map((row) => {
                     const chosen = Boolean(value && entityKey(value) === entityKey(row));
                     const sub = subLabelOf(row);
-                    const custom = secondary ? secondary(row) : '';
+                    const custom = secondary ? secondary(row) : !secondaryField && polymorphic ? row.type : '';
                     const raw = secondaryValue(row);
                     return (
                       <CommandItem

@@ -125,8 +125,8 @@ them once:
 |---|---|---|
 | `thumbnail` | `false`, or the image field name (`'image'`) | `'image'` in pickers and search, `false` in dense lists |
 | `labelField` | the field shown as the main label | the display-name chain in core |
-| `subLabelField` / `subLabel(row)` | the muted line under the label | the entity type when several types are shown, else none |
-| `secondaryField` / `secondary(row)` | the right-aligned column, rendered by data type through FieldValue | none |
+| `subLabelField` / `subLabel(row)` | the muted line under the label | none |
+| `secondaryField` / `secondary(row)` | the right-aligned column, rendered by data type through FieldValue | the entity type when several types are shown, else none |
 | `showCode` | show programmatic names beside display names where the row is a field or a type | `false` |
 | `fields` | extra fields to request so a caller's own sub-label or secondary can read them | `[]` |
 

@@ -47,7 +47,7 @@
 	</section>
 
 	<section class={group} data-demo-case="multi-type">
-		<h4 class={label}>Three types at once, the type under the name</h4>
+		<h4 class={label}>Three types at once, the type on the right</h4>
 		<div class={field}>
 			<EntityPicker
 				{client}

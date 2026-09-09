@@ -52,7 +52,7 @@ export default function EntityPickerDemo() {
       </section>
 
       <section className={group} data-demo-case="multi-type">
-        <h4 className={label}>Three types at once, the type under the name</h4>
+        <h4 className={label}>Three types at once, the type on the right</h4>
         <div className={field}>
           <EntityPicker
             client={client}

@@ -218,7 +218,7 @@
 	);
 	const options = $derived(withSelectedPinned(snap.rows, value ? [value] : [], search.known));
 	const polymorphic = $derived(entityTypes.length > 1);
-	const hasSubLabel = $derived(Boolean(subLabelField || subLabel || polymorphic));
+	const hasSubLabel = $derived(Boolean(subLabelField || subLabel));
 	const interactive = $derived(!disabled && !readonly);
 	const showClear = $derived(clearable && Boolean(value) && interactive);
 	/** An id is a code, and codes are the mono treatment of `docs/design-rules.md`. */
@@ -262,7 +262,7 @@
 			const raw = row.values[subLabelField];
 			return raw === null || raw === undefined ? '' : String(raw);
 		}
-		return polymorphic ? row.type : '';
+		return '';
 	}
 
 	/** The id is on the row itself, not among the attributes a read returns. */
@@ -387,7 +387,7 @@
 						{#each options as row (entityKey(row))}
 							{@const chosen = Boolean(value && entityKey(value) === entityKey(row))}
 							{@const sub = subLabelOf(row)}
-							{@const custom = secondary ? secondary(row) : ''}
+							{@const custom = secondary ? secondary(row) : !secondaryField && polymorphic ? row.type : ''}
 							{@const raw = secondaryValue(row)}
 							<Command.Item
 								data-slot="entity-picker-option"

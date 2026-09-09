@@ -5,8 +5,6 @@ import {
   ArrowDownIcon,
   ArrowUpDownIcon,
   ArrowUpIcon,
-  ChevronDownIcon,
-  ChevronUpIcon,
   GripVerticalIcon,
   XIcon,
 } from 'lucide-react';
@@ -183,26 +181,6 @@ export function SortPicker({
                     <ArrowDownIcon />
                   </ToggleGroupItem>
                 </ToggleGroup>
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  disabled={i === 0}
-                  aria-label="Move up"
-                  data-slot="sort-up"
-                  onClick={() => move(i, -1)}
-                >
-                  <ChevronUpIcon />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  disabled={i === value.length - 1}
-                  aria-label="Move down"
-                  data-slot="sort-down"
-                  onClick={() => move(i, 1)}
-                >
-                  <ChevronDownIcon />
-                </Button>
                 <Button
                   variant="ghost"
                   size="icon-sm"

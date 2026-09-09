@@ -2,8 +2,6 @@
 	import ArrowDownIcon from '@lucide/svelte/icons/arrow-down';
 	import ArrowUpIcon from '@lucide/svelte/icons/arrow-up';
 	import ArrowUpDownIcon from '@lucide/svelte/icons/arrow-up-down';
-	import ChevronDownIcon from '@lucide/svelte/icons/chevron-down';
-	import ChevronUpIcon from '@lucide/svelte/icons/chevron-up';
 	import GripVerticalIcon from '@lucide/svelte/icons/grip-vertical';
 	import XIcon from '@lucide/svelte/icons/x';
 	import type { SchemaService, SgClient, SortKey } from '@sg-widgets/core';
@@ -184,26 +182,6 @@
 								<ArrowDownIcon />
 							</ToggleGroup.Item>
 						</ToggleGroup.Root>
-						<Button
-							variant="ghost"
-							size="icon-sm"
-							disabled={i === 0}
-							aria-label="Move up"
-							data-slot="sort-up"
-							onclick={() => move(i, -1)}
-						>
-							<ChevronUpIcon />
-						</Button>
-						<Button
-							variant="ghost"
-							size="icon-sm"
-							disabled={i === value.length - 1}
-							aria-label="Move down"
-							data-slot="sort-down"
-							onclick={() => move(i, 1)}
-						>
-							<ChevronDownIcon />
-						</Button>
 						<Button
 							variant="ghost"
 							size="icon-sm"

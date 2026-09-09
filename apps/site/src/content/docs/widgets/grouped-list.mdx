@@ -1,0 +1,77 @@
+---
+title: Grouped List
+description: Dense Flow Production Tracking rows under collapsible group headers with counts.
+---
+
+import Demo from '../../../components/Demo.astro';
+
+Renders rows from an entity source as one line each, under collapsible headers of a shared value.
+
+## Install
+
+```sh
+pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/grouped-list.json
+pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/grouped-list.json
+```
+
+<Demo name="grouped-list" title="Grouped List: Tasks by pipeline step, with a status glyph, a sub-label and a due date" />
+
+```ts
+const source = createEntitySource({
+  client: context.client,
+  entityType: 'Task',
+  fields: ['content', 'sg_status_list', 'step.Step.code', 'sg_description', 'due_date'],
+  pageSize: 50,
+});
+const [group, sub, secondary] = await resolveColumns(context.schema, 'Task', [
+  'step.Step.code',
+  'sg_description',
+  'due_date',
+]);
+```
+
+## Props
+
+| prop | type | default | meaning |
+|---|---|---|---|
+| `source` | `EntitySource` | — | The rows and the order behind them. |
+| `groupBy` | `CollectionColumn` | — | Path the rows are grouped on. The source is sorted on it. |
+| `labelPath` | `string \| null` | `null` | Path of the row's label. Defaults to the type's display name. |
+| `subLabel` | `CollectionColumn \| null` | `null` | Shown under the label. |
+| `secondary` | `CollectionColumn \| null` | `null` | Shown right-aligned at the end of the row. |
+| `statuses` | `Record<string, StatusRecord> \| null` | `null` | Status rows by code. |
+| `density` | `'compact' \| 'default'` | `'default'` | Compact halves the vertical row padding. |
+| `selectable` | `boolean` | `false` | Draws a checkbox on each row. |
+| `maxHeight` | `string` | `'28rem'` | Height of the scrolling body. |
+| `emptyLabel` | `string` | `'No rows'` | Shown when the read returned nothing. |
+| `class` / `className` | `string` | — | Merged after the widget's own classes. |
+
+## Events
+
+| event | payload | when |
+|---|---|---|
+| `onselectionchange` / `onSelectionChange` | `EntityRef[]` | The selection changed. |
+| `onselect` / `onSelect` | `EntityRow` | A row was activated, when `selectable` is off. |
+
+## Slots
+
+| slot | receives | meaning |
+|---|---|---|
+| `leading` | `EntityRow` | Fixed-size slot at the start of the row: a thumbnail, an avatar, a status glyph. |
+
+## Keyboard
+
+| key | does |
+|---|---|
+| Tab | Moves through group headers, checkboxes and rows. |
+| Enter, Space on a header | Collapses or expands the group. |
+| Enter, Space on a row | Selects it, or emits the select event. |
+
+## API behaviour
+
+Grouping a paged read is only honest over an order the server produced, so the widget sets the group
+path as the source's first sort key and walks the contiguous runs. A group's count is therefore the
+rows loaded so far and grows as later pages arrive.
+
+Sorts fail silently where filters fail loudly: a field that cannot be sorted returns 200 with the
+rows in default order, so a group path is verified against the schema first (026_result_order).

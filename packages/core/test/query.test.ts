@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createQueryCache } from '../src/query.js';
 import { MockClient } from '../src/mock.js';
 import { SgApiError } from '../src/client.js';
-import type { EntityTypeInfo, SearchOptions, SearchResult, SgClient, TextSearchRow } from '../src/client.js';
+import type { EntityRow, EntityTypeInfo, HierarchyNode, SummarizeOptions, SummarizeResult, SearchOptions, SearchResult, SgClient, TextSearchRow } from '../src/client.js';
 import type { WireGroup } from '../src/filter.js';
 import type { FieldSchema } from '../src/schema.js';
 import type { StatusRecord } from '../src/status.js';
@@ -34,6 +34,18 @@ function counting(inner: SgClient): { client: SgClient; calls: string[] } {
     statuses(): Promise<StatusRecord[]> {
       calls.push('statuses');
       return inner.statuses();
+    },
+    update(entityType: string, id: number, patch: Record<string, unknown>): Promise<EntityRow> {
+      calls.push(`update ${entityType} ${id}`);
+      return inner.update(entityType, id, patch);
+    },
+    hierarchyExpand(path: string): Promise<HierarchyNode> {
+      calls.push(`hierarchyExpand ${path}`);
+      return inner.hierarchyExpand(path);
+    },
+    summarize(entityType: string, summarizeOptions?: SummarizeOptions): Promise<SummarizeResult> {
+      calls.push(`summarize ${entityType}`);
+      return inner.summarize(entityType, summarizeOptions);
     },
   };
   return { client, calls };
@@ -198,5 +210,30 @@ describe('as an SgClient', () => {
     expect(await cache.textSearch('sh010', { Shot: null })).toEqual(await mock.textSearch('sh010', { Shot: null }));
     const options: SearchOptions = { fields: ['code'], page: { size: 3 } };
     expect(await cache.search('Shot', options)).toEqual(await mock.search('Shot', options));
+  });
+});
+
+describe('writes', () => {
+  it('is never cached, and drops the cached pages of the type it touched', async () => {
+    const { client, calls } = counting(new MockClient());
+    const cache = createQueryCache(client);
+    await cache.search('Shot', { fields: ['code'], page: { size: 2 } });
+    await cache.search('Version', { fields: ['code'], page: { size: 2 } });
+    await cache.search('Shot', { fields: ['code'], page: { size: 2 } });
+    expect(calls).toEqual(['search Shot', 'search Version']);
+
+    await cache.update('Shot', 862, { description: 'x' });
+    await cache.search('Shot', { fields: ['code'], page: { size: 2 } });
+    // Version's page survives; Shot's is read again.
+    await cache.search('Version', { fields: ['code'], page: { size: 2 } });
+    expect(calls).toEqual(['search Shot', 'search Version', 'update Shot 862', 'search Shot']);
+  });
+
+  it('re-reads the changed value through the cache', async () => {
+    const cache = createQueryCache(new MockClient());
+    await cache.search('Shot', { fields: ['description'], page: { size: 1 } });
+    await cache.update('Shot', 862, { description: 'written through the cache' });
+    const after = await cache.search('Shot', { fields: ['description'], page: { size: 1 } });
+    expect(after.data[0]?.attributes['description']).toBe('written through the cache');
   });
 });

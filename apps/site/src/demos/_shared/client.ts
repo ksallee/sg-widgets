@@ -11,7 +11,7 @@
  *
  * This lives in the site, not in the packages: choosing fixtures is a docs concern.
  */
-import { createQueryCache, MockClient, type SgClient } from '@sg-widgets/core';
+import { createQueryCache, createSgContext, MockClient, type MockClientOptions, type SgClient, type SgContext } from '@sg-widgets/core';
 
 let singleton: SgClient | undefined;
 
@@ -19,4 +19,13 @@ let singleton: SgClient | undefined;
 export function getDemoClient(): SgClient {
   singleton ??= createQueryCache(new MockClient({ seed: 1, latencyMs: 150 }));
   return singleton;
+}
+
+/**
+ * A context of its own, for a demo whose fixtures differ from the shared site's.
+ * `counts` scales a type: the table demo needs more Versions than the 60 the
+ * default site has, so its virtualisation has something to virtualise.
+ */
+export function createDemoContext(options: MockClientOptions = {}): SgContext {
+  return createSgContext({ client: new MockClient({ seed: 1, latencyMs: 150, ...options }) });
 }

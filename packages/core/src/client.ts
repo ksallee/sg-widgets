@@ -43,6 +43,75 @@ export interface TextSearchRow {
   status?: string | null;
 }
 
+/**
+ * What a navigation node stands for. `entity` carries a `{type, id}`, `entity_type`
+ * a bare schema name; other kinds are passed through as the site sends them.
+ */
+export interface HierarchyRef {
+  kind: string;
+  value: EntityRef | string | null;
+}
+
+/** One level of the navigation tree the web interface draws (post_hierarchy_expand). */
+export interface HierarchyNode {
+  label: string;
+  ref: HierarchyRef;
+  /** The path to pass back to `hierarchyExpand` to open this node. */
+  path: string;
+  parentPath: string | null;
+  /** False when expanding this node would return nothing. */
+  hasChildren: boolean;
+  /** One level only: a child's own children come from its own call. */
+  children: HierarchyNode[];
+}
+
+/** The row a node stands for, or null when it stands for a type or nothing. */
+export function hierarchyEntity(ref: HierarchyRef | null | undefined): EntityRef | null {
+  if (!ref || ref.kind !== 'entity' || ref.value === null || typeof ref.value !== 'object') return null;
+  return ref.value;
+}
+
+/**
+ * The aggregates `_summarize` offers. The endpoint prints the whole set in the 400 it
+ * answers a bogus one (020_summarize).
+ */
+export type SummaryType =
+  | 'record_count' | 'count' | 'sum' | 'maximum' | 'minimum' | 'average' | 'earliest' | 'latest'
+  | 'percentage' | 'status_percentage' | 'status_percentage_as_float' | 'status_list' | 'checked' | 'unchecked';
+
+export interface SummaryField {
+  field: string;
+  type: SummaryType;
+}
+
+export interface SummaryGrouping {
+  field: string;
+  /** Default `exact`, one group per distinct value. */
+  type?: string;
+  direction?: 'asc' | 'desc';
+}
+
+export interface SummarizeOptions {
+  filters?: WireGroup | null;
+  /** Default `[{field: 'id', type: 'count'}]`. One type per field per call: the last entry wins (020_summarize). */
+  summaryFields?: SummaryField[];
+  grouping?: SummaryGrouping[];
+}
+
+export interface SummaryGroup {
+  /** The server's render of the value, for display. Not unique. */
+  groupName: string;
+  /** What the grouping was computed on. Key on this (020_summarize). */
+  groupValue: unknown;
+  summaries: Record<string, number>;
+}
+
+export interface SummarizeResult {
+  /** Keyed by field name. A field that cannot be summarized answers 200 with the key absent. */
+  summaries: Record<string, number>;
+  groups: SummaryGroup[];
+}
+
 export interface EntityTypeInfo {
   name: string;
   displayName: string;
@@ -63,6 +132,64 @@ export interface SgClient {
   textSearch(text: string, entityTypes: Record<string, WireGroup | null>, page?: { size?: number; number?: number }): Promise<TextSearchRow[]>;
   /** Status entities with colour and icon. */
   statuses(): Promise<StatusRecord[]>;
+  /**
+   * Change the named fields of one row and answer the whole record.
+   *
+   * A key left out of `patch` is unchanged, not cleared, and an empty patch is a
+   * no-op (put_entity_type_id). The answer never resolves a dotted path, so a
+   * caller that shows one re-reads the row (024_read_after_write).
+   */
+  update(entityType: string, id: number, patch: Record<string, unknown>): Promise<EntityRow>;
+  /**
+   * One level of the site's navigation tree. `path` is `/Project/<id>` at the root
+   * and a child's own `path` below it (post_hierarchy_expand).
+   */
+  hierarchyExpand(path: string): Promise<HierarchyNode>;
+  /**
+   * Aggregate rows without paging them. One `grouping` returns a field's distinct
+   * values and their counts (020_summarize).
+   */
+  summarize(entityType: string, options?: SummarizeOptions): Promise<SummarizeResult>;
+}
+
+/** The node shape `/hierarchy/_expand` answers, before normalising. */
+export interface RawHierarchyNode {
+  label?: string;
+  ref?: { kind?: string; value?: unknown };
+  path?: string;
+  parent_path?: string | null;
+  has_children?: boolean;
+  children?: RawHierarchyNode[];
+}
+
+/**
+ * Normalise one node and the level below it.
+ *
+ * The sample response gives a child a `label`, a `ref` and `has_children` but not
+ * always a `path`, so a child without one is addressed by appending its ref to the
+ * parent's path (post_hierarchy_expand).
+ */
+export function normalizeHierarchyNode(raw: RawHierarchyNode, path: string): HierarchyNode {
+  const ref: HierarchyRef = { kind: String(raw.ref?.kind ?? 'empty'), value: (raw.ref?.value as EntityRef | string | null) ?? null };
+  const own = raw.path ?? path;
+  return {
+    label: String(raw.label ?? ''),
+    ref,
+    path: own,
+    parentPath: raw.parent_path ?? null,
+    hasChildren: raw.has_children ?? false,
+    children: (raw.children ?? []).map((child) => normalizeHierarchyNode(child, childPath(own, child))),
+  };
+}
+
+function childPath(parentPath: string, child: RawHierarchyNode): string {
+  if (typeof child.path === 'string') return child.path;
+  const value = child.ref?.value;
+  if (child.ref?.kind === 'entity_type' && typeof value === 'string') return `${parentPath}/${value}`;
+  if (child.ref?.kind === 'entity' && value !== null && typeof value === 'object') {
+    return `${parentPath}/id/${(value as EntityRef).id}`;
+  }
+  return parentPath;
 }
 
 export interface RestClientOptions {
@@ -99,14 +226,20 @@ export class RestClient implements SgClient {
     this.fetchFn = options.fetch ?? globalThis.fetch;
   }
 
-  private async request<T>(method: string, path: string, body?: unknown, params?: Record<string, string | number | undefined>): Promise<T> {
+  private async request<T>(
+    method: string,
+    path: string,
+    body?: unknown,
+    params?: Record<string, string | number | undefined>,
+    contentType: string = API3_HASH,
+  ): Promise<T> {
     const url = new URL(this.base + path);
     for (const [k, v] of Object.entries(params ?? {})) if (v !== undefined) url.searchParams.set(k, String(v));
     const headers: Record<string, string> = {
       Accept: 'application/json',
       Authorization: `Bearer ${await this.options.token()}`,
     };
-    if (body !== undefined) headers['Content-Type'] = API3_HASH;
+    if (body !== undefined) headers['Content-Type'] = contentType;
     const init: RequestInit = { method, headers };
     if (body !== undefined) init.body = JSON.stringify(body);
     const res = await this.fetchFn(url, init);
@@ -164,6 +297,35 @@ export class RestClient implements SgClient {
     }));
   }
 
+  async update(entityType: string, id: number, patch: Record<string, unknown>): Promise<EntityRow> {
+    // A write takes plain JSON; the vendor types are a `_search` requirement (probe 004). There is
+    // no PATCH, and this PUT is already partial: it does not replace the record with the body
+    // (put_entity_type_id). `?fields` is accepted and ignored, so nothing is asked for here.
+    const res = await this.request<{ data: EntityRow }>('PUT', `/entity/${pluralPath(entityType)}/${id}`, patch, undefined, 'application/json');
+    return res.data;
+  }
+
+  async summarize(entityType: string, options: SummarizeOptions = {}): Promise<SummarizeResult> {
+    const body: Record<string, unknown> = {
+      filters: options.filters ?? { logical_operator: 'and', conditions: [] },
+      summary_fields: options.summaryFields ?? [{ field: 'id', type: 'count' }],
+    };
+    if (options.grouping) {
+      body['grouping'] = options.grouping.map((g) => ({ field: g.field, type: g.type ?? 'exact', direction: g.direction ?? 'asc' }));
+    }
+    // The same vendor content type `_search` requires; `application/json` is 415 (020_summarize).
+    const res = await this.request<SummarizeEnvelope>('POST', `/entity/${pluralPath(entityType)}/_summarize`, body);
+    return normalizeSummarize(res);
+  }
+
+  async hierarchyExpand(path: string): Promise<HierarchyNode> {
+    // `/hierarchy/*` is the one POST family that refuses the vendor content types and
+    // demands plain JSON. `seed_entity_field` is documented and ignored, so it is not
+    // sent (post_hierarchy_expand).
+    const res = await this.request<{ data: RawHierarchyNode }>('POST', '/hierarchy/_expand', { path }, undefined, 'application/json');
+    return normalizeHierarchyNode(res.data, path);
+  }
+
   async statuses(): Promise<StatusRecord[]> {
     const res = await this.request<{ data: EntityRow[] }>('GET', '/entity/statuses', undefined, {
       fields: 'code,name,bg_color,icon',
@@ -195,6 +357,26 @@ export class RestClient implements SgClient {
       };
     });
   }
+}
+
+interface RawSummary {
+  summaries?: Record<string, number>;
+  groups?: Array<{ group_name?: unknown; group_value?: unknown; summaries?: Record<string, number> }>;
+}
+
+type SummarizeEnvelope = RawSummary & { data?: RawSummary };
+
+/** A grouped call wraps the answer in `data`; an ungrouped one does not (020_summarize). */
+function normalizeSummarize(res: SummarizeEnvelope): SummarizeResult {
+  const raw = res.data ?? res;
+  return {
+    summaries: raw.summaries ?? {},
+    groups: (raw.groups ?? []).map((g) => ({
+      groupName: String(g.group_name ?? ''),
+      groupValue: g.group_value ?? null,
+      summaries: g.summaries ?? {},
+    })),
+  };
 }
 
 function toStatusIcon(a: Record<string, unknown>): StatusRecord['icon'] {

@@ -15,6 +15,9 @@ function counting(inner: SgClient): { client: SgClient; calls: () => number } {
       fieldWithProject: (...a) => inner.fieldWithProject(...a),
       search: (...a) => inner.search(...a),
       textSearch: (...a) => inner.textSearch(...a),
+      update: (...a) => inner.update(...a),
+      hierarchyExpand: (...a) => inner.hierarchyExpand(...a),
+      summarize: (...a) => inner.summarize(...a),
       statuses: () => {
         calls += 1;
         return inner.statuses();

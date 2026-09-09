@@ -10,7 +10,18 @@
  * Fixtures are generated from a seed, so two runs produce identical ids, codes,
  * statuses and dates.
  */
-import type { EntityRow, EntityTypeInfo, SearchOptions, SearchResult, SgClient, TextSearchRow } from './client.js';
+import type {
+  EntityRow,
+  EntityTypeInfo,
+  HierarchyNode,
+  SearchOptions,
+  SearchResult,
+  SgClient,
+  SummarizeOptions,
+  SummarizeResult,
+  SummaryGroup,
+  TextSearchRow,
+} from './client.js';
 import { SgApiError } from './client.js';
 import type { EntityRef, WireCondition, WireGroup } from './filter.js';
 import type { Operator } from './field-types.js';
@@ -40,6 +51,8 @@ export interface MockClientOptions {
   latencyMs?: number;
   /** Arm a failure for the very first call, for demoing an error state without extra wiring. */
   failNext?: MockFailure | null;
+  /** How many rows of the scaled types to generate. Default 60 Versions. */
+  counts?: { versions?: number };
 }
 
 /* -------------------------------------------------------------------------- */
@@ -428,7 +441,7 @@ function pick<T>(rng: () => number, items: readonly T[]): T {
   return item ?? (items[0] as T);
 }
 
-function buildFixtures(seed: number): Fixtures {
+function buildFixtures(seed: number, counts: { versions?: number } = {}): Fixtures {
   const rng = mulberry32(seed);
   const rows = new Map<string, Row[]>();
   const index = new Map<string, Row>();
@@ -709,13 +722,14 @@ function buildFixtures(seed: number): Fixtures {
 
   /* versions --------------------------------------------------------------- */
   let versionId = 17055;
-  for (let i = 0; i < 60; i += 1) {
+  const versionCount = counts.versions ?? 60;
+  for (let i = 0; i < versionCount; i += 1) {
     // 005_link_usage: on the sample project every Version links through `entity`, almost all to a Shot.
     const target = i % 7 === 6 ? (assets[i % assets.length] as Row) : (shots[i % shots.length] as Row);
     const targetTasks = (target.values['tasks'] as EntityRef[]) ?? [];
     const task = targetTasks[0];
     const stepName = task ? String(index.get(`Task:${task.id}`)?.values['content'] ?? 'comp') : 'comp';
-    const revision = 1 + (i % 3);
+    const revision = 1 + Math.floor(i / shots.length) * 3 + (i % 3);
     const code = `${String(target.values['code'])}_${stepName.toLowerCase().replace(/\s+/g, '')}_v${String(revision).padStart(3, '0')}`;
     const first = 1001;
     const last = first + 40 + Math.floor(rng() * 120);
@@ -763,7 +777,7 @@ export class MockClient implements SgClient {
   private pendingFailure: MockFailure | null;
 
   constructor(options: MockClientOptions = {}) {
-    this.fixtures = buildFixtures(options.seed ?? 1);
+    this.fixtures = buildFixtures(options.seed ?? 1, options.counts ?? {});
     this.latencyMs = options.latencyMs ?? 0;
     this.pendingFailure = options.failNext ?? null;
   }
@@ -899,6 +913,185 @@ export class MockClient implements SgClient {
     // Rows come back shortest name first, across types, not by id and not grouped by type.
     hits.sort((a, b) => a.sortName.length - b.sortName.length || (a.sortName < b.sortName ? -1 : a.sortName > b.sortName ? 1 : a.id - b.id));
     return hits.slice((number - 1) * size, (number - 1) * size + size).map(({ sortName: _sortName, ...row }) => row);
+  }
+
+  async update(entityType: string, id: number, patch: Record<string, unknown>): Promise<EntityRow> {
+    await this.gate();
+    const spec = this.schemaOf(entityType);
+    const row = this.fixtures.index.get(`${entityType}:${id}`);
+    // The 404 names the type and the id (put_entity_type_id).
+    if (!row) throw new SgApiError(404, null, `Entity of type [${entityType}] with id=${id} does not exist.`);
+    for (const [name, value] of Object.entries(patch)) {
+      const field = spec[name];
+      // `API create() Reply.project doesn't exist.` is the create spelling of this 400
+      // (entity_types/Reply); a write to a read-only field is `is read only.` (entity_types/Sequence).
+      if (!field) throw new SgApiError(400, null, `API update() ${entityType}.${name} doesn't exist.`);
+      if (field.editable === false) throw new SgApiError(400, null, `API update() ${entityType}.${name} is read only.`);
+      // Writing "" to a text field stores null: the two are one value (field_types/text).
+      row.values[name] = field.dataType === 'text' && value === '' ? null : value;
+    }
+    if (Object.keys(patch).length > 0) row.values['updated_at'] = isoDateTime(0);
+    // A PUT answers the whole record, changed fields and untouched ones alike (024_read_after_write).
+    return this.project(row, spec);
+  }
+
+  /**
+   * Counts without paging rows.
+   *
+   * `count` and the numeric aggregates are modelled; the rest of the vocabulary the
+   * endpoint prints is not. A grouping returns one group per distinct value with the
+   * empties under a `''` group, `group_value` is what the grouping was computed on and
+   * `group_name` the server's render of it, and one type per field per call wins
+   * (020_summarize).
+   */
+  async summarize(entityType: string, options: SummarizeOptions = {}): Promise<SummarizeResult> {
+    await this.gate();
+    this.schemaOf(entityType);
+    const all = this.fixtures.rows.get(entityType) ?? [];
+    const matched = all.filter((row) => this.matchGroup(row, entityType, options.filters ?? null));
+    const fields = options.summaryFields ?? [{ field: 'id' as string, type: 'count' as const }];
+
+    const summarize = (rows: Row[]): Record<string, number> => {
+      const out: Record<string, number> = {};
+      for (const f of fields) {
+        const values = rows.map((r) => this.walk(r, f.field, false)[0] ?? null).filter((v) => v !== null);
+        const numbers = values.map(Number).filter((n) => !Number.isNaN(n));
+        switch (f.type) {
+          case 'count':
+          case 'record_count':
+            out[f.field] = f.field === 'id' || f.type === 'record_count' ? rows.length : values.length;
+            break;
+          case 'sum':
+            out[f.field] = numbers.reduce((a, b) => a + b, 0);
+            break;
+          case 'maximum':
+            out[f.field] = numbers.length > 0 ? Math.max(...numbers) : 0;
+            break;
+          case 'minimum':
+            out[f.field] = numbers.length > 0 ? Math.min(...numbers) : 0;
+            break;
+          case 'average':
+            out[f.field] = numbers.length > 0 ? numbers.reduce((a, b) => a + b, 0) / numbers.length : 0;
+            break;
+          default:
+            // An unmodelled type is left out, the way an unsummarizable field answers 200
+            // with the key absent (020_summarize).
+            break;
+        }
+      }
+      return out;
+    };
+
+    const grouping = options.grouping?.[0];
+    if (!grouping) return { summaries: summarize(matched), groups: [] };
+
+    const buckets = new Map<string, { value: unknown; rows: Row[] }>();
+    for (const row of matched) {
+      const value = this.walk(row, grouping.field, false)[0] ?? null;
+      const key = value === null || value === undefined ? '' : JSON.stringify(value);
+      const bucket = buckets.get(key);
+      if (bucket) bucket.rows.push(row);
+      else buckets.set(key, { value, rows: [row] });
+    }
+    const groups: SummaryGroup[] = [...buckets.entries()].map(([, bucket]) => ({
+      groupName: bucket.value === null ? '' : groupLabel(bucket.value),
+      groupValue: bucket.value,
+      summaries: summarize(bucket.rows),
+    }));
+    groups.sort((a, b) => (a.groupName < b.groupName ? -1 : a.groupName > b.groupName ? 1 : 0));
+    if (grouping.direction === 'desc') groups.reverse();
+    return { summaries: summarize(matched), groups };
+  }
+
+  /**
+   * One level of the navigation tree.
+   *
+   * The shape is post_hierarchy_expand's: a node with `label`, `ref`, `path` and one
+   * level of `children`. Which levels a project has is the site's own navigation
+   * configuration and not a fixed hierarchy - the probed site's Shot path runs through
+   * the field name `sg_sequence` (post_hierarchy_search) - so this fixture offers the
+   * two branches that configuration draws for a stock project: Shots under their
+   * Sequence, and Assets flat.
+   */
+  async hierarchyExpand(path: string): Promise<HierarchyNode> {
+    await this.gate();
+    const parts = path.split('/').filter(Boolean);
+    if (parts[0] !== 'Project' || parts.length < 2) {
+      // Code 107 appears on this endpoint and nowhere else: a lookup that found the
+      // wrong number of rows, not a malformed request (post_hierarchy_expand).
+      throw new SgApiError(400, null, `Unexpected result looking for project: ${parts[1] ?? path}: 0 found.`);
+    }
+    const projectId = Number(parts[1]);
+    const project = this.fixtures.index.get(`Project:${projectId}`);
+    if (!project) throw new SgApiError(400, null, `Unexpected result looking for project: ${String(parts[1])}: 0 found.`);
+    const rest = parts.slice(2);
+    const above = parts.slice(0, -1).join('/');
+    const parentPath = above === 'Project' ? '/' : `/${above}`;
+
+    const node = (
+      label: string,
+      ref: HierarchyNode['ref'],
+      own: string,
+      children: HierarchyNode[],
+      hasChildren?: boolean,
+    ): HierarchyNode => ({
+      label,
+      ref,
+      path: own,
+      parentPath: own === path ? parentPath : null,
+      hasChildren: hasChildren ?? children.length > 0,
+      children,
+    });
+    const leaf = (row: Row, own: string): HierarchyNode =>
+      node(displayNameOf(row.values, `#${row.id}`), { kind: 'entity', value: { type: row.type, id: row.id } }, own, [], false);
+    const rowsOf = (type: string): Row[] =>
+      (this.fixtures.rows.get(type) ?? []).filter((r) => (r.values['project'] as EntityRef | null)?.id === projectId);
+
+    if (rest.length === 0) {
+      return node(String(project.values['name']), { kind: 'entity', value: { type: 'Project', id: projectId } }, path, [
+        node('Assets', { kind: 'entity_type', value: 'Asset' }, `${path}/Asset`, [], rowsOf('Asset').length > 0),
+        node('Shots', { kind: 'entity_type', value: 'Shot' }, `${path}/Shot`, [], rowsOf('Shot').length > 0),
+      ]);
+    }
+    if (rest.length === 1 && rest[0] === 'Asset') {
+      return node(
+        'Assets',
+        { kind: 'entity_type', value: 'Asset' },
+        path,
+        rowsOf('Asset').map((r) => leaf(r, `${path}/id/${r.id}`)),
+      );
+    }
+    if (rest.length === 1 && rest[0] === 'Shot') {
+      return node(
+        'Shots',
+        { kind: 'entity_type', value: 'Shot' },
+        path,
+        rowsOf('Sequence').map((seq) =>
+          node(
+            String(seq.values['code']),
+            { kind: 'entity', value: { type: 'Sequence', id: seq.id } },
+            `${path}/sg_sequence/Sequence/${seq.id}`,
+            [],
+            (seq.values['shots'] as EntityRef[]).length > 0,
+          ),
+        ),
+      );
+    }
+    if (rest.length === 4 && rest[0] === 'Shot' && rest[1] === 'sg_sequence' && rest[2] === 'Sequence') {
+      const seq = this.fixtures.index.get(`Sequence:${Number(rest[3])}`);
+      if (!seq) throw new SgApiError(400, null, `Unexpected result looking for project: ${String(rest[3])}: 0 found.`);
+      const shots = (seq.values['shots'] as EntityRef[])
+        .map((r) => this.fixtures.index.get(`Shot:${r.id}`))
+        .filter((r): r is Row => r !== undefined);
+      return node(
+        String(seq.values['code']),
+        { kind: 'entity', value: { type: 'Sequence', id: seq.id } },
+        path,
+        shots.map((r) => leaf(r, `${path}/id/${r.id}`)),
+      );
+    }
+    // A leaf, or a path this fixture does not model: a node with nothing under it.
+    return node(path.split('/').pop() ?? '', { kind: 'empty', value: null }, path, [], false);
   }
 
   async statuses(): Promise<StatusRecord[]> {
@@ -1245,6 +1438,15 @@ function evaluate(dataType: string, operator: Operator, actual: unknown, expecte
 function asList(value: unknown): unknown[] {
   // `in` and `not_in` take a list, but a bare scalar also works on a date (field_types/date).
   return Array.isArray(value) ? value : [value];
+}
+
+/** On an entity grouping the label is the target's display name, not the whole hash (020_summarize). */
+function groupLabel(value: unknown): string {
+  if (value !== null && typeof value === 'object' && 'type' in (value as EntityRef)) {
+    const ref = value as EntityRef;
+    return ref.name ?? `${ref.type} #${ref.id}`;
+  }
+  return String(value);
 }
 
 function toStatusIcon(values: Record<string, unknown>): StatusIcon | null {

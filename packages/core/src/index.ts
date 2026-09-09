@@ -17,3 +17,4 @@ export * from './context.js';
 export * from './edit.js';
 export * from './status-icons.js';
 export * from './pickers.js';
+export * from './collection.js';

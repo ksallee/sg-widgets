@@ -4,7 +4,7 @@ import { SgApiError } from '../src/client.js';
 import type { EntityRow, SearchResult } from '../src/client.js';
 import type { WireGroup } from '../src/filter.js';
 import type { EntityRef, Operator } from '../src/index.js';
-import { parseBgColor, statusFieldFor, usableStatuses } from '../src/index.js';
+import { hierarchyEntity, parseBgColor, statusFieldFor, usableStatuses } from '../src/index.js';
 
 const client = (): MockClient => new MockClient();
 
@@ -469,5 +469,108 @@ describe('demo hooks', () => {
     const started = Date.now();
     await c.entityTypes();
     expect(Date.now() - started).toBeGreaterThanOrEqual(10);
+  });
+});
+
+describe('update', () => {
+  it('changes only the named fields and answers the whole record', async () => {
+    const c = client();
+    const before = (await c.search('Shot', { fields: ['code', 'description'], page: { size: 1 } })).data[0];
+    if (!before) throw new Error('no shot');
+    const row = await c.update('Shot', before.id, { description: 'written by a test' });
+    expect(row.attributes['description']).toBe('written by a test');
+    // A key left out of the body is unchanged, not cleared (put_entity_type_id).
+    expect(row.attributes['code']).toBe(before.attributes['code']);
+    // The answer is the whole record, not the change (024_read_after_write).
+    expect(Object.keys(row.attributes).length).toBeGreaterThan(2);
+  });
+
+  it('is a no-op on an empty patch', async () => {
+    const c = client();
+    const row = await c.update('Shot', 862, {});
+    expect(row.id).toBe(862);
+  });
+
+  it('stores null for an empty string on a text field', async () => {
+    const c = client();
+    const row = await c.update('Shot', 862, { description: '' });
+    expect(row.attributes['description']).toBeNull();
+  });
+
+  it('refuses a read-only field and an unknown one', async () => {
+    const c = client();
+    await expect(c.update('Shot', 862, { created_at: '2026-01-01T00:00:00Z' })).rejects.toMatchObject({
+      status: 400,
+      message: 'API update() Shot.created_at is read only.',
+    });
+    await expect(c.update('Shot', 862, { sg_not_a_field: 1 })).rejects.toBeInstanceOf(SgApiError);
+  });
+
+  it('404s on an id that is not there', async () => {
+    const c = client();
+    await expect(c.update('Shot', 999999999, { description: 'x' })).rejects.toMatchObject({
+      status: 404,
+      message: 'Entity of type [Shot] with id=999999999 does not exist.',
+    });
+  });
+});
+
+describe('the navigation tree', () => {
+  it('answers one level, and names the next paths', async () => {
+    const c = client();
+    const root = await c.hierarchyExpand('/Project/70');
+    expect(root.ref).toEqual({ kind: 'entity', value: { type: 'Project', id: 70 } });
+    expect(root.children.map((n) => n.label)).toEqual(['Assets', 'Shots']);
+    // A child names the path that opens it, and `hasChildren` says whether that is worth doing.
+    expect(root.children.map((n) => n.path)).toEqual(['/Project/70/Asset', '/Project/70/Shot']);
+    expect(root.children.every((n) => n.children.length === 0)).toBe(true);
+    expect(root.children.every((n) => n.hasChildren)).toBe(true);
+  });
+
+  it('walks Project > Sequence > Shot', async () => {
+    const c = client();
+    const shots = await c.hierarchyExpand('/Project/70/Shot');
+    const sequence = shots.children[0];
+    if (!sequence) throw new Error('no sequence');
+    // The path runs through the field name the site navigates by (post_hierarchy_search).
+    expect(sequence.path).toMatch(/\/Project\/70\/Shot\/sg_sequence\/Sequence\/\d+$/);
+    const level = await c.hierarchyExpand(sequence.path);
+    expect(level.children.length).toBeGreaterThan(0);
+    const shot = level.children[0];
+    if (!shot) throw new Error('no shot');
+    expect(shot.hasChildren).toBe(false);
+    expect(hierarchyEntity(shot.ref)?.type).toBe('Shot');
+  });
+
+  it('400s on a project that is not there', async () => {
+    const c = client();
+    await expect(c.hierarchyExpand('/Project/999999999')).rejects.toMatchObject({ status: 400 });
+  });
+});
+
+describe('summarize', () => {
+  it('counts without paging rows', async () => {
+    const c = client();
+    const all = await c.search('Version', { fields: ['id'], page: { size: 500 } });
+    const summary = await c.summarize('Version');
+    expect(summary.summaries['id']).toBe(all.data.length);
+    expect(summary.groups).toEqual([]);
+  });
+
+  it('counts the rows a filter matches', async () => {
+    const c = client();
+    const filters: WireGroup = { logical_operator: 'and', conditions: [['sg_status_list', 'is', 'ip']] };
+    const rows = await c.search('Version', { filters, fields: ['id'], page: { size: 500 } });
+    const summary = await c.summarize('Version', { filters });
+    expect(summary.summaries['id']).toBe(rows.data.length);
+  });
+
+  it('returns one group per distinct value, keyed on group_value', async () => {
+    const c = client();
+    const summary = await c.summarize('Version', { grouping: [{ field: 'sg_status_list' }] });
+    expect(summary.groups.length).toBeGreaterThan(1);
+    const total = summary.groups.reduce((n, g) => n + (g.summaries['id'] ?? 0), 0);
+    expect(total).toBe(summary.summaries['id']);
+    for (const group of summary.groups) expect(typeof group.groupValue).toBe('string');
   });
 });

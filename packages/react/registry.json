@@ -611,6 +611,117 @@
           "type": "registry:component"
         }
       ]
+    },
+    {
+      "name": "entity-table",
+      "type": "registry:component",
+      "title": "Entity Table",
+      "description": "A page of Flow Production Tracking rows as a table: schema-driven columns, server-side sorting, selection, grouping and inline edit.",
+      "categories": [
+        "flow-production-tracking",
+        "collection"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react",
+        "@tanstack/react-table",
+        "@tanstack/react-virtual"
+      ],
+      "registryDependencies": [
+        "https://sg-widgets.dev/r/react/field-value.json",
+        "@shadcn/table",
+        "@shadcn/checkbox",
+        "@shadcn/skeleton",
+        "@shadcn/input"
+      ],
+      "docs": "Takes an entity source and resolved columns from @sg-widgets/core. Sorting and grouping go through the server; an edit writes one field and re-reads the row.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/entity-table.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "entity-grid",
+      "type": "registry:component",
+      "title": "Entity Grid",
+      "description": "Flow Production Tracking rows as thumbnail cards, with a status badge, two secondary fields, selection and infinite scroll.",
+      "categories": [
+        "flow-production-tracking",
+        "collection"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "https://sg-widgets.dev/r/react/field-value.json",
+        "https://sg-widgets.dev/r/react/status-badge.json",
+        "https://sg-widgets.dev/r/react/thumbnail.json",
+        "@shadcn/checkbox",
+        "@shadcn/skeleton"
+      ],
+      "docs": "Takes an entity source. A Version card carries a play overlay; scrolling to the end asks the source for the next page.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/entity-grid.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "grouped-list",
+      "type": "registry:component",
+      "title": "Grouped List",
+      "description": "Dense Flow Production Tracking rows grouped under collapsible headers with counts.",
+      "categories": [
+        "flow-production-tracking",
+        "collection"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "https://sg-widgets.dev/r/react/field-value.json",
+        "@shadcn/checkbox",
+        "@shadcn/skeleton"
+      ],
+      "docs": "Groups the contiguous runs of the order the server produced, so the source is sorted on the same path.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/grouped-list.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "entity-tree",
+      "type": "registry:component",
+      "title": "Entity Tree",
+      "description": "A lazy tree over a project's navigation hierarchy, with keyboard navigation, checkboxes and a filter.",
+      "categories": [
+        "flow-production-tracking",
+        "collection"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "https://sg-widgets.dev/r/react/entity-chip.json",
+        "@shadcn/checkbox",
+        "@shadcn/skeleton",
+        "@shadcn/input"
+      ],
+      "docs": "Expands one level per call through POST /hierarchy/_expand. seedPath opens the tree to a row on mount.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/entity-tree.tsx",
+          "type": "registry:component"
+        }
+      ]
     }
   ]
 }

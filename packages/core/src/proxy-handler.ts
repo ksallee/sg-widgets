@@ -28,12 +28,12 @@
  * };
  * ```
  */
-import type { SearchOptions, SgClient } from './client.js';
+import type { SearchOptions, SgClient, SummarizeOptions } from './client.js';
 import { SgApiError } from './client.js';
 import type { WireGroup } from './filter.js';
 
 /** The methods the protocol carries, one POST each. */
-export const PROXY_METHODS = ['entityTypes', 'fields', 'fieldWithProject', 'search', 'textSearch', 'statuses'] as const;
+export const PROXY_METHODS = ['entityTypes', 'fields', 'fieldWithProject', 'search', 'textSearch', 'statuses', 'update', 'hierarchyExpand', 'summarize'] as const;
 
 export type ProxyMethod = (typeof PROXY_METHODS)[number];
 
@@ -66,6 +66,9 @@ interface Params {
   text?: unknown;
   entityTypes?: unknown;
   page?: unknown;
+  id?: unknown;
+  patch?: unknown;
+  path?: unknown;
 }
 
 class BadRequest extends Error {}
@@ -82,6 +85,11 @@ function num(value: unknown, name: string): number {
 
 function optionalNum(value: unknown, name: string): number | undefined {
   return value === undefined || value === null ? undefined : num(value, name);
+}
+
+function obj(value: unknown, name: string): Record<string, unknown> {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) throw new BadRequest(`'${name}' must be a JSON object`);
+  return value as Record<string, unknown>;
 }
 
 function fail(status: number, message: string, body: unknown = null): ProxyResult {
@@ -123,5 +131,11 @@ function call(client: SgClient, method: ProxyMethod, p: Params): Promise<unknown
       );
     case 'statuses':
       return client.statuses();
+    case 'update':
+      return client.update(str(p.entityType, 'entityType'), num(p.id, 'id'), obj(p.patch, 'patch'));
+    case 'hierarchyExpand':
+      return client.hierarchyExpand(str(p.path, 'path'));
+    case 'summarize':
+      return client.summarize(str(p.entityType, 'entityType'), (p.options ?? {}) as SummarizeOptions);
   }
 }

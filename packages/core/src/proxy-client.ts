@@ -15,7 +15,11 @@
  * ```
  */
 import type {
+  EntityRow,
   EntityTypeInfo,
+  HierarchyNode,
+  SummarizeOptions,
+  SummarizeResult,
   SearchOptions,
   SearchResult,
   SgClient,
@@ -99,5 +103,17 @@ export class ProxyClient implements SgClient {
 
   statuses(): Promise<StatusRecord[]> {
     return this.post('statuses', {});
+  }
+
+  update(entityType: string, id: number, patch: Record<string, unknown>): Promise<EntityRow> {
+    return this.post('update', { entityType, id, patch });
+  }
+
+  hierarchyExpand(path: string): Promise<HierarchyNode> {
+    return this.post('hierarchyExpand', { path });
+  }
+
+  summarize(entityType: string, options: SummarizeOptions = {}): Promise<SummarizeResult> {
+    return this.post('summarize', { entityType, options });
   }
 }

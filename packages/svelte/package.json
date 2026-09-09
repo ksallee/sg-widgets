@@ -33,6 +33,8 @@
   "dependencies": {
     "@internationalized/date": "^3.12.4",
     "@lucide/svelte": "^1.43.0",
-    "@sg-widgets/core": "workspace:*"
+    "@sg-widgets/core": "workspace:*",
+    "@tanstack/svelte-table": "^9.2.4",
+    "@tanstack/virtual-core": "^3.17.9"
   }
 }

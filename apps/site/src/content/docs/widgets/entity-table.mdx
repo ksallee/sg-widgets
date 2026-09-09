@@ -1,0 +1,113 @@
+---
+title: Entity Table
+description: A page of Flow Production Tracking rows as a sortable, selectable, editable table.
+---
+
+import Demo from '../../../components/Demo.astro';
+
+Renders rows from an entity source as a table whose columns come from the schema, with server-side
+sorting, row selection, column sizing and reordering, grouping and inline edit.
+
+## Install
+
+```sh
+pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/entity-table.json
+pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/entity-table.json
+```
+
+<Demo name="entity-table" title="Entity Table: 320 Versions, eight columns, sorting, selection, grouping and inline edit" />
+
+Build the source and the columns once, then hand both to the table.
+
+```ts
+const context = createSgContext({ client });
+const source = createEntitySource({
+  client: context.client,
+  entityType: 'Version',
+  fields: ['code', 'entity', 'sg_status_list', 'image', 'description', 'user', 'created_at', 'updated_at'],
+  pageSize: 150,
+});
+const columns = await resolveColumns(context.schema, 'Version', ['code', 'entity', 'sg_status_list']);
+```
+
+## Props
+
+| prop | type | default | meaning |
+|---|---|---|---|
+| `source` | `EntitySource` | — | The rows, the filter and the sort behind them. |
+| `columns` | `CollectionColumn[]` | — | Columns in display order, from `resolveColumns`. |
+| `statuses` | `Record<string, StatusRecord> \| null` | `null` | Status rows by code, for status cells. |
+| `density` | `'compact' \| 'default'` | `'default'` | Compact halves the vertical cell padding. |
+| `selectable` | `boolean` | `false` | Draws a checkbox column. |
+| `groupBy` | `string \| null` | `null` | Collapses rows under headers of a shared value at this path. |
+| `editable` | `boolean` | `false` | Lets an editable cell open an editor. |
+| `editorFor` | `(dataType) => Component \| null` | — | The editor a cell opens, by data type. A type it does not answer for gets a plain input. |
+| `maxHeight` | `string` | `'28rem'` | Height of the scrolling body. |
+| `virtualizeAfter` | `number` | `100` | Rows above which the body is virtualised. |
+| `emptyLabel` | `string` | `'No rows'` | Shown when the read returned nothing. |
+| `class` / `className` | `string` | — | Merged after the widget's own classes. |
+
+## Events
+
+| event | payload | when |
+|---|---|---|
+| `onselectionchange` / `onSelectionChange` | `EntityRef[]` | The selection changed. |
+
+## Slots
+
+`editorFor` is the one extension point: return the component a data type opens in a cell, return
+nothing and the cell opens a plain text input. An editor is handed `value`, `dataType`, `field`,
+`commit` and `cancel`, and owns its own keys.
+
+The demo above wires it to the field editors. One wrapper is all it takes:
+
+```tsx
+function CellEditor({ value, dataType, field, commit, cancel }: CellEditorProps) {
+  const [draft, setDraft] = useState(value);
+  return (
+    <div
+      onKeyDown={(event) => {
+        if (event.key === 'Enter') commit(draft);
+        else if (event.key === 'Escape') cancel();
+      }}
+    >
+      <FieldEditor value={draft} onValueChange={setDraft} dataType={dataType} field={field} mode="edit" size="sm" />
+    </div>
+  );
+}
+
+<EntityTable editorFor={(dataType) => (isEditableType(dataType) ? CellEditor : null)} ... />
+```
+
+## Keyboard
+
+| key | does |
+|---|---|
+| Tab | Moves through header buttons, checkboxes and editable cells. |
+| Enter, Space on a header | Sorts by that column, ascending, then descending, then unsorted. |
+| Enter on an editable cell | Opens the editor. |
+| Enter in an editor | Commits the value. |
+| Escape in an editor | Cancels and restores the value. |
+| Space on a checkbox | Toggles the row, or every loaded row from the header. |
+
+A double-click on an editable cell opens the editor too.
+
+## API behaviour
+
+Sorting is the server's. A header click sets the source's sort and reads the first page again,
+because a sort applied to one loaded page orders the page and not the set. Sorts also fail silently
+where filters fail loudly: a field that cannot be sorted, and a name that does not exist, both return
+200 with the rows in default order, so a sortable path is verified against the schema first
+(026_result_order).
+
+Grouping follows that same server order and collapses the contiguous runs, so a group's count is the
+rows loaded so far and grows as later pages arrive.
+
+Paging stops on a short page. `links.next` is emitted on every page forever, including empty ones, so
+it is never the stop signal (006_pagination). The total beside the row count comes from one
+`_summarize` call, which counts without paging rows (020_summarize).
+
+An edit writes one field with `PUT /entity/<type>/<id>`, which changes only the keys it is given and
+leaves the rest alone (put_entity_type_id). The write answers the whole record but resolves no dotted
+path, so the row is read again afterwards (024_read_after_write). A dotted path is never editable: a
+write names one field of one row.

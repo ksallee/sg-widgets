@@ -1,0 +1,18 @@
+---
+title: Core
+description: The headless package every widget is built on.
+---
+
+`@sg-widgets/core` has no framework and no dependencies. It holds what the widgets share:
+
+- **Client**: `RestClient` for the REST API, `ProxyClient` for an app's own endpoints with a matching server handler, `MockClient` for tests, and `createSgContext`, the one object an app builds and hands to every widget.
+- **Schema**: the schema service, field data types and the operators each accepts, status vocabularies with per-project hidden values.
+- **Filters**: the filter tree, its serialisation to the API, and the operator presets the editor offers.
+- **Rendering**: formatters for every data type, initials, display names, the stock status icons.
+- **Editing**: parsers for what a person types and the shape the API stores.
+
+```sh
+pnpm add @sg-widgets/core
+```
+
+Pages for each module follow.

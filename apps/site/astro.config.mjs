@@ -32,8 +32,32 @@ export default defineConfig({
       components: { Header: './src/components/overrides/Header.astro' },
       sidebar: [
         { label: 'Start', items: [{ label: 'Introduction', slug: 'start/introduction' }] },
-        { label: 'Widgets', items: [{ autogenerate: { directory: 'widgets' } }] },
-        { label: 'Core', items: [{ autogenerate: { directory: 'core' } }] },
+        {
+          label: 'Core',
+          items: [{ autogenerate: { directory: 'core' } }],
+        },
+        {
+          label: 'Widgets',
+          items: [
+            { label: 'Overview', slug: 'widgets' },
+            {
+              label: 'Foundations',
+              items: ['thumbnail', 'user-avatar', 'text-editor', 'number-editor', 'checkbox-editor', 'date-editor', 'date-time-editor', 'list-select', 'url-editor', 'color-editor'].map((n) => ({ slug: `widgets/${n}` })),
+            },
+            {
+              label: 'Display',
+              items: ['status-badge', 'entity-chip', 'entity-card', 'field-value'].map((n) => ({ slug: `widgets/${n}` })),
+            },
+            {
+              label: 'Pickers',
+              items: ['entity-picker', 'entity-multi-picker', 'user-picker', 'project-picker', 'status-picker', 'status-multi-picker', 'entity-type-picker', 'field-picker', 'column-picker', 'field-editor', 'global-search', 'hierarchical-search', 'context-selector'].map((n) => ({ slug: `widgets/${n}` })),
+            },
+            {
+              label: 'Queries and collections',
+              items: ['filter-editor', 'filter-dialog', 'filter-bar', 'sort-picker', 'entity-table', 'entity-grid', 'grouped-list', 'entity-tree'].map((n) => ({ slug: `widgets/${n}` })),
+            },
+          ],
+        },
       ],
     }),
     react(),

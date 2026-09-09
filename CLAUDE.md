@@ -13,6 +13,7 @@ Monorepo: `packages/core` (headless TS, npm), `packages/react` (shadcn registry,
 - Never copy code from `~/Downloads/some_files`. Ideas only.
 - Svelte popovers, selects and dialogs that hold a Command list use `strategy="fixed"` on their content, are controlled with a function binding on `open`, and focus their input in `onOpenAutoFocus` with `preventScroll`; never the `autofocus` attribute. Any `.focus()` call passes `{ preventScroll: true }`.
 - Pickers: server-side search, client filtering off. No data loading in effects with "last seen" guards; use a query/cache layer. Checkboxes for "which of these", chips only for ordered lists.
+- A new widget page is added to its category in `apps/site/astro.config.mjs` (Foundations, Display, Pickers, Queries and collections); the sidebar is explicit so URLs stay flat.
 - Registry conventions are in `docs/registry-conventions.md` (React items in `packages/react/src/registry/sg/components/<name>.tsx`, Svelte in `packages/svelte/src/lib/registry/components/<name>.svelte`, same kebab name in both). `pnpm registry:build` emits to `apps/site/public/r/{react,svelte}`.
 
 ## Verifying UI

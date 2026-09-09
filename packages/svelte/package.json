@@ -35,6 +35,6 @@
     "@lucide/svelte": "^1.43.0",
     "@sg-widgets/core": "workspace:*",
     "@tanstack/svelte-table": "^9.2.4",
-    "@tanstack/svelte-virtual": "^3.13.37"
+    "@tanstack/virtual-core": "^3.17.9"
   }
 }

@@ -505,6 +505,97 @@
           "type": "registry:component"
         }
       ]
+    },
+    {
+      "name": "entity-table",
+      "type": "registry:component",
+      "title": "Entity Table",
+      "description": "A page of Flow Production Tracking rows as a table: schema-driven columns, server-side sorting, selection, grouping and inline edit.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte",
+        "@tanstack/svelte-table",
+        "@tanstack/virtual-core"
+      ],
+      "registryDependencies": [
+        "local:field-value",
+        "table",
+        "checkbox",
+        "skeleton",
+        "input"
+      ],
+      "files": [
+        {
+          "path": "src/lib/registry/components/entity-table.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "entity-grid",
+      "type": "registry:component",
+      "title": "Entity Grid",
+      "description": "Flow Production Tracking rows as thumbnail cards, with a status badge, two secondary fields, selection and infinite scroll.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte"
+      ],
+      "registryDependencies": [
+        "local:field-value",
+        "local:status-badge",
+        "local:thumbnail",
+        "checkbox",
+        "skeleton"
+      ],
+      "files": [
+        {
+          "path": "src/lib/registry/components/entity-grid.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "grouped-list",
+      "type": "registry:component",
+      "title": "Grouped List",
+      "description": "Dense Flow Production Tracking rows grouped under collapsible headers with counts.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte"
+      ],
+      "registryDependencies": [
+        "local:field-value",
+        "checkbox",
+        "skeleton"
+      ],
+      "files": [
+        {
+          "path": "src/lib/registry/components/grouped-list.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "entity-tree",
+      "type": "registry:component",
+      "title": "Entity Tree",
+      "description": "A lazy tree over a project's navigation hierarchy, with keyboard navigation, checkboxes and a filter.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte"
+      ],
+      "registryDependencies": [
+        "local:entity-chip",
+        "checkbox",
+        "skeleton",
+        "input"
+      ],
+      "files": [
+        {
+          "path": "src/lib/registry/components/entity-tree.svelte",
+          "type": "registry:component"
+        }
+      ]
     }
   ]
 }

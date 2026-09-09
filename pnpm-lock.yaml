@@ -171,9 +171,9 @@ importers:
       '@tanstack/svelte-table':
         specifier: ^9.2.4
         version: 9.2.4(svelte@5.57.0)
-      '@tanstack/svelte-virtual':
-        specifier: ^3.13.37
-        version: 3.13.37(svelte@5.57.0)
+      '@tanstack/virtual-core':
+        specifier: ^3.17.9
+        version: 3.17.9
     devDependencies:
       '@fontsource-variable/geist':
         specifier: ^5.3.0
@@ -1611,11 +1611,6 @@ packages:
     engines: {node: '>=20'}
     peerDependencies:
       svelte: ^5.0.0
-
-  '@tanstack/svelte-virtual@3.13.37':
-    resolution: {integrity: sha512-06d8Cvycaecjz0kyFs/odHa1Ol2bf7fVoi1LC2nh9ci0pQ4imL0vKYYSl/RoivSoJJswXg0AqiDIXBjitVJ1TA==}
-    peerDependencies:
-      svelte: ^3.48.0 || ^4.0.0 || ^5.0.0
 
   '@tanstack/table-core@9.2.4':
     resolution: {integrity: sha512-GwdDyGGr6UXAtubF14yAwcXvdaogqfsQgIk89Suebjxob/Rjq2xvfmXsjDF1rQmKmhHsJm9TOY7myxv3i6geJw==}
@@ -5716,11 +5711,6 @@ snapshots:
     dependencies:
       '@tanstack/svelte-store': 0.12.1(svelte@5.57.0)
       '@tanstack/table-core': 9.2.4
-      svelte: 5.57.0
-
-  '@tanstack/svelte-virtual@3.13.37(svelte@5.57.0)':
-    dependencies:
-      '@tanstack/virtual-core': 3.17.9
       svelte: 5.57.0
 
   '@tanstack/table-core@9.2.4':

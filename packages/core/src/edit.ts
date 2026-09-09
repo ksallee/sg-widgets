@@ -9,7 +9,8 @@
  * A parse either yields a value or an error. It never throws and never guesses:
  * an editor that gets an error emits nothing and shows the message.
  */
-import { COLOR_SENTINEL } from './render.js';
+import { COLOR_SENTINEL, formatTimecode } from './render.js';
+import type { TimecodeOptions } from './render.js';
 
 
 /** A parsed value, or the reason the input was refused. */
@@ -160,15 +161,6 @@ function bounded(minutes: number): ParseResult<number> {
   return { value: minutes };
 }
 
-export interface TimecodeOptions {
-  /**
-   * Frames per second, needed only for the `HH:MM:SS:FF` form. No schema or
-   * preference names it; solve it once per site from a `_summarize` grouping
-   * (field_types/timecode).
-   */
-  frameRate?: number;
-}
-
 const TIMECODE = /^([+-]?)(\d+):([0-5]\d):([0-5]\d)(?:[:;](\d+))?$/;
 
 /**
@@ -204,16 +196,7 @@ export function parseTimecodeInput(raw: string, options: TimecodeOptions = {}): 
 
 /** Milliseconds as `HH:MM:SS:FF`, for putting a stored timecode back in an input. */
 export function formatTimecodeFrames(ms: number, frameRate: number): string {
-  const sign = ms < 0 ? '-' : '';
-  const abs = Math.abs(ms);
-  const total = Math.floor(abs / 1000);
-  const frames = Math.min(Math.ceil(frameRate) - 1, Math.round(((abs % 1000) / 1000) * frameRate));
-  return (
-    sign +
-    [Math.floor(total / 3600), Math.floor((total % 3600) / 60), total % 60, frames]
-      .map((n) => String(n).padStart(2, '0'))
-      .join(':')
-  );
+  return formatTimecode(ms, { frameRate });
 }
 
 // --- stepping ----------------------------------------------------------------

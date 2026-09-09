@@ -9,6 +9,7 @@
  * Statuses are site-wide and keyed by code, not per entity type (probe 010).
  */
 import type { SgClient } from './client.js';
+import type { QueryCache } from './query.js';
 import type { StatusRecord } from './status.js';
 
 export interface StatusService {
@@ -21,7 +22,11 @@ export interface StatusService {
   invalidate(): void;
 }
 
-export function createStatusService(client: SgClient): StatusService {
+function isQueryCache(client: SgClient | QueryCache): client is QueryCache {
+  return typeof (client as QueryCache).invalidate === 'function';
+}
+
+export function createStatusService(client: SgClient | QueryCache): StatusService {
   let table: Promise<ReadonlyMap<string, StatusRecord>> | null = null;
 
   function load(): Promise<ReadonlyMap<string, StatusRecord>> {
@@ -54,6 +59,8 @@ export function createStatusService(client: SgClient): StatusService {
     },
     invalidate(): void {
       table = null;
+      // A shared cache holds the same read, so drop it there too or the next load replays it.
+      if (isQueryCache(client)) client.invalidate('statuses');
     },
   };
 }

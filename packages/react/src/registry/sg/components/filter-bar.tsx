@@ -219,25 +219,69 @@ export function FilterBar({
       {facets.map((name) => {
         const field = fields[name];
         const found = conditionOf(name);
-        if (!found) {
+        const parts = found ? conditionParts(found, field) : null;
+        const selected = selectedOf(name);
+        const remove = (label: string) => (
+          <button
+            type="button"
+            disabled={disabled}
+            data-slot="filter-pill-remove"
+            aria-label={`Remove ${label} filter`}
+            className="border-border text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring/50 inline-flex h-8 shrink-0 items-center border-l px-1.5 outline-none focus-visible:ring-3 disabled:pointer-events-none disabled:opacity-50"
+            onClick={() => onChange?.(withoutPaths(value, [name]))}
+          >
+            <XIcon className="size-4" />
+          </button>
+        );
+        if (!found || !parts || conditionArity(found, field?.dataType ?? '') === 'many') {
+          // One popover and one trigger across both looks, so the first tick does not close the list.
           return (
             <Popover key={name}>
-              <PopoverTrigger
-                disabled={disabled || !field}
+              <div
                 data-slot="filter-pill"
                 data-field={name}
-                className="border-border text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:border-ring focus-visible:ring-ring/50 inline-flex h-8 max-w-72 min-w-0 items-center gap-1.5 rounded-lg border border-dashed px-2.5 text-sm outline-none focus-visible:ring-3 disabled:pointer-events-none disabled:opacity-50"
+                data-active={found ? 'true' : undefined}
+                role={found ? 'group' : undefined}
+                aria-label={found ? describeCondition(found, field) : undefined}
+                className={cn(
+                  'border-border inline-flex h-8 max-w-full min-w-0 items-center overflow-hidden rounded-lg border text-sm',
+                  found ? 'bg-background' : 'text-muted-foreground max-w-72 border-dashed',
+                )}
               >
-                <PlusIcon className="size-4 shrink-0" />
-                <span className="min-w-0 truncate">{field?.displayName ?? name}</span>
-              </PopoverTrigger>
+                <PopoverTrigger
+                  disabled={disabled || !field}
+                  data-slot="filter-pill-trigger"
+                  className="hover:bg-muted hover:text-foreground focus-visible:ring-ring/50 inline-flex h-8 min-w-0 items-center gap-1.5 px-2.5 outline-none focus-visible:ring-3 focus-visible:ring-inset disabled:pointer-events-none disabled:opacity-50"
+                >
+                  {!found || !parts ? (
+                    <>
+                      <PlusIcon className="size-4 shrink-0" />
+                      <span className="min-w-0 truncate">{field?.displayName ?? name}</span>
+                    </>
+                  ) : (
+                    <>
+                      <span data-slot="filter-pill-field" className="shrink-0 font-medium">
+                        {parts.field}
+                      </span>
+                      {found.operator !== 'in' ? <span className="text-muted-foreground shrink-0">{parts.operator}</span> : null}
+                      <span data-slot="filter-pill-values" className="min-w-0 truncate" title={parts.value}>
+                        {parts.value}
+                      </span>
+                      {selected.length > 1 ? (
+                        <Badge variant="secondary" className="shrink-0">
+                          {selected.length}
+                        </Badge>
+                      ) : null}
+                    </>
+                  )}
+                </PopoverTrigger>
+                {found && parts ? remove(parts.field) : null}
+              </div>
               {facetList(name)}
             </Popover>
           );
         }
-        const parts = conditionParts(found, field);
-        const listed = conditionArity(found, field?.dataType ?? '') === 'many';
-        const selected = selectedOf(name);
+        // A condition the editor wrote on an operator no checklist can hold reads as text.
         return (
           <div
             key={name}
@@ -248,48 +292,14 @@ export function FilterBar({
             aria-label={describeCondition(found, field)}
             className="border-border bg-background inline-flex h-8 max-w-full min-w-0 items-center overflow-hidden rounded-lg border text-sm"
           >
-            {listed ? (
-              <Popover>
-                <PopoverTrigger
-                  disabled={disabled}
-                  data-slot="filter-pill-values"
-                  className="hover:bg-muted focus-visible:ring-ring/50 inline-flex h-8 min-w-0 items-center gap-1.5 px-2.5 outline-none focus-visible:ring-3 disabled:pointer-events-none disabled:opacity-50"
-                >
-                  <span data-slot="filter-pill-field" className="shrink-0 font-medium">
-                    {parts.field}
-                  </span>
-                  {found.operator !== 'in' ? <span className="text-muted-foreground shrink-0">{parts.operator}</span> : null}
-                  <span className="min-w-0 truncate" title={parts.value}>
-                    {parts.value}
-                  </span>
-                  {selected.length > 1 ? (
-                    <Badge variant="secondary" className="shrink-0">
-                      {selected.length}
-                    </Badge>
-                  ) : null}
-                </PopoverTrigger>
-                {facetList(name)}
-              </Popover>
-            ) : (
-              /* A condition the editor wrote on an operator no checklist can hold reads as text. */
-              <span data-slot="filter-pill-values" className="inline-flex h-8 min-w-0 items-center gap-1.5 px-2.5" title={parts.value}>
-                <span data-slot="filter-pill-field" className="shrink-0 font-medium">
-                  {parts.field}
-                </span>
-                <span className="text-muted-foreground shrink-0">{parts.operator}</span>
-                {parts.value ? <span className="min-w-0 truncate">{parts.value}</span> : null}
+            <span data-slot="filter-pill-values" className="inline-flex h-8 min-w-0 items-center gap-1.5 px-2.5" title={parts.value}>
+              <span data-slot="filter-pill-field" className="shrink-0 font-medium">
+                {parts.field}
               </span>
-            )}
-            <button
-              type="button"
-              disabled={disabled}
-              data-slot="filter-pill-remove"
-              aria-label={`Remove ${parts.field} filter`}
-              className="border-border text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring/50 inline-flex h-8 shrink-0 items-center border-l px-1.5 outline-none focus-visible:ring-3 disabled:pointer-events-none disabled:opacity-50"
-              onClick={() => onChange?.(withoutPaths(value, [name]))}
-            >
-              <XIcon className="size-4" />
-            </button>
+              <span className="text-muted-foreground shrink-0">{parts.operator}</span>
+              {parts.value ? <span className="min-w-0 truncate">{parts.value}</span> : null}
+            </span>
+            {remove(parts.field)}
           </div>
         );
       })}

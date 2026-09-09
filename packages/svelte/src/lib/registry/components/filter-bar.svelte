@@ -150,6 +150,19 @@
 	}
 </script>
 
+{#snippet remove(name: string, label: string)}
+	<button
+		type="button"
+		{disabled}
+		data-slot="filter-pill-remove"
+		aria-label="Remove {label} filter"
+		class="border-border text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring/50 inline-flex h-8 shrink-0 items-center border-l px-1.5 outline-none focus-visible:ring-3 disabled:pointer-events-none disabled:opacity-50"
+		onclick={() => commit(withoutPaths(value, [name]))}
+	>
+		<XIcon class="size-4" />
+	</button>
+{/snippet}
+
 {#snippet facetList(name: string)}
 	{@const selected = selectedOf(name)}
 	<Popover.Content strategy="fixed" class="w-64 p-0" align="start">
@@ -215,23 +228,49 @@
 	{#each facets as name (name)}
 		{@const field = fields[name]}
 		{@const found = conditionOf(name)}
-		{#if !found}
+		{@const parts = found ? conditionParts(found, field) : null}
+		{@const selected = selectedOf(name)}
+		{#if !found || conditionArity(found, field?.dataType ?? '') === 'many'}
+			<!-- One popover and one trigger across both looks, so the first tick does not close the list. -->
 			<Popover.Root>
-				<Popover.Trigger
-					disabled={disabled || !field}
+				<div
 					data-slot="filter-pill"
 					data-field={name}
-					class="border-border text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:border-ring focus-visible:ring-ring/50 inline-flex h-8 max-w-72 min-w-0 items-center gap-1.5 rounded-lg border border-dashed px-2.5 text-sm outline-none focus-visible:ring-3 disabled:pointer-events-none disabled:opacity-50"
+					data-active={found ? 'true' : undefined}
+					role={found ? 'group' : undefined}
+					aria-label={found ? describeCondition(found, field) : undefined}
+					class={cn(
+						'border-border inline-flex h-8 max-w-full min-w-0 items-center overflow-hidden rounded-lg border text-sm',
+						found ? 'bg-background' : 'text-muted-foreground max-w-72 border-dashed'
+					)}
 				>
-					<PlusIcon class="size-4 shrink-0" />
-					<span class="min-w-0 truncate">{field?.displayName ?? name}</span>
-				</Popover.Trigger>
+					<Popover.Trigger
+						disabled={disabled || !field}
+						data-slot="filter-pill-trigger"
+						class="hover:bg-muted hover:text-foreground focus-visible:ring-ring/50 inline-flex h-8 min-w-0 items-center gap-1.5 px-2.5 outline-none focus-visible:ring-3 focus-visible:ring-inset disabled:pointer-events-none disabled:opacity-50"
+					>
+						{#if !found || !parts}
+							<PlusIcon class="size-4 shrink-0" />
+							<span class="min-w-0 truncate">{field?.displayName ?? name}</span>
+						{:else}
+							<span data-slot="filter-pill-field" class="shrink-0 font-medium">{parts.field}</span>
+							{#if found.operator !== 'in'}
+								<span class="text-muted-foreground shrink-0">{parts.operator}</span>
+							{/if}
+							<span data-slot="filter-pill-values" class="min-w-0 truncate" title={parts.value}>{parts.value}</span>
+							{#if selected.length > 1}
+								<Badge variant="secondary" class="shrink-0">{selected.length}</Badge>
+							{/if}
+						{/if}
+					</Popover.Trigger>
+					{#if found && parts}
+						{@render remove(name, parts.field)}
+					{/if}
+				</div>
 				{@render facetList(name)}
 			</Popover.Root>
-		{:else}
-			{@const parts = conditionParts(found, field)}
-			{@const listed = conditionArity(found, field?.dataType ?? '') === 'many'}
-			{@const selected = selectedOf(name)}
+		{:else if parts}
+			<!-- A condition the editor wrote on an operator no checklist can hold reads as text. -->
 			<div
 				data-slot="filter-pill"
 				data-field={name}
@@ -240,42 +279,12 @@
 				aria-label={describeCondition(found, field)}
 				class="border-border bg-background inline-flex h-8 max-w-full min-w-0 items-center overflow-hidden rounded-lg border text-sm"
 			>
-				{#if listed}
-					<Popover.Root>
-						<Popover.Trigger
-							{disabled}
-							data-slot="filter-pill-values"
-							class="hover:bg-muted focus-visible:ring-ring/50 inline-flex h-8 min-w-0 items-center gap-1.5 px-2.5 outline-none focus-visible:ring-3 disabled:pointer-events-none disabled:opacity-50"
-						>
-							<span data-slot="filter-pill-field" class="shrink-0 font-medium">{parts.field}</span>
-							{#if found.operator !== 'in'}
-								<span class="text-muted-foreground shrink-0">{parts.operator}</span>
-							{/if}
-							<span class="min-w-0 truncate" title={parts.value}>{parts.value}</span>
-							{#if selected.length > 1}
-								<Badge variant="secondary" class="shrink-0">{selected.length}</Badge>
-							{/if}
-						</Popover.Trigger>
-						{@render facetList(name)}
-					</Popover.Root>
-				{:else}
-					<!-- A condition the editor wrote on an operator no checklist can hold reads as text. -->
-					<span data-slot="filter-pill-values" class="inline-flex h-8 min-w-0 items-center gap-1.5 px-2.5" title={parts.value}>
-						<span data-slot="filter-pill-field" class="shrink-0 font-medium">{parts.field}</span>
-						<span class="text-muted-foreground shrink-0">{parts.operator}</span>
-						{#if parts.value}<span class="min-w-0 truncate">{parts.value}</span>{/if}
-					</span>
-				{/if}
-				<button
-					type="button"
-					{disabled}
-					data-slot="filter-pill-remove"
-					aria-label="Remove {parts.field} filter"
-					class="border-border text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring/50 inline-flex h-8 shrink-0 items-center border-l px-1.5 outline-none focus-visible:ring-3 disabled:pointer-events-none disabled:opacity-50"
-					onclick={() => commit(withoutPaths(value, [name]))}
-				>
-					<XIcon class="size-4" />
-				</button>
+				<span data-slot="filter-pill-values" class="inline-flex h-8 min-w-0 items-center gap-1.5 px-2.5" title={parts.value}>
+					<span data-slot="filter-pill-field" class="shrink-0 font-medium">{parts.field}</span>
+					<span class="text-muted-foreground shrink-0">{parts.operator}</span>
+					{#if parts.value}<span class="min-w-0 truncate">{parts.value}</span>{/if}
+				</span>
+				{@render remove(name, parts.field)}
 			</div>
 		{/if}
 	{/each}

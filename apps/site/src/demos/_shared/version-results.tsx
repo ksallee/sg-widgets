@@ -73,7 +73,7 @@ export function VersionResults({ context, value }: { context: DemoContext; value
 
   return (
     <section className="flex min-w-0 flex-col gap-2">
-      <h4 className="text-muted-foreground text-xs font-medium tracking-wide uppercase">Result set</h4>
+      <h4 className="text-muted-foreground text-xs font-medium tracking-wide uppercase">Versions matching the filter</h4>
       <p
         className={count.kind === 'error' ? 'text-destructive text-sm' : 'text-muted-foreground text-sm tabular-nums'}
         data-testid="result-count"

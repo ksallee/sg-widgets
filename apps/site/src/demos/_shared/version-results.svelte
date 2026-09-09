@@ -63,7 +63,7 @@
 </script>
 
 <section class="flex min-w-0 flex-col gap-2">
-	<h4 class="text-muted-foreground text-xs font-medium tracking-wide uppercase">Result set</h4>
+	<h4 class="text-muted-foreground text-xs font-medium tracking-wide uppercase">Versions matching the filter</h4>
 	<p
 		class={count.kind === 'error' ? 'text-destructive text-sm' : 'text-muted-foreground text-sm tabular-nums'}
 		data-testid="result-count"

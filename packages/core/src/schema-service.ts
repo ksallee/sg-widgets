@@ -47,10 +47,13 @@ export interface SchemaService {
   field(entityType: string, name: string): Promise<FieldSchema | undefined>;
   /** Codes the project hides on a list or status field. */
   hiddenValues(entityType: string, field: string, projectId: number): Promise<string[]>;
-  /** Statuses a picker may offer. Without `projectId` the site vocabulary, which hides nothing. */
-  statusOptions(entityType: string, projectId?: number): Promise<StatusOption[]>;
+  /**
+   * Statuses a picker may offer. Without `projectId` the site vocabulary, which hides nothing.
+   * `field` names a list or status field other than the type's own status field.
+   */
+  statusOptions(entityType: string, projectId?: number, field?: string): Promise<StatusOption[]>;
   /** Statuses usable in every one of the projects. */
-  statusOptionsForProjects(entityType: string, projectIds: number[]): Promise<StatusOption[]>;
+  statusOptionsForProjects(entityType: string, projectIds: number[], field?: string): Promise<StatusOption[]>;
   /** The type's status field, or its conventional name when the type has none. */
   statusField(entityType: string): Promise<FieldSchema | string>;
   /** Walk `entity.Shot.code` into its segments. Throws naming the whole path when a segment does not resolve. */
@@ -84,9 +87,9 @@ export function createSchemaService(client: SgClient | QueryCache, options: Sche
   }
 
   /** The status field's site vocabulary with the project's hidden codes attached. */
-  async function scopedStatusField(entityType: string, projectId?: number): Promise<FieldSchema | undefined> {
-    const found = await statusField(entityType);
-    if (typeof found === 'string') return undefined;
+  async function scopedStatusField(entityType: string, projectId?: number, name?: string): Promise<FieldSchema | undefined> {
+    const found = name === undefined ? await statusField(entityType) : (await fields(entityType))[name];
+    if (found === undefined || typeof found === 'string') return undefined;
     if (projectId === undefined) return found;
     return { ...found, hiddenValues: await hiddenValues(entityType, found.name, projectId) };
   }
@@ -100,14 +103,14 @@ export function createSchemaService(client: SgClient | QueryCache, options: Sche
     hiddenValues,
     statusField,
 
-    async statusOptions(entityType: string, projectId?: number): Promise<StatusOption[]> {
-      const found = await scopedStatusField(entityType, projectId);
+    async statusOptions(entityType: string, projectId?: number, field?: string): Promise<StatusOption[]> {
+      const found = await scopedStatusField(entityType, projectId, field);
       return found ? usableStatuses(found) : [];
     },
 
-    async statusOptionsForProjects(entityType: string, projectIds: number[]): Promise<StatusOption[]> {
+    async statusOptionsForProjects(entityType: string, projectIds: number[], field?: string): Promise<StatusOption[]> {
       if (projectIds.length === 0) return [];
-      const scoped = await Promise.all(projectIds.map((id) => scopedStatusField(entityType, id)));
+      const scoped = await Promise.all(projectIds.map((id) => scopedStatusField(entityType, id, field)));
       const present = scoped.filter((f): f is FieldSchema => f !== undefined);
       return present.length === projectIds.length ? intersectStatuses(present) : [];
     },

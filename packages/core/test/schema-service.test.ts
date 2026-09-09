@@ -127,6 +127,15 @@ describe('status options', () => {
     expect((await schema.statusOptions('Project', 71)).map((s) => s.code)).toEqual(['Active', 'Bidding', 'Complete']);
   });
 
+  it('offers a named field instead of the type status field', async () => {
+    const schema = createSchemaService(new MockClient());
+    const types = await schema.statusOptions('Version', undefined, 'sg_version_type');
+    expect(types.map((s) => s.code)).toEqual(['Type A', 'Type B', 'Type C']);
+    expect(await schema.statusOptions('Version', 70, 'nosuchfield')).toEqual([]);
+    const intersected = await schema.statusOptionsForProjects('Version', [70, 71], 'sg_version_type');
+    expect(intersected.map((s) => s.code)).toEqual(['Type A', 'Type B', 'Type C']);
+  });
+
   it('falls back to the conventional name on a type with no status field', async () => {
     const schema = createSchemaService(new MockClient());
     expect(await schema.statusField('Icon')).toBe('sg_status_list');

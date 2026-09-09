@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { MockClient } from '../src/mock.js';
-import { createSgContext } from '../src/context.js';
+import { contextFromClient, createSgContext, preferencesOf } from '../src/context.js';
 import type { EntityRow, EntityTypeInfo, HierarchyNode, HierarchyPath, SummarizeOptions, SummarizeResult, SearchOptions, SearchResult, SgClient, TextSearchRow } from '../src/client.js';
 import type { EntityRef, TextSearchFilter } from '../src/filter.js';
 import type { FieldSchema } from '../src/schema.js';
@@ -90,11 +90,47 @@ describe('the context', () => {
     expect(calls).toEqual(['search Shot', 'search Shot', 'fields Shot']);
   });
 
+  it('carries the site preferences a formatter takes', () => {
+    // hours_per_day comes from GET /preferences; nothing on the site names a frame rate
+    // (field_types/duration, field_types/timecode).
+    const sg = createSgContext({ client: new MockClient(), hoursPerDay: 8, locale: 'en-GB', timeZone: 'Europe/Paris', frameRate: 23.976 });
+    expect(sg.preferences).toEqual({ hoursPerDay: 8, locale: 'en-GB', timeZone: 'Europe/Paris', frameRate: 23.976 });
+    expect(preferencesOf(sg)).toEqual(sg.preferences);
+  });
+
+  it('has no preferences when the app named none', () => {
+    const sg = createSgContext({ client: new MockClient() });
+    expect(sg.preferences).toEqual({});
+    expect(preferencesOf(sg)).toEqual({});
+    expect(preferencesOf(undefined)).toEqual({});
+  });
+
   it('answers the widgets a picker needs from one place', async () => {
     const sg = createSgContext({ client: new MockClient() });
     const options = await sg.schema.statusOptions('Shot', 70);
     const first = options[0];
     expect(first?.code).toBe('wtg');
     expect((await sg.statuses.record(first?.code ?? ''))?.bgColor).toBe('178,178,178');
+  });
+});
+
+describe('a context from a bare client', () => {
+  it('builds one context per client, so two widgets share the caches', async () => {
+    const { client, calls } = counting(new MockClient());
+    const first = contextFromClient(client, { hoursPerDay: 8 });
+    const second = contextFromClient(client);
+    expect(second).toBe(first);
+    expect(second.preferences).toEqual({ hoursPerDay: 8 });
+    await first.schema.fields('Shot');
+    await second.schema.fields('Shot');
+    await first.statuses.all();
+    await second.statuses.all();
+    expect(calls).toEqual(['fields Shot', 'statuses']);
+  });
+
+  it('gives another client its own context', () => {
+    const one = contextFromClient(new MockClient());
+    const other = contextFromClient(new MockClient());
+    expect(other).not.toBe(one);
   });
 });

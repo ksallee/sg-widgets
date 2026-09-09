@@ -82,6 +82,10 @@ export interface FieldTextOptions {
   /** The site's `hours_per_day`; a duration then renders in days (field_types/duration). */
   hoursPerDay?: number;
   locale?: string;
+  /** IANA zone a `date_time` is shown in. Defaults to the runtime's, which is what "local" means to a viewer. */
+  timeZone?: string;
+  /** Frames a second, for a timecode. Given, a timecode gains its frame digits (field_types/timecode). */
+  frameRate?: number;
   /** Decimals kept on a float or a currency. */
   decimals?: number;
   currencySymbol?: string;
@@ -108,7 +112,7 @@ export function fieldText(value: unknown, dataType: string, options: FieldTextOp
     case 'date':
       return formatDate(String(value), localeOnly(options));
     case 'datetime':
-      return formatDateTime(String(value), localeOnly(options));
+      return formatDateTime(String(value), dateOptions(options));
     case 'entity':
       return entityText(value as EntityLike);
     case 'multi_entity':
@@ -141,6 +145,14 @@ function localeOnly(options: FieldTextOptions): DateOptions {
   return options.locale === undefined ? {} : { locale: options.locale };
 }
 
+/** A `date` is zoneless and stays in UTC; only a `date_time` takes the zone (field_types/date, date_time). */
+function dateOptions(options: FieldTextOptions): DateOptions {
+  return {
+    ...localeOnly(options),
+    ...(options.timeZone === undefined ? {} : { timeZone: options.timeZone }),
+  };
+}
+
 function numberText(value: unknown, dataType: string, options: FieldTextOptions): string {
   switch (dataType) {
     case 'duration':
@@ -148,7 +160,7 @@ function numberText(value: unknown, dataType: string, options: FieldTextOptions)
     case 'percent':
       return formatPercent(value as number);
     case 'timecode':
-      return formatTimecode(Number(value));
+      return formatTimecode(Number(value), options.frameRate === undefined ? {} : { frameRate: options.frameRate });
     case 'currency':
       return formatCurrency(value as string, {
         ...(options.currencySymbol === undefined ? {} : { symbol: options.currencySymbol }),
@@ -210,20 +222,34 @@ export function formatPercent(value: number | string | null | undefined): string
   return `${trimDecimals(String(n))}%`;
 }
 
+export interface TimecodeOptions {
+  /**
+   * Frames a second, for the `HH:MM:SS:FF` form. No schema property and no
+   * preference names the rate, so it comes from the app; solving it out of a
+   * `_summarize` grouping gives 23.976 on the probed site
+   * (field_types/timecode).
+   */
+  frameRate?: number;
+}
+
 /**
  * A timecode is milliseconds in a signed 32-bit integer. Nothing wraps at 24
  * hours and negatives are stored, so hours are not clamped either
- * (field_types/timecode). Frames are omitted: no schema or preference names the
- * site's frame rate.
+ * (field_types/timecode). Without a frame rate the frame digits are left off;
+ * with one they are the sub-second remainder rounded to the nearest frame, which
+ * is how the server renders it.
  */
-export function formatTimecode(ms: number | null | undefined): string {
+export function formatTimecode(ms: number | null | undefined, options: TimecodeOptions = {}): string {
   if (ms === null || ms === undefined || !Number.isFinite(ms)) return '';
   const sign = ms < 0 ? '-' : '';
-  const total = Math.floor(Math.abs(ms) / 1000);
-  const hours = Math.floor(total / 3600);
-  const minutes = Math.floor((total % 3600) / 60);
-  const seconds = total % 60;
-  return `${sign}${pad2(hours)}:${pad2(minutes)}:${pad2(seconds)}`;
+  const abs = Math.abs(ms);
+  const total = Math.floor(abs / 1000);
+  const parts = [Math.floor(total / 3600), Math.floor((total % 3600) / 60), total % 60];
+  const rate = options.frameRate;
+  if (rate !== undefined && rate > 0) {
+    parts.push(Math.min(Math.ceil(rate) - 1, Math.round(((abs % 1000) / 1000) * rate)));
+  }
+  return sign + parts.map(pad2).join(':');
 }
 
 export interface FloatOptions {

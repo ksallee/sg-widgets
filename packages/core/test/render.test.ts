@@ -107,6 +107,14 @@ describe('formatTimecode', () => {
   it('does not wrap past 24 hours', () => {
     expect(formatTimecode(2147483647)).toBe('596:31:23');
   });
+
+  it('adds the frame digits when the app names a rate', () => {
+    // The server groups 500 as 00:00:00:12 and 3600000 as 01:00:00:00 (field_types/timecode).
+    expect(formatTimecode(500, { frameRate: 23.976 })).toBe('00:00:00:12');
+    expect(formatTimecode(3600000, { frameRate: 23.976 })).toBe('01:00:00:00');
+    expect(formatTimecode(86400000, { frameRate: 23.976 })).toBe('24:00:00:00');
+    expect(formatTimecode(500, { frameRate: 0 })).toBe('00:00:00');
+  });
 });
 
 describe('formatFloat', () => {
@@ -312,6 +320,27 @@ describe('fieldText', () => {
     expect(fieldText(3_661_000, 'timecode')).toBe('01:01:01');
     expect(fieldText('25.00', 'float')).toBe('25');
     expect(fieldText('42.5', 'currency', { currencySymbol: '€' })).toBe('€42.50');
+  });
+
+  it('gives a timecode its frames when the site names a rate', () => {
+    expect(fieldText(3_661_500, 'timecode', { frameRate: 23.976 })).toBe('01:01:01:12');
+    expect(fieldText(3_661_500, 'timecode')).toBe('01:01:01');
+  });
+
+  it('shows a date_time in the zone it is given', () => {
+    expect(fieldText('2026-09-02T15:58:21Z', 'date_time', { locale: 'en-US', timeZone: 'UTC' })).toBe(
+      'Sep 2, 2026, 3:58 PM',
+    );
+    expect(fieldText('2026-09-02T15:58:21Z', 'date_time', { locale: 'en-US', timeZone: 'Europe/Paris' })).toBe(
+      'Sep 2, 2026, 5:58 PM',
+    );
+  });
+
+  it('leaves the zone to the runtime when none is given, and keeps a date zoneless', () => {
+    const raw = '2026-09-02T15:58:21Z';
+    expect(fieldText(raw, 'date_time', { locale: 'en-US' })).toBe(formatDateTime(raw, { locale: 'en-US' }));
+    // A date has no time and no zone, so a zone must not move it (field_types/date).
+    expect(fieldText('2026-09-02', 'date', { locale: 'en-US', timeZone: 'Australia/Sydney' })).toBe('Sep 2, 2026');
   });
 
   it('renders a checkbox as a word, never as empty', () => {

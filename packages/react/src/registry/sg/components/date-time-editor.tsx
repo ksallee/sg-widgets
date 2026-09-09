@@ -38,6 +38,8 @@ export interface DateTimeEditorProps extends Omit<React.HTMLAttributes<HTMLDivEl
   field?: Pick<FieldSchema, 'displayName' | 'mandatory'> | null;
   /** IANA zone the typed wall-clock time is read in. Defaults to the runtime's. */
   timeZone?: string;
+  /** Name the zone under the control. */
+  hint?: boolean;
   /** Seconds in the time input. The store keeps them; most fields do not need them. */
   showSeconds?: boolean;
   size?: DateTimeEditorSize;
@@ -63,6 +65,7 @@ export function DateTimeEditor({
   onValueChange,
   field = null,
   timeZone,
+  hint = true,
   showSeconds = false,
   size = 'md',
   disabled = false,
@@ -197,9 +200,11 @@ export function DateTimeEditor({
           onKeyDown={onKeyDown}
         />
       </div>
+      {hint ? (
       <p data-slot="date-time-editor-zone" className="text-muted-foreground truncate text-xs">
         Local time in {zone}, stored as UTC.
       </p>
+      ) : null}
       {message
         ? (errorMessage?.(message) ?? (
             <p data-slot="field-editor-error" className="text-destructive text-xs">

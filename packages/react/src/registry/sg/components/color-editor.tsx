@@ -30,6 +30,8 @@ export interface ColorEditorProps extends Omit<React.HTMLAttributes<HTMLDivEleme
   error?: string | null;
   onErrorChange?: (error: string | null) => void;
   placeholder?: string;
+  /** Explain the pipeline-step token under the control. */
+  hint?: boolean;
   errorMessage?: (message: string) => React.ReactNode;
 }
 
@@ -52,6 +54,7 @@ export function ColorEditor({
   error = null,
   onErrorChange,
   placeholder = '255,128,0',
+  hint = true,
   errorMessage,
   className,
   ...rest
@@ -157,7 +160,7 @@ export function ColorEditor({
           onKeyDown={onKeyDown}
         />
       </div>
-      {sentinel ? (
+      {hint && sentinel ? (
         <p data-slot="color-editor-note" className="text-muted-foreground text-xs">
           Takes the colour of the linked pipeline step.
         </p>

@@ -94,6 +94,8 @@ export interface NumberEditorProps extends Omit<React.HTMLAttributes<HTMLDivElem
   frameRate?: number;
   /** Shown before the value on a currency field. */
   symbol?: string;
+  /** Show the stored form under the control, e.g. the minutes behind a duration. */
+  hint?: boolean;
   min?: number;
   max?: number;
   size?: NumberEditorSize;
@@ -236,7 +238,7 @@ export function NumberEditor({
           </span>
         ) : null}
       </div>
-      {hint ? (
+      {showHint && hint ? (
         <p data-slot="number-editor-hint" className="text-muted-foreground text-xs tabular-nums">
           {hint}
         </p>

@@ -34,6 +34,8 @@
 		error?: string | null;
 		onErrorChange?: (error: string | null) => void;
 		placeholder?: string;
+		/** Explain the pipeline-step token under the control. */
+		hint?: boolean;
 		errorMessage?: Snippet<[string]>;
 	};
 
@@ -48,6 +50,7 @@
 		error = null,
 		onErrorChange,
 		placeholder = '255,128,0',
+		hint = true,
 		errorMessage,
 		class: className,
 		ref = $bindable(null),
@@ -162,7 +165,7 @@
 			{onkeydown}
 		/>
 	</div>
-	{#if sentinel}
+	{#if hint && sentinel}
 		<p data-slot="color-editor-note" class="text-muted-foreground text-xs">
 			Takes the colour of the linked pipeline step.
 		</p>

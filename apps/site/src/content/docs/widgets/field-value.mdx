@@ -27,7 +27,10 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/field-value.js
 | `dataType` | `string` | required | The field's data type. An unknown one renders as text. |
 | `field` | `FieldSchema \| null` | `null` | Supplies a status label through its display values. |
 | `statuses` | `Record<string, StatusRecord> \| null` | `null` | Status rows by code, for the status name and icon. |
-| `siteUrl` | `string` | — | The site the stock sprite is served from, for a status icon the package does not bundle. |
+| `siteUrl` | `string` | — | The site the stock sprite is served from, and the site a linked row is addressed on. |
+| `entityVariant` | `'chip' \| 'link' \| 'text'` | `'chip'` | How an entity or multi-entity value draws. |
+| `preview` | `string[]` | — | Field paths shown in a hover card on a linked row. Needs a context. |
+| `context` | `SgContext` | — | Supplies the site url and reads the hover card's fields. |
 | `hoursPerDay` | `number` | — | The site's working day. Durations then render in days. |
 | `precision` | `number` | — | Decimals shown on a float, zeros kept. Without it, the value as the API sent it, trailing zeros dropped. On a currency, the decimals, default 2. |
 | `currencySymbol` | `string` | `'$'` | Shown before a currency amount. |
@@ -39,8 +42,8 @@ Each data type renders as follows.
 
 | data type | rendering |
 |---|---|
-| `entity` | an EntityChip |
-| `multi_entity`, `tag_list` | a wrapping row of chips |
+| `entity` | an EntityChip in the chosen variant |
+| `multi_entity`, `tag_list` | a wrapping row of chips in the chosen variant |
 | `status_list` | a StatusBadge |
 | `image` | a Thumbnail |
 | `checkbox` | a read-only switch |
@@ -55,6 +58,9 @@ Each data type renders as follows.
 | `list`, `text` | text, with newlines kept for text |
 | `pivot_column` | the empty marker |
 | anything else | text |
+
+The entity props are passed straight to EntityChip: a variant, the site each row is addressed on, and
+the field paths its hover card shows.
 
 An unset value renders a muted marker rather than a dash, because a dash is a character a field can
 hold. Zero, false and the string zero are values and render as themselves.

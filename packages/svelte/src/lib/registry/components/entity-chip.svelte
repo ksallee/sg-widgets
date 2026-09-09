@@ -1,11 +1,18 @@
 <script lang="ts" module>
 	export type EntityChipSize = 'sm' | 'md' | 'lg';
+	export type EntityChipVariant = 'chip' | 'link' | 'text';
 
 	/** Leaf atoms follow the thumbnail/avatar ladder of `docs/design-rules.md`. */
 	const BOX: Record<EntityChipSize, string> = {
 		sm: 'h-6 text-xs',
 		md: 'h-8 text-sm',
 		lg: 'h-10 text-sm'
+	};
+	/** A link or a bare label has no box, so only the type scale applies. */
+	const TEXT: Record<EntityChipSize, string> = {
+		sm: 'text-xs',
+		md: 'text-sm',
+		lg: 'text-sm'
 	};
 	const GLYPH: Record<EntityChipSize, string> = {
 		sm: 'size-4',
@@ -16,7 +23,8 @@
 
 <script lang="ts">
 	import type { HTMLAttributes, MouseEventHandler } from 'svelte/elements';
-	import type { EntityRef } from '@sg-widgets/core';
+	import type { EntityRef, SgContext } from '@sg-widgets/core';
+	import { entityDetailUrl } from '@sg-widgets/core';
 	import Box from '@lucide/svelte/icons/box';
 	import Clapperboard from '@lucide/svelte/icons/clapperboard';
 	import FileBox from '@lucide/svelte/icons/file-box';
@@ -28,14 +36,25 @@
 	import User from '@lucide/svelte/icons/user';
 	import Video from '@lucide/svelte/icons/video';
 	import X from '@lucide/svelte/icons/x';
+	import * as HoverCard from '$lib/components/ui/hover-card/index.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
+	import EntityCard from '$lib/registry/components/entity-card.svelte';
 
 	type Props = WithElementRef<HTMLAttributes<HTMLSpanElement>, HTMLSpanElement> & {
 		/** `{type, id, name}` exactly as an entity field returns it under `relationships` (field_types/entity). */
 		entity: EntityRef;
 		/** A thumbnail URL for the linked row. Presigned and short-lived, so pass a fresh one (field_types/image). */
 		thumbnail?: string | null;
-		href?: string;
+		/** `chip` is the boxed default, `link` an inline link, `text` the bare name. */
+		variant?: EntityChipVariant;
+		/** A url, or a resolver. Left out, the row's own page on the site, opened in a new tab. */
+		href?: string | ((entity: EntityRef) => string | null);
+		/** The web app the row lives on. Defaults to the context's. */
+		siteUrl?: string;
+		/** Field paths shown in a hover card. Needs a context to read them through. */
+		preview?: string[];
+		/** The widget context, for the site url and for the hover card's read. */
+		context?: SgContext;
 		onclick?: MouseEventHandler<HTMLButtonElement>;
 		size?: EntityChipSize;
 		removable?: boolean;
@@ -47,7 +66,11 @@
 	let {
 		entity,
 		thumbnail = null,
+		variant = 'chip',
 		href,
+		siteUrl,
+		preview,
+		context,
 		onclick,
 		size = 'md',
 		removable = false,
@@ -77,69 +100,121 @@
 	const named = $derived(Boolean(entity.name && entity.name.length > 0));
 	const label = $derived(named ? (entity.name as string) : `${entity.type} #${entity.id}`);
 	const Glyph = $derived(GLYPHS[entity.type] ?? Tag);
-	const interactive = $derived(Boolean(href || onclick));
+
+	const site = $derived(siteUrl ?? context?.siteUrl ?? '');
+	// The row's own page is on another origin, so it opens in a new tab; a url the
+	// caller resolved belongs to the caller's app and stays in this one.
+	const detail = $derived(href === undefined ? entityDetailUrl(site, entity) : null);
+	const url = $derived(
+		variant === 'text' ? null : typeof href === 'function' ? href(entity) : (href ?? detail)
+	);
+	const interactive = $derived(Boolean(url || onclick));
+	const showGlyph = $derived(variant !== 'text');
 	const innerClass = $derived(
 		cn(
 			'inline-flex min-w-0 items-center gap-1.5 rounded-[inherit] outline-none',
 			interactive &&
-				'focus-visible:ring-ring focus-visible:ring-offset-background transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2 motion-safe:active:scale-[0.98]'
+				'focus-visible:ring-ring focus-visible:ring-offset-background transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2 motion-safe:active:scale-[0.98]',
+			variant === 'link' && url && 'underline-offset-2 hover:underline'
+		)
+	);
+	const rootClass = $derived(
+		cn(
+			'inline-flex max-w-full min-w-0 items-center gap-1.5 align-middle whitespace-nowrap',
+			variant === 'chip'
+				? cn(
+						'bg-secondary text-secondary-foreground rounded-md border px-2',
+						BOX[size],
+						interactive &&
+							'hover:bg-accent hover:text-accent-foreground transition-colors duration-150'
+					)
+				: TEXT[size],
+			className
 		)
 	);
 </script>
 
 <!--
-	One linked row, as a chip.
+	One linked row, as a chip, a link or bare text.
 
 	`name` is the target's `cached_display_name` and is filled on every type measured,
 	so a chip needs no second call (probe 060). When it is missing the chip shows
 	`Type #id`, which is always addressable, in the mono/tabular treatment the design
-	rules give ids.
+	rules give ids. With no `href` the chip addresses the row's own page on the site,
+	which core builds from the context's site url.
 -->
 {#snippet body()}
-	{#if thumbnail}
-		<img
-			src={thumbnail}
-			alt=""
-			aria-hidden="true"
-			loading="lazy"
-			decoding="async"
-			class={cn('shrink-0 rounded-sm object-cover', GLYPH[size])}
-		/>
-	{:else}
-		<Glyph aria-hidden="true" class={cn('shrink-0 opacity-70', GLYPH[size])} />
+	{#if showGlyph}
+		{#if thumbnail}
+			<img
+				src={thumbnail}
+				alt=""
+				aria-hidden="true"
+				loading="lazy"
+				decoding="async"
+				class={cn('shrink-0 rounded-sm object-cover', GLYPH[size])}
+			/>
+		{:else}
+			<Glyph aria-hidden="true" class={cn('shrink-0 opacity-70', GLYPH[size])} />
+		{/if}
 	{/if}
 	<span class={cn('truncate', !named && 'font-mono tabular-nums')}>{label}</span>
 {/snippet}
 
-<span
-	bind:this={ref}
-	data-slot="entity-chip"
-	data-entity-type={entity.type}
-	data-entity-id={entity.id}
-	title={label}
-	class={cn(
-		'bg-secondary text-secondary-foreground inline-flex max-w-full min-w-0 items-center gap-1.5 rounded-md border px-2 align-middle whitespace-nowrap',
-		BOX[size],
-		interactive && 'hover:bg-accent hover:text-accent-foreground transition-colors duration-150',
-		className
-	)}
-	{...rest}
->
-	{#if href}
-		<a {href} class={innerClass}>{@render body()}</a>
-	{:else if onclick}
-		<button type="button" {onclick} class={innerClass}>{@render body()}</button>
-	{:else}
-		<span class={innerClass}>{@render body()}</span>
-	{/if}
-	{#if removable}
-		<button
-			type="button"
-			aria-label={removeLabel ?? `Remove ${label}`}
-			onclick={() => onremove?.(entity)}
-			class="hover:bg-destructive/15 hover:text-destructive focus-visible:ring-ring focus-visible:ring-offset-background shrink-0 rounded-sm p-0.5 opacity-70 outline-none transition-colors duration-150 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-2 motion-safe:active:scale-[0.98]"
-		>
-			<X aria-hidden="true" class="size-3" />
-		</button>
-	{/if}
-</span>
+{#snippet chip()}
+	<span
+		bind:this={ref}
+		data-slot="entity-chip"
+		data-variant={variant}
+		data-entity-type={entity.type}
+		data-entity-id={entity.id}
+		title={label}
+		class={rootClass}
+		{...rest}
+	>
+		{#if url}
+			<a
+				href={url}
+				target={href === undefined ? '_blank' : undefined}
+				rel={href === undefined ? 'noreferrer' : undefined}
+				class={innerClass}>{@render body()}</a
+			>
+		{:else if onclick}
+			<button type="button" {onclick} class={innerClass}>{@render body()}</button>
+		{:else}
+			<span class={innerClass}>{@render body()}</span>
+		{/if}
+		{#if removable}
+			<button
+				type="button"
+				aria-label={removeLabel ?? `Remove ${label}`}
+				onclick={() => onremove?.(entity)}
+				class="hover:bg-destructive/15 hover:text-destructive focus-visible:ring-ring focus-visible:ring-offset-background shrink-0 rounded-sm p-0.5 opacity-70 outline-none transition-colors duration-150 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-2 motion-safe:active:scale-[0.98]"
+			>
+				<X aria-hidden="true" class="size-3" />
+			</button>
+		{/if}
+	</span>
+{/snippet}
+
+{#if preview && preview.length > 0 && context}
+	<!-- The content mounts on open, so the card's read happens then and is cached on the context. -->
+	<HoverCard.Root openDelay={200} closeDelay={100}>
+		<HoverCard.Trigger>
+			{#snippet child({ props })}
+				<span
+					{...props}
+					data-slot="entity-chip-preview"
+					class="inline-flex max-w-full min-w-0 align-middle"
+				>
+					{@render chip()}
+				</span>
+			{/snippet}
+		</HoverCard.Trigger>
+		<HoverCard.Content class="w-72 p-3">
+			<EntityCard {context} {entity} fields={preview} size="sm" {siteUrl} />
+		</HoverCard.Content>
+	</HoverCard.Root>
+{:else}
+	{@render chip()}
+{/if}

@@ -13,11 +13,14 @@ import type { SchemaService } from './schema-service.js';
 import { createSchemaService } from './schema-service.js';
 import type { StatusService } from './status-service.js';
 import { createStatusService } from './status-service.js';
+import { normalizeSiteUrl } from './presentation.js';
 
 export interface SgContextOptions {
   client: SgClient;
   /** How long a row read stays fresh. Schema keeps its own hour-long cache. Default 30000. */
   ttlMs?: number;
+  /** The web app this data comes from, so widgets can link a row to its page. */
+  siteUrl?: string;
 }
 
 export interface SgContext {
@@ -25,6 +28,8 @@ export interface SgContext {
   client: QueryCache;
   schema: SchemaService;
   statuses: StatusService;
+  /** The web app this data comes from, without its trailing slash. Empty when the app named none. */
+  siteUrl: string;
   /** Drop everything cached. Call it after a write. */
   invalidate(): void;
 }
@@ -39,6 +44,7 @@ export function createSgContext(options: SgContextOptions): SgContext {
     client: cache,
     schema,
     statuses,
+    siteUrl: normalizeSiteUrl(options.siteUrl),
     invalidate(): void {
       cache.invalidate();
       schema.invalidate();

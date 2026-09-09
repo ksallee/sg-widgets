@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fileHref, formatCurrency, nameColorIndex, nameHue, NAME_HUES } from '../src/render.js';
+import { fieldText, fileHref, formatCurrency, nameColorIndex, nameHue, NAME_HUES } from '../src/render.js';
 import {
   COLOR_SENTINEL,
   fileNameFromUrl,
@@ -282,5 +282,60 @@ describe('formatCurrency', () => {
     expect(formatCurrency('42.5', { symbol: '€' })).toBe('€42.50');
     expect(formatCurrency(-3, { symbol: '£', decimals: 0 })).toBe('-£3');
     expect(formatCurrency(null)).toBe('');
+  });
+});
+
+describe('fieldText', () => {
+  it('names a linked row, and falls back to type and id', () => {
+    expect(fieldText({ type: 'Shot', id: 862, name: 'sh010_0010' }, 'entity')).toBe('sh010_0010');
+    expect(fieldText({ type: 'Shot', id: 862 }, 'entity')).toBe('Shot #862');
+  });
+
+  it('joins a multi entity value', () => {
+    const value = [
+      { type: 'Asset', id: 1, name: 'charAda' },
+      { type: 'Asset', id: 2, name: 'envForest' },
+    ];
+    expect(fieldText(value, 'multi_entity')).toBe('charAda, envForest');
+    expect(fieldText(value, 'multi_entity', { separator: ' / ' })).toBe('charAda / envForest');
+  });
+
+  it('labels a status through display values and falls back to the code', () => {
+    expect(fieldText('ip', 'status_list', { displayValues: { ip: 'In Progress' } })).toBe('In Progress');
+    expect(fieldText('ip', 'status_list')).toBe('ip');
+  });
+
+  it('formats the number family by its data type', () => {
+    expect(fieldText(90, 'duration')).toBe('1:30');
+    expect(fieldText(480, 'duration', { hoursPerDay: 8 })).toBe('1d');
+    expect(fieldText(50, 'percent')).toBe('50%');
+    expect(fieldText(3_661_000, 'timecode')).toBe('01:01:01');
+    expect(fieldText('25.00', 'float')).toBe('25');
+    expect(fieldText('42.5', 'currency', { currencySymbol: '€' })).toBe('€42.50');
+  });
+
+  it('renders a checkbox as a word, never as empty', () => {
+    expect(fieldText(false, 'checkbox')).toBe('No');
+    expect(fieldText(true, 'checkbox')).toBe('Yes');
+  });
+
+  it('answers empty for nothing to show', () => {
+    expect(fieldText(null, 'text')).toBe('');
+    expect(fieldText([], 'multi_entity')).toBe('');
+    expect(fieldText('anything', 'pivot_column')).toBe('');
+  });
+
+  it('keeps zero, which is a value', () => {
+    expect(fieldText(0, 'number')).toBe('0');
+  });
+
+  it('shows the colour sentinel as the step it stands for', () => {
+    expect(fieldText('pipeline_step', 'color')).toBe('pipeline step');
+    expect(fieldText('255,0,0', 'color')).toBe('255,0,0');
+  });
+
+  it('takes the label of a url and the file name of an image', () => {
+    expect(fieldText({ link_type: 'web', url: 'https://example.com/a.mov', name: 'a.mov' }, 'url')).toBe('a.mov');
+    expect(fieldText('https://example.com/x/thumb.jpg?sig=1', 'image')).toBe('thumb.jpg');
   });
 });

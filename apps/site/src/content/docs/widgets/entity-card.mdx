@@ -1,0 +1,100 @@
+---
+title: EntityCard
+description: One Flow Production Tracking row as a card, with a grid of chosen fields.
+---
+
+import Demo from '../../../components/Demo.astro';
+
+Renders one row as a card: its thumbnail, name, type, status and a grid of the field paths you name.
+
+## Install
+
+Installing this pulls StatusBadge and Thumbnail with it.
+
+```sh
+pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/entity-card.json
+pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/entity-card.json
+```
+
+<Demo name="entity-card" title="EntityCard: three sizes, from a row and from a bare reference" />
+
+## Props
+
+| prop | type | default | meaning |
+|---|---|---|---|
+| `context` | `SgContext` | required | The cached client, the schema service and the site url the card reads through. |
+| `row` | `EntityRow \| null` | `null` | A row you already read. Given, the card reads nothing. |
+| `entity` | `EntityRef \| null` | `null` | The row to read, when no row is given. |
+| `fields` | `string[]` | `[]` | Field paths for the grid, in order. Dotted paths allowed. |
+| `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Thumbnail 16, 16 and 24, with the gaps and name scale to match. |
+| `imagePath` | `string` | `'image'` | The image field the thumbnail comes from. |
+| `siteUrl` | `string` | the context's | The site the name and every linked row point at. |
+| `hoursPerDay` | `number` | — | The site's working day. Durations then render in days. |
+| `locale` | `string` | the runtime's | Passed through for dates. |
+| `emptyLabel` | `string` | `'empty'` | What a field with no value shows. |
+| `class` / `className` | `string` | — | Merged after the widget's own classes. |
+
+Given a reference, the card reads the row itself: one search asking for the type's identity chain,
+its thumbnail, its status field and your paths at once. The read goes through the context's cache,
+so a second card on the same row costs nothing.
+
+Every path is labelled through the schema. A hop names the type it travels through only when its
+field accepts several, so `sg_task.Task.sg_status_list` reads
+
+```
+Task › Status
+```
+
+and `entity.Shot.sg_sequence` reads
+
+```
+Link › Shot › Sequence
+```
+
+A card is a compact surface, so a value is one line: a status is a badge, an image a thumbnail, a
+linked row a link to its own page, and everything else the text core's formatters give it. A path
+that names no field is shown under its own text with an empty value.
+
+A card with no row yet shows a skeleton shaped like the card; a read that fails shows the message
+inline.
+
+The root fills its container and carries the size as a data attribute.
+
+## Events
+
+None.
+
+## Slots
+
+None.
+
+## Keyboard
+
+| key | does |
+|---|---|
+| `Tab` | Moves to the name, when a site url is known, then to any link inside a field value. |
+| `Enter` | Opens the row's page on the site, in a new tab. |
+
+Nothing else in the card takes focus.
+
+## API behaviour
+
+A dotted path is projected against the middle segment's `valid_types`: a segment outside that list
+answers 200 with the key simply absent, so an unresolvable path is an empty value and not an error
+(059_dotted_path_type_check).
+
+A path through a multi-entity field reads back nothing at all, in a single read and in a search
+alike, while the same path filters correctly (016_dotted_multi_entity).
+
+The identity chain is intersected with the type's own schema before the read, because a field a type
+does not have is a 400 and not an empty column: a Task has neither `code` nor `name`
+(entity_types/Task).
+
+Every type but Project holds its status in `sg_status_list`; Project's is `sg_status`, a plain list
+with no Status row behind it (entity_types/Project).
+
+The web app addresses a row at `/detail/<Type>/<id>`. The API hands that path out for one type only,
+as `Project.landing_page_url`, site-relative and with the site url left to the caller
+(entity_types/Project). On the test site the same shape answers for every type: the route resolves
+before authentication decides, redirecting an anonymous visitor to the login page with itself as the
+return path. Site measurement, pending a corpus card.

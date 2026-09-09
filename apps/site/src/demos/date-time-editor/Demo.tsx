@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { DateTimeEditor } from '@/registry/sg/components/date-time-editor';
 
-const cell = 'px-3 py-2 align-top';
-const typeCell = 'text-muted-foreground w-28 px-3 py-2 align-top font-mono text-xs';
+const zone = 'America/Los_Angeles';
+const field = { displayName: 'Client Approved At', mandatory: false };
+const item = 'flex w-full min-w-0 flex-col gap-2';
+const nameCell = 'text-muted-foreground font-mono text-xs';
 const valueCell = 'text-muted-foreground truncate font-mono text-xs';
 
 export default function DateTimeEditorDemo() {
@@ -11,53 +13,75 @@ export default function DateTimeEditorDemo() {
   const [never, setNever] = useState<string | null>(null);
 
   return (
-    <table className="w-full table-fixed border-collapse text-left">
-      <tbody>
-        <tr className="border-border border-b">
-          <th scope="row" className={typeCell}>
-            Los Angeles
-          </th>
-          <td className={cell}>
-            <div className="flex w-full min-w-0 flex-col gap-2">
-              <DateTimeEditor
-                value={approvedAt}
-                onValueChange={setApprovedAt}
-                timeZone="America/Los_Angeles"
-                field={{ displayName: 'Client Approved At', mandatory: false }}
-              />
-              <p className={valueCell}>{JSON.stringify(approvedAt)}</p>
-            </div>
-          </td>
-        </tr>
-        <tr className="border-border border-b">
-          <th scope="row" className={typeCell}>
-            Paris, seconds
-          </th>
-          <td className={cell}>
-            <div className="flex w-full min-w-0 flex-col gap-2">
-              <DateTimeEditor
-                value={importedAt}
-                onValueChange={setImportedAt}
-                timeZone="Europe/Paris"
-                showSeconds
-                field={{ displayName: 'Media Center Import Time', mandatory: false }}
-              />
-              <p className={valueCell}>{JSON.stringify(importedAt)}</p>
-            </div>
-          </td>
-        </tr>
-        <tr>
-          <th scope="row" className={typeCell}>
-            unset
-          </th>
-          <td className={cell}>
-            <div className="flex w-full min-w-0 flex-col gap-2">
-              <DateTimeEditor value={never} onValueChange={setNever} timeZone="UTC" />
-              <p className={valueCell}>{JSON.stringify(never)}</p>
-            </div>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+    <div className="flex w-full min-w-0 flex-col gap-4">
+      <div className={item} data-demo-row="sm">
+        <p className={nameCell}>sm</p>
+        <DateTimeEditor
+          value={approvedAt}
+          onValueChange={setApprovedAt}
+          timeZone={zone}
+          size="sm"
+          hint={false}
+          field={field}
+        />
+      </div>
+      <div className={item} data-demo-row="md">
+        <p className={nameCell}>md</p>
+        <DateTimeEditor value={approvedAt} onValueChange={setApprovedAt} timeZone={zone} field={field} />
+        <p className={valueCell} data-demo-value="set">
+          {JSON.stringify(approvedAt)}
+        </p>
+      </div>
+      <div className={item} data-demo-row="lg">
+        <p className={nameCell}>lg</p>
+        <DateTimeEditor
+          value={approvedAt}
+          onValueChange={setApprovedAt}
+          timeZone={zone}
+          size="lg"
+          hint={false}
+          field={field}
+        />
+      </div>
+      <div className={item} data-demo-row="seconds">
+        <p className={nameCell}>Paris, seconds</p>
+        <DateTimeEditor
+          value={importedAt}
+          onValueChange={setImportedAt}
+          timeZone="Europe/Paris"
+          showSeconds
+          field={{ displayName: 'Media Center Import Time', mandatory: false }}
+        />
+        <p className={valueCell} data-demo-value="seconds">
+          {JSON.stringify(importedAt)}
+        </p>
+      </div>
+      <div className={item} data-demo-row="unset">
+        <p className={nameCell}>unset</p>
+        <DateTimeEditor value={never} onValueChange={setNever} timeZone="UTC" />
+        <p className={valueCell} data-demo-value="unset">
+          {JSON.stringify(never)}
+        </p>
+      </div>
+      <div className={item} data-demo-row="invalid">
+        <p className={nameCell}>invalid</p>
+        <DateTimeEditor
+          value="2026-03-04T13:06:07Z"
+          timeZone={zone}
+          hint={false}
+          invalid
+          error="Before the version was delivered."
+          field={field}
+        />
+      </div>
+      <div className={item} data-demo-row="readonly">
+        <p className={nameCell}>readonly</p>
+        <DateTimeEditor value="2026-03-04T13:06:07Z" timeZone={zone} hint={false} readonly field={field} />
+      </div>
+      <div className={item} data-demo-row="disabled">
+        <p className={nameCell}>disabled</p>
+        <DateTimeEditor value="2026-03-04T13:06:07Z" timeZone={zone} hint={false} disabled field={field} />
+      </div>
+    </div>
   );
 }

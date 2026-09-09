@@ -38,9 +38,9 @@ export interface DateTimeEditorProps extends Omit<React.HTMLAttributes<HTMLDivEl
   field?: Pick<FieldSchema, 'displayName' | 'mandatory'> | null;
   /** IANA zone the typed wall-clock time is read in. Defaults to the runtime's. */
   timeZone?: string;
-  /** Name the zone under the control. */
+  /** Name the zone under the button. */
   hint?: boolean;
-  /** Compact for one row of a form or a filter: date and time only, on one line. */
+  /** The row form: the button takes the width of its value and the zone line goes. */
   inline?: boolean;
   /** Seconds in the time input. The store keeps them; most fields do not need them. */
   showSeconds?: boolean;
@@ -60,10 +60,11 @@ export interface DateTimeEditorProps extends Omit<React.HTMLAttributes<HTMLDivEl
  * The store is UTC `YYYY-MM-DDTHH:MM:SSZ`: a written offset is normalised away and a
  * zoneless string is taken as UTC, not as site-local, so the wall-clock time typed
  * here is converted before it is emitted and converted back to show
- * (field_types/date_time). The zone that conversion uses is named under the control.
+ * (field_types/date_time). The zone that conversion uses is named under the button.
  *
- * `inline` is the form a row of a table or a filter takes: the date and the time sit on
- * one line at a fixed width, and the calendar and the zone line are dropped.
+ * One anatomy everywhere: a button carrying the stored instant, over a popover holding
+ * the typed day, the calendar and the time. `inline` only sizes the button to its value
+ * and drops the zone line.
  */
 export function DateTimeEditor({
   value = null,
@@ -89,12 +90,15 @@ export function DateTimeEditor({
   const local = fromApiDateTime(value, zoneOptions);
   const incomingDate = local?.date ?? '';
   const incomingTime = local === null ? '' : showSeconds ? local.timeWithSeconds : local.time;
+  // The button reads the stored instant, so it answers a commit and never a draft.
+  const label = local === null ? null : `${incomingDate} ${incomingTime}`;
 
   const [dateDraft, setDateDraft] = React.useState(incomingDate);
   const [timeDraft, setTimeDraft] = React.useState(incomingTime);
   const [parseError, setParseError] = React.useState<string | null>(null);
   const [open, setOpen] = React.useState(false);
   const editing = React.useRef(false);
+  const dateInput = React.useRef<HTMLInputElement>(null);
 
   React.useEffect(() => {
     if (editing.current) return;
@@ -106,26 +110,28 @@ export function DateTimeEditor({
   const isInvalid = invalid || message !== null;
   const day = toCalendarDate(dateDraft);
 
-  const commitWith = (date: string, time: string): void => {
+  /** Commits both drafts. Answers whether they parsed, so Enter knows to close. */
+  const commitWith = (date: string, time: string): boolean => {
     const result = toApiDateTime(date, time, zoneOptions);
     if ('error' in result) {
       setParseError(result.error);
       onErrorChange?.(result.error);
-      return;
+      return false;
     }
     setParseError(null);
     onErrorChange?.(null);
     const next = fromApiDateTime(result.value, zoneOptions);
     setDateDraft(next?.date ?? '');
     setTimeDraft(next === null ? '' : showSeconds ? next.timeWithSeconds : next.time);
-    if (result.value === value) return;
+    if (result.value === value) return true;
     onValueChange?.(result.value);
+    return true;
   };
 
-  const commit = (): void => commitWith(dateDraft, timeDraft);
+  const commit = (): boolean => commitWith(dateDraft, timeDraft);
 
+  // A picked day leaves the popover open: the time is the other half of the value.
   const pick = (picked: Date | undefined): void => {
-    setOpen(false);
     const next = fromCalendarDate(picked);
     setDateDraft(next);
     commitWith(next, timeDraft);
@@ -146,8 +152,18 @@ export function DateTimeEditor({
   };
 
   const onKeyDown = (event: React.KeyboardEvent): void => {
-    if (event.key === 'Enter') commit();
-    if (event.key === 'Escape') reset();
+    if (event.key !== 'Enter' && event.key !== 'Escape') return;
+    // The popover is portalled out of the widget, but React replays a synthetic event
+    // up its own tree, so a key the editor answers is stopped here in both frameworks.
+    event.stopPropagation();
+    if (event.key === 'Enter') {
+      if (!commit()) return;
+      editing.current = false;
+      setOpen(false);
+      return;
+    }
+    reset();
+    editing.current = false;
   };
 
   return (
@@ -158,99 +174,69 @@ export function DateTimeEditor({
       className={cn('flex w-full min-w-0 flex-col gap-2', inline && 'w-fit', className)}
       {...rest}
     >
-      {inline ? (
-        // In a row the editor is one button carrying the value; the calendar and the time sit in its popover.
-        <Popover open={open} onOpenChange={setOpen}>
-          <PopoverTrigger
-            data-slot="date-time-editor-trigger"
-            disabled={disabled || readonly}
-            aria-label={field?.displayName ?? 'Pick a date and time'}
+      <Popover open={open} onOpenChange={(next) => setOpen(readonly || disabled ? false : next)}>
+        <PopoverTrigger
+          data-slot="date-time-editor-trigger"
+          aria-label={field?.displayName ?? 'Pick a date and time'}
+          aria-invalid={isInvalid}
+          aria-disabled={disabled ? 'true' : undefined}
+          data-readonly={readonly ? 'true' : undefined}
+          disabled={disabled}
+          title={value ?? undefined}
+          className={cn(
+            buttonVariants({ variant: 'outline', size: 'sm' }),
+            'w-full justify-start gap-1.5 font-normal tabular-nums',
+            BOX[size],
+            !label && 'text-muted-foreground',
+          )}
+        >
+          <CalendarIcon aria-hidden="true" className="size-4 shrink-0" />
+          <span className="truncate">{label ?? placeholder}</span>
+        </PopoverTrigger>
+        <PopoverContent align="start" className="flex w-auto flex-col gap-3 p-3" initialFocus={dateInput}>
+          <Input
+            ref={dateInput}
+            value={dateDraft}
+            type="text"
+            data-slot="date-time-editor-date"
+            disabled={disabled}
+            readOnly={readonly}
+            placeholder={placeholder}
+            className={cn('tabular-nums', BOX[size])}
             aria-invalid={isInvalid}
-            title={value ?? undefined}
-            className={cn(buttonVariants({ variant: 'outline', size: 'sm' }), 'w-fit gap-1.5 font-normal tabular-nums', BOX[size], !value && 'text-muted-foreground')}
-          >
-            <CalendarIcon aria-hidden="true" className="size-4 shrink-0" />
-            <span className="truncate">{value ? `${dateDraft} ${timeDraft}` : placeholder}</span>
-          </PopoverTrigger>
-          <PopoverContent className="flex w-auto flex-col gap-2 p-2" align="start">
-            <Calendar mode="single" selected={day} onSelect={pick} />
-            <Input
-              value={timeDraft}
-              type="time"
-              data-slot="date-time-editor-time"
-              step={showSeconds ? 1 : undefined}
-              disabled={disabled}
-              readOnly={readonly}
-              className={cn('w-auto shrink-0 tabular-nums', BOX[size])}
-              aria-invalid={isInvalid}
-              aria-label="Time"
-              onChange={(event) => setTimeDraft(event.target.value)}
-              onFocus={() => {
-                editing.current = true;
-              }}
-              onBlur={onBlur}
-              onKeyDown={onKeyDown}
-            />
-
-          </PopoverContent>
-        </Popover>
-      ) : (
-      <div className={cn('flex w-full min-w-0 items-center gap-2', !inline && 'flex-wrap')}>
-        <Input
-          value={dateDraft}
-          type="text"
-          data-slot="date-time-editor-date"
-          disabled={disabled}
-          readOnly={readonly}
-          placeholder={placeholder}
-          className={cn('tabular-nums', BOX[size], inline && 'w-28 shrink-0')}
-          aria-invalid={isInvalid}
-          aria-label={field?.displayName}
-          aria-required={field?.mandatory}
-          onChange={(event) => setDateDraft(event.target.value)}
-          onFocus={() => {
-            editing.current = true;
-          }}
-          onBlur={onBlur}
-          onKeyDown={onKeyDown}
-        />
-        {inline ? null : (
-          <Popover open={open} onOpenChange={setOpen}>
-            <PopoverTrigger
-              disabled={disabled || readonly}
-              aria-label="Pick a date"
-              className={cn(buttonVariants({ variant: 'outline', size: 'icon' }), 'shrink-0', BOX[size])}
-            >
-              <CalendarIcon aria-hidden="true" className="size-4" />
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar mode="single" selected={day} onSelect={pick} />
-            </PopoverContent>
-          </Popover>
-        )}
-        <Input
-          value={timeDraft}
-          type="time"
-          data-slot="date-time-editor-time"
-          step={showSeconds ? 1 : undefined}
-          disabled={disabled}
-          readOnly={readonly}
-          className={cn('w-auto shrink-0 tabular-nums', BOX[size], inline && 'w-24')}
-          aria-invalid={isInvalid}
-          aria-label="Time"
-          onChange={(event) => setTimeDraft(event.target.value)}
-          onFocus={() => {
-            editing.current = true;
-          }}
-          onBlur={onBlur}
-          onKeyDown={onKeyDown}
-        />
-      </div>
-      )}
+            aria-label={field?.displayName ?? 'Date'}
+            aria-required={field?.mandatory}
+            onChange={(event) => setDateDraft(event.target.value)}
+            onFocus={() => {
+              editing.current = true;
+            }}
+            onBlur={onBlur}
+            onKeyDown={onKeyDown}
+          />
+          <Calendar mode="single" className="p-0" selected={day} onSelect={pick} />
+          <Input
+            value={timeDraft}
+            type="time"
+            data-slot="date-time-editor-time"
+            step={showSeconds ? 1 : undefined}
+            disabled={disabled}
+            readOnly={readonly}
+            className={cn('tabular-nums', BOX[size])}
+            aria-invalid={isInvalid}
+            aria-label="Time"
+            onChange={(event) => setTimeDraft(event.target.value)}
+            onFocus={() => {
+              editing.current = true;
+            }}
+            onBlur={onBlur}
+            onKeyDown={onKeyDown}
+          />
+        </PopoverContent>
+      </Popover>
       {hint && !inline ? (
-      <p data-slot="date-time-editor-zone" className="text-muted-foreground truncate text-xs">
-        Local time in {zone}, stored as UTC.
-      </p>
+        <p data-slot="date-time-editor-zone" className="text-muted-foreground truncate text-xs">
+          Local time in {zone}, stored as UTC.
+        </p>
       ) : null}
       {message
         ? (errorMessage?.(message) ?? (

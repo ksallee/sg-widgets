@@ -84,6 +84,9 @@ A field whose type has no editor stays on the display half whatever the mode say
 
 Enter keeps the textarea of a multi-line text field open; leave it with `Tab`.
 
+On a field whose editor is a button over a popup — a date, a date-time, a list — Enter opens the
+popup. The value commits inside it and the edit half stays until focus leaves.
+
 ## API behaviour
 
 The write shapes each editor emits are the ones its own page documents. The dispatch itself follows

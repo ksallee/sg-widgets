@@ -44,9 +44,9 @@
 		field?: Pick<FieldSchema, 'displayName' | 'mandatory'> | null;
 		/** IANA zone the typed wall-clock time is read in. Defaults to the runtime's. */
 		timeZone?: string;
-		/** Name the zone under the control. */
+		/** Name the zone under the button. */
 		hint?: boolean;
-		/** Compact for one row of a form or a filter: date and time only, on one line. */
+		/** The row form: the button takes the width of its value and the zone line goes. */
 		inline?: boolean;
 		/** Seconds in the time input. The store keeps them; most fields do not need them. */
 		showSeconds?: boolean;
@@ -89,6 +89,7 @@
 	let parseError = $state<string | null>(null);
 	let editing = $state(false);
 	let open = $state(false);
+	let dateInput = $state<HTMLInputElement | null>(null);
 
 	$effect(() => {
 		const local = fromApiDateTime(value, zoneOptions);
@@ -100,26 +101,34 @@
 	const message = $derived(error ?? parseError);
 	const isInvalid = $derived(invalid || message !== null);
 	const day = $derived(toCalendarDate(dateDraft));
+	// The button reads the stored instant, so it answers a commit and never a draft.
+	const label = $derived.by(() => {
+		const local = fromApiDateTime(value, zoneOptions);
+		if (local === null) return null;
+		return `${local.date} ${showSeconds ? local.timeWithSeconds : local.time}`;
+	});
 
-	function commit(): void {
+	/** Commits both drafts. Answers whether they parsed, so Enter knows to close. */
+	function commit(): boolean {
 		const result = toApiDateTime(dateDraft, timeDraft, zoneOptions);
 		if ('error' in result) {
 			parseError = result.error;
 			onErrorChange?.(result.error);
-			return;
+			return false;
 		}
 		parseError = null;
 		onErrorChange?.(null);
 		const local = fromApiDateTime(result.value, zoneOptions);
 		dateDraft = local?.date ?? '';
 		timeDraft = local === null ? '' : showSeconds ? local.timeWithSeconds : local.time;
-		if (result.value === value) return;
+		if (result.value === value) return true;
 		value = result.value;
 		onValueChange?.(result.value);
+		return true;
 	}
 
+	// A picked day leaves the popover open: the time is the other half of the value.
 	function pick(picked: DateValue | undefined): void {
-		open = false;
 		dateDraft = fromCalendarDate(picked);
 		commit();
 	}
@@ -140,8 +149,18 @@
 	}
 
 	function onkeydown(event: KeyboardEvent): void {
-		if (event.key === 'Enter') commit();
-		if (event.key === 'Escape') reset();
+		if (event.key !== 'Enter' && event.key !== 'Escape') return;
+		// The popover is portalled out of the widget, but React replays a synthetic event
+		// up its own tree, so a key the editor answers is stopped here in both frameworks.
+		event.stopPropagation();
+		if (event.key === 'Enter') {
+			if (!commit()) return;
+			editing = false;
+			open = false;
+			return;
+		}
+		reset();
+		editing = false;
 	}
 </script>
 
@@ -151,10 +170,11 @@
 	The store is UTC `YYYY-MM-DDTHH:MM:SSZ`: a written offset is normalised away and a
 	zoneless string is taken as UTC, not as site-local, so the wall-clock time typed
 	here is converted before it is emitted and converted back to show
-	(field_types/date_time). The zone that conversion uses is named under the control.
+	(field_types/date_time). The zone that conversion uses is named under the button.
 
-	`inline` is the form a row of a table or a filter takes: the date and the time sit on
-	one line at a fixed width, and the calendar and the zone line are dropped.
+	One anatomy everywhere: a button carrying the stored instant, over a popover holding
+	the typed day, the calendar and the time. `inline` only sizes the button to its value
+	and drops the zone line.
 -->
 <div
 	bind:this={ref}
@@ -164,85 +184,67 @@
 	class={cn('flex w-full min-w-0 flex-col gap-2', inline && 'w-fit', className)}
 	{...rest}
 >
-	{#if inline}
-		<!-- In a row the editor is one button carrying the value; the calendar and the time sit in its popover. -->
-		<Popover.Root bind:open>
-			<Popover.Trigger
-				data-slot="date-time-editor-trigger"
-				disabled={disabled || readonly}
-				aria-label={field?.displayName ?? 'Pick a date and time'}
+	<Popover.Root bind:open={() => open, (next) => (open = readonly || disabled ? false : next)}>
+		<Popover.Trigger
+			data-slot="date-time-editor-trigger"
+			aria-label={field?.displayName ?? 'Pick a date and time'}
+			aria-invalid={isInvalid}
+			aria-disabled={disabled ? 'true' : undefined}
+			data-readonly={readonly ? 'true' : undefined}
+			{disabled}
+			title={value ?? undefined}
+			class={cn(
+				buttonVariants({ variant: 'outline', size: 'sm' }),
+				'w-full justify-start gap-1.5 font-normal tabular-nums',
+				BOX[size],
+				!label && 'text-muted-foreground'
+			)}
+		>
+			<CalendarIcon aria-hidden="true" class="size-4 shrink-0" />
+			<span class="truncate">{label ?? placeholder}</span>
+		</Popover.Trigger>
+		<Popover.Content
+			strategy="fixed"
+			align="start"
+			class="flex w-auto flex-col gap-3 p-3"
+			onOpenAutoFocus={(event) => {
+				event.preventDefault();
+				dateInput?.focus({ preventScroll: true });
+			}}
+		>
+			<Input
+				bind:ref={dateInput}
+				bind:value={dateDraft}
+				type="text"
+				data-slot="date-time-editor-date"
+				{disabled}
+				{readonly}
+				{placeholder}
+				class={cn('tabular-nums', BOX[size])}
 				aria-invalid={isInvalid}
-				title={value ?? undefined}
-				class={cn(buttonVariants({ variant: 'outline', size: 'sm' }), 'w-fit gap-1.5 font-normal tabular-nums', BOX[size], !value && 'text-muted-foreground')}
-			>
-				<CalendarIcon aria-hidden="true" class="size-4 shrink-0" />
-				<span class="truncate">{value ? `${dateDraft} ${timeDraft}` : placeholder}</span>
-			</Popover.Trigger>
-			<Popover.Content strategy="fixed" class="flex w-auto flex-col gap-2 p-2" align="start">
-				<Calendar type="single" value={day} onValueChange={pick} />
-		<Input
-					bind:value={timeDraft}
-					type="time"
-					data-slot="date-time-editor-time"
-					step={showSeconds ? 1 : undefined}
-					{disabled}
-					{readonly}
-					class={cn('w-auto shrink-0 tabular-nums', BOX[size])}
-					aria-invalid={isInvalid}
-					aria-label="Time"
-					onfocus={() => (editing = true)}
-					{onblur}
-					{onkeydown}
-				/>
-			</Popover.Content>
-		</Popover.Root>
-	{:else}
-	<div class={cn('flex w-full min-w-0 items-center gap-2', !inline && 'flex-wrap')}>
-		<Input
-			bind:value={dateDraft}
-			type="text"
-			data-slot="date-time-editor-date"
-			{disabled}
-			{readonly}
-			{placeholder}
-			class={cn('tabular-nums', BOX[size], inline && 'w-28 shrink-0')}
-			aria-invalid={isInvalid}
-			aria-label={field?.displayName}
-			aria-required={field?.mandatory}
-			onfocus={() => (editing = true)}
-			{onblur}
-			{onkeydown}
-		/>
-		{#if !inline}
-			<Popover.Root bind:open>
-				<Popover.Trigger
-					disabled={disabled || readonly}
-					aria-label="Pick a date"
-					class={cn(buttonVariants({ variant: 'outline', size: 'icon' }), 'shrink-0', BOX[size])}
-				>
-					<CalendarIcon aria-hidden="true" class="size-4" />
-				</Popover.Trigger>
-				<Popover.Content strategy="fixed" class="w-auto p-0" align="start">
-					<Calendar type="single" value={day} onValueChange={pick} />
-				</Popover.Content>
-			</Popover.Root>
-		{/if}
-		<Input
-			bind:value={timeDraft}
-			type="time"
-			data-slot="date-time-editor-time"
-			step={showSeconds ? 1 : undefined}
-			{disabled}
-			{readonly}
-			class={cn('w-auto shrink-0 tabular-nums', BOX[size], inline && 'w-24')}
-			aria-invalid={isInvalid}
-			aria-label="Time"
-			onfocus={() => (editing = true)}
-			{onblur}
-			{onkeydown}
-		/>
-	</div>
-	{/if}
+				aria-label={field?.displayName ?? 'Date'}
+				aria-required={field?.mandatory}
+				onfocus={() => (editing = true)}
+				{onblur}
+				{onkeydown}
+			/>
+			<Calendar type="single" class="p-0" value={day} onValueChange={pick} />
+			<Input
+				bind:value={timeDraft}
+				type="time"
+				data-slot="date-time-editor-time"
+				step={showSeconds ? 1 : undefined}
+				{disabled}
+				{readonly}
+				class={cn('tabular-nums', BOX[size])}
+				aria-invalid={isInvalid}
+				aria-label="Time"
+				onfocus={() => (editing = true)}
+				{onblur}
+				{onkeydown}
+			/>
+		</Popover.Content>
+	</Popover.Root>
 	{#if hint && !inline}
 		<p data-slot="date-time-editor-zone" class="text-muted-foreground truncate text-xs">
 			Local time in {zone}, stored as UTC.

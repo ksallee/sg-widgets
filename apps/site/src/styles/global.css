@@ -278,3 +278,19 @@
     padding: 0;
   }
 }
+
+/* Content column widens with the viewport so a two-pane demo has room; prose stays at reading width. */
+@layer starlight {
+  @media (min-width: 80rem) {
+    :root { --sl-content-width: 56rem; }
+  }
+  @media (min-width: 100rem) {
+    :root { --sl-content-width: 70rem; }
+  }
+  @media (min-width: 120rem) {
+    :root { --sl-content-width: 84rem; }
+  }
+  .sl-markdown-content > :not(.sg-demo-chrome) {
+    max-width: 45rem;
+  }
+}

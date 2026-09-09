@@ -220,8 +220,6 @@
 				dataType={type as 'number'}
 				field={field ?? null}
 				{precision}
-			currencySymbol={symbol ?? '$'}
-				currencySymbol={symbol ?? '$'}
 				{hoursPerDay}
 				{frameRate}
 				symbol={symbol ?? '$'}
@@ -333,6 +331,7 @@
 				{hoursPerDay}
 				{locale}
 				{precision}
+				currencySymbol={symbol ?? '$'}
 				{emptyLabel}
 			/>
 		</span>
@@ -345,6 +344,7 @@
 			{hoursPerDay}
 			{locale}
 			{precision}
+			currencySymbol={symbol ?? '$'}
 			{emptyLabel}
 		/>
 	{/if}

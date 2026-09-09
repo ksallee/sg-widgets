@@ -393,6 +393,7 @@
         "checkbox",
         "command",
         "input",
+        "input-group",
         "popover",
         "select",
         "skeleton",

@@ -96,7 +96,8 @@
 				{label ?? 'Add filters'}
 			{/if}
 		</Dialog.Trigger>
-		<Dialog.Content class="sm:max-w-3xl">
+		<!-- A condition row wants room: the dialog takes the viewport up to 64rem. -->
+		<Dialog.Content class="w-[min(96vw,64rem)] sm:max-w-none">
 			<Dialog.Header>
 				<Dialog.Title>{title}</Dialog.Title>
 				<Dialog.Description>Rows match on {entityType}. Nothing applies until you press Apply.</Dialog.Description>

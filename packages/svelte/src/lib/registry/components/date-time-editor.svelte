@@ -46,6 +46,8 @@
 		timeZone?: string;
 		/** Name the zone under the control. */
 		hint?: boolean;
+		/** Compact for one row of a form or a filter: date and time only, on one line. */
+		inline?: boolean;
 		/** Seconds in the time input. The store keeps them; most fields do not need them. */
 		showSeconds?: boolean;
 		size?: DateTimeEditorSize;
@@ -64,6 +66,7 @@
 		field = null,
 		timeZone,
 		hint = true,
+		inline = false,
 		showSeconds = false,
 		size = 'md',
 		disabled = false,
@@ -149,15 +152,19 @@
 	zoneless string is taken as UTC, not as site-local, so the wall-clock time typed
 	here is converted before it is emitted and converted back to show
 	(field_types/date_time). The zone that conversion uses is named under the control.
+
+	`inline` is the form a row of a table or a filter takes: the date and the time sit on
+	one line at a fixed width, and the calendar and the zone line are dropped.
 -->
 <div
 	bind:this={ref}
 	data-slot="date-time-editor"
 	data-size={size}
-	class={cn('flex w-full min-w-0 flex-col gap-2', className)}
+	data-inline={inline ? 'true' : undefined}
+	class={cn('flex w-full min-w-0 flex-col gap-2', inline && 'w-fit', className)}
 	{...rest}
 >
-	<div class="flex w-full min-w-0 flex-wrap items-center gap-2">
+	<div class={cn('flex w-full min-w-0 items-center gap-2', !inline && 'flex-wrap')}>
 		<Input
 			bind:value={dateDraft}
 			type="text"
@@ -165,7 +172,7 @@
 			{disabled}
 			{readonly}
 			{placeholder}
-			class={cn('tabular-nums', BOX[size])}
+			class={cn('tabular-nums', BOX[size], inline && 'w-28 shrink-0')}
 			aria-invalid={isInvalid}
 			aria-label={field?.displayName}
 			aria-required={field?.mandatory}
@@ -173,18 +180,20 @@
 			{onblur}
 			{onkeydown}
 		/>
-		<Popover.Root bind:open>
-			<Popover.Trigger
-				disabled={disabled || readonly}
-				aria-label="Pick a date"
-				class={cn(buttonVariants({ variant: 'outline', size: 'icon' }), 'shrink-0', BOX[size])}
-			>
-				<CalendarIcon aria-hidden="true" class="size-4" />
-			</Popover.Trigger>
-			<Popover.Content strategy="fixed" class="w-auto p-0" align="start">
-				<Calendar type="single" value={day} onValueChange={pick} />
-			</Popover.Content>
-		</Popover.Root>
+		{#if !inline}
+			<Popover.Root bind:open>
+				<Popover.Trigger
+					disabled={disabled || readonly}
+					aria-label="Pick a date"
+					class={cn(buttonVariants({ variant: 'outline', size: 'icon' }), 'shrink-0', BOX[size])}
+				>
+					<CalendarIcon aria-hidden="true" class="size-4" />
+				</Popover.Trigger>
+				<Popover.Content strategy="fixed" class="w-auto p-0" align="start">
+					<Calendar type="single" value={day} onValueChange={pick} />
+				</Popover.Content>
+			</Popover.Root>
+		{/if}
 		<Input
 			bind:value={timeDraft}
 			type="time"
@@ -192,7 +201,7 @@
 			step={showSeconds ? 1 : undefined}
 			{disabled}
 			{readonly}
-			class={cn('w-auto shrink-0 tabular-nums', BOX[size])}
+			class={cn('w-auto shrink-0 tabular-nums', BOX[size], inline && 'w-24')}
 			aria-invalid={isInvalid}
 			aria-label="Time"
 			onfocus={() => (editing = true)}
@@ -200,7 +209,7 @@
 			{onkeydown}
 		/>
 	</div>
-	{#if hint}
+	{#if hint && !inline}
 		<p data-slot="date-time-editor-zone" class="text-muted-foreground truncate text-xs">
 			Local time in {zone}, stored as UTC.
 		</p>

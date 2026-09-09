@@ -105,7 +105,8 @@ export function FilterDialog({
             </>
           )}
         </DialogTrigger>
-        <DialogContent className="sm:max-w-3xl">
+        {/* A condition row wants room: the dialog takes the viewport up to 64rem. */}
+        <DialogContent className="w-[min(96vw,64rem)] sm:max-w-none">
           <DialogHeader>
             <DialogTitle>{title}</DialogTitle>
             <DialogDescription>

@@ -40,6 +40,8 @@ export interface DateTimeEditorProps extends Omit<React.HTMLAttributes<HTMLDivEl
   timeZone?: string;
   /** Name the zone under the control. */
   hint?: boolean;
+  /** Compact for one row of a form or a filter: date and time only, on one line. */
+  inline?: boolean;
   /** Seconds in the time input. The store keeps them; most fields do not need them. */
   showSeconds?: boolean;
   size?: DateTimeEditorSize;
@@ -59,6 +61,9 @@ export interface DateTimeEditorProps extends Omit<React.HTMLAttributes<HTMLDivEl
  * zoneless string is taken as UTC, not as site-local, so the wall-clock time typed
  * here is converted before it is emitted and converted back to show
  * (field_types/date_time). The zone that conversion uses is named under the control.
+ *
+ * `inline` is the form a row of a table or a filter takes: the date and the time sit on
+ * one line at a fixed width, and the calendar and the zone line are dropped.
  */
 export function DateTimeEditor({
   value = null,
@@ -66,6 +71,7 @@ export function DateTimeEditor({
   field = null,
   timeZone,
   hint = true,
+  inline = false,
   showSeconds = false,
   size = 'md',
   disabled = false,
@@ -148,10 +154,11 @@ export function DateTimeEditor({
     <div
       data-slot="date-time-editor"
       data-size={size}
-      className={cn('flex w-full min-w-0 flex-col gap-2', className)}
+      data-inline={inline ? 'true' : undefined}
+      className={cn('flex w-full min-w-0 flex-col gap-2', inline && 'w-fit', className)}
       {...rest}
     >
-      <div className="flex w-full min-w-0 flex-wrap items-center gap-2">
+      <div className={cn('flex w-full min-w-0 items-center gap-2', !inline && 'flex-wrap')}>
         <Input
           value={dateDraft}
           type="text"
@@ -159,7 +166,7 @@ export function DateTimeEditor({
           disabled={disabled}
           readOnly={readonly}
           placeholder={placeholder}
-          className={cn('tabular-nums', BOX[size])}
+          className={cn('tabular-nums', BOX[size], inline && 'w-28 shrink-0')}
           aria-invalid={isInvalid}
           aria-label={field?.displayName}
           aria-required={field?.mandatory}
@@ -170,18 +177,20 @@ export function DateTimeEditor({
           onBlur={onBlur}
           onKeyDown={onKeyDown}
         />
-        <Popover open={open} onOpenChange={setOpen}>
-          <PopoverTrigger
-            disabled={disabled || readonly}
-            aria-label="Pick a date"
-            className={cn(buttonVariants({ variant: 'outline', size: 'icon' }), 'shrink-0', BOX[size])}
-          >
-            <CalendarIcon aria-hidden="true" className="size-4" />
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="start">
-            <Calendar mode="single" selected={day} onSelect={pick} />
-          </PopoverContent>
-        </Popover>
+        {inline ? null : (
+          <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger
+              disabled={disabled || readonly}
+              aria-label="Pick a date"
+              className={cn(buttonVariants({ variant: 'outline', size: 'icon' }), 'shrink-0', BOX[size])}
+            >
+              <CalendarIcon aria-hidden="true" className="size-4" />
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar mode="single" selected={day} onSelect={pick} />
+            </PopoverContent>
+          </Popover>
+        )}
         <Input
           value={timeDraft}
           type="time"
@@ -189,7 +198,7 @@ export function DateTimeEditor({
           step={showSeconds ? 1 : undefined}
           disabled={disabled}
           readOnly={readonly}
-          className={cn('w-auto shrink-0 tabular-nums', BOX[size])}
+          className={cn('w-auto shrink-0 tabular-nums', BOX[size], inline && 'w-24')}
           aria-invalid={isInvalid}
           aria-label="Time"
           onChange={(event) => setTimeDraft(event.target.value)}
@@ -200,7 +209,7 @@ export function DateTimeEditor({
           onKeyDown={onKeyDown}
         />
       </div>
-      {hint ? (
+      {hint && !inline ? (
       <p data-slot="date-time-editor-zone" className="text-muted-foreground truncate text-xs">
         Local time in {zone}, stored as UTC.
       </p>

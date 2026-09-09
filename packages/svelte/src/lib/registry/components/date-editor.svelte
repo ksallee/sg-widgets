@@ -43,6 +43,8 @@
 		value?: string | null;
 		onValueChange?: (value: string | null) => void;
 		field?: Pick<FieldSchema, 'displayName' | 'mandatory'> | null;
+		/** Compact for one row of a form or a filter: the typed day alone, at a fixed width. */
+		inline?: boolean;
 		size?: DateEditorSize;
 		disabled?: boolean;
 		readonly?: boolean;
@@ -57,6 +59,7 @@
 		value = $bindable(null),
 		onValueChange,
 		field = null,
+		inline = false,
 		size = 'md',
 		disabled = false,
 		readonly = false,
@@ -131,22 +134,27 @@
 	The value is exactly `YYYY-MM-DD`: no time, no zone, and the API validates the day
 	rather than only parsing it, so `2026-02-30` is refused here too. A timestamp is
 	never a date on this type (field_types/date).
+
+	`inline` is the form a row of a table or a filter takes: ten characters of typed day,
+	no calendar.
 -->
 <div
 	bind:this={ref}
 	data-slot="date-editor"
 	data-size={size}
-	class={cn('flex w-full min-w-0 flex-col gap-2', className)}
+	data-inline={inline ? 'true' : undefined}
+	class={cn('flex w-full min-w-0 flex-col gap-2', inline && 'w-fit', className)}
 	{...rest}
 >
 	<div class="flex w-full min-w-0 items-center gap-2">
 		<Input
 			bind:value={draft}
 			type="text"
+			data-slot="date-editor-day"
 			{disabled}
 			{readonly}
 			{placeholder}
-			class={cn('tabular-nums', BOX[size])}
+			class={cn('tabular-nums', BOX[size], inline && 'w-28 shrink-0')}
 			aria-invalid={isInvalid}
 			aria-label={field?.displayName}
 			aria-required={field?.mandatory}
@@ -154,18 +162,20 @@
 			{onblur}
 			{onkeydown}
 		/>
-		<Popover.Root bind:open>
-			<Popover.Trigger
-				disabled={disabled || readonly}
-				aria-label="Pick a date"
-				class={cn(buttonVariants({ variant: 'outline', size: 'icon' }), 'shrink-0', BOX[size])}
-			>
-				<CalendarIcon aria-hidden="true" class="size-4" />
-			</Popover.Trigger>
-			<Popover.Content strategy="fixed" class="w-auto p-0" align="start">
-				<Calendar type="single" value={day} onValueChange={pick} />
-			</Popover.Content>
-		</Popover.Root>
+		{#if !inline}
+			<Popover.Root bind:open>
+				<Popover.Trigger
+					disabled={disabled || readonly}
+					aria-label="Pick a date"
+					class={cn(buttonVariants({ variant: 'outline', size: 'icon' }), 'shrink-0', BOX[size])}
+				>
+					<CalendarIcon aria-hidden="true" class="size-4" />
+				</Popover.Trigger>
+				<Popover.Content strategy="fixed" class="w-auto p-0" align="start">
+					<Calendar type="single" value={day} onValueChange={pick} />
+				</Popover.Content>
+			</Popover.Root>
+		{/if}
 	</div>
 	{#if message}
 		{#if errorMessage}

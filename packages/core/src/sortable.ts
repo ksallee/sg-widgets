@@ -196,18 +196,24 @@ function idOf(element: HTMLElement): string {
 }
 
 /**
- * Where every item of the list sits, by id, in document coordinates.
+ * Where every item of the list sits, by id, relative to the container.
  *
- * A measurement is compared with one taken later, and the page may have scrolled in
- * between; viewport rects would read that scroll as a move of every row.
+ * A measurement is compared with one taken later. Between the two the page may have
+ * scrolled, or the container itself may have moved: a list inside a popover is
+ * measured at the viewport's corner before the popover is placed. Container
+ * coordinates read neither as a move of every row.
  */
 export function measureSortable(container: HTMLElement): Map<string, SortableRect> {
   const measured = new Map<string, SortableRect>();
-  const x = typeof scrollX === 'number' ? scrollX : 0;
-  const y = typeof scrollY === 'number' ? scrollY : 0;
+  const origin = container.getBoundingClientRect();
   for (const element of itemsOf(container)) {
     const { top, bottom, left, right } = element.getBoundingClientRect();
-    measured.set(idOf(element), { top: top + y, bottom: bottom + y, left: left + x, right: right + x });
+    measured.set(idOf(element), {
+      top: top - origin.top,
+      bottom: bottom - origin.top,
+      left: left - origin.left,
+      right: right - origin.left,
+    });
   }
   return measured;
 }

@@ -58,8 +58,10 @@ export function createSortable(options: SortableOptions): Sortable {
 
 			// A pointer drop leaves the rows where the drag put them, so that one change
 			// is re-measured rather than played again.
+			// The list is tracked by its order, so a change to a row's fields plays nothing.
+			const order = $derived(options.ids().join('\n'));
 			$effect(() => {
-				options.ids();
+				void order;
 				if (held.settled) {
 					held.settled = false;
 					previous = measureSortable(element);

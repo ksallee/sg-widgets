@@ -1,9 +1,8 @@
 <script lang="ts">
-	import type { CollectionColumn, EntityRow, FilterGroup, StatusRecord, WireGroup } from '@sg-widgets/core';
-	import { condition, cellValue, createEntitySource, emptyFilter, resolveColumns, toApi3Hash } from '@sg-widgets/core';
+	import type { CollectionColumn, FilterGroup, StatusRecord, WireGroup } from '@sg-widgets/core';
+	import { condition, createEntitySource, emptyFilter, group, resolveColumns, toApi3Hash } from '@sg-widgets/core';
 	import FilterBar from '$lib/registry/components/filter-bar.svelte';
 	import GroupedList from '$lib/registry/components/grouped-list.svelte';
-	import StatusBadge from '$lib/registry/components/status-badge.svelte';
 	import { createDemoContext } from '../_shared/client';
 	import { setDemoClient } from '../_shared/svelte';
 	import {
@@ -66,16 +65,12 @@
 	}
 </script>
 
-{#snippet leading(row: EntityRow)}
-	<StatusBadge code={String(cellValue(row, GROUP) ?? '')} variant="icon" size="sm" />
-{/snippet}
-
 <div class="flex min-w-0 flex-col gap-4">
 	<FilterBar
 		entityType="Shot"
 		{client}
 		facets={['sg_status_list', 'sg_sequence', 'sg_shot_type']}
-		baseFilter={context.live ? condition('project', 'is', { type: 'Project', id: context.projectId }) : null}
+		baseFilter={context.live ? group('and', [condition('project', 'is', { type: 'Project', id: context.projectId })]) : null}
 		bind:value
 	/>
 
@@ -96,7 +91,6 @@
 				subLabelField={columns[1]!}
 				secondaryField={columns[2]!}
 				{statuses}
-				{leading}
 				maxHeight="20rem"
 				emptyLabel="No Shot matches this filter"
 			/>

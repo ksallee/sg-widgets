@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { CollectionColumn, EntityRow, FilterGroup, StatusRecord, WireGroup } from '@sg-widgets/core';
-import { condition, cellValue, createEntitySource, emptyFilter, resolveColumns, toApi3Hash } from '@sg-widgets/core';
+import type { CollectionColumn, FilterGroup, StatusRecord, WireGroup } from '@sg-widgets/core';
+import { condition, createEntitySource, emptyFilter, group, resolveColumns, toApi3Hash } from '@sg-widgets/core';
 import { FilterBar } from '@/registry/sg/components/filter-bar';
 import { GroupedList } from '@/registry/sg/components/grouped-list';
-import { StatusBadge } from '@/registry/sg/components/status-badge';
 import { createDemoContext } from '../_shared/client';
 import { DemoClientProvider } from '../_shared/react';
 import {
@@ -25,9 +24,6 @@ interface Loaded {
   statuses: Record<string, StatusRecord>;
 }
 
-const leading = (row: EntityRow) => (
-  <StatusBadge code={String(cellValue(row, GROUP) ?? '')} variant="icon" size="sm" />
-);
 
 export default function FilterBarDemo() {
   const context = useMemo(() => createDemoContext(), []);
@@ -86,7 +82,7 @@ export default function FilterBarDemo() {
           entityType="Shot"
           client={context.client}
           facets={['sg_status_list', 'sg_sequence', 'sg_shot_type']}
-          baseFilter={context.live ? condition('project', 'is', { type: 'Project', id: context.projectId }) : null}
+          baseFilter={context.live ? group('and', [condition('project', 'is', { type: 'Project', id: context.projectId })]) : null}
           value={value}
           onChange={setValue}
         />
@@ -110,7 +106,6 @@ export default function FilterBarDemo() {
               subLabelField={loaded.columns[1]!}
               secondaryField={loaded.columns[2]!}
               statuses={loaded.statuses}
-              leading={leading}
               maxHeight="20rem"
               emptyLabel="No Shot matches this filter"
             />

@@ -14,14 +14,15 @@ pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/grouped-list.json
 pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/grouped-list.json
 ```
 
-<Demo name="grouped-list" title="Grouped List: Tasks by pipeline step, with a status glyph, a sub-label and a due date" />
+<Demo name="grouped-list" title="Grouped List: Tasks by pipeline step, with a status glyph, a sub-label, a due date and a pager" />
 
 ```ts
 const source = createEntitySource({
   client: context.client,
   entityType: 'Task',
   fields: ['content', 'sg_status_list', 'step.Step.code', 'sg_description', 'due_date'],
-  pageSize: 50,
+  mode: 'pages',
+  pageSize: 25,
 });
 const [group, sub, secondary] = await resolveColumns(context.schema, 'Task', [
   'step.Step.code',
@@ -36,12 +37,19 @@ const [group, sub, secondary] = await resolveColumns(context.schema, 'Task', [
 |---|---|---|---|
 | `source` | `EntitySource` | — | The rows and the order behind them. |
 | `groupBy` | `CollectionColumn` | — | Path the rows are grouped on. The source is sorted on it. |
-| `labelPath` | `string \| null` | `null` | Path of the row's label. Defaults to the type's display name. |
-| `subLabel` | `CollectionColumn \| null` | `null` | Shown under the label. |
-| `secondary` | `CollectionColumn \| null` | `null` | Shown right-aligned at the end of the row. |
+| `thumbnail` | `string \| false` | `false` | Field holding the thumbnail URL. |
+| `labelField` | `string \| null` | `null` | Field shown as the row's label. Defaults to the type's display name. |
+| `subLabelField` | `string \| CollectionColumn \| null` | `null` | The muted line under the label. A resolved column renders it by type. |
+| `subLabel` | `(row) => string` | — | The caller's own sub-label. Wins over `subLabelField`. |
+| `secondaryField` | `string \| CollectionColumn \| null` | `null` | The right-aligned value at the end of the row. |
+| `secondary` | `(row) => string` | — | The caller's own right-aligned text. Wins over `secondaryField`. |
+| `showCode` | `boolean` | `false` | Show the row's `code` beside the label when the two differ. |
+| `fields` | `CollectionColumn[]` | `[]` | Extra fields drawn under the label. The source must already read them. |
 | `statuses` | `Record<string, StatusRecord> \| null` | `null` | Status rows by code. |
+| `context` | `SgContext` | — | An entity value links to the row's page when this carries a site. |
 | `density` | `'compact' \| 'default'` | `'default'` | Compact halves the vertical row padding. |
 | `selectable` | `boolean` | `false` | Draws a checkbox on each row. |
+| `pageSizes` | `number[]` | `[25, 50, 100]` | Rows per page offered in the footer. |
 | `maxHeight` | `string` | `'28rem'` | Height of the scrolling body. |
 | `emptyLabel` | `string` | `'No rows'` | Shown when the read returned nothing. |
 | `class` / `className` | `string` | — | Merged after the widget's own classes. |
@@ -57,21 +65,26 @@ const [group, sub, secondary] = await resolveColumns(context.schema, 'Task', [
 
 | slot | receives | meaning |
 |---|---|---|
-| `leading` | `EntityRow` | Fixed-size slot at the start of the row: a thumbnail, an avatar, a status glyph. |
+| `leading` | `EntityRow` | Fixed-size slot at the start of the row, when `thumbnail` is not the one wanted: an avatar, a status glyph. |
 
 ## Keyboard
 
 | key | does |
 |---|---|
-| Tab | Moves through group headers, checkboxes and rows. |
+| Tab | Moves through group headers, checkboxes, rows and the footer. |
 | Enter, Space on a header | Collapses or expands the group. |
 | Enter, Space on a row | Selects it, or emits the select event. |
+| Enter in the page number | Goes to that page. |
 
 ## API behaviour
 
 Grouping a paged read is only honest over an order the server produced, so the widget sets the group
 path as the source's first sort key and walks the contiguous runs. A group's count is therefore the
-rows loaded so far and grows as later pages arrive.
+rows loaded so far.
 
 Sorts fail silently where filters fail loudly: a field that cannot be sorted returns 200 with the
 rows in default order, so a group path is verified against the schema first (026_result_order).
+
+No total is in a read, so `pages` mode walks the set with an explicit page number and stops on a short
+page rather than on a missing `links.next`, which is emitted forever (006_pagination). The "of N" in
+the range comes from one `_summarize` call counting `id` (020_summarize).

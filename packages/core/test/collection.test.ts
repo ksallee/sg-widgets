@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { MockClient } from '../src/mock.js';
-import { createEntitySource, cellValue, groupRows, resolveColumns, rowKey, serializeSort } from '../src/collection.js';
+import {
+  createEntitySource,
+  cellValue,
+  describePaging,
+  groupRows,
+  resolveColumns,
+  rowKey,
+  serializeSort,
+} from '../src/collection.js';
 import { createSchemaService } from '../src/schema-service.js';
 import { condition, group } from '../src/filter.js';
 import type { EntitySource } from '../src/collection.js';
@@ -229,5 +237,143 @@ describe('groupRows', () => {
       relationships: {},
     }));
     expect(groupRows(rows, 'sg_status_list').map((g) => g.value)).toEqual(['a', 'b', 'a']);
+  });
+});
+
+describe('pages mode', () => {
+  it('walks the set one page at a time and counts it once', async () => {
+    const s = source({ mode: 'pages', pageSize: 25 });
+    await s.load();
+    expect(s.mode).toBe('pages');
+    expect(s.page).toBe(1);
+    expect(s.rows.length).toBe(25);
+    // The first read asks `_summarize` for the total the read itself never carries.
+    expect(s.total).toBe(60);
+    const first = s.rows.map((r) => r.id);
+
+    await s.setPage(2);
+    expect(s.page).toBe(2);
+    expect(s.rows.length).toBe(25);
+    expect(s.rows.map((r) => r.id)).not.toEqual(first);
+    // A page replaces the rows; it never appends.
+    expect(s.total).toBe(60);
+
+    await s.setPage(3);
+    expect(s.rows.length).toBe(10);
+    expect(s.hasMore).toBe(false);
+  });
+
+  it('reopens at the first page on a new page size and keeps the total', async () => {
+    const s = source({ mode: 'pages', pageSize: 25 });
+    await s.load();
+    await s.setPage(2);
+
+    await s.setPageSize(50);
+    expect(s.page).toBe(1);
+    expect(s.pageSize).toBe(50);
+    expect(s.rows.length).toBe(50);
+    expect(s.total).toBe(60);
+  });
+
+  it('leaves loadMore alone and re-counts when the filter moves', async () => {
+    const s = source({ mode: 'pages', pageSize: 25 });
+    await s.load();
+    await s.loadMore();
+    expect(s.rows.length).toBe(25);
+
+    await s.setFilters(condition('sg_status_list', 'is', 'ip'));
+    expect(s.page).toBe(1);
+    expect(s.total).not.toBe(60);
+    expect(s.total).toBe(s.rows.length + (s.hasMore ? (s.total ?? 0) - s.rows.length : 0));
+  });
+
+  it('sorts without asking for the total again', async () => {
+    const s = source({ mode: 'pages', pageSize: 25 });
+    await s.load();
+    await s.setPage(2);
+
+    await s.setSort([{ path: 'id', descending: true }]);
+    expect(s.page).toBe(1);
+    expect(s.total).toBe(60);
+  });
+});
+
+describe('count', () => {
+  it('lands even when the first read starts beside it', async () => {
+    const s = source({ pageSize: 25 });
+    const [total] = await Promise.all([s.count(), s.load()]);
+    expect(total).toBe(60);
+    // The read that overtook it changed no filter, so the total it took still stands.
+    expect(s.total).toBe(60);
+  });
+
+  it('is dropped when the filter it counted has moved', async () => {
+    const s = source({ pageSize: 25 });
+    await s.load();
+    const stale = s.count();
+    await s.setFilters(condition('sg_status_list', 'is', 'ip'));
+    await stale;
+    expect(s.total).not.toBe(60);
+  });
+});
+
+describe('describePaging', () => {
+  it('reads a range against a known total', async () => {
+    const s = source({ mode: 'pages', pageSize: 25 });
+    await s.load();
+    await s.setPage(2);
+    const paging = describePaging(s.snapshot());
+    expect(paging.rangeLabel).toBe('26 to 50 of 60');
+    expect(paging.pageCount).toBe(3);
+    expect(paging.hasPrevious).toBe(true);
+    expect(paging.hasNext).toBe(true);
+  });
+
+  it('drops the total from the range when nothing counted the set', () => {
+    const paging = describePaging({
+      rows: [1, 2, 3].map((id) => ({ type: 'Version', id, attributes: {}, relationships: {} })),
+      status: 'ready',
+      error: null,
+      hasMore: true,
+      total: null,
+      filters: null,
+      sort: [],
+      mode: 'pages',
+      page: 2,
+      pageSize: 3,
+    });
+    expect(paging.rangeLabel).toBe('4 to 6');
+    expect(paging.pageCount).toBeNull();
+    // With no total the full page that came back is the only evidence of a next one.
+    expect(paging.hasNext).toBe(true);
+  });
+
+  it('counts what is loaded in infinite mode', async () => {
+    const s = source({ pageSize: 25 });
+    await s.load();
+    await s.loadMore();
+    await s.count();
+    const paging = describePaging(s.snapshot());
+    expect(paging.from).toBe(1);
+    expect(paging.to).toBe(50);
+    expect(paging.loadedLabel).toBe('50 of 60 loaded');
+    expect(paging.hasPrevious).toBe(false);
+  });
+
+  it('reads zero rows as an empty range', () => {
+    const paging = describePaging({
+      rows: [],
+      status: 'ready',
+      error: null,
+      hasMore: false,
+      total: 0,
+      filters: null,
+      sort: [],
+      mode: 'pages',
+      page: 1,
+      pageSize: 25,
+    });
+    expect(paging.rangeLabel).toBe('0 to 0 of 0');
+    expect(paging.hasNext).toBe(false);
   });
 });

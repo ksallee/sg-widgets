@@ -5,8 +5,9 @@ import { EntityGrid } from '@/registry/sg/components/entity-grid';
 import { createDemoContext } from '../_shared/client';
 import { DemoClientProvider } from '../_shared/react';
 
-const SECONDARY = ['user', 'created_at'];
-const FIELDS = ['code', 'image', 'sg_status_list', ...SECONDARY];
+const SUB = 'user';
+const EXTRA = ['created_at'];
+const FIELDS = ['code', 'image', 'sg_status_list', SUB, ...EXTRA];
 const SIZES = ['sm', 'md', 'lg'] as const;
 
 const toggle =
@@ -16,7 +17,8 @@ const toggle =
   'aria-pressed:bg-accent aria-pressed:text-accent-foreground aria-pressed:font-medium';
 
 interface Loaded {
-  secondary: CollectionColumn[];
+  subLabel: CollectionColumn;
+  fields: CollectionColumn[];
   statusField: FieldSchema | null;
   statuses: Record<string, StatusRecord>;
 }
@@ -44,14 +46,19 @@ export default function EntityGridDemo() {
   useEffect(() => {
     let live = true;
     Promise.all([
-      resolveColumns(context.schema, 'Version', SECONDARY),
+      resolveColumns(context.schema, 'Version', [SUB, ...EXTRA]),
       context.schema.fields('Version'),
       context.statuses.byCode(),
     ])
-      .then(([secondary, fields, table]) => {
+      .then(([resolved, schema, table]) => {
         if (!live) return;
         void source.count();
-        setData({ secondary, statusField: fields['sg_status_list'] ?? null, statuses: Object.fromEntries(table) });
+        setData({
+          subLabel: resolved[0]!,
+          fields: resolved.slice(1),
+          statusField: schema['sg_status_list'] ?? null,
+          statuses: Object.fromEntries(table),
+        });
       })
       .catch((e: unknown) => live && setError(e instanceof Error ? e.message : String(e)));
     return () => {
@@ -83,7 +90,10 @@ export default function EntityGridDemo() {
         </div>
         <EntityGrid
           source={source}
-          secondary={data.secondary}
+          context={context}
+          subLabelField={data.subLabel}
+          secondaryField="id"
+          fields={data.fields}
           statusField={data.statusField}
           statuses={data.statuses}
           size={size}

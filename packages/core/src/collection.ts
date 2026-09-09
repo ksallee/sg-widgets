@@ -8,7 +8,9 @@
  * read-after-write rule.
  *
  * Paging stops on an empty page, never on a missing `links.next`, which the API
- * emits forever (006_pagination). Ordering is the server's: with no sort rows
+ * emits forever (006_pagination). A read carries no total, so `pages` mode walks
+ * the set with an explicit page number and asks `_summarize` for the count that
+ * turns a range into "n to m of N" (020_summarize). Ordering is the server's: with no sort rows
  * come back id ascending and id ascending is the implicit tiebreak, and a sort
  * on a field that cannot be sorted is a silent 200 no-op, so a widget verifies a
  * sort path against the schema before offering it (026_result_order).
@@ -32,6 +34,9 @@ export type SourceFilters = FilterNode | WireGroup | null;
 
 export type SourceStatus = 'idle' | 'loading' | 'loadingMore' | 'ready' | 'error';
 
+/** `pages` shows one page at a time; `infinite` appends page after page. */
+export type SourceMode = 'pages' | 'infinite';
+
 export interface EntitySourceOptions {
   client: SgClient;
   entityType: string;
@@ -41,6 +46,10 @@ export interface EntitySourceOptions {
   sort?: SortSpec[];
   /** Rows per request. Default 50. */
   pageSize?: number;
+  /** Default `infinite`. */
+  mode?: SourceMode;
+  /** The page `pages` mode opens on. Default 1. */
+  page?: number;
 }
 
 /** Everything a view renders. A new object on every change, so identity is the signal. */
@@ -50,10 +59,14 @@ export interface EntitySourceState {
   error: Error | null;
   /** True when another page exists. */
   hasMore: boolean;
-  /** The total the last `count()` answered, or null when none has been asked for. */
-  count: number | null;
+  /** The total the last `count()` answered. Null until one is asked for, and null when the site did not answer it. */
+  total: number | null;
   filters: WireGroup | null;
   sort: SortSpec[];
+  mode: SourceMode;
+  /** 1-based page number of the rows on screen. 1 in infinite mode. */
+  page: number;
+  pageSize: number;
 }
 
 export interface EntitySource {
@@ -65,14 +78,22 @@ export interface EntitySource {
   readonly hasMore: boolean;
   readonly filters: WireGroup | null;
   readonly sort: SortSpec[];
-  /** Read the first page, discarding anything already loaded. */
+  readonly mode: SourceMode;
+  readonly page: number;
+  readonly pageSize: number;
+  readonly total: number | null;
+  /** Read the first page, discarding anything already loaded, and count the set in `pages` mode. */
   load(): Promise<void>;
-  /** Append the next page. A no-op while another read is in flight or when there is no more. */
+  /** Append the next page. A no-op in `pages` mode, while another read is in flight, or when there is no more. */
   loadMore(): Promise<void>;
   /** Read every page already shown again, keeping the row count. */
   refresh(): Promise<void>;
   setFilters(filters: SourceFilters): Promise<void>;
   setSort(sort: SortSpec[]): Promise<void>;
+  /** Show one page of the set. `pages` mode only. */
+  setPage(page: number): Promise<void>;
+  /** Change the rows per page and open at the first one. */
+  setPageSize(size: number): Promise<void>;
   /** Total rows the filter matches, through `_summarize` (020_summarize). Null when the site did not answer the key. */
   count(): Promise<number | null>;
   /** Write the named fields of one row and put the re-read row back in place. */
@@ -118,7 +139,6 @@ function asError(value: unknown): Error {
 
 export function createEntitySource(options: EntitySourceOptions): EntitySource {
   const { client, entityType } = options;
-  const pageSize = options.pageSize ?? 50;
   // `id` is what a row is keyed and re-read on, so it is never left out of a projection.
   const fields = [...new Set(['id', ...options.fields])];
 
@@ -127,21 +147,27 @@ export function createEntitySource(options: EntitySourceOptions): EntitySource {
     status: 'idle',
     error: null,
     hasMore: false,
-    count: null,
+    total: null,
     filters: toWire(options.filters ?? null),
     sort: [...(options.sort ?? [])],
+    mode: options.mode ?? 'infinite',
+    page: Math.max(1, options.page ?? 1),
+    pageSize: options.pageSize ?? 50,
   };
   const listeners = new Set<() => void>();
   // Every read carries the generation it started in; a later filter or sort discards it.
   let generation = 0;
   let inFlight: Promise<void> | null = null;
+  // One count per filter, whatever it answered: a site that answers no total answers
+  // none however often it is asked (020_summarize).
+  let counted = false;
 
   function set(next: Partial<EntitySourceState>): void {
     state = { ...state, ...next };
     for (const listener of listeners) listener();
   }
 
-  function page(number: number): Promise<SearchResult> {
+  function requestPage(number: number): Promise<SearchResult> {
     const sort = serializeSort(state.sort);
     return client.search(entityType, {
       filters: state.filters,
@@ -149,18 +175,23 @@ export function createEntitySource(options: EntitySourceOptions): EntitySource {
       // An empty `sort` is 400 `sort must be filled`, so the key is omitted rather
       // than sent blank (026_result_order).
       ...(sort === undefined ? {} : { sort }),
-      page: { size: pageSize, number },
+      page: { size: state.pageSize, number },
     });
   }
 
-  async function read(pages: number, status: 'loading' | 'loadingMore', keep: EntityRow[]): Promise<void> {
+  async function read(
+    pages: number,
+    status: 'loading' | 'loadingMore',
+    keep: EntityRow[],
+    first: number,
+  ): Promise<void> {
     const mine = ++generation;
     set({ status, error: null });
     try {
       const rows = [...keep];
       let more = false;
       for (let n = 0; n < pages; n += 1) {
-        const result = await page(Math.floor(rows.length / pageSize) + 1);
+        const result = await requestPage(first + n);
         if (mine !== generation) return;
         rows.push(...result.data);
         more = result.hasMore;
@@ -180,6 +211,19 @@ export function createEntitySource(options: EntitySourceOptions): EntitySource {
     });
     inFlight = promise;
     return promise;
+  }
+
+  /**
+   * Read the page the state now names, and count the set once per filter in `pages`
+   * mode: a range reads "n to m of N" only after something counted, because no total
+   * is in a read (006_pagination). Rows reach subscribers as soon as they land; the
+   * promise waits for the count as well.
+   */
+  function reread(): Promise<void> {
+    const rows = run(() => read(1, 'loading', [], state.mode === 'pages' ? state.page : 1));
+    if (state.mode !== 'pages' || counted) return rows;
+    const total = source.count().catch(() => undefined);
+    return Promise.all([rows, total]).then(() => undefined);
   }
 
   const source: EntitySource = {
@@ -204,21 +248,40 @@ export function createEntitySource(options: EntitySourceOptions): EntitySource {
       return state.sort;
     },
 
+    get mode(): SourceMode {
+      return state.mode;
+    },
+    get page(): number {
+      return state.page;
+    },
+    get pageSize(): number {
+      return state.pageSize;
+    },
+    get total(): number | null {
+      return state.total;
+    },
+
     load(): Promise<void> {
-      // A new read invalidates the count: the filter it was taken under may have moved.
-      set({ count: null });
-      return run(() => read(1, 'loading', []));
+      // A new read invalidates the total: the filter it was taken under may have moved.
+      counted = false;
+      set({ total: null, page: 1 });
+      return reread();
     },
 
     loadMore(): Promise<void> {
-      if (inFlight || !state.hasMore || state.status === 'error') return Promise.resolve();
-      return run(() => read(1, 'loadingMore', state.rows));
+      if (state.mode === 'pages' || inFlight || !state.hasMore || state.status === 'error') return Promise.resolve();
+      return run(() => read(1, 'loadingMore', state.rows, Math.floor(state.rows.length / state.pageSize) + 1));
     },
 
     refresh(): Promise<void> {
-      const pages = Math.max(1, Math.ceil(state.rows.length / pageSize));
-      set({ count: null });
-      return run(() => read(pages, 'loading', []));
+      counted = false;
+      if (state.mode === 'pages') {
+        set({ total: null });
+        return reread();
+      }
+      const pages = Math.max(1, Math.ceil(state.rows.length / state.pageSize));
+      set({ total: null });
+      return run(() => read(pages, 'loading', [], 1));
     },
 
     setFilters(filters: SourceFilters): Promise<void> {
@@ -227,20 +290,38 @@ export function createEntitySource(options: EntitySourceOptions): EntitySource {
     },
 
     setSort(sort: SortSpec[]): Promise<void> {
-      set({ sort: [...sort] });
-      return source.load();
+      // An order moves the rows, not the set, so the total counted under this filter stands.
+      set({ sort: [...sort], page: 1 });
+      return reread();
+    },
+
+    setPage(page: number): Promise<void> {
+      if (state.mode !== 'pages') return Promise.resolve();
+      set({ page: Math.max(1, Math.floor(page)) });
+      return reread();
+    },
+
+    setPageSize(size: number): Promise<void> {
+      set({ pageSize: Math.max(1, Math.floor(size)), page: 1 });
+      return reread();
     },
 
     async count(): Promise<number | null> {
+      const counting = state.filters;
       // A field that cannot be summarized answers 200 with its key absent, so the key is
       // tested rather than assumed (020_summarize).
       const summary = await client.summarize(entityType, {
-        filters: state.filters,
+        filters: counting,
         summaryFields: [{ field: 'id', type: 'count' }],
       });
       const total = summary.summaries['id'];
       const value = typeof total === 'number' ? total : null;
-      set({ count: value });
+      // Only the filter decides the total, so a count outlives the read it started beside
+      // and is dropped only when the filter it counted has moved.
+      if (state.filters === counting) {
+        counted = true;
+        set({ total: value });
+      }
       return value;
     },
 
@@ -273,6 +354,59 @@ export function createEntitySource(options: EntitySourceOptions): EntitySource {
   };
 
   return source;
+}
+
+/* -------------------------------------------------------------------------- */
+/* paging                                                                     */
+/* -------------------------------------------------------------------------- */
+
+/** The numbers a collection's footer draws, in either mode. */
+export interface PagingModel {
+  mode: SourceMode;
+  page: number;
+  pageSize: number;
+  /** 1-based index of the first row on screen. 0 when there are none. */
+  from: number;
+  /** 1-based index of the last row on screen. 0 when there are none. */
+  to: number;
+  total: number | null;
+  /** Pages the total implies. Null when nothing counted the set. */
+  pageCount: number | null;
+  hasPrevious: boolean;
+  hasNext: boolean;
+  /** `1 to 25 of 320`, and `1 to 25` when nothing counted the set. */
+  rangeLabel: string;
+  /** `25 loaded`, and `25 of 320 loaded` once the set is counted. */
+  loadedLabel: string;
+}
+
+/**
+ * The footer's numbers for one state.
+ *
+ * A read answers no total of its own, so a range reads "of N" only once
+ * `_summarize` has counted the set, and a next page exists either because that
+ * count says so or because the page that came back was full (006_pagination,
+ * 020_summarize).
+ */
+export function describePaging(state: EntitySourceState): PagingModel {
+  const { mode, page, pageSize, total, hasMore } = state;
+  const loaded = state.rows.length;
+  const from = loaded === 0 ? 0 : mode === 'pages' ? (page - 1) * pageSize + 1 : 1;
+  const to = loaded === 0 ? 0 : from + loaded - 1;
+  const pageCount = total === null ? null : Math.max(1, Math.ceil(total / pageSize));
+  return {
+    mode,
+    page,
+    pageSize,
+    from,
+    to,
+    total,
+    pageCount,
+    hasPrevious: mode === 'pages' && page > 1,
+    hasNext: pageCount === null ? hasMore : page < pageCount,
+    rangeLabel: total === null ? `${from} to ${to}` : `${from} to ${to} of ${total}`,
+    loadedLabel: total === null ? `${loaded} loaded` : `${loaded} of ${total} loaded`,
+  };
 }
 
 /* -------------------------------------------------------------------------- */
@@ -341,6 +475,26 @@ export async function resolveColumns(
       return column;
     }),
   );
+}
+
+/**
+ * A column from a bare path, for a row-anatomy prop that takes either.
+ *
+ * Nothing but the path is known, so the value renders as text and the column is
+ * neither sortable nor editable. A caller that wants the field's own type passes
+ * the resolved column from `resolveColumns` instead.
+ */
+export function toColumn(spec: string | CollectionColumn): CollectionColumn {
+  if (typeof spec !== 'string') return spec;
+  return {
+    path: spec,
+    header: spec,
+    dataType: 'text',
+    editable: false,
+    align: 'left',
+    sortable: false,
+    field: null,
+  };
 }
 
 /**

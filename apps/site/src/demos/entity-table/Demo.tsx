@@ -1,71 +1,30 @@
-import { useRef, useState } from 'react';
-import { useEffect, useMemo } from 'react';
-import type { CollectionColumn, EntityRef, StatusRecord } from '@sg-widgets/core';
-import { condition, createEntitySource, isEditableType, resolveColumns } from '@sg-widgets/core';
-import { EntityTable, type CellEditorProps } from '@/registry/sg/components/entity-table';
-import { FieldEditor } from '@/registry/sg/components/field-editor';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import type { CollectionColumn, EntityRef, FilterGroup, StatusRecord } from '@sg-widgets/core';
+import { condition, createEntitySource, emptyFilter, resolveColumns } from '@sg-widgets/core';
+import { ColumnPicker } from '@/registry/sg/components/column-picker';
+import { EntityTable } from '@/registry/sg/components/entity-table';
+import { FilterDialog } from '@/registry/sg/components/filter-dialog';
 import { createDemoContext } from '../_shared/client';
 import { DemoClientProvider } from '../_shared/react';
 
-const COLUMNS = [
-  { path: 'code', width: 260 },
-  { path: 'entity', width: 150 },
-  { path: 'sg_status_list', width: 150 },
-  { path: 'image', width: 90 },
-  { path: 'description', width: 260 },
-  { path: 'user', width: 160 },
-  { path: 'created_at', width: 170 },
-  { path: 'updated_at', width: 170 },
-];
+const WIDTHS: Record<string, number> = {
+  code: 260,
+  entity: 150,
+  sg_status_list: 150,
+  image: 90,
+  description: 260,
+  user: 160,
+  created_at: 170,
+  updated_at: 170,
+};
+const PATHS = Object.keys(WIDTHS);
+const SHOWN = ['code', 'entity', 'sg_status_list', 'image', 'description', 'user'];
 
 const toggle =
   'inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-background px-2 text-sm ' +
   'text-muted-foreground outline-none transition-colors duration-150 hover:bg-accent hover:text-accent-foreground ' +
   'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ' +
   'aria-pressed:bg-accent aria-pressed:text-accent-foreground aria-pressed:font-medium';
-
-interface Loaded {
-  columns: CollectionColumn[];
-  statuses: Record<string, StatusRecord>;
-}
-
-/**
- * The cell's editor: the type's own control from the field-editor item, with Enter
- * committing through the source and Escape restoring the value.
- */
-function CellEditor({ value, dataType, field, commit, cancel }: CellEditorProps) {
-  const [draft, setDraft] = useState(value);
-  // Enter can arrive in the same tick as the change that produced the value, before a
-  // re-render, so the committed value is read off a ref rather than off state.
-  const latest = useRef(value);
-  return (
-    <div
-      onKeyDown={(event) => {
-        if (event.key === 'Enter') {
-          event.preventDefault();
-          commit(latest.current);
-        } else if (event.key === 'Escape') {
-          event.preventDefault();
-          cancel();
-        }
-      }}
-    >
-      <FieldEditor
-        value={draft}
-        onValueChange={(next) => {
-          latest.current = next;
-          setDraft(next);
-        }}
-        dataType={dataType}
-        field={field}
-        mode="edit"
-        size="sm"
-      />
-    </div>
-  );
-}
-
-const editorFor = (dataType: string) => (isEditableType(dataType) ? CellEditor : null);
 
 export default function EntityTableDemo() {
   const context = useMemo(() => createDemoContext({ counts: { versions: 320 } }), []);
@@ -74,36 +33,58 @@ export default function EntityTableDemo() {
       createEntitySource({
         client: context.client,
         entityType: 'Version',
-        fields: COLUMNS.map((c) => c.path),
+        fields: PATHS,
         // The mock's rows are one project's already; a real site's are not.
         filters: context.live ? condition('project', 'is', { type: 'Project', id: context.projectId }) : null,
-        pageSize: 150,
+        mode: 'pages',
+        pageSize: 25,
       }),
     [context],
   );
 
-  const [data, setData] = useState<Loaded | null>(null);
+  const [columns, setColumns] = useState<CollectionColumn[]>([]);
+  const [statuses, setStatuses] = useState<Record<string, StatusRecord> | null>(null);
+  const [filter, setFilter] = useState<FilterGroup>(emptyFilter());
   const [error, setError] = useState<string | null>(null);
+  const [picking, setPicking] = useState(false);
   const [grouped, setGrouped] = useState(false);
   const [compact, setCompact] = useState(false);
   const [selected, setSelected] = useState<EntityRef[]>([]);
 
+  const pickColumns = useCallback(
+    (paths: string[]) => {
+      void resolveColumns(
+        context.schema,
+        'Version',
+        paths.map((path) => ({ path, width: WIDTHS[path] })),
+      ).then(setColumns);
+    },
+    [context],
+  );
+
   useEffect(() => {
     let live = true;
-    Promise.all([resolveColumns(context.schema, 'Version', COLUMNS), context.statuses.byCode()])
-      .then(([columns, table]) => {
+    Promise.all([
+      resolveColumns(
+        context.schema,
+        'Version',
+        SHOWN.map((path) => ({ path, width: WIDTHS[path] })),
+      ),
+      context.statuses.byCode(),
+    ])
+      .then(([resolved, table]) => {
         if (!live) return;
-        void source.count();
-        setData({ columns, statuses: Object.fromEntries(table) });
+        setColumns(resolved);
+        setStatuses(Object.fromEntries(table));
       })
       .catch((e: unknown) => live && setError(e instanceof Error ? e.message : String(e)));
     return () => {
       live = false;
     };
-  }, [context, source]);
+  }, [context]);
 
   if (error) return <p className="text-destructive text-sm">{error}</p>;
-  if (!data) return <p className="text-muted-foreground text-sm">Loading the site…</p>;
+  if (!statuses) return <p className="text-muted-foreground text-sm">Loading the site…</p>;
 
   return (
     <DemoClientProvider client={context.client}>
@@ -121,14 +102,48 @@ export default function EntityTableDemo() {
         </div>
         <EntityTable
           source={source}
-          columns={data.columns}
-          statuses={data.statuses}
+          columns={columns}
+          onColumnsChange={setColumns}
+          statuses={statuses}
+          context={context}
           selectable
           editable
           density={compact ? 'compact' : 'default'}
           groupBy={grouped ? 'sg_status_list' : null}
-          editorFor={editorFor}
           onSelectionChange={setSelected}
+          toolbarStart={
+            <div className="flex flex-col gap-2">
+              <button type="button" className={toggle} aria-pressed={picking} onClick={() => setPicking(!picking)}>
+                Columns
+              </button>
+              {picking ? (
+                <div className="w-64">
+                  <ColumnPicker
+                    schema={context.schema}
+                    entityType="Version"
+                    size="sm"
+                    deepLinks={false}
+                    filter={(_field, path) => PATHS.includes(path)}
+                    placeholder="Add a column"
+                    value={columns.map((column) => column.path)}
+                    onValueChange={pickColumns}
+                  />
+                </div>
+              ) : null}
+            </div>
+          }
+          toolbarEnd={
+            <FilterDialog
+              entityType="Version"
+              client={context.client}
+              schema={context.schema}
+              value={filter}
+              onChange={(next) => {
+                setFilter(next);
+                void source.setFilters(next);
+              }}
+            />
+          }
         />
       </div>
     </DemoClientProvider>

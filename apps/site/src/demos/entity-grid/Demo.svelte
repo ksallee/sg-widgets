@@ -5,8 +5,9 @@
 	import { createDemoContext } from '../_shared/client';
 	import { setDemoClient } from '../_shared/svelte';
 
-	const SECONDARY = ['user', 'created_at'];
-	const FIELDS = ['code', 'image', 'sg_status_list', ...SECONDARY];
+	const SUB = 'user';
+	const EXTRA = ['created_at'];
+	const FIELDS = ['code', 'image', 'sg_status_list', SUB, ...EXTRA];
 
 	const context = createDemoContext();
 	setDemoClient(context.client);
@@ -24,17 +25,23 @@
 	let selected = $state<EntityRef[]>([]);
 
 	async function load(): Promise<{
-		secondary: CollectionColumn[];
+		subLabel: CollectionColumn;
+		fields: CollectionColumn[];
 		statusField: FieldSchema | null;
 		statuses: Record<string, StatusRecord>;
 	}> {
-		const [secondary, fields, table] = await Promise.all([
-			resolveColumns(context.schema, 'Version', SECONDARY),
+		const [resolved, schema, table] = await Promise.all([
+			resolveColumns(context.schema, 'Version', [SUB, ...EXTRA]),
 			context.schema.fields('Version'),
 			context.statuses.byCode()
 		]);
 		void source.count();
-		return { secondary, statusField: fields['sg_status_list'] ?? null, statuses: Object.fromEntries(table) };
+		return {
+			subLabel: resolved[0]!,
+			fields: resolved.slice(1),
+			statusField: schema['sg_status_list'] ?? null,
+			statuses: Object.fromEntries(table)
+		};
 	}
 
 	const toggle =
@@ -46,7 +53,7 @@
 
 {#await load()}
 	<p class="text-muted-foreground text-sm">Loading the site…</p>
-{:then { secondary, statusField, statuses }}
+{:then { subLabel, fields, statusField, statuses }}
 	<div class="flex w-full min-w-0 flex-col gap-3">
 		<div class="flex flex-wrap items-center gap-2">
 			{#each ['sm', 'md', 'lg'] as const as option (option)}
@@ -60,7 +67,10 @@
 		</div>
 		<EntityGrid
 			{source}
-			{secondary}
+			{context}
+			subLabelField={subLabel}
+			secondaryField="id"
+			{fields}
 			{statusField}
 			{statuses}
 			{size}

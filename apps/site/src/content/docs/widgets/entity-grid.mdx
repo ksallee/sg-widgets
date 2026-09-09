@@ -1,12 +1,13 @@
 ---
 title: Entity Grid
-description: Flow Production Tracking rows as thumbnail cards, with selection and infinite scroll.
+description: Flow Production Tracking rows as thumbnail cards, with selection and either paging or infinite scroll.
 ---
 
 import Demo from '../../../components/Demo.astro';
 
-Renders rows from an entity source as cards: a thumbnail, the row's name, a status badge and up to
-two more fields. Scrolling to the end asks the source for the next page.
+Renders rows from an entity source as cards: a thumbnail, the row's label, a sub-label, a status badge
+and any extra fields. A source in `infinite` mode loads the next page at the end of the scroll; one in
+`pages` mode draws a pagination footer.
 
 ## Install
 
@@ -24,7 +25,7 @@ const source = createEntitySource({
   fields: ['code', 'image', 'sg_status_list', 'user', 'created_at'],
   pageSize: 12,
 });
-const secondary = await resolveColumns(context.schema, 'Version', ['user', 'created_at']);
+const [subLabel, ...fields] = await resolveColumns(context.schema, 'Version', ['user', 'created_at']);
 ```
 
 ## Props
@@ -32,13 +33,21 @@ const secondary = await resolveColumns(context.schema, 'Version', ['user', 'crea
 | prop | type | default | meaning |
 |---|---|---|---|
 | `source` | `EntitySource` | — | The rows and the paging behind them. |
-| `imagePath` | `string` | `'image'` | Path of the image field. |
+| `thumbnail` | `string \| false` | `'image'` | Field holding the thumbnail URL. |
+| `labelField` | `string \| null` | `null` | Field shown as the card's label. Defaults to the type's display name. |
+| `subLabelField` | `string \| CollectionColumn \| null` | `null` | The muted line under the label. A resolved column renders it by type. |
+| `subLabel` | `(row) => string` | — | The caller's own sub-label. Wins over `subLabelField`. |
+| `secondaryField` | `string \| CollectionColumn \| null` | `null` | The value shown beside the label. |
+| `secondary` | `(row) => string` | — | The caller's own text beside the label. Wins over `secondaryField`. |
+| `showCode` | `boolean` | `false` | Show the row's `code` beside the label when the two differ. |
+| `fields` | `CollectionColumn[]` | `[]` | Extra fields drawn on the card. The source must already read them. |
 | `statusPath` | `string` | `'sg_status_list'` | Path of the status field. Project's is `sg_status`. |
 | `statusField` | `FieldSchema \| null` | `null` | The status field's schema, for its labels. |
-| `secondary` | `CollectionColumn[]` | `[]` | Up to two fields shown under the name. |
 | `statuses` | `Record<string, StatusRecord> \| null` | `null` | Status rows by code. |
+| `context` | `SgContext` | — | An entity value links to the row's page when this carries a site. |
 | `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Card width: 160, 224 or 288 pixels. |
 | `selectable` | `boolean` | `false` | Draws a checkbox on each card. |
+| `pageSizes` | `number[]` | `[25, 50, 100]` | Rows per page offered in the footer. |
 | `maxHeight` | `string` | `'32rem'` | Height of the scrolling body. |
 | `emptyLabel` | `string` | `'No rows'` | Shown when the read returned nothing. |
 | `class` / `className` | `string` | — | Merged after the widget's own classes. |
@@ -58,16 +67,18 @@ None.
 
 | key | does |
 |---|---|
-| Tab | Moves to the next card, or to its checkbox. |
+| Tab | Moves to the next card, or to its checkbox, then to the footer. |
 | Enter, Space on a card | Selects it, or emits the select event. |
 | Space on a checkbox | Toggles the card. |
+| Enter in the page number | Goes to that page. |
 
 ## API behaviour
 
 The value of an image field is a presigned URL re-signed on every read, and it is the only state
 marker there is: null means the row never had a thumbnail, and a URL under the transient status path
-means one is still transcoding. All three states render (field_types/image).
+means one is still transcoding. All three states render (field_types/image). A Version card carries a
+play overlay.
 
-A Version card carries a play overlay. Paging stops on a short page: `links.next` is emitted on every
-page forever, including empty ones (006_pagination). The total beside the card count comes from one
-`_summarize` call (020_summarize).
+Paging stops on a short page: `links.next` is emitted on every page forever, including empty ones, and
+no total is in a read (006_pagination). The "of N" in the footer comes from one `_summarize` call
+counting `id`; a site that does not answer that key leaves the range without a total (020_summarize).

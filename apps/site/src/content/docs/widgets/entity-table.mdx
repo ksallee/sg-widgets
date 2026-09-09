@@ -1,12 +1,13 @@
 ---
 title: Entity Table
-description: A page of Flow Production Tracking rows as a sortable, selectable, editable table.
+description: A page of Flow Production Tracking rows as a sortable, selectable, editable table with server pagination.
 ---
 
 import Demo from '../../../components/Demo.astro';
 
 Renders rows from an entity source as a table whose columns come from the schema, with server-side
-sorting, row selection, column sizing and reordering, grouping and inline edit.
+sorting and paging, a toolbar, a pagination footer, row selection, column sizing, resizing, ordering,
+pinning and grouping, and inline edit.
 
 ## Install
 
@@ -15,7 +16,7 @@ pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/entity-table.json
 pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/entity-table.json
 ```
 
-<Demo name="entity-table" title="Entity Table: 320 Versions, eight columns, sorting, selection, grouping and inline edit" />
+<Demo name="entity-table" title="Entity Table: 320 Versions in pages of 25, with a column picker and a filter dialog in the toolbar" />
 
 Build the source and the columns once, then hand both to the table.
 
@@ -24,24 +25,32 @@ const context = createSgContext({ client });
 const source = createEntitySource({
   client: context.client,
   entityType: 'Version',
-  fields: ['code', 'entity', 'sg_status_list', 'image', 'description', 'user', 'created_at', 'updated_at'],
-  pageSize: 150,
+  fields: ['code', 'entity', 'sg_status_list', 'image', 'description', 'user'],
+  mode: 'pages',
+  pageSize: 25,
 });
 const columns = await resolveColumns(context.schema, 'Version', ['code', 'entity', 'sg_status_list']);
 ```
+
+A source in `infinite` mode swaps the pager for a load-more row and a count of what is loaded.
+
+<Demo name="entity-table-infinite" title="Entity Table: the same rows in infinite mode, with the programmatic path beside each header" />
 
 ## Props
 
 | prop | type | default | meaning |
 |---|---|---|---|
-| `source` | `EntitySource` | — | The rows, the filter and the sort behind them. |
-| `columns` | `CollectionColumn[]` | — | Columns in display order, from `resolveColumns`. |
+| `source` | `EntitySource` | — | The rows, the filter, the sort and the page behind them. |
+| `columns` | `CollectionColumn[]` | — | Columns in display order, from `resolveColumns`. Two-way: hiding one writes the shorter list back. |
 | `statuses` | `Record<string, StatusRecord> \| null` | `null` | Status rows by code, for status cells. |
+| `context` | `SgContext` | — | An entity cell links to the row's page when this carries a site. |
 | `density` | `'compact' \| 'default'` | `'default'` | Compact halves the vertical cell padding. |
 | `selectable` | `boolean` | `false` | Draws a checkbox column. |
 | `groupBy` | `string \| null` | `null` | Collapses rows under headers of a shared value at this path. |
 | `editable` | `boolean` | `false` | Lets an editable cell open an editor. |
-| `editorFor` | `(dataType) => Component \| null` | — | The editor a cell opens, by data type. A type it does not answer for gets a plain input. |
+| `editorFor` | `(dataType) => Component \| null` | — | The editor a cell opens, by data type. A type it does not answer for opens FieldEditor. |
+| `showCode` | `boolean` | `false` | Show the programmatic field path beside the header's display name. |
+| `pageSizes` | `number[]` | `[25, 50, 100]` | Rows per page offered in the footer. |
 | `maxHeight` | `string` | `'28rem'` | Height of the scrolling body. |
 | `virtualizeAfter` | `number` | `100` | Rows above which the body is virtualised. |
 | `emptyLabel` | `string` | `'No rows'` | Shown when the read returned nothing. |
@@ -51,63 +60,86 @@ const columns = await resolveColumns(context.schema, 'Version', ['code', 'entity
 
 | event | payload | when |
 |---|---|---|
+| `onColumnsChange` | `CollectionColumn[]` | A column was hidden from its header menu. |
 | `onselectionchange` / `onSelectionChange` | `EntityRef[]` | The selection changed. |
 
 ## Slots
 
-`editorFor` is the one extension point: return the component a data type opens in a cell, return
-nothing and the cell opens a plain text input. An editor is handed `value`, `dataType`, `field`,
-`commit` and `cancel`, and owns its own keys.
+| slot | receives | meaning |
+|---|---|---|
+| `toolbarStart` | — | Left region of the toolbar above the table. |
+| `toolbarEnd` | — | Right region of the toolbar above the table. |
+| `editorFor` | `dataType` | The component a cell opens for that data type. |
 
-The demo above wires it to the field editors. One wrapper is all it takes:
+Bind a ColumnPicker to the same array the table holds and the two drive each other: hiding a column
+from its header menu removes it from the picker, and adding one there puts it back.
 
 ```tsx
-function CellEditor({ value, dataType, field, commit, cancel }: CellEditorProps) {
-  const [draft, setDraft] = useState(value);
-  return (
-    <div
-      onKeyDown={(event) => {
-        if (event.key === 'Enter') commit(draft);
-        else if (event.key === 'Escape') cancel();
-      }}
-    >
-      <FieldEditor value={draft} onValueChange={setDraft} dataType={dataType} field={field} mode="edit" size="sm" />
-    </div>
-  );
-}
-
-<EntityTable editorFor={(dataType) => (isEditableType(dataType) ? CellEditor : null)} ... />
+<EntityTable
+  source={source}
+  columns={columns}
+  onColumnsChange={setColumns}
+  toolbarStart={
+    <ColumnPicker
+      schema={schema}
+      entityType="Version"
+      value={columns.map((column) => column.path)}
+      onValueChange={pickColumns}
+    />
+  }
+/>
 ```
+
+An editor is handed `value`, `dataType`, `field`, `commit` and `cancel`, and owns its own keys.
+Without `editorFor`, an editable cell opens the type's own control from the field-editor item.
+
+## Column menu
+
+Every header carries a menu: sort ascending, sort descending, clear sort, hide column, and pin left.
+The sort entries are inert on a column the schema says cannot be sorted. Hiding writes the shorter
+column list back through `columns`. Pinning sticks the column to the start of the scrolling body.
 
 ## Keyboard
 
 | key | does |
 |---|---|
-| Tab | Moves through header buttons, checkboxes and editable cells. |
+| Tab | Moves through toolbar, header buttons, column menus, checkboxes, editable cells and the footer. |
 | Enter, Space on a header | Sorts by that column, ascending, then descending, then unsorted. |
+| Enter, Space on a column menu | Opens it; arrows walk it, Escape closes it. |
 | Enter on an editable cell | Opens the editor. |
 | Enter in an editor | Commits the value. |
 | Escape in an editor | Cancels and restores the value. |
 | Space on a checkbox | Toggles the row, or every loaded row from the header. |
+| Enter in the page number | Goes to that page. |
 
-A double-click on an editable cell opens the editor too.
+A double-click on an editable cell opens the editor too. A header drags onto another to reorder, and
+its right edge drags to resize.
 
 ## API behaviour
 
-Sorting is the server's. A header click sets the source's sort and reads the first page again,
-because a sort applied to one loaded page orders the page and not the set. Sorts also fail silently
-where filters fail loudly: a field that cannot be sorted, and a name that does not exist, both return
-200 with the rows in default order, so a sortable path is verified against the schema first
+Sorting is the server's. A header click sets the source's sort and reads the page again, because a
+sort applied to one loaded page orders the page and not the set. Sorts also fail silently where
+filters fail loudly: a field that cannot be sorted, and a name that does not exist, both return 200
+with the rows in default order, so a sortable path is verified against the schema first
 (026_result_order).
 
-Grouping follows that same server order and collapses the contiguous runs, so a group's count is the
-rows loaded so far and grows as later pages arrive.
+Paging is the server's too. No total is in a read: a paged GET answers `data` and `links` alone, and
+five spellings of a count option are accepted at 200 and change nothing, so `pages` mode walks the
+set with an explicit page number and stops on a short page rather than on a missing `links.next`,
+which is emitted on every page forever (006_pagination). The "of N" in the range comes from one
+`_summarize` call counting `id`, taken once per filter; a site that does not answer that key leaves
+the range reading "n to m" (020_summarize).
 
-Paging stops on a short page. `links.next` is emitted on every page forever, including empty ones, so
-it is never the stop signal (006_pagination). The total beside the row count comes from one
-`_summarize` call, which counts without paging rows (020_summarize).
+Grouping collapses the loaded rows under headers, and the group path leads the source's sort so a
+group is not split across pages. A count is the rows loaded under that header.
 
 An edit writes one field with `PUT /entity/<type>/<id>`, which changes only the keys it is given and
 leaves the rest alone (put_entity_type_id). The write answers the whole record but resolves no dotted
 path, so the row is read again afterwards (024_read_after_write). A dotted path is never editable: a
 write names one field of one row.
+
+## Reference
+
+Column sizing, resizing, ordering and grouping are TanStack Table's (`@tanstack/table-core` 9.2.4).
+The markup, the classes and the anatomy of the toolbar, the pagination footer and the column menu
+follow ReUI's Base UI data grid (ReUI 2.5.2).

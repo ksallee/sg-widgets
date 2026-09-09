@@ -32,7 +32,8 @@ export default function GroupedListDemo() {
         fields: FIELDS,
         // The mock's rows are one project's already; a real site's are not.
         filters: context.live ? condition('project', 'is', { type: 'Project', id: context.projectId }) : null,
-        pageSize: 50,
+        mode: 'pages',
+        pageSize: 25,
       }),
     [context],
   );
@@ -77,9 +78,11 @@ export default function GroupedListDemo() {
         </div>
         <GroupedList
           source={source}
+          context={context}
           groupBy={data.columns[0]!}
-          subLabel={data.columns[1]!}
-          secondary={data.columns[2]!}
+          labelField="content"
+          subLabelField={data.columns[1]!}
+          secondaryField={data.columns[2]!}
           statuses={data.statuses}
           leading={leading}
           selectable

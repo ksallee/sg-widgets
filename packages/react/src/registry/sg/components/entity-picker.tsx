@@ -286,7 +286,7 @@ export function EntityPicker({
           {chipEntity ? (
             <span
               data-slot="entity-picker-value"
-              className="relative flex min-w-0 flex-wrap items-center gap-1.5"
+              className="pointer-events-none relative flex min-w-0 flex-wrap items-center gap-1.5 [&_button]:pointer-events-auto"
             >
               <EntityChip
                 entity={chipEntity}
@@ -295,7 +295,7 @@ export function EntityPicker({
               />
             </span>
           ) : (
-            <span className="text-muted-foreground relative min-w-0 truncate">{placeholder}</span>
+            <span className="text-muted-foreground pointer-events-none relative min-w-0 truncate">{placeholder}</span>
           )}
         </div>
 

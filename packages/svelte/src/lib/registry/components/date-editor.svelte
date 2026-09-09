@@ -162,7 +162,7 @@
 			>
 				<CalendarIcon aria-hidden="true" class="size-4" />
 			</Popover.Trigger>
-			<Popover.Content class="w-auto p-0" align="start">
+			<Popover.Content strategy="fixed" class="w-auto p-0" align="start">
 				<Calendar type="single" value={day} onValueChange={pick} />
 			</Popover.Content>
 		</Popover.Root>

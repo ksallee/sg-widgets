@@ -250,7 +250,7 @@
 		queueMicrotask(() => {
 			const element = document.querySelector<HTMLElement>(`[data-slot="entity-tree"] [data-path="${CSS.escape(path)}"]`);
 			if (element && element.matches(':not(:focus)') && element.closest('[data-slot="entity-tree"]')?.contains(document.activeElement)) {
-				element.focus();
+				element.focus({ preventScroll: true });
 			}
 		});
 	});

@@ -117,7 +117,7 @@
 				<Badge variant="secondary" class="shrink-0" data-slot="sort-count">{value.length}</Badge>
 			{/if}
 		</Popover.Trigger>
-		<Popover.Content class="flex w-96 flex-col gap-3 p-3" align="start">
+		<Popover.Content strategy="fixed" class="flex w-96 flex-col gap-3 p-3" align="start">
 			<div class="flex min-w-0 flex-col gap-2" data-slot="sort-keys">
 				{#each value as key, i (key.field)}
 					<div class="flex min-w-0 items-center gap-2" data-slot="sort-key" data-field={key.field}>

@@ -166,6 +166,7 @@
 
 	let snap = $state(search.state);
 	let open = $state(false);
+	let inputEl = $state<HTMLInputElement | null>(null);
 	let query = $state('');
 
 	$effect(() => search.subscribe((next) => (snap = next)));
@@ -327,7 +328,7 @@
 	data-multiple="true"
 	class={cn('relative flex w-full min-w-0 items-center', disabled && 'pointer-events-none opacity-50', className)}
 >
-	<Popover.Root {open} onOpenChange={(next) => (open = interactive ? next : false)}>
+	<Popover.Root bind:open={() => open, (next) => (open = interactive ? next : false)}>
 		<div
 			data-slot="entity-picker-control"
 			aria-invalid={invalid ? 'true' : undefined}
@@ -375,12 +376,16 @@
 
 		<Popover.Content
 			data-picker="entity-multi"
+			strategy="fixed"
+			onOpenAutoFocus={(e) => {
+				e.preventDefault();
+				inputEl?.focus({ preventScroll: true });
+			}}
 			align="start"
 			class="w-96 max-w-[calc(100vw-2rem)] gap-0 overflow-hidden p-0"
 		>
 			<Command.Root shouldFilter={false} loop>
-				<!-- svelte-ignore a11y_autofocus -->
-				<Command.Input autofocus bind:value={query} placeholder={searchPlaceholder} />
+				<Command.Input bind:ref={inputEl} bind:value={query} placeholder={searchPlaceholder} />
 				<Command.List>
 					{#if snap.error}
 						<div

@@ -554,7 +554,7 @@
 												<!-- No editor for this type: a plain input, which every text-like field takes. -->
 												<Input
 													value={String(cellValue(item.row.data, column.path) ?? '')}
-													autofocus
+													{@attach (el: HTMLInputElement) => el.focus({ preventScroll: true })}
 													aria-label={column.header}
 													onkeydown={(event) => fallbackKeydown(event, item.row!, column)}
 													onblur={() => (editing = null)}

@@ -167,7 +167,7 @@
 					<ChevronDownIcon class="text-muted-foreground size-4 shrink-0" />
 				{/if}
 			</Popover.Trigger>
-			<Popover.Content class="w-64 p-0" align="start">
+			<Popover.Content strategy="fixed" class="w-64 p-0" align="start">
 				<Command.Root>
 					<Command.Input placeholder="Search values…" />
 					<Command.List>

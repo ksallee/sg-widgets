@@ -48,6 +48,7 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/entity-picker.
 | `invalid` | `boolean` | `false` | Sets `aria-invalid` and the destructive ring. |
 | `clearable` | `boolean` | `true` | Shows the clear control. |
 | `debounceMs` | `number` | `250` | Wait after the last keystroke before searching. |
+| `open` | `boolean` | `false` | Whether the popup is showing. Two-way in Svelte. |
 | `class` / `className` | `string` | — | Merged after the widget's own classes. |
 
 The secondary column shows nothing until `secondaryField` or `secondary` asks for something.
@@ -70,6 +71,7 @@ The picker is `w-full`; wrap it in a sized container.
 |---|---|---|
 | `onValueChange` | `EntityRef \| null`, `PickerRow \| null` | A row was chosen, or the clear control was pressed. |
 | `onError` | `Error` | A read failed. The list shows it inline as well. |
+| `onOpenChange` | `boolean` | The popup opened or closed. Svelte also binds it with `bind:open`. |
 
 ## Slots
 

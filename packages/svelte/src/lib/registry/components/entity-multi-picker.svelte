@@ -109,6 +109,9 @@
 		invalid?: boolean;
 		clearable?: boolean;
 		debounceMs?: number;
+		/** Whether the popup is showing, two-way. */
+		open?: boolean;
+		onOpenChange?: (open: boolean) => void;
 		onError?: (error: Error) => void;
 		class?: string;
 	}
@@ -179,6 +182,8 @@
 		invalid = false,
 		clearable = true,
 		debounceMs = 250,
+		open = $bindable(false),
+		onOpenChange,
 		onValueChange,
 		onError,
 		class: className
@@ -210,7 +215,6 @@
 	});
 
 	let snap = $state(search.state);
-	let open = $state(false);
 	let controlEl = $state<HTMLElement | null>(null);
 	let inputEl = $state<HTMLInputElement | null>(null);
 	let query = $state('');
@@ -436,7 +440,7 @@
 			event.preventDefault();
 			inputEl?.focus({ preventScroll: true });
 		}
-		open = true;
+		setOpen(true);
 	}
 
 	// A summary trigger has no caret of its own, so the popup's search box takes it.
@@ -452,8 +456,11 @@
 			paging = false;
 			return;
 		}
-		open = interactive ? next : false;
-		if (!open) query = '';
+		const wanted = interactive ? next : false;
+		if (!wanted) query = '';
+		if (wanted === open) return;
+		open = wanted;
+		onOpenChange?.(open);
 	}
 
 	function setSelected(keys: string[]): void {

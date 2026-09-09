@@ -97,6 +97,9 @@
 		/** The site the stock sprite is served from, passed to every badge. */
 		siteUrl?: string;
 		size?: StatusMultiPickerSize;
+		/** Whether the popup is showing, two-way. */
+		open?: boolean;
+		onOpenChange?: (open: boolean) => void;
 		class?: string;
 	};
 
@@ -120,6 +123,8 @@
 		max = 0,
 		siteUrl = undefined,
 		size = 'md',
+		open = $bindable(false),
+		onOpenChange,
 		class: className
 	}: Props = $props();
 
@@ -168,7 +173,6 @@
 		load(entityType, projectKey === '' ? [] : projectKey.split(',').map(Number), field)
 	);
 
-	let open = $state(false);
 	let controlEl = $state<HTMLElement | null>(null);
 	let inputEl = $state<HTMLInputElement | null>(null);
 	let search = $state('');
@@ -277,7 +281,7 @@
 			event.preventDefault();
 			inputEl?.focus({ preventScroll: true });
 		}
-		open = true;
+		setOpen(true);
 	}
 
 	// A summary trigger has no caret of its own, so the popup's search box takes it.
@@ -289,8 +293,11 @@
 	});
 
 	function setOpen(next: boolean): void {
-		open = interactive ? next : false;
-		if (!open) search = '';
+		const wanted = interactive ? next : false;
+		if (!wanted) search = '';
+		if (wanted === open) return;
+		open = wanted;
+		onOpenChange?.(open);
 	}
 
 	function setSelected(next: string[]): void {

@@ -59,6 +59,9 @@
 		error?: string | null;
 		onErrorChange?: (error: string | null) => void;
 		placeholder?: string;
+		/** Whether the calendar popover is showing, two-way. */
+		open?: boolean;
+		onOpenChange?: (open: boolean) => void;
 		errorMessage?: Snippet<[string]>;
 	};
 
@@ -74,6 +77,8 @@
 		error = null,
 		onErrorChange,
 		placeholder = 'YYYY-MM-DD',
+		open = $bindable(false),
+		onOpenChange,
 		errorMessage,
 		class: className,
 		ref = $bindable(null),
@@ -83,7 +88,6 @@
 	let draft = $state(value ?? '');
 	let parseError = $state<string | null>(null);
 	let editing = $state(false);
-	let open = $state(false);
 	let dayInput = $state<HTMLInputElement | null>(null);
 
 	$effect(() => {
@@ -116,9 +120,16 @@
 		return true;
 	}
 
+	function setOpen(next: boolean): void {
+		const wanted = readonly || disabled ? false : next;
+		if (wanted === open) return;
+		open = wanted;
+		onOpenChange?.(open);
+	}
+
 	function pick(picked: DateValue | undefined): void {
 		editing = false;
-		open = false;
+		setOpen(false);
 		emit(fromCalendarDate(picked) || null);
 	}
 
@@ -137,7 +148,7 @@
 		if (event.key === 'Enter') {
 			if (!commit()) return;
 			editing = false;
-			open = false;
+			setOpen(false);
 			return;
 		}
 		draft = value ?? '';
@@ -165,7 +176,7 @@
 	class={cn('flex w-full min-w-0 flex-col gap-2', inline && 'w-fit', className)}
 	{...rest}
 >
-	<Popover.Root bind:open={() => open, (next) => (open = readonly || disabled ? false : next)}>
+	<Popover.Root bind:open={() => open, setOpen}>
 		<Popover.Trigger
 			data-slot="date-editor-trigger"
 			aria-label={field?.displayName ?? 'Pick a date'}

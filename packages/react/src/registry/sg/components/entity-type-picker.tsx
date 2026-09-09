@@ -147,6 +147,9 @@ export interface EntityTypePickerProps {
   /** Chips drawn before the rest becomes `+n`. `0` draws every chip. */
   max?: number;
   size?: EntityTypePickerSize;
+  /** Whether the popup is showing. */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
   className?: string;
 }
 
@@ -177,9 +180,16 @@ export function EntityTypePicker({
   summary = 'ellipsis',
   max = 0,
   size = 'md',
+  open: openProp,
+  onOpenChange,
   className,
 }: EntityTypePickerProps) {
-  const [open, setOpen] = useState(false);
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const open = openProp ?? uncontrolledOpen;
+  const setOpen = (next: boolean): void => {
+    setUncontrolledOpen(next);
+    onOpenChange?.(next);
+  };
   const [search, setSearch] = useState('');
   const [loaded, setLoaded] = useState<EntityTypeInfo[] | null>(null);
   const [failure, setFailure] = useState<string | null>(null);

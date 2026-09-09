@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useSyncExternalStore } from 'react';
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import type { ReactNode } from 'react';
 import type { SgClient, StatusOption, StatusRecord } from '@sg-widgets/core';
 import { createSchemaService, createStatusService } from '@sg-widgets/core';
@@ -60,6 +60,9 @@ export interface StatusPickerProps {
   /** The site the stock sprite is served from, passed to every badge. */
   siteUrl?: string;
   size?: StatusPickerSize;
+  /** Whether the popup is showing. */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
   className?: string;
 }
 
@@ -147,8 +150,17 @@ export function StatusPicker({
   showCode = false,
   siteUrl,
   size = 'md',
+  open: openProp,
+  onOpenChange,
   className,
 }: StatusPickerProps) {
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const open = openProp ?? uncontrolledOpen;
+  const setOpen = (next: boolean): void => {
+    setUncontrolledOpen(next);
+    onOpenChange?.(next);
+  };
+
   const projectKey = (projectIds ?? (projectId === undefined ? [] : [projectId])).join(',');
   const store = useMemo(
     () => statusOptionStore(client, entityType, projectKey, field),
@@ -268,6 +280,8 @@ export function StatusPicker({
             value={value ?? null}
             onValueChange={(next: string | null) => onValueChange?.(next ?? undefined)}
             disabled={inert}
+            open={open}
+            onOpenChange={(next: boolean) => setOpen(inert ? false : next)}
           >
             <SelectTrigger
               aria-invalid={invalid ? 'true' : undefined}

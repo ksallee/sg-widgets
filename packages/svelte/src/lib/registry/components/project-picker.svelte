@@ -36,6 +36,7 @@
 		fields = [],
 		placeholder = 'Search for a project',
 		emptyLabel = 'No project matches.',
+		open = $bindable(false),
 		...rest
 	}: Props = $props();
 </script>
@@ -49,6 +50,7 @@
 -->
 <EntityPicker
 	bind:value
+	bind:open
 	entityTypes={['Project']}
 	fields={[...PROJECT_FIELDS, ...fields]}
 	filters={projectFilters(includeArchived, filters)}

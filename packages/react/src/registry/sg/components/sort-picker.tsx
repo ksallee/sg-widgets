@@ -27,6 +27,9 @@ export interface SortPickerProps {
   disabled?: boolean;
   /** Both the keys and the `sort` string they serialise to. */
   onChange?: (value: SortKey[], sort: string) => void;
+  /** Whether the popover is showing. */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
   className?: string;
 }
 
@@ -51,8 +54,16 @@ export function SortPicker({
   hidePaths = [],
   disabled = false,
   onChange,
+  open: openProp,
+  onOpenChange,
   className,
 }: SortPickerProps) {
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const open = openProp ?? uncontrolledOpen;
+  const setOpen = (next: boolean): void => {
+    setUncontrolledOpen(next);
+    onOpenChange?.(next);
+  };
   const service = useMemo(() => schema ?? createSchemaService(client), [schema, client]);
 
   /** The friendly label of every path in the list, resolved once and kept. */
@@ -117,7 +128,7 @@ export function SortPicker({
 
   return (
     <div className={cn('inline-flex min-w-0 items-center', className)} data-slot="sort-picker">
-      <Popover>
+      <Popover open={open} onOpenChange={(next) => setOpen(disabled ? false : next)}>
         <PopoverTrigger
           disabled={disabled}
           data-slot="sort-trigger"

@@ -88,6 +88,9 @@
 		/** Chips drawn before the rest becomes `+n`. `0` draws every chip. */
 		max?: number;
 		size?: EntityTypePickerSize;
+		/** Whether the popup is showing, two-way. */
+		open?: boolean;
+		onOpenChange?: (open: boolean) => void;
 		class?: string;
 	};
 
@@ -109,10 +112,10 @@
 		summary = 'ellipsis',
 		max = 0,
 		size = 'md',
+		open = $bindable(false),
+		onOpenChange,
 		class: className
 	}: Props = $props();
-
-	let open = $state(false);
 	let controlEl = $state<HTMLElement | null>(null);
 	let inputEl = $state<HTMLInputElement | null>(null);
 	let search = $state('');
@@ -228,7 +231,7 @@
 			event.preventDefault();
 			inputEl?.focus({ preventScroll: true });
 		}
-		open = true;
+		setOpen(true);
 	}
 
 	// A summary trigger has no caret of its own, so the popup's search box takes it.
@@ -238,8 +241,11 @@
 	});
 
 	function setOpen(next: boolean): void {
-		open = interactive ? next : false;
-		if (!open) search = '';
+		const wanted = interactive ? next : false;
+		if (!wanted) search = '';
+		if (wanted === open) return;
+		open = wanted;
+		onOpenChange?.(open);
 	}
 
 	function setSingle(code: string): void {

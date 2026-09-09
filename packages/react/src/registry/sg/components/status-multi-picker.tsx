@@ -156,6 +156,9 @@ export interface StatusMultiPickerProps {
   /** The site the stock sprite is served from, passed to every badge. */
   siteUrl?: string;
   size?: StatusMultiPickerSize;
+  /** Whether the popup is showing. */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
   className?: string;
 }
 
@@ -249,6 +252,8 @@ export function StatusMultiPicker({
   max = 0,
   siteUrl,
   size = 'md',
+  open: openProp,
+  onOpenChange,
   className,
 }: StatusMultiPickerProps) {
   const projectKey = (projectIds ?? (projectId === undefined ? [] : [projectId])).join(',');
@@ -257,7 +262,12 @@ export function StatusMultiPicker({
     [client, entityType, projectKey, field],
   );
   const query = useSyncExternalStore(store.subscribe, store.snapshot, store.snapshot);
-  const [open, setOpen] = useState(false);
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const open = openProp ?? uncontrolledOpen;
+  const setOpen = (next: boolean): void => {
+    setUncontrolledOpen(next);
+    onOpenChange?.(next);
+  };
   const [search, setSearch] = useState('');
   const controlRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);

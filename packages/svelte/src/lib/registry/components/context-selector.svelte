@@ -68,7 +68,9 @@
 		recentLimit?: number;
 		onRecentsChange?: (recents: WorkContext[]) => void;
 		onContextChange?: (context: WorkContext) => void;
+		/** Whether the popover is showing, two-way. */
 		open?: boolean;
+		onOpenChange?: (open: boolean) => void;
 		class?: string;
 	};
 
@@ -81,6 +83,7 @@
 		onRecentsChange,
 		onContextChange,
 		open = $bindable(false),
+		onOpenChange,
 		class: className
 	}: Props = $props();
 
@@ -160,10 +163,16 @@
 		};
 	});
 
+	function setOpen(next: boolean): void {
+		if (next === open) return;
+		open = next;
+		onOpenChange?.(next);
+	}
+
 	function apply(next: WorkContext): void {
 		onRecentsChange?.([next, ...recents.filter((r) => keyOf(r) !== keyOf(next))].slice(0, recentLimit));
 		onContextChange?.(next);
-		open = false;
+		setOpen(false);
 	}
 
 	const heading = 'text-muted-foreground px-2 py-1.5 text-xs font-medium';
@@ -179,7 +188,7 @@
 	one `_search` on Task filtered by `task_assignees`, grouped under their project.
 -->
 <div data-slot="context-selector" class={cn('w-full', className)}>
-	<Popover.Root bind:open={() => open, (next) => (open = next)}>
+	<Popover.Root bind:open={() => open, setOpen}>
 		<Popover.Trigger
 			data-slot="context-selector-trigger"
 			class="border-border bg-background hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring focus-visible:ring-offset-background flex w-full min-w-0 items-center gap-2 rounded-md border px-2 py-1.5 text-left outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2"

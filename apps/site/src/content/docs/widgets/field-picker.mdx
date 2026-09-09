@@ -44,6 +44,7 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/field-picker.j
 | `disabled` | `boolean` | `false` | |
 | `invalid` | `boolean` | `false` | Applies the invalid ring and `aria-invalid`. |
 | `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | |
+| `open` | `boolean` | `false` | Whether the popover is showing. Two-way in Svelte. |
 | `className` / `class` | `string` | — | Merged after the widget's own classes. |
 
 The value is a dotted path. A root field is its own code; every hop names the field followed and the
@@ -73,6 +74,7 @@ one.
 | event | payload | when |
 |---|---|---|
 | `onValueChange` | `string` | A field is chosen, or the clear control is pressed, which sends the empty string. |
+| `onOpenChange` | `boolean` | The popover opened or closed. Svelte also binds it with `bind:open`. |
 
 ## Slots
 

@@ -128,6 +128,9 @@ export interface FieldPickerProps {
   disabled?: boolean;
   invalid?: boolean;
   size?: FieldPickerSize;
+  /** Whether the popover is showing. */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
   className?: string;
 }
 
@@ -166,9 +169,16 @@ export function FieldPicker({
   disabled = false,
   invalid = false,
   size = 'md',
+  open: openProp,
+  onOpenChange,
   className,
 }: FieldPickerProps) {
-  const [open, setOpen] = useState(false);
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const open = openProp ?? uncontrolledOpen;
+  const setOpen = (next: boolean): void => {
+    setUncontrolledOpen(next);
+    onOpenChange?.(next);
+  };
   const [search, setSearch] = useState('');
   const [highlighted, setHighlighted] = useState('');
   const [hops, setHops] = useState<FieldHop[]>([]);

@@ -25,6 +25,9 @@
 		label?: string;
 		title?: string;
 		onChange?: (value: FilterGroup) => void;
+		/** Whether the dialog is showing, two-way. */
+		open?: boolean;
+		onOpenChange?: (open: boolean) => void;
 		fieldChooser?: Snippet<[FieldChooserArgs]>;
 		valueEditor?: Snippet<[ValueEditorArgs]>;
 		entityEditor?: Snippet<[ValueEditorArgs]>;
@@ -41,13 +44,14 @@
 		label,
 		title = 'Filters',
 		onChange,
+		open = $bindable(false),
+		onOpenChange,
 		fieldChooser,
 		valueEditor,
 		entityEditor,
 		class: className
 	}: Props = $props();
 
-	let open = $state(false);
 	let draft = $state<FilterGroup>(value);
 
 	const active = $derived(countActiveConditions(value));
@@ -60,12 +64,19 @@
 	function apply(): void {
 		// A tree of blank rows is not a filter; it applies as no filter at all.
 		commit(isEmptyFilter(draft) ? emptyFilter() : draft);
-		open = false;
+		setOpen(false);
 	}
 
 	function clearAll(): void {
 		commit(emptyFilter());
-		open = false;
+		setOpen(false);
+	}
+
+	function setOpen(next: boolean): void {
+		if (next === open) return;
+		open = next;
+		if (next) draft = value;
+		onOpenChange?.(next);
 	}
 </script>
 
@@ -79,7 +90,7 @@
 -->
 <div class={cn('inline-flex items-center gap-2', className)} data-slot="filter-dialog">
 	<!-- The draft starts from the applied value every time the dialog opens, so a cancelled edit leaves nothing behind. -->
-	<Dialog.Root bind:open onOpenChange={(next) => next && (draft = value)}>
+	<Dialog.Root bind:open={() => open, setOpen}>
 		<Dialog.Trigger
 			{disabled}
 			data-slot="filter-launch"
@@ -115,7 +126,7 @@
 			<Dialog.Footer class="sm:justify-between">
 				<Button variant="ghost" data-slot="filter-clear-all" onclick={clearAll}>Clear all</Button>
 				<div class="flex items-center gap-2">
-					<Button variant="outline" data-slot="filter-cancel" onclick={() => (open = false)}>Cancel</Button>
+					<Button variant="outline" data-slot="filter-cancel" onclick={() => setOpen(false)}>Cancel</Button>
 					<Button data-slot="filter-apply" onclick={apply}>Apply</Button>
 				</div>
 			</Dialog.Footer>

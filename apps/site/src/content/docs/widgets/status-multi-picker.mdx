@@ -39,6 +39,7 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/status-multi-p
 | `max` | `number` | `0` | Badges drawn before the rest becomes `+n`. `0` lets the row fit what it can, and `icons` draws twice as many. |
 | `siteUrl` | `string` | — | Passed to every badge, for a sprite cell outside the status icon set. |
 | `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Heights 8, 9 and 10. |
+| `open` | `boolean` | `false` | Whether the popup is showing. Two-way in Svelte. |
 | `class` / `className` | `string` | — | Merged after the widget's own classes. |
 
 `chips` makes the control a token field: every badge, wrapped, each with its own remove control,
@@ -59,6 +60,8 @@ The root carries the size and, while the options load, `data-loading`.
 
 `onValueChange` fires with the whole array on every change, including the empty array from the clear
 control. A selected code the option set does not carry is kept, never dropped.
+
+`onOpenChange` fires when the popup opens or closes. Svelte also binds it with `bind:open`.
 
 ## Slots
 

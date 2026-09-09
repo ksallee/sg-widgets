@@ -96,6 +96,9 @@
 		disabled?: boolean;
 		invalid?: boolean;
 		size?: FieldPickerSize;
+		/** Whether the popover is showing, two-way. */
+		open?: boolean;
+		onOpenChange?: (open: boolean) => void;
 		class?: string;
 	};
 
@@ -123,6 +126,8 @@
 		disabled = false,
 		invalid = false,
 		size = 'md',
+		open = $bindable(false),
+		onOpenChange,
 		class: className
 	}: Props = $props();
 
@@ -152,7 +157,13 @@
 		type: Type
 	};
 
-	let open = $state(false);
+	function setOpen(next: boolean): void {
+		const wanted = readonly || disabled ? false : next;
+		if (wanted === open) return;
+		open = wanted;
+		onOpenChange?.(open);
+	}
+
 	let inputEl = $state<HTMLInputElement | null>(null);
 	let search = $state('');
 	let highlighted = $state('');
@@ -267,7 +278,7 @@
 		// adding one field after another never has to reach for the mouse.
 		search = '';
 		highlighted = '';
-		if (closeOnSelect) open = false;
+		if (closeOnSelect) setOpen(false);
 	}
 
 	function descendInto(row: FieldOption): void {
@@ -335,7 +346,7 @@
 	data-depth={hops.length}
 	class={cn('relative flex w-full min-w-0 items-center', className)}
 >
-	<Popover.Root bind:open={() => open, (next) => (open = readonly || disabled ? false : next)}>
+	<Popover.Root bind:open={() => open, setOpen}>
 		<Popover.Trigger
 			data-slot="field-picker-trigger"
 			role="combobox"

@@ -35,6 +35,7 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/status-picker.
 | `showCode` | `boolean` | `false` | Shows the raw code instead of the label. The other one stays in the tooltip. |
 | `siteUrl` | `string` | — | Passed to every badge, for a sprite cell outside the status icon set. |
 | `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Heights 8, 9 and 10. |
+| `open` | `boolean` | `false` | Whether the popup is showing. Two-way in Svelte. |
 | `class` / `className` | `string` | — | Merged after the widget's own classes. |
 
 Without a project the options are the site vocabulary, which hides nothing. `projectIds` offers the
@@ -47,6 +48,8 @@ The root carries the size and, while the options load, `data-loading`.
 `onValueChange` fires with the code, or with `undefined` when the selection is cleared. It also fires
 once with `undefined` when a new option set drops the selected code, which is what a project change
 does.
+
+`onOpenChange` fires when the popup opens or closes. Svelte also binds it with `bind:open`.
 
 ## Slots
 

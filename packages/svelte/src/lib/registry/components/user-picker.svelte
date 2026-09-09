@@ -66,6 +66,7 @@
 		searchFields = [],
 		placeholder = 'Search for a person',
 		emptyLabel = 'No person matches.',
+		open = $bindable(false),
 		...rest
 	}: Props = $props();
 </script>
@@ -80,6 +81,7 @@
 -->
 <EntityPicker
 	bind:value
+	bind:open
 	entityTypes={userTypes(includeApiUsers)}
 	searchFields={userSearchFieldsWith(searchFields)}
 	fields={[...USER_FIELDS, ...fields]}

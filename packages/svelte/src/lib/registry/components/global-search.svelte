@@ -62,7 +62,9 @@
 		hotkey?: boolean;
 		/** Render as a combobox in the page instead of a dialog behind a trigger. */
 		inline?: boolean;
+		/** Whether the dialog is showing, two-way. */
 		open?: boolean;
+		onOpenChange?: (open: boolean) => void;
 		/** Rows picked before, newest first. Held by the caller: persisting them is the app's job. */
 		recents?: EntityRef[];
 		/** How many recents to keep when a pick is prepended. */
@@ -84,6 +86,7 @@
 		hotkey = false,
 		inline = false,
 		open = $bindable(false),
+		onOpenChange,
 		recents = [],
 		recentLimit = 5,
 		onRecentsChange,
@@ -198,10 +201,16 @@
 		timer = setTimeout(() => void run(text, 1), DEBOUNCE_MS);
 	}
 
+	function setOpen(next: boolean): void {
+		if (next === open) return;
+		open = next;
+		onOpenChange?.(next);
+	}
+
 	function choose(entity: EntityRef): void {
 		onRecentsChange?.([entity, ...recents.filter((r) => !same(r, entity))].slice(0, recentLimit));
 		onSelect?.(entity);
-		if (!inline) open = false;
+		if (!inline) setOpen(false);
 		setQuery('');
 	}
 
@@ -209,7 +218,7 @@
 		if (!hotkey || inline) return;
 		if (event.key.toLowerCase() !== 'k' || !(event.metaKey || event.ctrlKey)) return;
 		event.preventDefault();
-		open = !open;
+		setOpen(!open);
 	}
 
 	function subLabel(hit: SearchHit): string {
@@ -333,13 +342,13 @@
 {:else}
 	<div data-slot="global-search" data-variant="dialog" class={cn('w-full', className)}>
 		{#if trigger}
-			{@render trigger({ open: () => (open = true) })}
+			{@render trigger({ open: () => setOpen(true) })}
 		{:else}
 			<Button
 				variant="outline"
 				data-slot="global-search-trigger"
 				class="h-9 w-full justify-between"
-				onclick={() => (open = true)}
+				onclick={() => setOpen(true)}
 			>
 				<span class="flex min-w-0 items-center gap-1.5">
 					<Search aria-hidden="true" class="size-4 opacity-70" />
@@ -349,7 +358,7 @@
 			</Button>
 		{/if}
 		<Command.Dialog
-			bind:open={() => open, (next) => (open = next)}
+			bind:open={() => open, setOpen}
 			bind:value={cursor}
 			shouldFilter={false}
 			title="Search"

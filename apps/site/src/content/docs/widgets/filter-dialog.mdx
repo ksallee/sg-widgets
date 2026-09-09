@@ -32,6 +32,7 @@ anything.
 | `label` | `string` | — | Replaces both button labels. |
 | `title` | `string` | `'Filters'` | Dialog title. |
 | `disabled` | `boolean` | `false` | Blocks both buttons. |
+| `open` | `boolean` | `false` | Whether the dialog is showing. Two-way in Svelte. |
 | `class` / `className` | `string` | — | Merged after the widget's own classes. |
 
 ## Events
@@ -39,6 +40,7 @@ anything.
 | event | payload | when |
 |---|---|---|
 | `onChange` | `FilterGroup` | The tree was applied, by Apply, Clear all or the clear control, never while editing. Svelte also binds it with `bind:value`. |
+| `onOpenChange` | `boolean` | The dialog opened or closed. Svelte also binds it with `bind:open`. |
 
 ## Slots
 

@@ -57,6 +57,9 @@
 		/** The site the stock sprite is served from, passed to every badge. */
 		siteUrl?: string;
 		size?: StatusPickerSize;
+		/** Whether the popup is showing, two-way. */
+		open?: boolean;
+		onOpenChange?: (open: boolean) => void;
 		class?: string;
 	};
 
@@ -77,6 +80,8 @@
 		showCode = false,
 		siteUrl = undefined,
 		size = 'md',
+		open = $bindable(false),
+		onOpenChange,
 		class: className
 	}: Props = $props();
 
@@ -157,6 +162,13 @@
 			onValueChange?.(undefined);
 		}
 	});
+
+	function setOpen(next: boolean): void {
+		const wanted = readonly || inert ? false : next;
+		if (wanted === open) return;
+		open = wanted;
+		onOpenChange?.(open);
+	}
 
 	function pick(code: string): void {
 		value = code === '' ? undefined : code;
@@ -262,6 +274,7 @@
 			value={value ?? ''}
 			onValueChange={pick}
 			disabled={inert}
+			bind:open={() => open, setOpen}
 			items={rows.map((option) => ({ value: option.code, label: option.label }))}
 		>
 			<Select.Trigger

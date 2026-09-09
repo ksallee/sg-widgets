@@ -25,6 +25,9 @@
 		disabled?: boolean;
 		/** Both the keys and the `sort` string they serialise to. */
 		onChange?: (value: SortKey[], sort: string) => void;
+		/** Whether the popover is showing, two-way. */
+		open?: boolean;
+		onOpenChange?: (open: boolean) => void;
 		class?: string;
 	};
 
@@ -36,8 +39,17 @@
 		hidePaths = [],
 		disabled = false,
 		onChange,
+		open = $bindable(false),
+		onOpenChange,
 		class: className
 	}: Props = $props();
+
+	function setOpen(next: boolean): void {
+		const wanted = disabled ? false : next;
+		if (wanted === open) return;
+		open = wanted;
+		onOpenChange?.(open);
+	}
 
 	const service = $derived(schema ?? createSchemaService(client));
 
@@ -125,7 +137,7 @@
 	in default order, so only types that sort are offered.
 -->
 <div class={cn('inline-flex min-w-0 items-center', className)} data-slot="sort-picker">
-	<Popover.Root>
+	<Popover.Root bind:open={() => open, setOpen}>
 		<Popover.Trigger
 			{disabled}
 			data-slot="sort-trigger"

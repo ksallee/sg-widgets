@@ -31,6 +31,9 @@ export interface FilterDialogProps {
   label?: string;
   title?: string;
   onChange?: (value: FilterGroup) => void;
+  /** Whether the dialog is showing. */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
   fieldChooser?: (args: FieldChooserArgs) => ReactNode;
   valueEditor?: (args: ValueEditorArgs) => ReactNode;
   entityEditor?: (args: ValueEditorArgs) => ReactNode;
@@ -55,12 +58,19 @@ export function FilterDialog({
   label,
   title = 'Filters',
   onChange,
+  open: openProp,
+  onOpenChange,
   fieldChooser,
   valueEditor,
   entityEditor,
   className,
 }: FilterDialogProps) {
-  const [open, setOpen] = useState(false);
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const open = openProp ?? uncontrolledOpen;
+  const setOpen = (next: boolean): void => {
+    setUncontrolledOpen(next);
+    onOpenChange?.(next);
+  };
   const [draft, setDraft] = useState<FilterGroup>(value);
   const active = countActiveConditions(value);
 

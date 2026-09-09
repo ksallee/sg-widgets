@@ -242,6 +242,9 @@ export interface EntityMultiPickerBaseProps {
   invalid?: boolean;
   clearable?: boolean;
   debounceMs?: number;
+  /** Whether the popup is showing. */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
   onError?: (error: Error) => void;
   className?: string;
 }
@@ -297,6 +300,8 @@ export function EntityMultiPicker({
   invalid = false,
   clearable = true,
   debounceMs = 250,
+  open: openProp,
+  onOpenChange,
   onError,
   className,
 }: EntityMultiPickerProps) {
@@ -338,7 +343,12 @@ export function EntityMultiPicker({
   );
   const state = useSyncExternalStore(search.subscribe, () => search.state, () => search.state);
 
-  const [open, setOpen] = useState(false);
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const open = openProp ?? uncontrolledOpen;
+  const setOpen = (next: boolean): void => {
+    setUncontrolledOpen(next);
+    onOpenChange?.(next);
+  };
   const [query, setQuery] = useState('');
   const controlRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);

@@ -30,6 +30,12 @@ export default defineConfig({
   ],
   vite: {
     plugins: [tailwindcss()],
+    // Every demo is discovered at startup, so the optimizer bundles all dependencies once
+    // instead of re-bundling on first visit and answering the in-flight requests with 504.
+    optimizeDeps: {
+      entries: ['src/demos/**/*.{svelte,tsx,ts}', 'src/components/**/*.astro'],
+      include: ['react', 'react-dom', 'react-dom/client', 'lucide-react', 'cn', 'clsx', 'tailwind-merge', 'bits-ui'],
+    },
     resolve: {
       // Demo islands import registry sources straight out of the workspace packages,
       // with the same specifiers a published registry item uses, so what the demo

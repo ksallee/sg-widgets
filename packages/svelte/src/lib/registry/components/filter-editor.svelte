@@ -116,7 +116,7 @@
 		presetIdOf,
 		removeAt,
 		replaceAt,
-		valueArity,
+		conditionArity,
 		valueEditorFor
 	} from '@sg-widgets/core';
 	import { Badge } from '$lib/components/ui/badge/index.js';
@@ -416,7 +416,7 @@
 	{@const field = fieldOf(node.path)}
 	{@const dataType = field?.dataType ?? ''}
 	{@const kind = valueEditorFor(dataType, node.operator)}
-	{@const arity = valueArity(node.operator)}
+	{@const arity = conditionArity(node, dataType)}
 	{@const set = (v: ConditionValue) => edit(path, { ...node, value: v })}
 	<div class="flex min-w-0 flex-1 flex-wrap items-center gap-2" data-slot="filter-value">
 		{#if unresolved(node.path)}

@@ -28,7 +28,7 @@ import {
   replaceAt,
   TIME_UNITS,
   timeUnitLabel,
-  valueArity,
+  conditionArity,
   valueEditorFor,
 } from '@sg-widgets/core';
 import { ChevronDownIcon, PlusIcon, XIcon } from 'lucide-react';
@@ -502,7 +502,7 @@ function ValueSlot({ ctx, path, node }: { ctx: EditorContext; path: NodePath; no
   const field = ctx.fieldOf(node.path);
   const dataType = field?.dataType ?? '';
   const kind = valueEditorFor(dataType, node.operator);
-  const arity = valueArity(node.operator);
+  const arity = conditionArity(node, dataType);
   const set = (v: ConditionValue) => ctx.edit(path, { ...node, value: v });
   const disabled = ctx.disabled;
   const args: ValueEditorArgs = { field, dataType, operator: node.operator, value: node.value, arity, disabled, onChange: set };

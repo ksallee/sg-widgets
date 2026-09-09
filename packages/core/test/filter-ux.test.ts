@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { conditionArity } from '../src/filter-ux.js';
 import { condition, group, toApi3Hash } from '../src/filter.js';
 import {
   appendAt,
@@ -456,5 +457,13 @@ describe('sort strings', () => {
     ]);
     expect(fromSortString('')).toEqual([]);
     expect(fromSortString(null)).toEqual([]);
+  });
+});
+
+describe('conditionArity', () => {
+  it('draws no editor for a pinned preset', () => {
+    expect(conditionArity(condition('image', 'is', null), 'image')).toBe('none');
+    expect(conditionArity(condition('created_at', 'in_calendar_week', 0), 'date_time')).toBe('none');
+    expect(conditionArity(condition('code', 'is', 'x'), 'text')).toBe('one');
   });
 });

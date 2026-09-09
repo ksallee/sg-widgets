@@ -303,8 +303,8 @@ export function applyPreset(condition: FilterCondition, preset: OperatorPreset, 
   };
 }
 
-/** True when the condition sits on a preset that pins its value. */
-function isPinned(condition: FilterCondition, dataType: string): boolean {
+/** True when the condition sits on a preset that pins its value, so no editor is drawn. */
+export function isPinned(condition: FilterCondition, dataType: string): boolean {
   const id = presetIdOf(condition, dataType);
   return id === 'is_empty' || id === 'is_not_empty' || condition.operator.startsWith('in_calendar_');
 }
@@ -508,6 +508,11 @@ export function valueEditorFor(dataType: string, operator: Operator): ValueEdito
 }
 
 /** Whether a value editor holds one value or many. */
+/** The arity a row draws: none for a pinned preset, else the operator's own. */
+export function conditionArity(condition: FilterCondition, dataType: string): 'none' | 'one' | 'many' | 'two' | 'relative' {
+  return isPinned(condition, dataType) ? 'none' : valueArity(condition.operator);
+}
+
 export function valueArity(operator: Operator): 'none' | 'one' | 'many' | 'two' | 'relative' {
   switch (VALUE_SHAPE[operator]) {
     case 'list':

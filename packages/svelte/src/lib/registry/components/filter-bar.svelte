@@ -7,7 +7,6 @@
 		FilterCondition,
 		FilterGroup,
 		Operator,
-		OperatorPreset,
 		SchemaService,
 		Scalar,
 		SgClient,
@@ -19,13 +18,9 @@
 		createSchemaService,
 		describeCondition,
 		emptyFilter,
-		facetPresets,
 		facetValues,
 		findCondition,
-		presetById,
-		presetIdOf,
 		setFacet,
-		setFacetPreset,
 		toApi3Hash,
 		asFilterGroup,
 		group,
@@ -36,7 +31,6 @@
 	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
 	import * as Command from '$lib/components/ui/command/index.js';
 	import * as Popover from '$lib/components/ui/popover/index.js';
-	import * as Select from '$lib/components/ui/select/index.js';
 	import { cn } from '$lib/utils.js';
 	import FilterDialog from '$lib/registry/components/filter-dialog.svelte';
 
@@ -154,27 +148,6 @@
 			: [...selected, option.value];
 		commit(setFacet(value, name, next, listOperator(name)));
 	}
-
-	/**
-	 * The operator menu one pill offers. A condition the full editor left on an
-	 * operator no pill would have chosen still names itself, so the segment reads
-	 * what the tree says rather than the nearest entry to it.
-	 */
-	function menuOf(name: string): OperatorPreset[] {
-		const dataType = fields[name]?.dataType ?? '';
-		const presets = facetPresets(dataType);
-		const found = conditionOf(name);
-		if (!found) return presets;
-		const current = presetById(dataType, presetIdOf(found, dataType));
-		if (!current || presets.some((p) => p.id === current.id)) return presets;
-		return [current, ...presets];
-	}
-
-	function pickPreset(name: string, id: string): void {
-		const dataType = fields[name]?.dataType ?? '';
-		const preset = presetById(dataType, id);
-		if (preset) commit(setFacetPreset(value, name, preset, dataType));
-	}
 </script>
 
 {#snippet facetList(name: string)}
@@ -229,10 +202,10 @@
 	Quick facets over one entity type.
 
 	An untouched facet is a quiet pill naming its field; ticking a value turns it into
-	a segmented pill reading field, operator and values, where the operator segment is
-	a menu of the operators that field's facet can take and the values segment is the
+	a pill reading the field and the values ticked, and opening it again reopens the
 	checklist. The pill adds its condition to the bound tree, and More filters opens
-	the same tree in the full editor, so the two edit one value.
+	the same tree in the full editor, so the two edit one value: a condition the editor
+	wrote on an operator the checklist cannot hold reads as text in its pill.
 
 	Counts come from a `_summarize` grouping call when one is wired to `counts`, and
 	otherwise from tallying one page of rows, which makes them as complete as the page
@@ -256,9 +229,8 @@
 				{@render facetList(name)}
 			</Popover.Root>
 		{:else}
-			{@const dataType = field?.dataType ?? ''}
 			{@const parts = conditionParts(found, field)}
-			{@const arity = conditionArity(found, dataType)}
+			{@const listed = conditionArity(found, field?.dataType ?? '') === 'many'}
 			{@const selected = selectedOf(name)}
 			<div
 				data-slot="filter-pill"
@@ -268,38 +240,17 @@
 				aria-label={describeCondition(found, field)}
 				class="border-border bg-background inline-flex h-8 max-w-full min-w-0 items-center overflow-hidden rounded-lg border text-sm"
 			>
-				<span
-					data-slot="filter-pill-field"
-					class="min-w-0 shrink truncate px-2.5 font-medium"
-					title={parts.field}
-				>
-					{parts.field}
-				</span>
-				<Select.Root
-					type="single"
-					value={presetIdOf(found, dataType)}
-					{disabled}
-					onValueChange={(id) => pickPreset(name, id)}
-				>
-					<Select.Trigger
-						data-slot="filter-pill-operator"
-						class="border-border text-muted-foreground hover:bg-muted h-8 shrink-0 rounded-none border-0 border-l bg-transparent px-2 dark:bg-transparent"
-					>
-						{parts.operator}
-					</Select.Trigger>
-					<Select.Content>
-						{#each menuOf(name) as preset (preset.id)}
-							<Select.Item value={preset.id} label={preset.label} data-preset={preset.id} />
-						{/each}
-					</Select.Content>
-				</Select.Root>
-				{#if arity === 'many'}
+				{#if listed}
 					<Popover.Root>
 						<Popover.Trigger
 							{disabled}
 							data-slot="filter-pill-values"
-							class="border-border hover:bg-muted focus-visible:ring-ring/50 inline-flex h-8 min-w-0 items-center gap-1.5 border-l px-2.5 outline-none focus-visible:ring-3 disabled:pointer-events-none disabled:opacity-50"
+							class="hover:bg-muted focus-visible:ring-ring/50 inline-flex h-8 min-w-0 items-center gap-1.5 px-2.5 outline-none focus-visible:ring-3 disabled:pointer-events-none disabled:opacity-50"
 						>
+							<span data-slot="filter-pill-field" class="shrink-0 font-medium">{parts.field}</span>
+							{#if found.operator !== 'in'}
+								<span class="text-muted-foreground shrink-0">{parts.operator}</span>
+							{/if}
 							<span class="min-w-0 truncate" title={parts.value}>{parts.value}</span>
 							{#if selected.length > 1}
 								<Badge variant="secondary" class="shrink-0">{selected.length}</Badge>
@@ -307,9 +258,12 @@
 						</Popover.Trigger>
 						{@render facetList(name)}
 					</Popover.Root>
-				{:else if parts.value}
-					<span data-slot="filter-pill-values" class="border-border min-w-0 truncate border-l px-2.5" title={parts.value}>
-						{parts.value}
+				{:else}
+					<!-- A condition the editor wrote on an operator no checklist can hold reads as text. -->
+					<span data-slot="filter-pill-values" class="inline-flex h-8 min-w-0 items-center gap-1.5 px-2.5" title={parts.value}>
+						<span data-slot="filter-pill-field" class="shrink-0 font-medium">{parts.field}</span>
+						<span class="text-muted-foreground shrink-0">{parts.operator}</span>
+						{#if parts.value}<span class="min-w-0 truncate">{parts.value}</span>{/if}
 					</span>
 				{/if}
 				<button

@@ -17,12 +17,12 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/filter-bar.jso
 
 <Demo name="filter-bar" title="FilterBar: status, sequence and shot type over Shot" />
 
-An untouched facet is a quiet dashed pill naming its field. Ticking a value turns it into a segmented
-pill of three parts — the field, the operator and the values — in the same wording the editor uses.
-The operator segment opens a menu of the operators that facet can take: is any of, is none of, is
-empty and is not empty. The values segment opens the checklist. A control at the end of the pill
-removes it, and once any pill is active a Clear all control drops every condition the pills
-contribute, leaving anything built in the dialog alone.
+An untouched facet is a quiet dashed pill naming its field. Ticking a value turns it into a pill
+reading the field and the values ticked, with a count once there are several, and opening the pill
+again reopens the checklist. A control at the end of the pill removes it, and once any pill is
+active a Clear all control drops every condition the pills contribute, leaving anything built in
+the dialog alone. Other operators on a facet field, is none of and is empty among them, are set in
+the dialog; a pill holding one reads its condition as text.
 
 ## Props
 
@@ -53,11 +53,11 @@ None. The dialog behind More filters takes the editor's slots.
 
 | key | does |
 |---|---|
-| `Tab` | Moves between the segments of a pill and on to the next pill. |
-| `Enter`, `Space` | Opens the operator menu or the value list under the cursor. |
-| `Arrow` keys | Move the cursor in the open menu or list. |
-| `Enter` | Chooses the operator, or ticks and unticks the value under the cursor. |
-| `Escape` | Closes the open menu or list. |
+| `Tab` | Moves from pill to pill, and to a pill's remove control. |
+| `Enter`, `Space` | Opens the value list under the cursor. |
+| `Arrow` keys | Move the cursor in the open list. |
+| `Enter` | Ticks and unticks the value under the cursor. |
+| `Escape` | Closes the open list. |
 
 ## API behaviour
 
@@ -79,8 +79,4 @@ Every negating operator, `not_in` included, also matches rows where the field is
 
 ## Reference
 
-The pill anatomy follows bazza/ui's data-table-filter 2025.04.12, its Linear-style chip of a field, an
-operator and a value where the operator is a menu of its own. The segmented chip and the dashed
-add-a-filter pill follow ReUI's Filters 2.5.2. The operator matrix behind the facet menu follows Dice
-UI's data table config (`docs/config/data-table.ts`, commit `6e0ab98`). None of the three is
-installed.
+The dashed add-a-filter pill and the value checklist follow ReUI's Filters 2.5.2, and the counts beside each value follow shadcn's data table faceted filter. Neither is installed.

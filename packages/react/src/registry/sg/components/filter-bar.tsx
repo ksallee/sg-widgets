@@ -5,7 +5,6 @@ import type {
   FilterCondition,
   FilterGroup,
   Operator,
-  OperatorPreset,
   Scalar,
   SchemaService,
   SgClient,
@@ -17,13 +16,9 @@ import {
   createSchemaService,
   describeCondition,
   emptyFilter,
-  facetPresets,
   facetValues,
   findCondition,
-  presetById,
-  presetIdOf,
   setFacet,
-  setFacetPreset,
   toApi3Hash,
   asFilterGroup,
   group,
@@ -35,7 +30,6 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { FilterDialog } from '@/registry/sg/components/filter-dialog';
 
@@ -167,27 +161,6 @@ export function FilterBar({
     onChange?.(setFacet(value, name, next, listOperator(name)));
   }
 
-  /**
-   * The operator menu one pill offers. A condition the full editor left on an
-   * operator no pill would have chosen still names itself, so the segment reads
-   * what the tree says rather than the nearest entry to it.
-   */
-  const menuOf = (name: string): OperatorPreset[] => {
-    const dataType = fields[name]?.dataType ?? '';
-    const presets = facetPresets(dataType);
-    const found = conditionOf(name);
-    if (!found) return presets;
-    const current = presetById(dataType, presetIdOf(found, dataType));
-    if (!current || presets.some((p) => p.id === current.id)) return presets;
-    return [current, ...presets];
-  };
-
-  function pickPreset(name: string, id: string) {
-    const dataType = fields[name]?.dataType ?? '';
-    const preset = presetById(dataType, id);
-    if (preset) onChange?.(setFacetPreset(value, name, preset, dataType));
-  }
-
   const facetList = (name: string): ReactNode => {
     const selected = selectedOf(name);
     return (
@@ -262,9 +235,8 @@ export function FilterBar({
             </Popover>
           );
         }
-        const dataType = field?.dataType ?? '';
         const parts = conditionParts(found, field);
-        const arity = conditionArity(found, dataType);
+        const listed = conditionArity(found, field?.dataType ?? '') === 'many';
         const selected = selectedOf(name);
         return (
           <div
@@ -276,35 +248,17 @@ export function FilterBar({
             aria-label={describeCondition(found, field)}
             className="border-border bg-background inline-flex h-8 max-w-full min-w-0 items-center overflow-hidden rounded-lg border text-sm"
           >
-            <span data-slot="filter-pill-field" className="min-w-0 shrink truncate px-2.5 font-medium" title={parts.field}>
-              {parts.field}
-            </span>
-            <Select
-              value={presetIdOf(found, dataType)}
-              disabled={disabled}
-              onValueChange={(id) => pickPreset(name, id as string)}
-            >
-              <SelectTrigger
-                data-slot="filter-pill-operator"
-                className="border-border text-muted-foreground hover:bg-muted h-8 shrink-0 rounded-none border-0 border-l bg-transparent px-2 dark:bg-transparent"
-              >
-                {parts.operator}
-              </SelectTrigger>
-              <SelectContent>
-                {menuOf(name).map((preset) => (
-                  <SelectItem key={preset.id} value={preset.id} data-preset={preset.id}>
-                    {preset.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {arity === 'many' ? (
+            {listed ? (
               <Popover>
                 <PopoverTrigger
                   disabled={disabled}
                   data-slot="filter-pill-values"
-                  className="border-border hover:bg-muted focus-visible:ring-ring/50 inline-flex h-8 min-w-0 items-center gap-1.5 border-l px-2.5 outline-none focus-visible:ring-3 disabled:pointer-events-none disabled:opacity-50"
+                  className="hover:bg-muted focus-visible:ring-ring/50 inline-flex h-8 min-w-0 items-center gap-1.5 px-2.5 outline-none focus-visible:ring-3 disabled:pointer-events-none disabled:opacity-50"
                 >
+                  <span data-slot="filter-pill-field" className="shrink-0 font-medium">
+                    {parts.field}
+                  </span>
+                  {found.operator !== 'in' ? <span className="text-muted-foreground shrink-0">{parts.operator}</span> : null}
                   <span className="min-w-0 truncate" title={parts.value}>
                     {parts.value}
                   </span>
@@ -316,11 +270,16 @@ export function FilterBar({
                 </PopoverTrigger>
                 {facetList(name)}
               </Popover>
-            ) : parts.value ? (
-              <span data-slot="filter-pill-values" className="border-border min-w-0 truncate border-l px-2.5" title={parts.value}>
-                {parts.value}
+            ) : (
+              /* A condition the editor wrote on an operator no checklist can hold reads as text. */
+              <span data-slot="filter-pill-values" className="inline-flex h-8 min-w-0 items-center gap-1.5 px-2.5" title={parts.value}>
+                <span data-slot="filter-pill-field" className="shrink-0 font-medium">
+                  {parts.field}
+                </span>
+                <span className="text-muted-foreground shrink-0">{parts.operator}</span>
+                {parts.value ? <span className="min-w-0 truncate">{parts.value}</span> : null}
               </span>
-            ) : null}
+            )}
             <button
               type="button"
               disabled={disabled}

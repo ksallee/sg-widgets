@@ -7,17 +7,18 @@
 
 	let columns = $state(['code', 'sg_status_list', 'entity.Shot.sg_turnover_date']);
 	let dates = $state(['entity.Shot.sg_turnover_date']);
-	let compact = $state(['code', 'sg_cut_in']);
+	let dual = $state(['code', 'sg_cut_in']);
 
 	const label = 'text-muted-foreground text-xs';
 </script>
 
 <div class="flex flex-col gap-4">
 	<div class="flex flex-col gap-2" data-demo="columns">
-		<span class={label}>Columns on Version: check a field, then order the right list</span>
+		<span class={label}>Columns on Version: pick a field, then drag the list into order</span>
 		<ColumnPicker
 			{schema}
 			entityType="Version"
+			showCount
 			value={columns}
 			onValueChange={(next) => (columns = next)}
 		/>
@@ -35,15 +36,15 @@
 		/>
 	</div>
 
-	<div class="flex flex-col gap-2" data-demo="compact">
-		<span class={label}>Compact: the chosen list, with the fields behind the add button</span>
+	<div class="flex flex-col gap-2" data-demo="dual">
+		<span class={label}>Dual: the fields of the type on the left, the chosen paths on the right</span>
 		<ColumnPicker
 			{schema}
 			entityType="Shot"
-			compact
+			layout="dual"
 			filterableOnly
-			value={compact}
-			onValueChange={(next) => (compact = next)}
+			value={dual}
+			onValueChange={(next) => (dual = next)}
 		/>
 	</div>
 

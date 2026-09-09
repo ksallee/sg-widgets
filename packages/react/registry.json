@@ -224,7 +224,7 @@
       "name": "column-picker",
       "type": "registry:component",
       "title": "Column Picker",
-      "description": "The columns of a grid as a dual list: the type's fields on the left, the chosen paths in order on the right.",
+      "description": "The columns of a grid as a field picker over the ordered list it fills, dragged into place.",
       "categories": [
         "flow-production-tracking",
         "picker"
@@ -237,11 +237,11 @@
         "button",
         "checkbox",
         "command",
-        "popover",
         "skeleton",
+        "https://sg-widgets.dev/r/react/field-picker.json",
         "https://sg-widgets.dev/r/react/sortable.json"
       ],
-      "docs": "The left list checks the paths already chosen; the right list holds them in order, moved with its buttons or with Alt and an arrow key.",
+      "docs": "The picker appends a path to the list; a row is moved by dragging its grip or with Alt and an arrow key. `layout=\"dual\"` gives the two lists side by side.",
       "files": [
         {
           "path": "src/registry/sg/components/column-picker.tsx",

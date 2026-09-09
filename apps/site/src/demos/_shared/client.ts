@@ -11,7 +11,14 @@
  *
  * This lives in the site, not in the packages: choosing fixtures is a docs concern.
  */
-import { createQueryCache, createSgContext, MockClient, type MockClientOptions, type SgClient, type SgContext } from '@sg-widgets/core';
+import {
+  createQueryCache,
+  createSgContext,
+  MockClient,
+  type MockClientOptions,
+  type SgClient,
+  type SgContext,
+} from '@sg-widgets/core';
 
 let singleton: SgClient | undefined;
 
@@ -28,4 +35,14 @@ export function getDemoClient(): SgClient {
  */
 export function createDemoContext(options: MockClientOptions = {}): SgContext {
   return createSgContext({ client: new MockClient({ seed: 1, latencyMs: 150, ...options }) });
+}
+
+/**
+ * A demo's own client, for a demo that arms a failure with `failNext` or wants
+ * different fixtures. The shared one is never armed: a failure on it would land
+ * in whichever demo asked next.
+ */
+export function createDemoClient(options: MockClientOptions = {}): { mock: MockClient; client: SgClient } {
+  const mock = new MockClient({ seed: 1, latencyMs: 150, ...options });
+  return { mock, client: createQueryCache(mock) };
 }

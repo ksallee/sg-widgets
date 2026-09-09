@@ -1,0 +1,110 @@
+---
+title: EntityPicker
+description: One Flow Production Tracking entity, chosen by server-side search across one or more types.
+---
+
+import Demo from '../../../components/Demo.astro';
+
+Searches one or more entity types on the server as you type, and binds the row you choose.
+
+## Install
+
+```sh
+pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/entity-picker.json
+pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/entity-picker.json
+```
+
+<Demo name="entity-picker" title="EntityPicker: types, project scope, hydration, paging, errors, sizes, states" />
+
+## Props
+
+| prop | type | default | meaning |
+|---|---|---|---|
+| `entityTypes` | `string[]` | required | Types to search. Several make the picker polymorphic. |
+| `client` | `SgClient` | required | Wrap it in `createQueryCache` so repeated queries cost one request. |
+| `value` | `EntityRef \| null` | `null` | The chosen row. Two-way in Svelte. |
+| `labelField` | `string` | display-name chain | Field holding the row label. |
+| `searchFields` | `string[]` | `[]` | Fields matched on top of the display-name chain. |
+| `secondaryField` | `string` | — | Field shown right-aligned. |
+| `secondary` | `(row) => string` | the row id | Computes the right-aligned text. |
+| `subLabelField` | `string` | — | Field shown under the label. |
+| `subLabel` | `(row) => string` | the type, when several are searched | Computes the sub-label. |
+| `thumbnailField` | `string \| false` | `'image'` | Field holding the thumbnail URL. `false` hides the leading slot. |
+| `roundThumbnail` | `boolean` | `false` | Draws the thumbnail as a circle. |
+| `fields` | `string[]` | `[]` | Extra fields to request. |
+| `filters` | `FilterGroup \| WireGroup \| null` | `null` | Pre-filter, merged into every search with `and`. |
+| `projectId` | `number` | — | Scopes to one project. |
+| `exclude` | `EntityRef[]` | `[]` | Rows kept out of the results. |
+| `minQueryLength` | `number` | `2` | Shorter queries run nothing. |
+| `pageSize` | `number` | `20` | Rows a page, with a load more row under them. |
+| `placeholder` | `string` | `'Search for an entity'` | Shown in the control while nothing is chosen. |
+| `searchPlaceholder` | `string` | `'Search…'` | Shown in the search input. |
+| `emptyLabel` | `string` | `'No entity matches.'` | Shown when a query matches nothing. |
+| `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Heights 8, 9 and 10. |
+| `disabled` | `boolean` | `false` | |
+| `readonly` / `readOnly` | `boolean` | `false` | Keeps full contrast and drops the affordances. |
+| `invalid` | `boolean` | `false` | Sets `aria-invalid` and the destructive ring. |
+| `clearable` | `boolean` | `true` | Shows the clear control. |
+| `debounceMs` | `number` | `250` | Wait after the last keystroke before searching. |
+| `class` / `className` | `string` | — | Merged after the widget's own classes. |
+
+A row is `{ type, id, name, values }`, where `values` holds the attributes and the relationships in
+one map. A dotted field is a literal key with dots in it, so `project.Project.name` reads straight
+out of it.
+
+The picker is `w-full`; wrap it in a sized container.
+
+## Events
+
+| event | React | Svelte | payload |
+|---|---|---|---|
+| change | `onValueChange` | `onValueChange` | The new reference and the full row, or `null` on clear. |
+| error | `onError` | `onerror` | The failure. The list shows it inline as well. |
+
+## Slots
+
+None. The row is fixed: leading thumbnail or avatar, label with the matched words in bold,
+sub-label, right-aligned secondary.
+
+## Keyboard
+
+| key | does |
+|---|---|
+| `Enter`, `Space` | Opens the popover from the control. |
+| `Up`, `Down` | Moves the highlight through the rows. |
+| `Enter` | Chooses the highlighted row, or loads the next page on the load more row. |
+| `Escape` | Closes the popover. |
+| `Tab` | Moves to the clear control, then out. |
+
+## API behaviour
+
+A query is split on whitespace and every word must match, each as its own `contains` condition,
+`or`'d across the fields the type has out of `cached_display_name`, `code`, `name`, `title`,
+`content` and `subject`. `contains` works on text fields and through dotted paths, and an operator
+the field does not accept is a 400, never a silent pass (017_filter_operators). Client-side
+filtering is off: the server decides what matches.
+
+Each searched type gets its own `POST /entity/<type>/_search` with `api3_hash`, the only content
+type that expresses a nested `and` and `or` group (030_complex_filters).
+`POST /entity/_text_search` is not used: it takes no `fields`, so every row comes back as name,
+links and status whatever the type, and a picker needs a thumbnail and a sub-label
+(post_entity_text_search).
+
+Another page exists when the page came back full. `links.next` is emitted on every page forever,
+including empty ones, so it is never the stop signal (006_pagination).
+
+A pre-filter naming a field the type does not have is dropped on that type. The same name in a
+filter would be a 400 while an unknown name in `fields` is a silent 200 (003_query,
+017_filter_operators), so a picker across several types applies each condition only where it
+resolves. `projectId` follows the same rule: it becomes `project` on a type that links one and
+`projects` on a site-wide type such as HumanUser, and nothing on Project itself.
+
+A bare `{ type, id }` is resolved on mount by one `id in` read per type, with the same field list.
+A row that cannot be resolved keeps the label `Type id`.
+
+A thumbnail URL is presigned and re-minted on every read, so the picker holds the row and re-reads
+rather than storing the string (field_types/image).
+
+The popover and the list are the `popover` and `command` items of each registry, unmodified; the
+loading state is `skeleton`. shadcn-svelte ships no `combobox`, so both frameworks are built on
+Popover plus Command and emit the same markup.

@@ -7,6 +7,7 @@ export * from './schema.js';
 export * from './status.js';
 export * from './client.js';
 export * from './query.js';
+export * from './picker.js';
 export * from './mock.js';
 export * from './schema-service.js';
 export * from './status-service.js';

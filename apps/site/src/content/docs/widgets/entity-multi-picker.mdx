@@ -1,0 +1,66 @@
+---
+title: EntityMultiPicker
+description: Several Flow Production Tracking entities, chosen by server-side search, with checkbox rows and removable chips.
+---
+
+import Demo from '../../../components/Demo.astro';
+
+Searches one or more entity types on the server as you type, and binds the rows you tick.
+
+## Install
+
+```sh
+pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/entity-multi-picker.json
+pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/entity-multi-picker.json
+```
+
+<Demo name="entity-multi-picker" title="EntityMultiPicker: types, hydration, exclusions, paging, errors, sizes, states" />
+
+## Props
+
+Every prop of [EntityPicker](/widgets/entity-picker/), with the value as an array.
+
+| prop | type | default | meaning |
+|---|---|---|---|
+| `value` | `EntityRef[]` | `[]` | The chosen rows, in the order they were ticked. Two-way in Svelte. |
+| `exclude` | `EntityRef[]` | `[]` | Rows kept out of the results, per type. |
+| `clearable` | `boolean` | `true` | Shows the clear-all control. |
+
+Selected rows are appended to the option list after the search results, so a row stays there to be
+unticked whatever the query, including a query too short to search. Each selection is also a chip
+in the control, with its own remove control.
+
+## Events
+
+| event | React | Svelte | payload |
+|---|---|---|---|
+| change | `onValueChange` | `onValueChange` | The new array of references and the full rows. |
+| error | `onError` | `onerror` | The failure. The list shows it inline as well. |
+
+## Slots
+
+None. The row is fixed: checkbox, leading thumbnail or avatar, label with the matched words in
+bold, sub-label, right-aligned secondary.
+
+## Keyboard
+
+| key | does |
+|---|---|
+| `Enter`, `Space` | Opens the popover from the control. |
+| `Up`, `Down` | Moves the highlight through the rows. |
+| `Enter` | Ticks or unticks the highlighted row. The popover stays open. |
+| `Escape` | Closes the popover. |
+| `Tab` | Moves through the chips' remove controls, then the toggle and the clear control. |
+
+## API behaviour
+
+The same request model as the single picker: one `contains` condition per word, `or`'d across the
+display-name fields the type has, one `POST /entity/<type>/_search` per searched type, and
+client-side filtering off (017_filter_operators, 030_complex_filters).
+
+Exclusions go into the server filter as `id not_in` per type, so they never eat into the page. The
+legacy behaviour of filtering them out after the page cap could empty a dropdown that had matches.
+
+Bare `{ type, id }` members are resolved on mount by one `id in` read per type, batched, with the
+page size set to the number of ids. A resolved row is never overwritten by the bare reference it
+came from.

@@ -71,6 +71,10 @@ async function startSite(port) {
     env: { ...process.env, ASTRO_DEV_BACKGROUND: '1' },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
+  // Nothing reads the child's output, and an unread pipe fills at 64KB and blocks
+  // the writer, so astro dev would stop answering mid-run. Drain both.
+  proc.stdout.resume();
+  proc.stderr.resume();
   const deadline = Date.now() + 60000;
   while (Date.now() < deadline) {
     try {
@@ -137,7 +141,18 @@ async function main() {
   const out = { url };
   let failed = false;
   try {
-    await page.goto(url, { waitUntil: 'networkidle', timeout: a.timeout });
+    // A cold `astro dev` answers the first request for a route it has not synced yet
+    // with its 404 page, then restarts itself once the sync lands, so a retry has to
+    // survive the server being down for a moment as well.
+    let response = await page.goto(url, { waitUntil: 'networkidle', timeout: a.timeout });
+    for (let attempt = 0; attempt < 10 && (response === null || response.status() === 404); attempt++) {
+      await page.waitForTimeout(1000);
+      try {
+        response = await page.goto(url, { waitUntil: 'networkidle', timeout: a.timeout });
+      } catch {
+        response = null;
+      }
+    }
     out.result = await page.evaluate(boot, { drive });
     if (a.shot) {
       mkdirSync(dirname(resolve(a.shot)), { recursive: true });

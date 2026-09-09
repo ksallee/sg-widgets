@@ -50,7 +50,14 @@ function args(argv) {
   return a;
 }
 
-function freePort(start = 4400) {
+// Each checkout starts its search at its own port so two worktrees never race for one.
+function portBase() {
+  let h = 0;
+  for (const ch of ROOT) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return 4400 + (h % 400);
+}
+
+function freePort(start = portBase()) {
   return new Promise((res, rej) => {
     const s = createServer();
     s.once('error', () => res(freePort(start + 1)));

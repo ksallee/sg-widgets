@@ -14,7 +14,7 @@
  * is a write, so it is never cached and it drops every cached row read of the
  * type it touched before it returns.
  */
-import type { EntityRow, EntityTypeInfo, SearchOptions, SearchResult, SgClient, TextSearchRow } from './client.js';
+import type { EntityRow, EntityTypeInfo, HierarchyNode, SearchOptions, SearchResult, SgClient, TextSearchRow } from './client.js';
 import type { WireGroup } from './filter.js';
 import type { FieldSchema } from './schema.js';
 import type { StatusRecord } from './status.js';
@@ -123,6 +123,11 @@ export function createQueryCache(client: SgClient, options: QueryCacheOptions = 
     },
     statuses(): Promise<StatusRecord[]> {
       return run('statuses', [], () => client.statuses());
+    },
+    hierarchyExpand(path: string): Promise<HierarchyNode> {
+      // One level per call, so a tree that walks a project is one cached entry per node
+      // (post_hierarchy_expand).
+      return run('hierarchyExpand', [path], () => client.hierarchyExpand(path));
     },
     async update(entityType: string, id: number, patch: Record<string, unknown>): Promise<EntityRow> {
       const row = await client.update(entityType, id, patch);

@@ -4,7 +4,7 @@ import { SgApiError } from '../src/client.js';
 import type { EntityRow, SearchResult } from '../src/client.js';
 import type { WireGroup } from '../src/filter.js';
 import type { EntityRef, Operator } from '../src/index.js';
-import { parseBgColor, statusFieldFor, usableStatuses } from '../src/index.js';
+import { hierarchyEntity, parseBgColor, statusFieldFor, usableStatuses } from '../src/index.js';
 
 const client = (): MockClient => new MockClient();
 
@@ -512,5 +512,38 @@ describe('update', () => {
       status: 404,
       message: 'Entity of type [Shot] with id=999999999 does not exist.',
     });
+  });
+});
+
+describe('the navigation tree', () => {
+  it('answers one level, and names the next paths', async () => {
+    const c = client();
+    const root = await c.hierarchyExpand('/Project/70');
+    expect(root.ref).toEqual({ kind: 'entity', value: { type: 'Project', id: 70 } });
+    expect(root.children.map((n) => n.label)).toEqual(['Assets', 'Shots']);
+    // A child names the path that opens it, and `hasChildren` says whether that is worth doing.
+    expect(root.children.map((n) => n.path)).toEqual(['/Project/70/Asset', '/Project/70/Shot']);
+    expect(root.children.every((n) => n.children.length === 0)).toBe(true);
+    expect(root.children.every((n) => n.hasChildren)).toBe(true);
+  });
+
+  it('walks Project > Sequence > Shot', async () => {
+    const c = client();
+    const shots = await c.hierarchyExpand('/Project/70/Shot');
+    const sequence = shots.children[0];
+    if (!sequence) throw new Error('no sequence');
+    // The path runs through the field name the site navigates by (post_hierarchy_search).
+    expect(sequence.path).toMatch(/\/Project\/70\/Shot\/sg_sequence\/Sequence\/\d+$/);
+    const level = await c.hierarchyExpand(sequence.path);
+    expect(level.children.length).toBeGreaterThan(0);
+    const shot = level.children[0];
+    if (!shot) throw new Error('no shot');
+    expect(shot.hasChildren).toBe(false);
+    expect(hierarchyEntity(shot.ref)?.type).toBe('Shot');
+  });
+
+  it('400s on a project that is not there', async () => {
+    const c = client();
+    await expect(c.hierarchyExpand('/Project/999999999')).rejects.toMatchObject({ status: 400 });
   });
 });

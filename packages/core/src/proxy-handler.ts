@@ -33,7 +33,7 @@ import { SgApiError } from './client.js';
 import type { WireGroup } from './filter.js';
 
 /** The methods the protocol carries, one POST each. */
-export const PROXY_METHODS = ['entityTypes', 'fields', 'fieldWithProject', 'search', 'textSearch', 'statuses', 'update'] as const;
+export const PROXY_METHODS = ['entityTypes', 'fields', 'fieldWithProject', 'search', 'textSearch', 'statuses', 'update', 'hierarchyExpand'] as const;
 
 export type ProxyMethod = (typeof PROXY_METHODS)[number];
 
@@ -68,6 +68,7 @@ interface Params {
   page?: unknown;
   id?: unknown;
   patch?: unknown;
+  path?: unknown;
 }
 
 class BadRequest extends Error {}
@@ -132,5 +133,7 @@ function call(client: SgClient, method: ProxyMethod, p: Params): Promise<unknown
       return client.statuses();
     case 'update':
       return client.update(str(p.entityType, 'entityType'), num(p.id, 'id'), obj(p.patch, 'patch'));
+    case 'hierarchyExpand':
+      return client.hierarchyExpand(str(p.path, 'path'));
   }
 }

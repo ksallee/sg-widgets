@@ -43,6 +43,34 @@ export interface TextSearchRow {
   status?: string | null;
 }
 
+/**
+ * What a navigation node stands for. `entity` carries a `{type, id}`, `entity_type`
+ * a bare schema name; other kinds are passed through as the site sends them.
+ */
+export interface HierarchyRef {
+  kind: string;
+  value: EntityRef | string | null;
+}
+
+/** One level of the navigation tree the web interface draws (post_hierarchy_expand). */
+export interface HierarchyNode {
+  label: string;
+  ref: HierarchyRef;
+  /** The path to pass back to `hierarchyExpand` to open this node. */
+  path: string;
+  parentPath: string | null;
+  /** False when expanding this node would return nothing. */
+  hasChildren: boolean;
+  /** One level only: a child's own children come from its own call. */
+  children: HierarchyNode[];
+}
+
+/** The row a node stands for, or null when it stands for a type or nothing. */
+export function hierarchyEntity(ref: HierarchyRef | null | undefined): EntityRef | null {
+  if (!ref || ref.kind !== 'entity' || ref.value === null || typeof ref.value !== 'object') return null;
+  return ref.value;
+}
+
 export interface EntityTypeInfo {
   name: string;
   displayName: string;
@@ -71,6 +99,51 @@ export interface SgClient {
    * caller that shows one re-reads the row (024_read_after_write).
    */
   update(entityType: string, id: number, patch: Record<string, unknown>): Promise<EntityRow>;
+  /**
+   * One level of the site's navigation tree. `path` is `/Project/<id>` at the root
+   * and a child's own `path` below it (post_hierarchy_expand).
+   */
+  hierarchyExpand(path: string): Promise<HierarchyNode>;
+}
+
+/** The node shape `/hierarchy/_expand` answers, before normalising. */
+export interface RawHierarchyNode {
+  label?: string;
+  ref?: { kind?: string; value?: unknown };
+  path?: string;
+  parent_path?: string | null;
+  has_children?: boolean;
+  children?: RawHierarchyNode[];
+}
+
+/**
+ * Normalise one node and the level below it.
+ *
+ * The sample response gives a child a `label`, a `ref` and `has_children` but not
+ * always a `path`, so a child without one is addressed by appending its ref to the
+ * parent's path (post_hierarchy_expand).
+ */
+export function normalizeHierarchyNode(raw: RawHierarchyNode, path: string): HierarchyNode {
+  const ref: HierarchyRef = { kind: String(raw.ref?.kind ?? 'empty'), value: (raw.ref?.value as EntityRef | string | null) ?? null };
+  const own = raw.path ?? path;
+  return {
+    label: String(raw.label ?? ''),
+    ref,
+    path: own,
+    parentPath: raw.parent_path ?? null,
+    hasChildren: raw.has_children ?? false,
+    children: (raw.children ?? []).map((child) => normalizeHierarchyNode(child, childPath(own, child))),
+  };
+}
+
+function childPath(parentPath: string, child: RawHierarchyNode): string {
+  if (typeof child.path === 'string') return child.path;
+  const value = child.ref?.value;
+  if (child.ref?.kind === 'entity_type' && typeof value === 'string') return `${parentPath}/${value}`;
+  if (child.ref?.kind === 'entity' && value !== null && typeof value === 'object') {
+    return `${parentPath}/id/${(value as EntityRef).id}`;
+  }
+  return parentPath;
 }
 
 export interface RestClientOptions {
@@ -184,6 +257,14 @@ export class RestClient implements SgClient {
     // (put_entity_type_id). `?fields` is accepted and ignored, so nothing is asked for here.
     const res = await this.request<{ data: EntityRow }>('PUT', `/entity/${pluralPath(entityType)}/${id}`, patch, undefined, 'application/json');
     return res.data;
+  }
+
+  async hierarchyExpand(path: string): Promise<HierarchyNode> {
+    // `/hierarchy/*` is the one POST family that refuses the vendor content types and
+    // demands plain JSON. `seed_entity_field` is documented and ignored, so it is not
+    // sent (post_hierarchy_expand).
+    const res = await this.request<{ data: RawHierarchyNode }>('POST', '/hierarchy/_expand', { path }, undefined, 'application/json');
+    return normalizeHierarchyNode(res.data, path);
   }
 
   async statuses(): Promise<StatusRecord[]> {

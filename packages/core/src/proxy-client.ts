@@ -17,6 +17,7 @@
 import type {
   EntityRow,
   EntityTypeInfo,
+  HierarchyNode,
   SearchOptions,
   SearchResult,
   SgClient,
@@ -104,5 +105,9 @@ export class ProxyClient implements SgClient {
 
   update(entityType: string, id: number, patch: Record<string, unknown>): Promise<EntityRow> {
     return this.post('update', { entityType, id, patch });
+  }
+
+  hierarchyExpand(path: string): Promise<HierarchyNode> {
+    return this.post('hierarchyExpand', { path });
   }
 }

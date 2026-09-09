@@ -10,7 +10,7 @@
  * Fixtures are generated from a seed, so two runs produce identical ids, codes,
  * statuses and dates.
  */
-import type { EntityRow, EntityTypeInfo, SearchOptions, SearchResult, SgClient, TextSearchRow } from './client.js';
+import type { EntityRow, EntityTypeInfo, HierarchyNode, SearchOptions, SearchResult, SgClient, TextSearchRow } from './client.js';
 import { SgApiError } from './client.js';
 import type { EntityRef, WireCondition, WireGroup } from './filter.js';
 import type { Operator } from './field-types.js';
@@ -919,6 +919,97 @@ export class MockClient implements SgClient {
     if (Object.keys(patch).length > 0) row.values['updated_at'] = isoDateTime(0);
     // A PUT answers the whole record, changed fields and untouched ones alike (024_read_after_write).
     return this.project(row, spec);
+  }
+
+  /**
+   * One level of the navigation tree.
+   *
+   * The shape is post_hierarchy_expand's: a node with `label`, `ref`, `path` and one
+   * level of `children`. Which levels a project has is the site's own navigation
+   * configuration and not a fixed hierarchy - the probed site's Shot path runs through
+   * the field name `sg_sequence` (post_hierarchy_search) - so this fixture offers the
+   * two branches that configuration draws for a stock project: Shots under their
+   * Sequence, and Assets flat.
+   */
+  async hierarchyExpand(path: string): Promise<HierarchyNode> {
+    await this.gate();
+    const parts = path.split('/').filter(Boolean);
+    if (parts[0] !== 'Project' || parts.length < 2) {
+      // Code 107 appears on this endpoint and nowhere else: a lookup that found the
+      // wrong number of rows, not a malformed request (post_hierarchy_expand).
+      throw new SgApiError(400, null, `Unexpected result looking for project: ${parts[1] ?? path}: 0 found.`);
+    }
+    const projectId = Number(parts[1]);
+    const project = this.fixtures.index.get(`Project:${projectId}`);
+    if (!project) throw new SgApiError(400, null, `Unexpected result looking for project: ${String(parts[1])}: 0 found.`);
+    const rest = parts.slice(2);
+    const above = parts.slice(0, -1).join('/');
+    const parentPath = above === 'Project' ? '/' : `/${above}`;
+
+    const node = (
+      label: string,
+      ref: HierarchyNode['ref'],
+      own: string,
+      children: HierarchyNode[],
+      hasChildren?: boolean,
+    ): HierarchyNode => ({
+      label,
+      ref,
+      path: own,
+      parentPath: own === path ? parentPath : null,
+      hasChildren: hasChildren ?? children.length > 0,
+      children,
+    });
+    const leaf = (row: Row, own: string): HierarchyNode =>
+      node(displayNameOf(row.values, `#${row.id}`), { kind: 'entity', value: { type: row.type, id: row.id } }, own, [], false);
+    const rowsOf = (type: string): Row[] =>
+      (this.fixtures.rows.get(type) ?? []).filter((r) => (r.values['project'] as EntityRef | null)?.id === projectId);
+
+    if (rest.length === 0) {
+      return node(String(project.values['name']), { kind: 'entity', value: { type: 'Project', id: projectId } }, path, [
+        node('Assets', { kind: 'entity_type', value: 'Asset' }, `${path}/Asset`, [], rowsOf('Asset').length > 0),
+        node('Shots', { kind: 'entity_type', value: 'Shot' }, `${path}/Shot`, [], rowsOf('Shot').length > 0),
+      ]);
+    }
+    if (rest.length === 1 && rest[0] === 'Asset') {
+      return node(
+        'Assets',
+        { kind: 'entity_type', value: 'Asset' },
+        path,
+        rowsOf('Asset').map((r) => leaf(r, `${path}/id/${r.id}`)),
+      );
+    }
+    if (rest.length === 1 && rest[0] === 'Shot') {
+      return node(
+        'Shots',
+        { kind: 'entity_type', value: 'Shot' },
+        path,
+        rowsOf('Sequence').map((seq) =>
+          node(
+            String(seq.values['code']),
+            { kind: 'entity', value: { type: 'Sequence', id: seq.id } },
+            `${path}/sg_sequence/Sequence/${seq.id}`,
+            [],
+            (seq.values['shots'] as EntityRef[]).length > 0,
+          ),
+        ),
+      );
+    }
+    if (rest.length === 4 && rest[0] === 'Shot' && rest[1] === 'sg_sequence' && rest[2] === 'Sequence') {
+      const seq = this.fixtures.index.get(`Sequence:${Number(rest[3])}`);
+      if (!seq) throw new SgApiError(400, null, `Unexpected result looking for project: ${String(rest[3])}: 0 found.`);
+      const shots = (seq.values['shots'] as EntityRef[])
+        .map((r) => this.fixtures.index.get(`Shot:${r.id}`))
+        .filter((r): r is Row => r !== undefined);
+      return node(
+        String(seq.values['code']),
+        { kind: 'entity', value: { type: 'Sequence', id: seq.id } },
+        path,
+        shots.map((r) => leaf(r, `${path}/id/${r.id}`)),
+      );
+    }
+    // A leaf, or a path this fixture does not model: a node with nothing under it.
+    return node(path.split('/').pop() ?? '', { kind: 'empty', value: null }, path, [], false);
   }
 
   async statuses(): Promise<StatusRecord[]> {

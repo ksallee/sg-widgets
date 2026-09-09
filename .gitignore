@@ -11,3 +11,5 @@ build/
 .DS_Store
 coverage/
 apps/site/public/r/
+.claude/
+.playwright-mcp/

@@ -1,56 +1,22 @@
 ---
 title: Widgets
-description: The demo harness — every widget, in Svelte and React, side by side, in light and dark, with motion on or off.
+description: Every widget, with a live demo of the Svelte and React implementations.
 ---
 
 import Demo from '../../../components/Demo.astro';
 
-Every widget on this site is documented with a live demo of **both** implementations.
-The Svelte and the React version sit on the same stage, driven by the same fixtures, so
-you can see straight away whether they agree.
+Each widget page shows the Svelte and React implementations side by side. The toolbar above a demo
+picks the framework, switches the demo between light and dark, and reduces motion. The choices carry
+across pages.
 
-The toolbar above each demo has three controls:
+Widgets install from a registry into your project, one command per framework:
 
-- **Svelte / React / Both** picks what is shown.
-- **Dark** flips the demo stage only. Starlight's own theme is separate, so you can read
-  the docs in dark and QA a widget in light.
-- **Reduce motion** simulates `prefers-reduced-motion: reduce` inside the stage —
-  transitions collapse to opacity and animations finish at once — so you can check
-  [rule 4](https://github.com/ksallee/sg-widgets/blob/dev/docs/design-rules.md) without
-  changing your OS settings.
+```sh
+pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/status-badge.json
+pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/status-badge.json
+```
 
-All three choices are remembered across pages, and both demos stay mounted whichever
-one is on show, so switching never resets a widget.
+Every widget takes an `SgClient` from `@sg-widgets/core` for data. Wire your own, or the shipped REST
+client.
 
-## The demo below is the harness proving itself
-
-`hello` is not a widget. It is one shadcn Button per framework, imported out of
-`packages/svelte` and `packages/react` exactly as a user would get it from the
-registry, plus a call into the demo client. If it renders identically in both panes, in
-both themes, the pipeline works.
-
-<Demo name="hello" title="hello — a shadcn Button and a client call" />
-
-## What the demos run against
-
-Demos never reach a real Flow Production Tracking site. They share one
-`createQueryCache(new MockClient({ seed: 1, latencyMs: 150 }))` from
-`@sg-widgets/core`: a seeded in-memory site whose rows, schemas and statuses are shaped
-exactly as the REST API returns them, behind the same cache a real app is expected to
-put in front of a client. The latency is deliberate — a widget's loading state is part
-of what you are here to look at — and the seed means every run, and every screenshot,
-is identical.
-
-## Adding a demo
-
-Create `src/demos/<name>/Demo.svelte` and `src/demos/<name>/Demo.tsx`, then put
-`<Demo name="<name>" />` on the widget's page. There is no registration step: the
-harness finds the pair by directory name, and fails the build if either file is
-missing.
-
-Both files import the widget through the same specifier a user would write —
-`$lib/registry/<name>` for Svelte, `@/registry/sg/<name>` for React — which resolve to
-the workspace packages, so the demo compiles the very file that ships. For the client,
-Svelte calls `setDemoClient()` in the root component and reads it back with
-`getSgClient()`; React wraps the tree in `<DemoClientProvider>` and reads it with
-`useSgClient()`. Both helpers live in `src/demos/_shared/`.
+<Demo name="hello" />

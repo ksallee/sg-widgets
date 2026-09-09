@@ -11,8 +11,21 @@ Monorepo: `packages/core` (headless TS, npm), `packages/react` (shadcn registry,
 - Order per widget: core model + tests, then Svelte, then React. Both must exist before a widget is documented.
 - Never copy code from `~/Downloads/some_files`. Ideas only.
 - Pickers: server-side search, client filtering off. No data loading in effects with "last seen" guards; use a query/cache layer. Checkboxes for "which of these", chips only for ordered lists.
-- Registry items: React under `packages/react/registry/sg/<name>/`, Svelte under `packages/svelte/registry/<name>/`. `pnpm registry:build` emits to `apps/site/public/r/{react,svelte}`.
+- Registry conventions are in `docs/registry-conventions.md` (React items in `packages/react/src/registry/sg/components/<name>.tsx`, Svelte in `packages/svelte/src/lib/registry/components/<name>.svelte`, same kebab name in both). `pnpm registry:build` emits to `apps/site/public/r/{react,svelte}`.
+
+## Verifying UI
+
+- Use `pnpm qa` (`tools/qa.mjs`) to drive the docs site headless: `--start` launches an isolated dev
+  server, `--path` picks the page, `--drive file.js` runs an async body in the page and prints its
+  return as JSON, `--shot out.png` screenshots, `--dark`, `--reduced-motion`, `--framework svelte|react|both`.
+  Do not use the Playwright MCP tools for this repo. Every UI PR includes one screenshot per
+  framework taken with it, in light and dark.
+- Drive scripts that assert return `{ verdict: "PASS ..." | "FAIL ..." }`; the exit code follows.
+
+## Writing
+
+Follow `docs/writing-rules.md` for docs pages, comments, issues and PRs.
 
 ## Commands
 
-    pnpm test / pnpm check / pnpm build / pnpm registry:build / pnpm dev:site
+    pnpm test / pnpm check / pnpm build / pnpm registry:build / pnpm dev:site / pnpm qa

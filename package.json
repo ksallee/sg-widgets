@@ -2,13 +2,19 @@
   "name": "sg-widgets",
   "private": true,
   "packageManager": "pnpm@10.15.0",
-  "engines": { "node": ">=22" },
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "build": "pnpm -r --filter './packages/**' build",
     "test": "pnpm -r test",
     "lint": "pnpm -r lint",
     "check": "pnpm -r check",
     "registry:build": "pnpm -r registry:build",
-    "dev:site": "pnpm --filter site dev"
+    "dev:site": "pnpm --filter site dev",
+    "qa": "node tools/qa.mjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.63.0"
   }
 }

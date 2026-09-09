@@ -34,3 +34,8 @@ Terse and declarative. The code says what it is; comments do not narrate how it 
 - Issue description: what it is, in one paragraph. Edited in place when scope changes.
 - PR body: what landed, what to look at, one screenshot per framework when UI changed, and
   `Closes #n`. No process narrative.
+
+## Names in examples
+
+Invented names only, in docs, demos, tests and comments. Never the maintainer's name or a real
+person's. Ada Lovelace, Anna van der Meer, j.doe and the mock client's people are fine.

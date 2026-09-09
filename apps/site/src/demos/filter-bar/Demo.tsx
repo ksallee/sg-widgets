@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CollectionColumn, EntityRow, FilterGroup, StatusRecord, WireGroup } from '@sg-widgets/core';
-import { cellValue, createEntitySource, emptyFilter, resolveColumns, toApi3Hash } from '@sg-widgets/core';
+import { condition, cellValue, createEntitySource, emptyFilter, resolveColumns, toApi3Hash } from '@sg-widgets/core';
 import { FilterBar } from '@/registry/sg/components/filter-bar';
 import { GroupedList } from '@/registry/sg/components/grouped-list';
 import { StatusBadge } from '@/registry/sg/components/status-badge';
@@ -86,6 +86,7 @@ export default function FilterBarDemo() {
           entityType="Shot"
           client={context.client}
           facets={['sg_status_list', 'sg_sequence', 'sg_shot_type']}
+          baseFilter={context.live ? condition('project', 'is', { type: 'Project', id: context.projectId }) : null}
           value={value}
           onChange={setValue}
         />

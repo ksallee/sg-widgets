@@ -16,6 +16,8 @@ import {
   findCondition,
   setFacet,
   toApi3Hash,
+  asFilterGroup,
+  group,
   withoutPaths,
 } from '@sg-widgets/core';
 import { ChevronDownIcon } from 'lucide-react';
@@ -40,6 +42,8 @@ export interface FilterBarProps {
    * Counts per value for one facet. Wire it to a `_summarize` grouping call.
    * Without it the bar reads one page of rows and tallies them.
    */
+  /** Conditions every facet query carries, such as a project scope. Never edited by the bar. */
+  baseFilter?: FilterGroup | WireGroup | null;
   counts?: (field: string, filters: WireGroup | null) => Promise<Record<string, number>>;
   /** Rows read for the tally when `counts` is not given. */
   sampleSize?: number;
@@ -67,6 +71,7 @@ export function FilterBar({
   hidePaths = [],
   disabled = false,
   counts,
+  baseFilter = null,
   sampleSize = 200,
   onChange,
   className,
@@ -88,7 +93,8 @@ export function FilterBar({
 
   // Counts are read against the filter with every facet's own condition stripped, so
   // ticking one value does not empty its neighbours. One read serves every pill.
-  const scope = JSON.stringify(toApi3Hash(withoutPaths(value, facets)));
+  const base = asFilterGroup(baseFilter);
+  const scope = JSON.stringify(toApi3Hash(base ? group('and', [base, withoutPaths(value, facets)]) : withoutPaths(value, facets)));
 
   useEffect(() => {
     const present = facets.map((name) => fields[name]).filter((f): f is FieldSchema => Boolean(f));

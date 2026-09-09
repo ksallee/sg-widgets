@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { CollectionColumn, EntityRow, FilterGroup, StatusRecord, WireGroup } from '@sg-widgets/core';
-	import { cellValue, createEntitySource, emptyFilter, resolveColumns, toApi3Hash } from '@sg-widgets/core';
+	import { condition, cellValue, createEntitySource, emptyFilter, resolveColumns, toApi3Hash } from '@sg-widgets/core';
 	import FilterBar from '$lib/registry/components/filter-bar.svelte';
 	import GroupedList from '$lib/registry/components/grouped-list.svelte';
 	import StatusBadge from '$lib/registry/components/status-badge.svelte';
@@ -75,6 +75,7 @@
 		entityType="Shot"
 		{client}
 		facets={['sg_status_list', 'sg_sequence', 'sg_shot_type']}
+		baseFilter={context.live ? condition('project', 'is', { type: 'Project', id: context.projectId }) : null}
 		bind:value
 	/>
 

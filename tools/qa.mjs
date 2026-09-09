@@ -7,8 +7,9 @@
 // --start builds nothing: it runs `astro dev` on a free port with its own .astro dir, so two agents
 // never share a server. Without it, --url (or --path on --base, default http://127.0.0.1:4321) is used.
 //
-// The drive file is the body of an async function receiving ({wait, $, $$, harness}). `harness` sets
-// the demo toolbar (framework, dark, reduced motion) without clicking. Whatever the body returns is
+// The drive file is the body of an async function receiving ({wait, $, $$, harness}). `harness.set`
+// writes the demo toolbar's localStorage keys (framework: svelte|react|both, theme: light|dark,
+// motion: normal|reduced) before a reload; the flags below set them for the initial load. Whatever the body returns is
 // printed as JSON under `result`, next to `console` (errors and warnings only) and `shot`/`video`
 // paths. Exit code is 1 when the page threw, a console error was logged, or the result carries
 // `verdict` starting with FAIL.
@@ -110,13 +111,14 @@ async function main() {
     reducedMotion: a.reducedMotion ? 'reduce' : 'no-preference',
     ...(a.video ? { recordVideo: { dir: dirname(resolve(a.video)), size: { width: vw, height: vh } } } : {}),
   });
+  // Demo.astro stores raw strings under these keys; keep them in sync with its KEYS table.
   const prefs = {};
   if (a.framework) prefs.framework = a.framework;
-  if (a.dark) prefs.dark = true;
-  if (a.reducedMotion) prefs.reducedMotion = true;
+  if (a.dark) prefs.theme = 'dark';
+  if (a.reducedMotion) prefs.motion = 'reduced';
   if (Object.keys(prefs).length) {
     await ctx.addInitScript((p) => {
-      for (const [k, v] of Object.entries(p)) localStorage.setItem('sg-demo:' + k, JSON.stringify(v));
+      for (const [k, v] of Object.entries(p)) localStorage.setItem('sg-demo:' + k, v);
     }, prefs);
   }
   const page = await ctx.newPage();

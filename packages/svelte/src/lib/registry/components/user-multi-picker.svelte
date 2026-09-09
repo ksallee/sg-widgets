@@ -3,7 +3,7 @@
 	import EntityMultiPicker, {
 		type EntityMultiPickerBaseProps
 	} from './entity-multi-picker.svelte';
-	import { USER_FIELDS, USER_SEARCH_FIELDS, userFilters, userSubLabel, userTypes } from './user-picker.svelte';
+	import { USER_FIELDS, userFilters, userSearchFieldsWith, userSubLabel, userTypes } from './user-picker.svelte';
 
 	type Props = Omit<EntityMultiPickerBaseProps, 'entityTypes'> & {
 		value?: EntityRef[];
@@ -37,7 +37,7 @@
 <EntityMultiPicker
 	bind:value
 	entityTypes={userTypes(includeApiUsers)}
-	searchFields={[...USER_SEARCH_FIELDS, ...searchFields]}
+	searchFields={userSearchFieldsWith(searchFields)}
 	fields={[...USER_FIELDS, ...fields]}
 	filters={userFilters(includeInactive, filters)}
 	subLabel={userSubLabel}

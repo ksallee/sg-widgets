@@ -54,6 +54,8 @@
 		field?: Pick<FieldSchema, 'displayValues'> | null;
 		/** `Status` rows by code, for the status name and icon (probe 010). */
 		statuses?: Record<string, StatusRecord> | null;
+		/** The site the stock sprite is served from, for a status icon the package does not bundle. */
+		siteUrl?: string;
 		/** The site's `hours_per_day` from `GET /preferences`; durations then render in days (field_types/duration). */
 		hoursPerDay?: number;
 		locale?: string;
@@ -72,6 +74,7 @@
 		dataType,
 		field = null,
 		statuses = null,
+		siteUrl,
 		hoursPerDay,
 		locale,
 		precision,
@@ -146,6 +149,7 @@
 			status={statuses?.[String(value)] ?? null}
 			{field}
 			size="sm"
+			{siteUrl}
 		/>
 	{:else if kind === 'image'}
 		<Thumbnail src={String(value)} size="sm" alt="" />

@@ -1,10 +1,25 @@
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
-import type { EntityRef, FilterGroup, PickerRow, SgClient, WireGroup } from '@sg-widgets/core';
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import type {
+  EntityRef,
+  FieldSchema,
+  FilterGroup,
+  PickerRow,
+  SchemaService,
+  SearchFieldSpec,
+  SgClient,
+  StatusRecord,
+  StatusService,
+  WireGroup,
+} from '@sg-widgets/core';
 import {
   createEntitySearch,
+  createSchemaService,
+  createStatusService,
   entityKey,
   highlightRuns,
+  isEmptyValue,
   placeholderName,
+  renderKindFor,
   withSelectedPinned,
 } from '@sg-widgets/core';
 import {
@@ -16,8 +31,9 @@ import {
 } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ChevronsUpDown, SearchX, TriangleAlert, Type, X } from 'lucide-react';
+import { ChevronsUpDown, SearchX, TriangleAlert, X } from 'lucide-react';
 import { EntityChip } from '@/registry/sg/components/entity-chip';
+import { FieldValue } from '@/registry/sg/components/field-value';
 import { Thumbnail } from '@/registry/sg/components/thumbnail';
 import { UserAvatar } from '@/registry/sg/components/user-avatar';
 import { cn } from '@/lib/utils';
@@ -34,6 +50,50 @@ const GLYPH: Record<EntityPickerSize, string> = { sm: 'size-4', md: 'size-4', lg
 /** A chip sits inside the control, so it takes the step below it. */
 const CHIP: Record<EntityPickerSize, EntityPickerSize> = { sm: 'sm', md: 'sm', lg: 'md' };
 
+interface SecondaryPlan {
+  /** The secondary field's schema, per searched type. */
+  fields: Record<string, FieldSchema | undefined>;
+  /** `Status` rows by code, read only when the field is a status (probe 010). */
+  statuses: Record<string, StatusRecord> | null;
+}
+
+const NO_SECONDARY: SecondaryPlan = { fields: {}, statuses: null };
+
+/**
+ * What the secondary column draws with: one field read per searched type through the
+ * cached schema service, as a store, so the read starts in a memo over the props and
+ * never in an effect with a "last seen" key.
+ */
+function secondaryPlanStore(
+  schema: SchemaService,
+  statusTable: StatusService,
+  types: string[],
+  name: string | undefined,
+  onError: (error: Error) => void,
+) {
+  const listeners = new Set<() => void>();
+  let snapshot = NO_SECONDARY;
+  if (name) {
+    void Promise.all(types.map((type) => schema.field(type, name)))
+      .then(async (found) => {
+        const fields = Object.fromEntries(types.map((type, i) => [type, found[i]]));
+        const status = found.some((field) => field && renderKindFor(field.dataType) === 'status');
+        snapshot = { fields, statuses: status ? Object.fromEntries(await statusTable.byCode()) : null };
+        for (const listener of listeners) listener();
+      })
+      .catch((error: unknown) => onError(error instanceof Error ? error : new Error(String(error))));
+  }
+  return {
+    subscribe(listener: () => void): () => void {
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+      };
+    },
+    snapshot: (): SecondaryPlan => snapshot,
+  };
+}
+
 /** Everything both entity pickers take. They differ only in the shape of the value. */
 export interface EntityPickerBaseProps {
   /** Types to search. One for a homogeneous picker, several for a polymorphic one. */
@@ -42,10 +102,14 @@ export interface EntityPickerBaseProps {
   client: SgClient;
   /** Field holding the row label. Defaults to the display-name chain. */
   labelField?: string;
-  /** Extra fields the query is matched against, on top of the display-name chain. */
-  searchFields?: string[];
-  /** Field shown right-aligned. Defaults to the row id, in the mono treatment. */
+  /**
+   * Extra fields the query is matched against, on top of the display-name chain. A
+   * function is called with the query, so a field is searched only when it suits it.
+   */
+  searchFields?: SearchFieldSpec[] | ((query: string) => SearchFieldSpec[]);
+  /** Field shown right-aligned, drawn by its data type. Nothing is shown without it. */
   secondaryField?: string;
+  /** Right-aligned text of the caller's own making. Wins over `secondaryField`. */
   secondary?: (row: PickerRow) => string;
   /** Field shown under the label. Defaults to the type when several types are searched. */
   subLabelField?: string;
@@ -53,6 +117,8 @@ export interface EntityPickerBaseProps {
   /** Field holding the thumbnail URL. `false` hides the leading slot. */
   thumbnailField?: string | false;
   roundThumbnail?: boolean;
+  /** The site the status sprite is served from, for a secondary that is a status. */
+  siteUrl?: string;
   /** Extra fields to request, so a caller's own sub-label or secondary can be read. */
   fields?: string[];
   /** Pre-filter merged into every search with `and`. */
@@ -87,10 +153,14 @@ export interface EntityPickerProps extends EntityPickerBaseProps {
  *
  * A query past `minQueryLength` becomes one `contains` condition per word, `or`'d
  * across the type's display-name fields, and goes to `POST /entity/<type>/_search`
- * once per searched type. Client-side filtering is off: the server is the only
- * authority on what matches. A response from an abandoned query is dropped rather
- * than shown, reads come from the query cache, and every row is held under
- * `Type:id` because a numeric id alone collides across types.
+ * once per searched type. Under it the same search runs without the name condition,
+ * so an open picker lists the rows worked on most recently. Client-side filtering is
+ * off: the server is the only authority on what matches. A response from an abandoned
+ * query is dropped rather than shown, reads come from the query cache, and every row
+ * is held under `Type:id` because a numeric id alone collides across types.
+ *
+ * The secondary column is drawn by the field's data type through FieldValue, so a
+ * status is a badge and a date is formatted.
  */
 export function EntityPicker({
   entityTypes,
@@ -105,11 +175,12 @@ export function EntityPicker({
   subLabel,
   thumbnailField = 'image',
   roundThumbnail = false,
+  siteUrl,
   fields,
   filters = null,
   projectId,
   exclude,
-  minQueryLength = 2,
+  minQueryLength = 0,
   pageSize = 20,
   placeholder = 'Search for an entity',
   searchPlaceholder = 'Search…',
@@ -126,9 +197,23 @@ export function EntityPicker({
   const errorRef = useRef(onError);
   errorRef.current = onError;
 
+  // One schema service for the widget. The controller shares it, so a type's fields
+  // are read once however many times they are asked for.
+  const schema = useMemo(() => createSchemaService(client), [client]);
+  const statusTable = useMemo(() => createStatusService(client), [client]);
+  const secondaryStore = useMemo(
+    () =>
+      secondaryPlanStore(schema, statusTable, entityTypes, secondaryField, (error) =>
+        errorRef.current?.(error),
+      ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [schema, statusTable, entityTypes.join(','), secondaryField],
+  );
+
   const [search] = useState(() =>
     createEntitySearch({
       client,
+      schema,
       entityTypes,
       labelField,
       searchFields,
@@ -171,6 +256,7 @@ export function EntityPicker({
   useEffect(() => {
     search.update({
       client,
+      schema,
       entityTypes,
       labelField,
       searchFields,
@@ -186,13 +272,15 @@ export function EntityPicker({
       debounceMs,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, client, shape]);
+  }, [search, client, schema, shape]);
 
   useEffect(() => () => search.dispose(), [search]);
 
+  // The search runs for an open picker only: the list is what the popover shows, and
+  // a closed one has nobody to show it to.
   useEffect(() => {
-    search.setQuery(query);
-  }, [search, query]);
+    if (open) search.setQuery(query);
+  }, [search, open, query]);
 
   // A bare reference is resolved by one batched read, latched on the reference
   // itself, so swapping in a different bare one resolves that one too.
@@ -209,8 +297,13 @@ export function EntityPicker({
   const hasSubLabel = Boolean(subLabelField || subLabel || polymorphic);
   const interactive = !disabled && !readOnly;
   const showClear = clearable && Boolean(value) && interactive;
-  /** The id is the only secondary that is a code, so it is the only one set in mono. */
-  const secondaryIsId = !secondary && !secondaryField;
+  /** An id is a code, and codes are the mono treatment of `docs/design-rules.md`. */
+  const secondaryIsId = secondaryField === 'id';
+  const secondaryPlan = useSyncExternalStore(
+    secondaryStore.subscribe,
+    secondaryStore.snapshot,
+    secondaryStore.snapshot,
+  );
 
   function thumbOf(row: PickerRow): string | null {
     if (thumbnailField === false) return null;
@@ -227,13 +320,14 @@ export function EntityPicker({
     return polymorphic ? row.type : '';
   }
 
-  function secondaryOf(row: PickerRow): string {
-    if (secondary) return secondary(row);
-    if (secondaryField) {
-      const raw = row.values[secondaryField];
-      return raw === null || raw === undefined ? '' : String(raw);
-    }
-    return `#${row.id}`;
+  /** The id is on the row itself, not among the attributes a read returns. */
+  function secondaryValue(row: PickerRow): unknown {
+    if (!secondaryField) return null;
+    return secondaryField === 'id' ? row.id : row.values[secondaryField];
+  }
+
+  function secondaryType(row: PickerRow): string {
+    return secondaryPlan.fields[row.type]?.dataType ?? (secondaryIsId ? 'number' : 'text');
   }
 
   function isPerson(row: PickerRow): boolean {
@@ -321,14 +415,6 @@ export function EntityPicker({
                     <Skeleton key={row} className="h-8 w-full" />
                   ))}
                 </div>
-              ) : state.tooShort && options.length === 0 ? (
-                <div
-                  data-slot="entity-picker-hint"
-                  className="text-muted-foreground flex items-center justify-center gap-1.5 py-6 text-center text-sm"
-                >
-                  <Type aria-hidden="true" className="size-4 shrink-0" />
-                  <span>Type {minQueryLength} characters to search.</span>
-                </div>
               ) : (
                 <>
                   <CommandEmpty>
@@ -339,6 +425,9 @@ export function EntityPicker({
                   </CommandEmpty>
                   {options.map((row) => {
                     const chosen = Boolean(value && entityKey(value) === entityKey(row));
+                    const sub = subLabelOf(row);
+                    const custom = secondary ? secondary(row) : '';
+                    const raw = secondaryValue(row);
                     return (
                       <CommandItem
                         key={entityKey(row)}
@@ -378,19 +467,43 @@ export function EntityPicker({
                               </span>
                             ))}
                           </span>
-                          {subLabelOf(row) ? (
-                            <span className="text-muted-foreground truncate text-xs">{subLabelOf(row)}</span>
+                          {sub ? (
+                            // Highlighted too, so a row matched on its login or its email shows why.
+                            <span
+                              data-slot="entity-picker-sub-label"
+                              className="text-muted-foreground truncate text-xs"
+                            >
+                              {highlightRuns(sub, state.query).map((run, i) => (
+                                <span key={i} className={run.match ? 'font-semibold' : undefined}>
+                                  {run.text}
+                                </span>
+                              ))}
+                            </span>
                           ) : null}
                         </span>
-                        {secondaryOf(row) ? (
+                        {custom ? (
+                          <span
+                            data-slot="entity-picker-secondary"
+                            className="text-muted-foreground shrink-0 text-xs"
+                          >
+                            {custom}
+                          </span>
+                        ) : secondaryField && !isEmptyValue(raw) ? (
                           <span
                             data-slot="entity-picker-secondary"
                             className={cn(
-                              'text-muted-foreground shrink-0 text-xs',
+                              'text-muted-foreground flex shrink-0 items-center text-xs',
                               secondaryIsId && 'font-mono tabular-nums',
                             )}
                           >
-                            {secondaryOf(row)}
+                            <FieldValue
+                              value={raw}
+                              dataType={secondaryType(row)}
+                              field={secondaryPlan.fields[row.type] ?? null}
+                              statuses={secondaryPlan.statuses}
+                              siteUrl={siteUrl}
+                              className="w-auto justify-end text-xs"
+                            />
                           </span>
                         ) : null}
                       </CommandItem>

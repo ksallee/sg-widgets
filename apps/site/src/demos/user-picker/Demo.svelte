@@ -8,6 +8,7 @@
 
 	let one = $state<EntityRef | null>(null);
 	let people = $state<EntityRef[]>([]);
+	let byAddress = $state<EntityRef | null>(null);
 	let peopleOnly = $state<EntityRef | null>(null);
 	let withInactive = $state<EntityRef | null>(null);
 	// A bare reference: type and id, no name. Resolved on mount.
@@ -31,6 +32,17 @@
 		<h4 class={label}>Several, with checkbox rows</h4>
 		<div class={field}>
 			<UserMultiPicker {client} bind:value={people} clearable />
+		</div>
+	</section>
+
+	<section class={group} data-demo-case="by-address">
+		<h4 class={label}>Matched on the name, the address or the login</h4>
+		<div class={field}>
+			<UserPicker
+				{client}
+				bind:value={byAddress}
+				placeholder="Try ada, ada.lo or @example.studio…"
+			/>
 		</div>
 	</section>
 

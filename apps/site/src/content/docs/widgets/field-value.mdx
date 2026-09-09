@@ -27,6 +27,7 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/field-value.js
 | `dataType` | `string` | required | The field's data type. An unknown one renders as text. |
 | `field` | `FieldSchema \| null` | `null` | Supplies a status label through its display values. |
 | `statuses` | `Record<string, StatusRecord> \| null` | `null` | Status rows by code, for the status name and icon. |
+| `siteUrl` | `string` | — | The site the stock sprite is served from, for a status icon the package does not bundle. |
 | `hoursPerDay` | `number` | — | The site's working day. Durations then render in days. |
 | `precision` | `number` | — | Decimals shown on a float, zeros kept. Without it, the value as the API sent it, trailing zeros dropped. On a currency, the decimals, default 2. |
 | `currencySymbol` | `string` | `'$'` | Shown before a currency amount. |

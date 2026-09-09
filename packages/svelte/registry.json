@@ -609,6 +609,7 @@
       ],
       "registryDependencies": [
         "local:entity-chip",
+        "local:field-value",
         "local:thumbnail",
         "local:user-avatar",
         "popover",
@@ -633,6 +634,7 @@
       ],
       "registryDependencies": [
         "local:entity-chip",
+        "local:field-value",
         "local:thumbnail",
         "local:user-avatar",
         "popover",

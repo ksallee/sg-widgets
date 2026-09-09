@@ -9,7 +9,9 @@
 	const failing = createDemoClient();
 
 	let shot = $state<EntityRef | null>(null);
+	let withStatus = $state<EntityRef | null>(null);
 	let anything = $state<EntityRef | null>(null);
+	let custom = $state<EntityRef | null>(null);
 	let inProject = $state<EntityRef | null>(null);
 	// A bare reference: type and id, no name. Resolved on mount by one id-in read.
 	let bare = $state<EntityRef | null>({ type: 'Shot', id: 866 });
@@ -31,14 +33,40 @@
 		</div>
 	</section>
 
+	<section class={group} data-demo-case="status-secondary">
+		<h4 class={label}>Status as secondary</h4>
+		<div class={field}>
+			<EntityPicker
+				{client}
+				entityTypes={['Shot']}
+				secondaryField="sg_status_list"
+				bind:value={withStatus}
+				clearable
+			/>
+		</div>
+	</section>
+
 	<section class={group} data-demo-case="multi-type">
-		<h4 class={label}>Three types at once</h4>
+		<h4 class={label}>Three types at once, the type under the name</h4>
 		<div class={field}>
 			<EntityPicker
 				{client}
 				entityTypes={['Shot', 'Asset', 'Sequence']}
 				bind:value={anything}
 				placeholder="Search shots, assets and sequences…"
+				clearable
+			/>
+		</div>
+	</section>
+
+	<section class={group} data-demo-case="custom-secondary">
+		<h4 class={label}>Custom secondary</h4>
+		<div class={field}>
+			<EntityPicker
+				{client}
+				entityTypes={['Shot']}
+				secondary={(row) => `#${row.id}`}
+				bind:value={custom}
 				clearable
 			/>
 		</div>

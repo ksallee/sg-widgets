@@ -18,7 +18,9 @@ export default function EntityPickerDemo() {
   const [failing] = useState(() => createDemoClient());
 
   const [shot, setShot] = useState<EntityRef | null>(null);
+  const [withStatus, setWithStatus] = useState<EntityRef | null>(null);
   const [anything, setAnything] = useState<EntityRef | null>(null);
+  const [custom, setCustom] = useState<EntityRef | null>(null);
   const [inProject, setInProject] = useState<EntityRef | null>(null);
   // A bare reference: type and id, no name. Resolved on mount by one id-in read.
   const [bare, setBare] = useState<EntityRef | null>({ type: 'Shot', id: 866 });
@@ -35,8 +37,22 @@ export default function EntityPickerDemo() {
         </div>
       </section>
 
+      <section className={group} data-demo-case="status-secondary">
+        <h4 className={label}>Status as secondary</h4>
+        <div className={field}>
+          <EntityPicker
+            client={client}
+            entityTypes={['Shot']}
+            secondaryField="sg_status_list"
+            value={withStatus}
+            onValueChange={setWithStatus}
+            clearable
+          />
+        </div>
+      </section>
+
       <section className={group} data-demo-case="multi-type">
-        <h4 className={label}>Three types at once</h4>
+        <h4 className={label}>Three types at once, the type under the name</h4>
         <div className={field}>
           <EntityPicker
             client={client}
@@ -44,6 +60,20 @@ export default function EntityPickerDemo() {
             value={anything}
             onValueChange={setAnything}
             placeholder="Search shots, assets and sequences…"
+            clearable
+          />
+        </div>
+      </section>
+
+      <section className={group} data-demo-case="custom-secondary">
+        <h4 className={label}>Custom secondary</h4>
+        <div className={field}>
+          <EntityPicker
+            client={client}
+            entityTypes={['Shot']}
+            secondary={(row) => `#${row.id}`}
+            value={custom}
+            onValueChange={setCustom}
             clearable
           />
         </div>

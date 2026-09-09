@@ -14,7 +14,7 @@ pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/entity-picker.json
 pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/entity-picker.json
 ```
 
-<Demo name="entity-picker" title="EntityPicker: types, project scope, hydration, paging, errors, sizes, states" />
+<Demo name="entity-picker" title="EntityPicker: secondary column, types, project scope, hydration, paging, errors, sizes, states" />
 
 ## Props
 
@@ -24,18 +24,19 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/entity-picker.
 | `client` | `SgClient` | required | Wrap it in `createQueryCache` so repeated queries cost one request. |
 | `value` | `EntityRef \| null` | `null` | The chosen row. Two-way in Svelte. |
 | `labelField` | `string` | display-name chain | Field holding the row label. |
-| `searchFields` | `string[]` | `[]` | Fields matched on top of the display-name chain. |
-| `secondaryField` | `string` | — | Field shown right-aligned. |
-| `secondary` | `(row) => string` | the row id | Computes the right-aligned text. |
+| `searchFields` | `string[] \| ((query) => string[])` | `[]` | Fields matched on top of the display-name chain. A function is called with the query. |
+| `secondaryField` | `string` | — | Field shown right-aligned, drawn by its data type. |
+| `secondary` | `(row) => string` | — | Right-aligned text of your own. Wins over `secondaryField`. |
 | `subLabelField` | `string` | — | Field shown under the label. |
 | `subLabel` | `(row) => string` | the type, when several are searched | Computes the sub-label. |
 | `thumbnailField` | `string \| false` | `'image'` | Field holding the thumbnail URL. `false` hides the leading slot. |
 | `roundThumbnail` | `boolean` | `false` | Draws the thumbnail as a circle. |
+| `siteUrl` | `string` | — | The site the status sprite is served from, for a secondary that is a status. |
 | `fields` | `string[]` | `[]` | Extra fields to request. |
 | `filters` | `FilterGroup \| WireGroup \| null` | `null` | Pre-filter, merged into every search with `and`. |
 | `projectId` | `number` | — | Scopes to one project. |
 | `exclude` | `EntityRef[]` | `[]` | Rows kept out of the results. |
-| `minQueryLength` | `number` | `2` | Shorter queries run nothing. |
+| `minQueryLength` | `number` | `0` | Under it the query carries no name condition. |
 | `pageSize` | `number` | `20` | Rows a page, with a load more row under them. |
 | `placeholder` | `string` | `'Search for an entity'` | Shown in the control while nothing is chosen. |
 | `searchPlaceholder` | `string` | `'Search…'` | Shown in the search input. |
@@ -47,6 +48,14 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/entity-picker.
 | `clearable` | `boolean` | `true` | Shows the clear control. |
 | `debounceMs` | `number` | `250` | Wait after the last keystroke before searching. |
 | `class` / `className` | `string` | — | Merged after the widget's own classes. |
+
+The secondary column shows nothing until `secondaryField` or `secondary` asks for something.
+`secondaryField` is drawn by the field's data type, so a status is a badge, an entity is the name it
+links to, a date is formatted and a number is right-aligned in tabular figures; `secondaryField="id"`
+puts the id back, in mono. The field is requested with the row.
+
+A query shorter than `minQueryLength`, or none at all, still lists the first page, sorted by the last
+update, so an open picker is never empty.
 
 A row is `{ type, id, name, values }`, where `values` holds the attributes and the relationships in
 one map. A dotted field is a literal key with dots in it, so `project.Project.name` reads straight
@@ -89,6 +98,10 @@ type that expresses a nested `and` and `or` group (030_complex_filters).
 `POST /entity/_text_search` is not used: it takes no `fields`, so every row comes back as name,
 links and status whatever the type, and a picker needs a thumbnail and a sub-label
 (post_entity_text_search).
+
+With no name condition the rows are sorted `-updated_at`. Unsorted, a read comes back id ascending,
+which is the oldest work on the site; an unsortable or unknown sort field is a silent 200 no-op
+(026_result_order).
 
 Another page exists when the page came back full. `links.next` is emitted on every page forever,
 including empty ones, so it is never the stop signal (006_pagination).

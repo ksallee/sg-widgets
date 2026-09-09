@@ -371,6 +371,11 @@ function thumb(slug: string, w = 96, h = 54): string {
   return `https://picsum.photos/seed/${slug}/${w}/${h}`;
 }
 
+/** Illustrated portraits from DiceBear's CC0 "lorelei" set, one per login, so no real face appears. */
+function portrait(login: string): string {
+  return `https://api.dicebear.com/9.x/lorelei/svg?seed=${encodeURIComponent(login)}&backgroundType=gradientLinear&backgroundColor=d1d4f9,c0aede,ffdfbf,b6e3f4`;
+}
+
 function ref(row: Row): EntityRef {
   return { type: row.type, id: row.id };
 }
@@ -449,7 +454,7 @@ function buildFixtures(seed: number): Fixtures {
       lastname: u.last,
       email: `${login}@example.studio`,
       sg_status_list: u.status,
-      image: thumb(login, 64, 64),
+      image: portrait(login),
       password_proxy: '*******',
       can_impersonate_this_user: true,
       sg_department_name: u.dept,

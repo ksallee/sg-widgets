@@ -1,0 +1,57 @@
+---
+title: UserAvatar
+description: A person as a round avatar, with an initials fallback.
+---
+
+import Demo from '../../../components/Demo.astro';
+
+Renders one person as a round avatar, falling back to initials whenever there is no picture.
+
+## Install
+
+```sh
+pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/user-avatar.json
+pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/user-avatar.json
+```
+
+<Demo name="user-avatar" title="UserAvatar: sizes, initials, inactive users, API users" />
+
+## Props
+
+| prop | type | default | meaning |
+|---|---|---|---|
+| `name` | `string` | required | Display name. Drives the initials, the tooltip and the accessible name. |
+| `image` | `string \| null` | `null` | The user's image field. |
+| `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Diameters 6, 8 and 10. |
+| `inactive` | `boolean` | `false` | Dims and desaturates without hiding. |
+| `apiUser` | `boolean` | `false` | Adds a badge marking a script account, and names it in the tooltip. |
+| `class` / `className` | `string` | — | Merged after the widget's own classes. |
+
+Initials are the first letter of the first and last word, so Kevin Sallee gives KS and Kevin van der
+Meer gives KM. A single word gives one letter, and a login is split on its punctuation. They come
+from the core package, so both frameworks derive them identically.
+
+The avatar never renders blank. An image that fails to load falls back to the initials, and with no
+name at all it is still a muted circle. The name is always in the accessible tree.
+
+The root carries an inactive data attribute when the user is dimmed.
+
+## Events
+
+None.
+
+## Slots
+
+None.
+
+## Keyboard
+
+Not focusable.
+
+## API behaviour
+
+A person's image field is presigned and short-lived, like every other image on the site
+(field_types/image).
+
+A disabled person is a real row that still owns work: the status field holds a discarded code rather
+than the row being removed, which is why the widget dims instead of hiding (entity_types/HumanUser).

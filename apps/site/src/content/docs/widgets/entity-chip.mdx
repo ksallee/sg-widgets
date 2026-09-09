@@ -1,0 +1,67 @@
+---
+title: EntityChip
+description: A linked Flow Production Tracking row as a compact chip.
+---
+
+import Demo from '../../../components/Demo.astro';
+
+Renders one linked row as a chip with a type glyph or thumbnail, its name, and an optional remove
+control.
+
+## Install
+
+```sh
+pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/entity-chip.json
+pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/entity-chip.json
+```
+
+<Demo name="entity-chip" title="EntityChip: sizes, type glyphs, thumbnails, links, removal" />
+
+## Props
+
+| prop | type | default | meaning |
+|---|---|---|---|
+| `entity` | `EntityRef` | required | Type, id and optional name, as an entity field returns it. |
+| `thumbnail` | `string \| null` | `null` | Replaces the type glyph. |
+| `href` | `string` | — | Renders the content as a link. |
+| `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Heights 6, 8 and 10. |
+| `removable` | `boolean` | `false` | Shows the remove control. |
+| `removeLabel` | `string` | derived from the name | Accessible name for the remove control. |
+| `class` / `className` | `string` | — | Merged after the widget's own classes. |
+
+A chip with no name shows the type and id instead, in the mono treatment ids get elsewhere.
+
+Nine entity types have their own glyph: Shot, Asset, Sequence, Version, Task, HumanUser, Project,
+Note and PublishedFile. Every other type, including a site's custom entities, gets a tag.
+
+The root carries the entity type and id as data attributes.
+
+## Events
+
+| event | React | Svelte | payload |
+|---|---|---|---|
+| activate | `onClick` | `onclick` | The mouse event. Renders the content as a button. Ignored when a link is set. |
+| remove | `onRemove` | `onremove` | The entity that was removed. |
+
+## Slots
+
+None.
+
+## Keyboard
+
+| key | does |
+|---|---|
+| `Tab` | Moves to the link or button, then to the remove control. |
+| `Enter` | Follows the link, or activates the button. |
+| `Space` | Activates the button or the remove control. |
+
+An inert chip takes no focus.
+
+## API behaviour
+
+The name in an entity hash is the target's cached display name, and it is filled on every entity
+type measured, single links and multi links alike, so a chip needs no second call
+(060_entity_dict_name).
+
+A thumbnail URL is presigned and re-minted on every read, so pass a fresh one rather than a stored
+string (field_types/image).

@@ -26,9 +26,10 @@ async function count(c: MockClient, type: string, filters: WireGroup | null): Pr
 describe('fixtures', () => {
   it('has the sizes a demo needs, and stable ids across runs', () => {
     const c = client();
-    expect(c.rowsOf('Project')).toHaveLength(2);
+    expect(c.rowsOf('Project')).toHaveLength(3);
     expect(c.rowsOf('Sequence')).toHaveLength(6);
-    expect(c.rowsOf('Shot')).toHaveLength(30);
+    // 30 under a sequence, and 3 under a project that has none.
+    expect(c.rowsOf('Shot')).toHaveLength(33);
     expect(c.rowsOf('Asset')).toHaveLength(10);
     expect(c.rowsOf('Version')).toHaveLength(60);
     expect(c.rowsOf('Task')).toHaveLength(40);
@@ -93,21 +94,21 @@ describe('filter operators on text', () => {
 
   it('is / is_not', async () => {
     expect(await attrs(c, 'Shot', only('code', 'is', 'sh010_0010'), 'code')).toEqual(['sh010_0010']);
-    expect(await count(c, 'Shot', only('code', 'is_not', 'sh010_0010'))).toBe(29);
+    expect(await count(c, 'Shot', only('code', 'is_not', 'sh010_0010'))).toBe(32);
     // Matching is case-insensitive on a text field (field_types/text).
     expect(await attrs(c, 'Shot', only('code', 'is', 'SH010_0010'), 'code')).toEqual(['sh010_0010']);
   });
 
   it('in / not_in', async () => {
     expect(await count(c, 'Shot', only('code', 'in', ['sh010_0010', 'sh010_0020']))).toBe(2);
-    expect(await count(c, 'Shot', only('code', 'not_in', ['sh010_0010', 'sh010_0020']))).toBe(28);
+    expect(await count(c, 'Shot', only('code', 'not_in', ['sh010_0010', 'sh010_0020']))).toBe(31);
     expect(await count(c, 'Shot', only('code', 'in', ['ZZZNOPE']))).toBe(0);
   });
 
   it('contains / not_contains / starts_with / ends_with', async () => {
     const contains = codes.filter((code) => code.includes('010_00')).length;
     expect(await count(c, 'Shot', only('code', 'contains', '010_00'))).toBe(contains);
-    expect(await count(c, 'Shot', only('code', 'not_contains', '010_00'))).toBe(30 - contains);
+    expect(await count(c, 'Shot', only('code', 'not_contains', '010_00'))).toBe(33 - contains);
     expect(await count(c, 'Shot', only('code', 'starts_with', 'sh01'))).toBe(codes.filter((code) => code.startsWith('sh01')).length);
     expect(await count(c, 'Shot', only('code', 'ends_with', '0010'))).toBe(codes.filter((code) => code.endsWith('0010')).length);
     expect(await count(c, 'Shot', only('code', 'contains', 'ZZZNOPE'))).toBe(0);
@@ -142,10 +143,10 @@ describe('filter operators on status_list, list and number', () => {
     const statuses = c.rowsOf('Shot').map((r) => r['sg_status_list']);
     const ip = statuses.filter((s) => s === 'ip').length;
     expect(await count(c, 'Shot', only('sg_status_list', 'is', 'ip'))).toBe(ip);
-    expect(await count(c, 'Shot', only('sg_status_list', 'is_not', 'ip'))).toBe(30 - ip);
+    expect(await count(c, 'Shot', only('sg_status_list', 'is_not', 'ip'))).toBe(33 - ip);
     const both = statuses.filter((s) => s === 'ip' || s === 'fin').length;
     expect(await count(c, 'Shot', only('sg_status_list', 'in', ['ip', 'fin']))).toBe(both);
-    expect(await count(c, 'Shot', only('sg_status_list', 'not_in', ['ip', 'fin']))).toBe(30 - both);
+    expect(await count(c, 'Shot', only('sg_status_list', 'not_in', ['ip', 'fin']))).toBe(33 - both);
     // The display label is not a filter value: `is "In Progress"` returns nothing (field_types/status_list).
     expect(await count(c, 'Shot', only('sg_status_list', 'is', 'In Progress'))).toBe(0);
   });
@@ -252,8 +253,8 @@ describe('filter groups', () => {
   });
 
   it('treats an empty group and a null filter as no filter', async () => {
-    expect(await count(c, 'Shot', { logical_operator: 'and', conditions: [] })).toBe(30);
-    expect(await count(c, 'Shot', null)).toBe(30);
+    expect(await count(c, 'Shot', { logical_operator: 'and', conditions: [] })).toBe(33);
+    expect(await count(c, 'Shot', null)).toBe(33);
   });
 });
 
@@ -288,9 +289,9 @@ describe('pagination and sort', () => {
       page += 1;
       if (page > 20) throw new Error('paging did not terminate');
     }
-    expect(seen).toHaveLength(30);
-    expect(new Set(seen).size).toBe(30);
-    // 30 rows in pages of 7: the fifth page holds 2, so hasMore is false there (006_pagination).
+    expect(seen).toHaveLength(33);
+    expect(new Set(seen).size).toBe(33);
+    // 33 rows in pages of 7: the fifth page holds 5, so hasMore is false there (006_pagination).
     expect(last?.hasMore).toBe(false);
     expect(page).toBe(6);
   });
@@ -573,6 +574,42 @@ describe('the navigation tree', () => {
   it('400s on a project that is not there', async () => {
     const c = client();
     await expect(c.hierarchyExpand('/Project/999999999')).rejects.toMatchObject({ status: 400 });
+  });
+
+  it('hides every row of a level whose grouping field has no rows', async () => {
+    const c = client();
+    const shots = await c.hierarchyExpand('/Project/72/Shot');
+    // One `empty` child, no bucket among the children, and no path of its own
+    // (064_hierarchy_expand_buckets).
+    expect(shots.children.map((n) => n.ref.kind)).toEqual(['empty']);
+    expect(shots.children[0]?.path).toBe('/Project/72/Shot');
+  });
+
+  it('answers the bucket path at both its spellings', async () => {
+    const c = client();
+    const long = await c.hierarchyExpand('/Project/72/Shot/sg_sequence/Sequence/__none__');
+    const short = await c.hierarchyExpand('/Project/72/Shot/sg_sequence/__none__');
+    expect(long.children.map((n) => n.label)).toEqual(['nf_0010', 'nf_0020', 'nf_0030']);
+    expect(short.children.map((n) => n.label)).toEqual(long.children.map((n) => n.label));
+  });
+
+  it('names the grouping field a level takes in the 400 it answers a bogus one', async () => {
+    const c = client();
+    await expect(c.hierarchyExpand('/Project/72/Shot/nope')).rejects.toMatchObject({
+      status: 400,
+      message: 'Unexpected field name in path: nope (expecting sg_sequence)',
+    });
+  });
+
+  it('places an ungrouped row under the bucket the search endpoint spells', async () => {
+    const c = client();
+    const [found] = await c.hierarchySearch('/Project/72', { type: 'Shot', id: 892 });
+    expect(found?.incrementalPath).toEqual([
+      '/Project/72',
+      '/Project/72/Shot',
+      '/Project/72/Shot/sg_sequence/__none__',
+      '/Project/72/Shot/sg_sequence/__none__/id/892',
+    ]);
   });
 });
 

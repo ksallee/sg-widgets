@@ -553,6 +553,9 @@ function buildFixtures(seed: number, counts: { versions?: number } = {}): Fixtur
   const projectSeeds = [
     { id: 70, name: 'Blue Moon Rising', code: 'bmr', status: 'Active', type: 'Feature' },
     { id: 71, name: 'Harbour Lights', code: 'hbl', status: 'Bidding', type: 'Episodic' },
+    // A project whose Shots are grouped by a field no row of it fills, which the
+    // navigation tree answers as an empty level (064_hierarchy_expand_buckets).
+    { id: 72, name: 'Night Ferry', code: 'nfr', status: 'Active', type: 'Short' },
   ];
   const projects = projectSeeds.map((p, i) =>
     add('Project', p.id, {
@@ -581,8 +584,9 @@ function buildFixtures(seed: number, counts: { versions?: number } = {}): Fixtur
   );
   const p0 = projects[0] as Row;
   const p1 = projects[1] as Row;
-  for (const u of users) u.values['projects'] = [ref(p0), ref(p1)];
-  for (const a of apiUsers) a.values['projects'] = [ref(p0), ref(p1)];
+  const p2 = projects[2] as Row;
+  for (const u of users) u.values['projects'] = [ref(p0), ref(p1), ref(p2)];
+  for (const a of apiUsers) a.values['projects'] = [ref(p0), ref(p1), ref(p2)];
 
   /* sequences -------------------------------------------------------------- */
   const seqSeeds = [
@@ -647,6 +651,38 @@ function buildFixtures(seed: number, counts: { versions?: number } = {}): Fixtur
       (seq.values['shots'] as EntityRef[]).push(ref(shot));
       shotId += 1;
     }
+  });
+
+  /* shots with no sequence -------------------------------------------------- */
+  // They stay out of `shots`, so they carry no task and no asset and the levels
+  // above them hold nothing but the tree's ungrouped bucket.
+  ['nf_0010', 'nf_0020', 'nf_0030'].forEach((code, i) => {
+    const duration = 60 + i * 20;
+    add('Shot', shotId + i, {
+      code,
+      cached_display_name: code,
+      description: `Shot ${code}`,
+      sg_status_list: pick(rng, SHOT_STATUSES),
+      sg_shot_type: pick(rng, SHOT_TYPES),
+      sg_cut_in: 1001,
+      sg_cut_out: 1001 + duration,
+      sg_cut_duration: duration,
+      sg_working_duration: duration * 5,
+      sg_turnover_date: isoDate(Math.floor(rng() * 120)),
+      sg_complexity: Math.floor(rng() * 101),
+      sg_lens: 24 + Math.round(rng() * 800) / 10,
+      sg_omit: false,
+      image: thumb(code),
+      sg_shot_notes_url: null,
+      project: ref(p2),
+      sg_sequence: null,
+      assets: [],
+      tasks: [],
+      created_at: isoDateTime(-100 + i),
+      updated_at: isoDateTime(-10 + i),
+      created_by: ref(bot),
+      updated_by: ref(bot),
+    });
   });
 
   /* assets ----------------------------------------------------------------- */
@@ -1073,21 +1109,49 @@ export class MockClient implements SgClient {
         rowsOf('Asset').map((r) => leaf(r, `${path}/id/${r.id}`)),
       );
     }
+    /** A child standing for a level with nothing in it. It carries no path of its own. */
+    const noRows = (label: string): HierarchyNode => node(label, { kind: 'empty', value: null }, path, [], false);
+    const looseShots = (): Row[] => rowsOf('Shot').filter((r) => r.values['sg_sequence'] === null);
+
     if (rest.length === 1 && rest[0] === 'Shot') {
-      return node(
-        'Shots',
-        { kind: 'entity_type', value: 'Shot' },
-        path,
-        rowsOf('Sequence').map((seq) =>
-          node(
-            String(seq.values['code']),
-            { kind: 'entity', value: { type: 'Sequence', id: seq.id } },
-            `${path}/sg_sequence/Sequence/${seq.id}`,
-            [],
-            (seq.values['shots'] as EntityRef[]).length > 0,
-          ),
+      const groups = rowsOf('Sequence').map((seq) =>
+        node(
+          String(seq.values['code']),
+          { kind: 'entity', value: { type: 'Sequence', id: seq.id } },
+          `${path}/sg_sequence/Sequence/${seq.id}`,
+          [],
+          (seq.values['shots'] as EntityRef[]).length > 0,
         ),
       );
+      // A grouping field with no rows hides every row under it: the level answers one
+      // `empty` child and no bucket, although the `__none__` path under it answers them
+      // all. The site emits the bucket once after every group and the client dedupes the
+      // repeats; this fixture emits it once, and only where it holds rows
+      // (064_hierarchy_expand_buckets).
+      if (groups.length === 0) return node('Shots', { kind: 'entity_type', value: 'Shot' }, path, [noRows('No Shots')]);
+      const loose = looseShots();
+      if (loose.length > 0) {
+        groups.push(
+          node('Shots with no Sequence', { kind: 'entity_type', value: 'Shot' }, `${path}/sg_sequence/Sequence/__none__`, [], true),
+        );
+      }
+      return node('Shots', { kind: 'entity_type', value: 'Shot' }, path, groups);
+    }
+    // The bucket at both its spellings: `_expand` writes `<field>/<GroupType>/__none__`
+    // and `_search` writes `<field>/__none__` (064_hierarchy_expand_buckets).
+    if (rest[0] === 'Shot' && rest[1] === 'sg_sequence' && rest[rest.length - 1] === '__none__') {
+      const loose = looseShots();
+      return node(
+        'Shots with no Sequence',
+        { kind: 'entity_type', value: 'Shot' },
+        path,
+        loose.length > 0 ? loose.map((r) => leaf(r, `${path}/id/${r.id}`)) : [noRows('No Shots')],
+      );
+    }
+    // The 400 names the grouping field the level takes, and it is the only way to learn it
+    // (post_hierarchy_expand).
+    if (rest[0] === 'Shot' && rest.length > 1 && rest[1] !== 'sg_sequence' && rest[1] !== 'id') {
+      throw new SgApiError(400, null, `Unexpected field name in path: ${String(rest[1])} (expecting sg_sequence)`);
     }
     if (rest.length === 4 && rest[0] === 'Shot' && rest[1] === 'sg_sequence' && rest[2] === 'Sequence') {
       const seq = this.fixtures.index.get(`Sequence:${Number(rest[3])}`);
@@ -1157,6 +1221,7 @@ export class MockClient implements SgClient {
     if (last === 'Asset') return 'Assets';
     if (last === 'Shot') return 'Shots';
     if (last === 'Task') return 'Tasks';
+    if (last === '__none__') return 'Shots with no Sequence';
     if (rest[rest.length - 2] === 'Sequence') {
       const sequence = this.fixtures.index.get(`Sequence:${Number(last)}`);
       return sequence ? displayNameOf(sequence.values, `#${sequence.id}`) : '';
@@ -1188,8 +1253,12 @@ export class MockClient implements SgClient {
         return [root, `${root}/Asset`, `${root}/Asset/id/${entity.id}`];
       case 'Shot': {
         const sequence = row.values['sg_sequence'] as EntityRef | null;
-        if (!sequence) return [];
-        const above = this.pathTo({ type: 'Sequence', id: sequence.id });
+        // `_search` spells the ungrouped bucket without the group type
+        // (064_hierarchy_expand_buckets).
+        const above = sequence
+          ? this.pathTo({ type: 'Sequence', id: sequence.id })
+          : [root, `${root}/Shot`, `${root}/Shot/sg_sequence/__none__`];
+        if (above.length === 0) return [];
         return [...above, `${above[above.length - 1]}/id/${entity.id}`];
       }
       case 'Task': {

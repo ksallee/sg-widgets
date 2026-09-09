@@ -1,4 +1,4 @@
-// Seed, two levels by keyboard, checkbox propagation, type-ahead and the filter.
+// Seed, two levels by keyboard, checkbox propagation, type-ahead, the search, `*` and the bucket.
 const notes = [];
 const pane = () => $$('[data-sg-demo] [data-pane]').find((p) => p.offsetParent !== null) ?? document;
 const tree = () => pane().querySelectorAll('[data-slot="entity-tree"]')[0];
@@ -91,18 +91,71 @@ if (labelOf(cursor()) !== 'sh010_0020') {
 }
 notes.push('type-ahead reached sh010_0020');
 
-// The filter narrows the nodes already loaded.
-const before = items().length;
-const input = pane().querySelector('[data-slot="entity-tree-filter"]');
-Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, 'sh010_0030');
-input.dispatchEvent(new Event('input', { bubbles: true }));
-input.dispatchEvent(new Event('change', { bubbles: true }));
-for (let i = 0; i < 20 && items().length === before; i += 1) await wait(200);
-if (items().length >= before) return { verdict: `FAIL the filter kept all ${before} nodes`, notes };
-notes.push(`the filter narrowed ${before} nodes to ${items().length}`);
+// `*` opens every branch at the focus level, three levels deep.
+await press('Home');
+// Long enough for the type-ahead buffer above to have gone stale.
+await wait(900);
+type([...'sh030']);
+await wait(300);
+if (!/\/Sequence\/\d+$/.test(cursor()?.dataset.path ?? '')) {
+  return { verdict: `FAIL the cursor sits on ${cursor()?.dataset.path}, expected a sequence`, notes };
+}
+const level = () => items().filter((n) => /\/Sequence\/\d+$/.test(n.dataset.path));
+const shutBefore = level().filter((n) => n.getAttribute('aria-expanded') === 'false').length;
+const nodesBefore = items().length;
+type(['*']);
+for (let i = 0; i < 60 && level().some((n) => n.getAttribute('aria-expanded') === 'false'); i += 1) await wait(250);
+const stillShut = level().filter((n) => n.getAttribute('aria-expanded') === 'false');
+if (stillShut.length > 0) {
+  return { verdict: `FAIL * left ${stillShut.length} of ${level().length} sequences shut`, notes };
+}
+for (let i = 0; i < 60 && items().length <= nodesBefore; i += 1) await wait(250);
+if (items().length <= nodesBefore) return { verdict: `FAIL * opened no level under ${level().length} sequences`, notes };
+notes.push(`* opened ${shutBefore} shut sequences, ${nodesBefore} nodes to ${items().length}`);
 
-// The second tree draws a thumbnail and a sub-label per row.
-const shown = pane().querySelectorAll('[data-slot="entity-tree"]')[1];
+// The search asks the server, opens the tree onto the hit and marks it.
+const search = pane().querySelector('[data-slot="entity-tree-search"]');
+const typeInto = (text) => {
+  Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(search, text);
+  search.dispatchEvent(new Event('input', { bubbles: true }));
+  search.dispatchEvent(new Event('change', { bubbles: true }));
+};
+at('/Project/70/Shot')?.click();
+await wait(300);
+const shutAgain = items().length;
+typeInto('sh030_0020');
+for (let i = 0; i < 60 && items().length <= shutAgain; i += 1) await wait(250);
+const hit = items().find((n) => labelOf(n) === 'sh030_0020');
+if (!hit) return { verdict: `FAIL the search opened ${items().length} nodes and none was the hit`, notes };
+if (!hit.querySelector('[data-slot="entity-tree-label"] .font-semibold')) {
+  return { verdict: 'FAIL the hit is not marked', notes };
+}
+const dimmed = items().filter((n) => n.className.includes('text-muted-foreground'));
+if (dimmed.length === 0) return { verdict: 'FAIL nothing outside the hit was dimmed', notes };
+notes.push(`searching opened ${shutAgain} nodes to ${items().length}, marked the hit and dimmed ${dimmed.length} rows`);
+
+// Clearing puts the tree back as it was.
+typeInto('');
+for (let i = 0; i < 20 && items().length !== shutAgain; i += 1) await wait(200);
+if (items().length !== shutAgain) {
+  return { verdict: `FAIL clearing the search left ${items().length} nodes, expected ${shutAgain}`, notes };
+}
+notes.push('clearing the search restored the expansion it opened onto');
+
+// A project whose shots sit under no sequence answers them all the same.
+const loose = pane().querySelector('[data-testid="loose-tree"]');
+const looseItems = () => [...loose.querySelectorAll('[role="treeitem"]')];
+for (let i = 0; i < 40 && looseItems().length === 0; i += 1) await wait(250);
+const shotsFolder = looseItems().find((n) => n.dataset.path.endsWith('/Shot'));
+if (!shotsFolder) return { verdict: 'FAIL the second project has no Shots folder', notes };
+shotsFolder.click();
+for (let i = 0; i < 40 && looseItems().length < 4; i += 1) await wait(250);
+const under = looseItems().filter((n) => n.dataset.path.includes('__none__'));
+if (under.length === 0) return { verdict: 'FAIL the ungrouped shots did not come back', notes };
+notes.push(`a project with no sequences opened ${under.length} shots: ${under.map(labelOf).join(', ')}`);
+
+// The thumbnail tree draws a thumbnail and a sub-label per row.
+const shown = pane().querySelector('[data-testid="thumbnail-tree"]');
 const assets = [...shown.querySelectorAll('[role="treeitem"]')].find((n) => n.dataset.path.endsWith('/Asset'));
 if (!assets) return { verdict: 'FAIL the thumbnail tree has no Assets folder', notes };
 assets.click();
@@ -116,4 +169,4 @@ if (thumbs === 0 || subs === 0) {
 }
 notes.push(`with thumbnails on: ${thumbs} images and ${subs} sub-labels`);
 
-return { verdict: 'PASS seed, two keyboard levels, propagation, type-ahead, the filter and thumbnails', notes };
+return { verdict: 'PASS seed, keyboard levels, propagation, type-ahead, *, the search, the bucket and thumbnails', notes };

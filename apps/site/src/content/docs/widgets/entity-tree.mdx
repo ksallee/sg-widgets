@@ -15,7 +15,7 @@ pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/entity-tree.json
 pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/entity-tree.json
 ```
 
-<Demo name="entity-tree" title="Entity Tree: a project seeded open to one shot, with checkboxes, a filter and a thumbnail variant" />
+<Demo name="entity-tree" title="Entity Tree: a project seeded open to one shot, with checkboxes, a search and a thumbnail variant" />
 
 ```ts
 <EntityTree
@@ -23,7 +23,7 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/entity-tree.js
   rootPath="/Project/70"
   seedPath="/Project/70/Shot/sg_sequence/Sequence/100/id/862"
   checkable
-  filterable
+  searchable
 />
 ```
 
@@ -37,8 +37,13 @@ A checkbox propagates both ways. Checking a branch checks everything under it, i
 after the box was ticked. Unchecking one child leaves the branch `mixed`, and it returns to `checked`
 once every child is checked again. Only nodes that stand for a row are reported.
 
-The filter narrows the nodes already loaded, keeping every ancestor that leads to a match, and opens
-those ancestors for as long as it is set.
+Typing in the search input searches the whole project, not the nodes already loaded. Every row the
+words match is placed in the tree, the branches above it are opened, matched rows are marked and the
+rest are dimmed. Clearing the input, or pressing Escape in it, restores the tree as it was.
+
+A whole branch opens at once on Alt-click or Cmd/Ctrl-click on its chevron, and on `*` for every
+branch at the focus level. Both read `expandDepth` levels below the node, with the node marked busy
+until every one of them is in.
 
 Each level's rows are read once per type over the ids the level returned, so `subLabelField`,
 `secondaryField`, `thumbnail` and the status badge cost no read per row.
@@ -52,8 +57,9 @@ Each level's rows are read once per type over the ids the level returned, so `su
 | `seedPath` | `string \| string[] \| null` | `null` | Opens the tree down to this path, or to the last entry of an incremental path. |
 | `checkable` | `boolean` | `false` | Draws a checkbox per node and reports the checked rows. |
 | `selection` | `'none' \| 'single' \| 'multiple'` | `'single'` | How many nodes may be selected at once. |
-| `filterable` | `boolean` | `false` | Shows an input that narrows the nodes already loaded. |
-| `filterPlaceholder` | `string` | `'Filter loaded nodes'` | Placeholder and label of that input. |
+| `searchable` | `boolean` | `false` | Shows an input that searches the project and opens the tree onto the hits. |
+| `searchPlaceholder` | `string` | `'Search'` | Placeholder and label of that input. |
+| `expandDepth` | `number` | `3` | Levels a whole-branch expansion opens. |
 | `thumbnail` | `string \| false` | `false` | The image field to draw a thumbnail from. |
 | `labelField` | `string` | — | Field shown as the label, in place of the tree's own. |
 | `subLabelField` | `string` | — | Field shown under the label. |
@@ -66,6 +72,7 @@ Each level's rows are read once per type over the ids the level returned, so `su
 | `label` | `string` | `'Project hierarchy'` | Accessible name of the tree. |
 | `maxHeight` | `string` | `'24rem'` | Height of the scrolling body. |
 | `emptyLabel` | `string` | `'Nothing under this project'` | Shown when the root has no children. |
+| `noMatchLabel` | `string` | `'Nothing matches every word'` | Shown when a search matched no row. |
 | `class` / `className` | `string` | — | Merged after the widget's own classes. |
 
 ## Events
@@ -95,6 +102,8 @@ The tree keeps one tab stop. Focus follows the cursor, and the row it sits on is
 | End | Moves to the last visible node. |
 | Space | Toggles the node's checkbox. |
 | Enter | Selects the node. |
+| * | Opens every branch at the focus level, `expandDepth` levels deep. |
+| Escape | In the search input, clears it. |
 | a–z, 0–9 | Moves to the next node whose label starts with what was typed. The same letter again walks the matches. |
 
 ## API behaviour
@@ -118,7 +127,19 @@ A field name a type does not have is dropped at 200, so one list of names reads 
 `sg_status` is a plain `list` with no Status row behind its values, so a project carries no badge
 (entity_types/Project, probe 009).
 
-The filter never asks the server, so a branch that was never opened is not searched.
+Searching is two calls a query. `POST /entity/_text_search` matches a row when every
+whitespace-separated word appears in its name or in the name of the row it links to, and answers at
+most 25 rows a page (probe 053). It says nothing about where a row sits, and
+`POST /hierarchy/_search` does not match words, so each hit is then asked for its own path
+(post_hierarchy_search). The words are scoped to the project on every searched type that carries a
+`project` field.
+
+A grouping field with no rows hides every row under it: a project with shots and no sequences answers
+`/Project/<id>/Shot` as one empty child and no bucket, although the `__none__` path under that level
+answers all of them. The tree asks for that path instead of drawing the empty row, reading the field
+it runs through off the 400 the endpoint answers a bogus segment. The two endpoints spell the bucket
+differently — `<field>/<GroupType>/__none__` from `_expand`, `<field>/__none__` from `_search` — and a
+seed path is followed in either spelling (064_hierarchy_expand_buckets, post_hierarchy_expand).
 
 ## Reference
 

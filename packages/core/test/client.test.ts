@@ -158,3 +158,13 @@ describe('status icons on the wire', () => {
     expect((await client.statuses())[0]?.icon).toEqual({ displayType: 'image', dataUrl: 'data:image/png;base64,AABB' });
   });
 });
+
+describe('normalizeHierarchyNode', () => {
+  it('keeps one child when _expand repeats the no-sequence bucket after every group', async () => {
+    const mod = await import('../src/client.js');
+    const bucket = { path: '/Project/91/Shot/sg_sequence/Sequence/__none__', label: 'Shots with no Sequence', has_children: true, ref: { kind: 'entity_type', value: 'Shot' } };
+    const seq = (id: number) => ({ path: `/Project/91/Shot/sg_sequence/Sequence/${id}`, label: String(id), has_children: true, ref: { kind: 'entity', value: { type: 'Sequence', id } } });
+    const node = mod.normalizeHierarchyNode({ path: '/Project/91/Shot', label: 'Shots', has_children: true, ref: { kind: 'entity_type', value: 'Shot' }, children: [seq(41), bucket, seq(307), bucket, seq(1362), bucket] } as never, '/Project/91/Shot');
+    expect(node.children.map((c) => c.path)).toEqual(['/Project/91/Shot/sg_sequence/Sequence/41', '/Project/91/Shot/sg_sequence/Sequence/__none__', '/Project/91/Shot/sg_sequence/Sequence/307', '/Project/91/Shot/sg_sequence/Sequence/1362']);
+  });
+});

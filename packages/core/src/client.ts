@@ -213,8 +213,18 @@ export function normalizeHierarchyNode(raw: RawHierarchyNode, path: string): Hie
     path: own,
     parentPath: raw.parent_path ?? null,
     hasChildren: raw.has_children ?? false,
-    children: (raw.children ?? []).map((child) => normalizeHierarchyNode(child, childPath(own, child))),
+    children: uniqueByPath((raw.children ?? []).map((child) => normalizeHierarchyNode(child, childPath(own, child)))),
   };
+}
+
+/**
+ * Children keyed by path, first occurrence kept. `_expand` repeats the "no <field>"
+ * bucket (`.../Sequence/__none__`) once after every group on a grouped level, and the
+ * repeats are the same node (measured on the probed site, `/Project/<id>/Shot`).
+ */
+function uniqueByPath(nodes: HierarchyNode[]): HierarchyNode[] {
+  const seen = new Set<string>();
+  return nodes.filter((node) => (seen.has(node.path) ? false : (seen.add(node.path), true)));
 }
 
 function childPath(parentPath: string, child: RawHierarchyNode): string {

@@ -375,8 +375,8 @@ export function EntityTree({
                     ) : null}
 
                     {thumbnail !== false ? (
-                      <span className="flex shrink-0 items-center">
-                        <Thumbnail src={thumbOf(node)} aspect="square" size="sm" />
+                      <span className="flex size-6 shrink-0 items-center">
+                        {thumbOf(node) ? <Thumbnail src={thumbOf(node)} aspect="square" size="sm" /> : null}
                       </span>
                     ) : null}
 

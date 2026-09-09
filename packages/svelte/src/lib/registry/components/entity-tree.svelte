@@ -383,8 +383,10 @@
 							{/if}
 
 							{#if thumbnail !== false}
-								<span class="flex shrink-0 items-center">
-									<Thumbnail src={thumbOf(node)} aspect="square" size="sm" />
+								<span class="flex size-6 shrink-0 items-center">
+									{#if thumbOf(node)}
+										<Thumbnail src={thumbOf(node)} aspect="square" size="sm" />
+									{/if}
 								</span>
 							{/if}
 

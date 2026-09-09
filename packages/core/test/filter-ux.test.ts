@@ -8,8 +8,10 @@ import {
   countConditions,
   defaultCondition,
   defaultValueFor,
+  conditionParts,
   describeCondition,
   emptyValueFor,
+  facetPresets,
   facetValues,
   filterableFields,
   findCondition,
@@ -28,6 +30,7 @@ import {
   removeAt,
   replaceAt,
   setFacet,
+  setFacetPreset,
   sortableFields,
   supportsEmpty,
   timeUnitLabel,
@@ -87,6 +90,56 @@ describe('presetsFor', () => {
     expect(ids).toContain('this_year');
     const thisWeek = presetById('date', 'this_week');
     expect(thisWeek).toMatchObject({ operator: 'in_calendar_week', value: 0, input: 'none' });
+  });
+
+  it('names every bucket around today on a date and on a date_time', () => {
+    const expected: Array<[string, string, number]> = [
+      ['today', 'in_calendar_day', 0],
+      ['yesterday', 'in_calendar_day', -1],
+      ['tomorrow', 'in_calendar_day', 1],
+      ['this_week', 'in_calendar_week', 0],
+      ['last_week', 'in_calendar_week', -1],
+      ['next_week', 'in_calendar_week', 1],
+      ['this_month', 'in_calendar_month', 0],
+      ['last_month', 'in_calendar_month', -1],
+      ['next_month', 'in_calendar_month', 1],
+      ['this_year', 'in_calendar_year', 0],
+      ['last_year', 'in_calendar_year', -1],
+      ['next_year', 'in_calendar_year', 1],
+    ];
+    for (const dataType of ['date', 'date_time']) {
+      const calendar = operatorMenu(dataType).find((run) => run.label === 'Calendar');
+      expect(calendar?.presets.map((p) => [p.id, p.operator, p.value])).toEqual(expected);
+      for (const [id] of expected) expect(presetById(dataType, id)?.input).toBe('none');
+    }
+  });
+
+  it('keeps the forward buckets off a type that has no calendar operator', () => {
+    for (const id of ['next_week', 'next_month', 'next_year']) {
+      expect(presetById('number', id)).toBeUndefined();
+      expect(presetById('status_list', id)).toBeUndefined();
+    }
+  });
+
+  it('reads a forward bucket back as its name and serialises the signed offset', () => {
+    expect(presetIdOf(condition('sg_turnover_date', 'in_calendar_week', 1), 'date')).toBe('next_week');
+    expect(presetIdOf(condition('sg_turnover_date', 'in_calendar_month', 1), 'date')).toBe('next_month');
+    expect(presetIdOf(condition('sg_turnover_date', 'in_calendar_year', 1), 'date')).toBe('next_year');
+    const moved = applyPreset(
+      condition('sg_turnover_date', 'is', '2026-01-01'),
+      presetById('date', 'next_week')!,
+      'date',
+    );
+    expect(moved).toMatchObject({ operator: 'in_calendar_week', value: 1 });
+  });
+
+  it('reads a forward bucket as a sentence', () => {
+    expect(describeCondition(condition('sg_turnover_date', 'in_calendar_week', 1), turnover)).toBe(
+      'Turnover Date next week',
+    );
+    expect(describeCondition(condition('sg_turnover_date', 'in_calendar_month', 1), turnover)).toBe(
+      'Turnover Date next month',
+    );
   });
 
   it('gives a checkbox no empty pair and an image nothing but one', () => {
@@ -381,6 +434,52 @@ describe('facets', () => {
     const removed = setFacet(tree, 'sg_shot_type', []);
     expect(countConditions(removed)).toBe(2);
     expect(setFacet(tree, 'sg_omit', [])).toBe(tree);
+  });
+
+  it('writes the facet on the operator it is given', () => {
+    const negated = setFacet(tree, 'sg_status_list', ['fin'], 'not_in');
+    expect(nodeAt(negated, [1])).toMatchObject({ operator: 'not_in', value: ['fin'] });
+  });
+
+  it('offers a facet the list operators and the empty tests, and nothing that takes one value', () => {
+    expect(facetPresets('status_list').map((p) => p.id)).toEqual(['in', 'not_in', 'is_empty', 'is_not_empty']);
+    expect(facetPresets('checkbox')).toEqual([]);
+  });
+
+  it('moves a facet onto another of its entries, keeping the ticked values where the shape holds', () => {
+    const negated = setFacetPreset(tree, 'sg_status_list', presetById('status_list', 'not_in')!, 'status_list');
+    expect(nodeAt(negated, [1])).toMatchObject({ operator: 'not_in', value: ['fin'] });
+
+    const emptied = setFacetPreset(tree, 'sg_status_list', presetById('status_list', 'is_empty')!, 'status_list');
+    expect(nodeAt(emptied, [1])).toMatchObject({ operator: 'is', value: null });
+
+    const fresh = setFacetPreset(tree, 'sg_omit', presetById('checkbox', 'is')!, 'checkbox');
+    expect(nodeAt(fresh, [3])).toMatchObject({ path: 'sg_omit', operator: 'is' });
+  });
+});
+
+describe('conditionParts', () => {
+  it('splits the sentence describeCondition joins', () => {
+    const ticked = condition('sg_status_list', 'in', ['apr', 'fin']);
+    expect(conditionParts(ticked, status)).toEqual({
+      field: 'Status',
+      operator: 'is any of',
+      value: 'Approved, Final',
+    });
+    expect(describeCondition(ticked, status)).toBe('Status is any of Approved, Final');
+  });
+
+  it('leaves the value empty where the operator pins it', () => {
+    expect(conditionParts(condition('sg_turnover_date', 'in_calendar_week', 1), turnover)).toEqual({
+      field: 'Turnover Date',
+      operator: 'next week',
+      value: '',
+    });
+    expect(conditionParts(condition('sg_turnover_date', 'is', null), turnover).value).toBe('');
+  });
+
+  it('falls back to the dotted path with no schema', () => {
+    expect(conditionParts(condition('entity.Shot.code', 'contains', '010')).field).toBe('entity.Shot.code');
   });
 });
 

@@ -56,7 +56,7 @@ async function run(framework) {
 
   const rows = () => $$('[data-slot="filter-row"]', pane);
   const rowCount = rows().length;
-  press($('[data-slot="filter-add-condition"]', pane));
+  press($('[data-slot="filter-add-condition"][data-path=""]', pane));
   await until(() => rows().length > rowCount, 'the new row');
   const rowAt = () => rows().at(-1);
 

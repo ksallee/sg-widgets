@@ -21,7 +21,7 @@ async function run(framework) {
   const before = json();
   const rows = $$('[data-slot="filter-row"]', pane).length;
 
-  press($('[data-slot="filter-add-condition"]', pane));
+  press($('[data-slot="filter-add-condition"][data-path=""]', pane));
   await until(() => $$('[data-slot="filter-row"]', pane).length === rows + 1, 'the blank row');
   await wait(200);
 

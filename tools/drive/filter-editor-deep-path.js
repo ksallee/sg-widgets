@@ -48,7 +48,7 @@ async function run(framework) {
   await closePopovers();
   const before = $$('[data-slot="filter-row"]', pane).length;
 
-  press($('[data-slot="filter-add-condition"]', pane));
+  press($('[data-slot="filter-add-condition"][data-path=""]', pane));
   await until(() => $$('[data-slot="filter-row"]', pane).length > before, 'the new row');
   const rowAt = () => $$('[data-slot="filter-row"]', pane).at(-1);
 

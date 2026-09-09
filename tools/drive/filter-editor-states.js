@@ -38,7 +38,7 @@ const dataRows = (pane) => $$('[data-slot="entity-table"] tbody tr[data-row-key]
 async function addRow(pane, field, preset) {
   const rows = () => $$('[data-slot="filter-row"]', pane);
   const before = rows().length;
-  press($('[data-slot="filter-add-condition"]', pane));
+  press($('[data-slot="filter-add-condition"][data-path=""]', pane));
   await until(() => rows().length > before, 'the new row');
   const rowAt = () => rows().at(-1);
 

@@ -1,21 +1,31 @@
 <script lang="ts">
-	import ChevronDownIcon from '@lucide/svelte/icons/chevron-down';
+	import PlusIcon from '@lucide/svelte/icons/plus';
+	import XIcon from '@lucide/svelte/icons/x';
 	import type {
 		FacetValue,
 		FieldSchema,
+		FilterCondition,
 		FilterGroup,
+		Operator,
+		OperatorPreset,
 		SchemaService,
 		Scalar,
 		SgClient,
 		WireGroup
 	} from '@sg-widgets/core';
 	import {
+		conditionArity,
+		conditionParts,
 		createSchemaService,
 		describeCondition,
 		emptyFilter,
+		facetPresets,
 		facetValues,
 		findCondition,
+		presetById,
+		presetIdOf,
 		setFacet,
+		setFacetPreset,
 		toApi3Hash,
 		asFilterGroup,
 		group,
@@ -26,6 +36,7 @@
 	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
 	import * as Command from '$lib/components/ui/command/index.js';
 	import * as Popover from '$lib/components/ui/popover/index.js';
+	import * as Select from '$lib/components/ui/select/index.js';
 	import { cn } from '$lib/utils.js';
 	import FilterDialog from '$lib/registry/components/filter-dialog.svelte';
 
@@ -84,6 +95,7 @@
 	const base = $derived(asFilterGroup(baseFilter));
 	const scope = $derived(toApi3Hash(base ? group('and', [base, withoutPaths(value, facets)]) : withoutPaths(value, facets)));
 	const tally = $derived(loadFacets(scope, fields, facets));
+	const activeCount = $derived(facets.filter((name) => Boolean(findCondition(value, name))).length);
 
 	async function loadFacets(
 		filters: WireGroup | null,
@@ -110,9 +122,13 @@
 		return out;
 	}
 
+	function conditionOf(name: string): FilterCondition | null {
+		return findCondition(value, name)?.condition ?? null;
+	}
+
 	function selectedOf(name: string): Scalar[] {
-		const found = findCondition(value, name);
-		return found && Array.isArray(found.condition.value) ? (found.condition.value as Scalar[]) : [];
+		const found = conditionOf(name);
+		return found && Array.isArray(found.value) ? (found.value as Scalar[]) : [];
 	}
 
 	function keyOf(v: Scalar): string {
@@ -125,28 +141,98 @@
 		onChange?.(next);
 	}
 
+	/** The list operator the checklist writes: the one the pill already holds, else `in`. */
+	function listOperator(name: string): Operator {
+		const found = conditionOf(name);
+		return found && Array.isArray(found.value) ? found.operator : 'in';
+	}
+
 	function toggle(name: string, option: FacetValue): void {
 		const selected = selectedOf(name);
 		const next = selected.some((v) => keyOf(v) === option.key)
 			? selected.filter((v) => keyOf(v) !== option.key)
 			: [...selected, option.value];
-		commit(setFacet(value, name, next));
+		commit(setFacet(value, name, next, listOperator(name)));
 	}
 
-	function summaryOf(name: string): string {
-		const field = fields[name];
-		const found = findCondition(value, name);
-		if (!found || selectedOf(name).length === 0) return field?.displayName ?? name;
-		return describeCondition(found.condition, field);
+	/**
+	 * The operator menu one pill offers. A condition the full editor left on an
+	 * operator no pill would have chosen still names itself, so the segment reads
+	 * what the tree says rather than the nearest entry to it.
+	 */
+	function menuOf(name: string): OperatorPreset[] {
+		const dataType = fields[name]?.dataType ?? '';
+		const presets = facetPresets(dataType);
+		const found = conditionOf(name);
+		if (!found) return presets;
+		const current = presetById(dataType, presetIdOf(found, dataType));
+		if (!current || presets.some((p) => p.id === current.id)) return presets;
+		return [current, ...presets];
+	}
+
+	function pickPreset(name: string, id: string): void {
+		const dataType = fields[name]?.dataType ?? '';
+		const preset = presetById(dataType, id);
+		if (preset) commit(setFacetPreset(value, name, preset, dataType));
 	}
 </script>
+
+{#snippet facetList(name: string)}
+	{@const selected = selectedOf(name)}
+	<Popover.Content strategy="fixed" class="w-64 p-0" align="start">
+		<Command.Root>
+			<Command.Input placeholder="Search values…" />
+			<Command.List>
+				{#await tally}
+					<p class="text-muted-foreground py-6 text-center text-sm">Counting…</p>
+				{:then found}
+					<Command.Empty>No value.</Command.Empty>
+					{#each found[name] ?? [] as option (option.key)}
+						<Command.Item
+							value="{option.label} {option.key}"
+							data-option={option.key}
+							onSelect={() => toggle(name, option)}
+						>
+							<Checkbox
+								checked={selected.some((v) => keyOf(v) === option.key)}
+								tabindex={-1}
+								aria-hidden="true"
+							/>
+							<span class="min-w-0 flex-1 truncate">{option.label}</span>
+							<span class="text-muted-foreground text-xs tabular-nums" data-slot="facet-count">
+								{option.count}
+							</span>
+						</Command.Item>
+					{/each}
+				{:catch error}
+					<p class="text-destructive py-6 text-center text-sm">{error.message}</p>
+				{/await}
+			</Command.List>
+		</Command.Root>
+		{#if selected.length > 0}
+			<div class="border-border border-t p-1">
+				<Button
+					variant="ghost"
+					size="sm"
+					class="w-full"
+					data-slot="filter-pill-clear"
+					onclick={() => commit(setFacet(value, name, []))}
+				>
+					Clear
+				</Button>
+			</div>
+		{/if}
+	</Popover.Content>
+{/snippet}
 
 <!--
 	Quick facets over one entity type.
 
-	Each pill lists the field's values with a count and adds an `in` condition to the
-	bound tree as they are ticked; the pill then shows what that condition says. More
-	filters opens the same tree in the full editor, so the two edit one value.
+	An untouched facet is a quiet pill naming its field; ticking a value turns it into
+	a segmented pill reading field, operator and values, where the operator segment is
+	a menu of the operators that field's facet can take and the values segment is the
+	checklist. The pill adds its condition to the bound tree, and More filters opens
+	the same tree in the full editor, so the two edit one value.
 
 	Counts come from a `_summarize` grouping call when one is wired to `counts`, and
 	otherwise from tallying one page of rows, which makes them as complete as the page
@@ -155,70 +241,103 @@
 <div class={cn('flex w-full min-w-0 flex-wrap items-center gap-2', className)} data-slot="filter-bar">
 	{#each facets as name (name)}
 		{@const field = fields[name]}
-		{@const selected = selectedOf(name)}
-		<Popover.Root>
-			<Popover.Trigger
-				disabled={disabled || !field}
+		{@const found = conditionOf(name)}
+		{#if !found}
+			<Popover.Root>
+				<Popover.Trigger
+					disabled={disabled || !field}
+					data-slot="filter-pill"
+					data-field={name}
+					class="border-border text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:border-ring focus-visible:ring-ring/50 inline-flex h-8 max-w-72 min-w-0 items-center gap-1.5 rounded-lg border border-dashed px-2.5 text-sm outline-none focus-visible:ring-3 disabled:pointer-events-none disabled:opacity-50"
+				>
+					<PlusIcon class="size-4 shrink-0" />
+					<span class="min-w-0 truncate">{field?.displayName ?? name}</span>
+				</Popover.Trigger>
+				{@render facetList(name)}
+			</Popover.Root>
+		{:else}
+			{@const dataType = field?.dataType ?? ''}
+			{@const parts = conditionParts(found, field)}
+			{@const arity = conditionArity(found, dataType)}
+			{@const selected = selectedOf(name)}
+			<div
 				data-slot="filter-pill"
 				data-field={name}
-				class={cn(
-					'border-border bg-background hover:bg-muted focus-visible:border-ring focus-visible:ring-ring/50 inline-flex h-8 max-w-72 min-w-0 items-center gap-1.5 rounded-lg border px-2.5 text-sm outline-none focus-visible:ring-3 disabled:pointer-events-none disabled:opacity-50',
-					selected.length > 0 && 'border-transparent bg-accent text-accent-foreground'
-				)}
+				data-active="true"
+				role="group"
+				aria-label={describeCondition(found, field)}
+				class="border-border bg-background inline-flex h-8 max-w-full min-w-0 items-center overflow-hidden rounded-lg border text-sm"
 			>
-				<span class="min-w-0 truncate" title={summaryOf(name)}>{summaryOf(name)}</span>
-				{#if selected.length > 0}
-					<Badge variant="secondary" class="shrink-0">{selected.length}</Badge>
-				{:else}
-					<ChevronDownIcon class="text-muted-foreground size-4 shrink-0" />
-				{/if}
-			</Popover.Trigger>
-			<Popover.Content strategy="fixed" class="w-64 p-0" align="start">
-				<Command.Root>
-					<Command.Input placeholder="Search values…" />
-					<Command.List>
-						{#await tally}
-							<p class="text-muted-foreground py-6 text-center text-sm">Counting…</p>
-						{:then found}
-							<Command.Empty>No value.</Command.Empty>
-							{#each found[name] ?? [] as option (option.key)}
-								<Command.Item
-									value="{option.label} {option.key}"
-									data-option={option.key}
-									onSelect={() => toggle(name, option)}
-								>
-									<Checkbox
-										checked={selected.some((v) => keyOf(v) === option.key)}
-										tabindex={-1}
-										aria-hidden="true"
-									/>
-									<span class="min-w-0 flex-1 truncate">{option.label}</span>
-									<span class="text-muted-foreground text-xs tabular-nums" data-slot="facet-count">
-										{option.count}
-									</span>
-								</Command.Item>
-							{/each}
-						{:catch error}
-							<p class="text-destructive py-6 text-center text-sm">{error.message}</p>
-						{/await}
-					</Command.List>
-				</Command.Root>
-				{#if selected.length > 0}
-					<div class="border-border border-t p-1">
-						<Button
-							variant="ghost"
-							size="sm"
-							class="w-full"
-							data-slot="filter-pill-clear"
-							onclick={() => commit(setFacet(value, name, []))}
+				<span
+					data-slot="filter-pill-field"
+					class="min-w-0 shrink truncate px-2.5 font-medium"
+					title={parts.field}
+				>
+					{parts.field}
+				</span>
+				<Select.Root
+					type="single"
+					value={presetIdOf(found, dataType)}
+					{disabled}
+					onValueChange={(id) => pickPreset(name, id)}
+				>
+					<Select.Trigger
+						data-slot="filter-pill-operator"
+						class="border-border text-muted-foreground hover:bg-muted h-8 shrink-0 rounded-none border-0 border-l bg-transparent px-2 dark:bg-transparent"
+					>
+						{parts.operator}
+					</Select.Trigger>
+					<Select.Content>
+						{#each menuOf(name) as preset (preset.id)}
+							<Select.Item value={preset.id} label={preset.label} data-preset={preset.id} />
+						{/each}
+					</Select.Content>
+				</Select.Root>
+				{#if arity === 'many'}
+					<Popover.Root>
+						<Popover.Trigger
+							{disabled}
+							data-slot="filter-pill-values"
+							class="border-border hover:bg-muted focus-visible:ring-ring/50 inline-flex h-8 min-w-0 items-center gap-1.5 border-l px-2.5 outline-none focus-visible:ring-3 disabled:pointer-events-none disabled:opacity-50"
 						>
-							Clear
-						</Button>
-					</div>
+							<span class="min-w-0 truncate" title={parts.value}>{parts.value}</span>
+							{#if selected.length > 1}
+								<Badge variant="secondary" class="shrink-0">{selected.length}</Badge>
+							{/if}
+						</Popover.Trigger>
+						{@render facetList(name)}
+					</Popover.Root>
+				{:else if parts.value}
+					<span data-slot="filter-pill-values" class="border-border min-w-0 truncate border-l px-2.5" title={parts.value}>
+						{parts.value}
+					</span>
 				{/if}
-			</Popover.Content>
-		</Popover.Root>
+				<button
+					type="button"
+					{disabled}
+					data-slot="filter-pill-remove"
+					aria-label="Remove {parts.field} filter"
+					class="border-border text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring/50 inline-flex h-8 shrink-0 items-center border-l px-1.5 outline-none focus-visible:ring-3 disabled:pointer-events-none disabled:opacity-50"
+					onclick={() => commit(withoutPaths(value, [name]))}
+				>
+					<XIcon class="size-4" />
+				</button>
+			</div>
+		{/if}
 	{/each}
+
+	{#if activeCount > 0}
+		<Button
+			variant="ghost"
+			size="sm"
+			{disabled}
+			class="text-muted-foreground hover:text-foreground"
+			data-slot="filter-clear-all"
+			onclick={() => commit(withoutPaths(value, facets))}
+		>
+			Clear all
+		</Button>
+	{/if}
 
 	<FilterDialog
 		{entityType}

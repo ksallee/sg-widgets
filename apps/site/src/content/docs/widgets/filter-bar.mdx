@@ -5,8 +5,8 @@ description: Quick facet pills over one entity type, bound to a filter tree.
 
 import Demo from '../../../components/Demo.astro';
 
-A row of facet pills. Each lists one field's values with a count and ticking them adds an `in`
-condition to the bound tree. A More filters pill opens the same tree in the full editor.
+A row of facet pills. Each lists one field's values with a count and ticking them adds a condition to
+the bound tree. A More filters pill opens the same tree in the full editor.
 
 ## Install
 
@@ -17,8 +17,12 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/filter-bar.jso
 
 <Demo name="filter-bar" title="FilterBar: status, sequence and shot type over Shot" />
 
-A pill with nothing ticked shows the field name. With values ticked it shows what its condition
-says, in the same wording the editor uses.
+An untouched facet is a quiet dashed pill naming its field. Ticking a value turns it into a segmented
+pill of three parts — the field, the operator and the values — in the same wording the editor uses.
+The operator segment opens a menu of the operators that facet can take: is any of, is none of, is
+empty and is not empty. The values segment opens the checklist. A control at the end of the pill
+removes it, and once any pill is active a Clear all control drops every condition the pills
+contribute, leaving anything built in the dialog alone.
 
 ## Props
 
@@ -49,10 +53,11 @@ None. The dialog behind More filters takes the editor's slots.
 
 | key | does |
 |---|---|
-| `Enter`, `Space` | Opens the pill's list. |
-| `Arrow` keys | Move the cursor in the list. |
-| `Enter` | Ticks or unticks the value under the cursor. |
-| `Escape` | Closes the list. |
+| `Tab` | Moves between the segments of a pill and on to the next pill. |
+| `Enter`, `Space` | Opens the operator menu or the value list under the cursor. |
+| `Arrow` keys | Move the cursor in the open menu or list. |
+| `Enter` | Chooses the operator, or ticks and unticks the value under the cursor. |
+| `Escape` | Closes the open menu or list. |
 
 ## API behaviour
 
@@ -68,3 +73,14 @@ does not empty its neighbours.
 A status or list value is the raw code, never the display label, and a code outside `valid_values`
 matches nothing rather than erroring (field_types/status_list). An entity value is a `{type, id}`
 hash (field_types/entity).
+
+Every negating operator, `not_in` included, also matches rows where the field is unset
+(017_filter_operators), so is none of on a facet returns the blanks as well.
+
+## Reference
+
+The pill anatomy follows bazza/ui's data-table-filter 2025.04.12, its Linear-style chip of a field, an
+operator and a value where the operator is a menu of its own. The segmented chip and the dashed
+add-a-filter pill follow ReUI's Filters 2.5.2. The operator matrix behind the facet menu follows Dice
+UI's data table config (`docs/config/data-table.ts`, commit `6e0ab98`). None of the three is
+installed.

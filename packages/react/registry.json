@@ -38,11 +38,40 @@
         "@sg-widgets/core",
         "lucide-react"
       ],
-      "registryDependencies": [],
-      "docs": "Takes an EntityRef exactly as an entity field returns it. With no name it falls back to `Type #id`.",
+      "registryDependencies": [
+        "https://sg-widgets.dev/r/react/entity-card.json",
+        "hover-card"
+      ],
+      "docs": "Takes an EntityRef exactly as an entity field returns it. With no name it falls back to `Type #id`. A preview list installs EntityCard for the hover card.",
       "files": [
         {
           "path": "src/registry/sg/components/entity-chip.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "entity-card",
+      "type": "registry:component",
+      "title": "Entity Card",
+      "description": "One Flow Production Tracking row as a card: thumbnail, name, type, status and a grid of field values.",
+      "categories": [
+        "flow-production-tracking",
+        "widget"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "https://sg-widgets.dev/r/react/status-badge.json",
+        "https://sg-widgets.dev/r/react/thumbnail.json",
+        "skeleton"
+      ],
+      "docs": "Reads the row through an SgContext when given a reference, labels every dotted path through the schema, and draws values itself so nothing depends on it in return.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/entity-card.tsx",
           "type": "registry:component"
         }
       ]

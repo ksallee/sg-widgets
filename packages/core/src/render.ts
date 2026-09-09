@@ -78,6 +78,90 @@ export function renderKindFor(dataType: string): RenderKind {
   return RENDER_KIND[dataType as DataType] ?? 'text';
 }
 
+export interface FieldTextOptions {
+  /** The site's `hours_per_day`; a duration then renders in days (field_types/duration). */
+  hoursPerDay?: number;
+  locale?: string;
+  /** Decimals kept on a float or a currency. */
+  decimals?: number;
+  currencySymbol?: string;
+  /** The status field's `display_values`, the only source of a status label (field_types/status_list). */
+  displayValues?: Record<string, string>;
+  /** Between the names of a multi_entity value. */
+  separator?: string;
+}
+
+/**
+ * Any value as one line of text.
+ *
+ * The renderings a widget usually draws with a component of its own -- a status
+ * badge, a thumbnail, a chip -- come back as their plain label, so a compact
+ * surface can show them as text and a caller can copy or export them.
+ */
+export function fieldText(value: unknown, dataType: string, options: FieldTextOptions = {}): string {
+  const kind = renderKindFor(dataType);
+  if (kind === 'checkbox') return value === true ? 'Yes' : 'No';
+  if (kind === 'empty' || isEmptyValue(value)) return '';
+  switch (kind) {
+    case 'number':
+      return numberText(value, dataType, options);
+    case 'date':
+      return formatDate(String(value), localeOnly(options));
+    case 'datetime':
+      return formatDateTime(String(value), localeOnly(options));
+    case 'entity':
+      return entityText(value as EntityLike);
+    case 'multi_entity':
+      return (value as EntityLike[]).map(entityText).join(options.separator ?? ', ');
+    case 'status':
+      return options.displayValues?.[String(value)] ?? String(value);
+    case 'image':
+      return fileNameFromUrl(String(value));
+    case 'url':
+      return urlLink(value)?.label ?? '';
+    case 'color':
+      return String(value) === COLOR_SENTINEL ? 'pipeline step' : String(value);
+    default:
+      return String(value);
+  }
+}
+
+/** The shape an entity link reads back as: `{type, id, name}` (field_types/entity). */
+interface EntityLike {
+  type: string;
+  id: number;
+  name?: string | null;
+}
+
+function entityText(ref: EntityLike): string {
+  return ref.name && ref.name.length > 0 ? ref.name : `${ref.type} #${ref.id}`;
+}
+
+function localeOnly(options: FieldTextOptions): DateOptions {
+  return options.locale === undefined ? {} : { locale: options.locale };
+}
+
+function numberText(value: unknown, dataType: string, options: FieldTextOptions): string {
+  switch (dataType) {
+    case 'duration':
+      return formatDuration(Number(value), options.hoursPerDay === undefined ? {} : { hoursPerDay: options.hoursPerDay });
+    case 'percent':
+      return formatPercent(value as number);
+    case 'timecode':
+      return formatTimecode(Number(value));
+    case 'currency':
+      return formatCurrency(value as string, {
+        ...(options.currencySymbol === undefined ? {} : { symbol: options.currencySymbol }),
+        ...(options.decimals === undefined ? {} : { decimals: options.decimals }),
+        ...(options.locale === undefined ? {} : { locale: options.locale }),
+      });
+    case 'float':
+      return formatFloat(value as string, options.decimals === undefined ? {} : { decimals: options.decimals });
+    default:
+      return String(value);
+  }
+}
+
 /**
  * True when there is nothing to show. `0`, `false` and `"0"` are values, not
  * emptiness: a `number` holding 0 is `is_not None` on the server too

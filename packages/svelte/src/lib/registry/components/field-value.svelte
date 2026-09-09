@@ -28,7 +28,7 @@
 
 <script lang="ts">
 	import type { HTMLAttributes } from 'svelte/elements';
-	import type { EntityRef, FieldSchema, StatusRecord, UrlLinkInfo } from '@sg-widgets/core';
+	import type { EntityRef, FieldSchema, SgContext, StatusRecord, UrlLinkInfo } from '@sg-widgets/core';
 	import {
 		COLOR_SENTINEL,
 		formatDate,
@@ -41,7 +41,7 @@
 	} from '@sg-widgets/core';
 	import { Switch } from '$lib/components/ui/switch/index.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
-	import EntityChip from '$lib/registry/components/entity-chip.svelte';
+	import EntityChip, { type EntityChipVariant } from '$lib/registry/components/entity-chip.svelte';
 	import StatusBadge from '$lib/registry/components/status-badge.svelte';
 	import Thumbnail from '$lib/registry/components/thumbnail.svelte';
 
@@ -54,8 +54,14 @@
 		field?: Pick<FieldSchema, 'displayValues'> | null;
 		/** `Status` rows by code, for the status name and icon (probe 010). */
 		statuses?: Record<string, StatusRecord> | null;
-		/** The site the stock sprite is served from, for a status icon the package does not bundle. */
+		/** The site the stock sprite is served from, and the site a linked row is addressed on. */
 		siteUrl?: string;
+		/** How an entity or multi_entity value draws: a chip, a link or bare text. */
+		entityVariant?: EntityChipVariant;
+		/** Field paths shown in a hover card on a linked row. Needs a context. */
+		preview?: string[];
+		/** The widget context, for the site url and the hover card's read. */
+		context?: SgContext;
 		/** The site's `hours_per_day` from `GET /preferences`; durations then render in days (field_types/duration). */
 		hoursPerDay?: number;
 		locale?: string;
@@ -75,6 +81,9 @@
 		field = null,
 		statuses = null,
 		siteUrl,
+		entityVariant = 'chip',
+		preview,
+		context,
 		hoursPerDay,
 		locale,
 		precision,
@@ -136,11 +145,18 @@
 	{#if empty}
 		<span class="text-muted-foreground text-xs italic select-none">{emptyLabel}</span>
 	{:else if kind === 'entity'}
-		<EntityChip entity={value as EntityRef} size="sm" />
+		<EntityChip
+			entity={value as EntityRef}
+			size="sm"
+			variant={entityVariant}
+			{siteUrl}
+			{preview}
+			{context}
+		/>
 	{:else if kind === 'multi_entity'}
 		<span class="flex min-w-0 flex-wrap items-center gap-2">
 			{#each value as EntityRef[] as entity (`${entity.type}:${entity.id}`)}
-				<EntityChip {entity} size="sm" />
+				<EntityChip {entity} size="sm" variant={entityVariant} {siteUrl} {preview} {context} />
 			{/each}
 		</span>
 	{:else if kind === 'status'}

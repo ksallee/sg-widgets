@@ -36,10 +36,34 @@
         "@sg-widgets/core",
         "@lucide/svelte"
       ],
-      "registryDependencies": [],
+      "registryDependencies": [
+        "local:entity-card",
+        "hover-card"
+      ],
       "files": [
         {
           "path": "src/lib/registry/components/entity-chip.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "entity-card",
+      "type": "registry:component",
+      "title": "Entity Card",
+      "description": "One Flow Production Tracking row as a card: thumbnail, name, type, status and a grid of field values.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte"
+      ],
+      "registryDependencies": [
+        "local:status-badge",
+        "local:thumbnail",
+        "skeleton"
+      ],
+      "files": [
+        {
+          "path": "src/lib/registry/components/entity-card.svelte",
           "type": "registry:component"
         }
       ]

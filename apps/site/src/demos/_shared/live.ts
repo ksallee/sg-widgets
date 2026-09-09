@@ -197,7 +197,8 @@ async function resolve(): Promise<LiveState> {
   // read fails, and the widgets show the error state they show for any refusal.
   const problem = !siteUrl ? 'Live mode needs a site url.' : token ? null : 'Live mode needs a login.';
   const refuse = (): Promise<string> => Promise.reject(new Error(problem ?? 'Live mode is not ready.'));
-  context = createSgContext({ client: new RestClient({ siteUrl, token: token ?? refuse }) });
+  // The site is carried on the context so a widget can link a row to its own page.
+  context = createSgContext({ client: new RestClient({ siteUrl, token: token ?? refuse }), siteUrl });
   return { source, siteUrl, session, devToken: dev !== null, project, problem };
 }
 

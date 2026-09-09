@@ -1,5 +1,5 @@
 import type * as React from 'react';
-import type { EntityRef, FieldSchema, StatusRecord, UrlLinkInfo } from '@sg-widgets/core';
+import type { EntityRef, FieldSchema, SgContext, StatusRecord, UrlLinkInfo } from '@sg-widgets/core';
 import {
   COLOR_SENTINEL,
   formatDate,
@@ -17,7 +17,7 @@ import {
 } from '@sg-widgets/core';
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
-import { EntityChip } from '@/registry/sg/components/entity-chip';
+import { EntityChip, type EntityChipVariant } from '@/registry/sg/components/entity-chip';
 import { StatusBadge } from '@/registry/sg/components/status-badge';
 import { Thumbnail } from '@/registry/sg/components/thumbnail';
 
@@ -30,8 +30,14 @@ export interface FieldValueProps extends Omit<React.HTMLAttributes<HTMLSpanEleme
   field?: Pick<FieldSchema, 'displayValues'> | null;
   /** `Status` rows by code, for the status name and icon (probe 010). */
   statuses?: Record<string, StatusRecord> | null;
-  /** The site the stock sprite is served from, for a status icon the package does not bundle. */
+  /** The site the stock sprite is served from, and the site a linked row is addressed on. */
   siteUrl?: string;
+  /** How an entity or multi_entity value draws: a chip, a link or bare text. */
+  entityVariant?: EntityChipVariant;
+  /** Field paths shown in a hover card on a linked row. Needs a context. */
+  preview?: string[];
+  /** The widget context, for the site url and the hover card's read. */
+  context?: SgContext;
   /** The site's `hours_per_day` from `GET /preferences`; durations then render in days (field_types/duration). */
   hoursPerDay?: number;
   locale?: string;
@@ -60,6 +66,9 @@ export function FieldValue({
   field = null,
   statuses = null,
   siteUrl,
+  entityVariant = 'chip',
+  preview,
+  context,
   hoursPerDay,
   locale,
   precision,
@@ -107,11 +116,26 @@ export function FieldValue({
       {empty ? (
         <span className="text-muted-foreground text-xs italic select-none">{emptyLabel}</span>
       ) : kind === 'entity' ? (
-        <EntityChip entity={value as EntityRef} size="sm" />
+        <EntityChip
+          entity={value as EntityRef}
+          size="sm"
+          variant={entityVariant}
+          siteUrl={siteUrl}
+          preview={preview}
+          context={context}
+        />
       ) : kind === 'multi_entity' ? (
         <span className="flex min-w-0 flex-wrap items-center gap-2">
           {(value as EntityRef[]).map((entity) => (
-            <EntityChip key={`${entity.type}:${entity.id}`} entity={entity} size="sm" />
+            <EntityChip
+              key={`${entity.type}:${entity.id}`}
+              entity={entity}
+              size="sm"
+              variant={entityVariant}
+              siteUrl={siteUrl}
+              preview={preview}
+              context={context}
+            />
           ))}
         </span>
       ) : kind === 'status' ? (

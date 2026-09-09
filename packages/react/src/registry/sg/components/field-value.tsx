@@ -1,5 +1,5 @@
 import type * as React from 'react';
-import type { EntityRef, FieldSchema, StatusRecord } from '@sg-widgets/core';
+import type { EntityRef, FieldSchema, StatusRecord, UrlLinkInfo } from '@sg-widgets/core';
 import {
   COLOR_SENTINEL,
   formatDate,
@@ -32,6 +32,8 @@ export interface FieldValueProps extends Omit<React.HTMLAttributes<HTMLSpanEleme
   /** The site's `hours_per_day` from `GET /preferences`; durations then render in days (field_types/duration). */
   hoursPerDay?: number;
   locale?: string;
+  /** Rewrites the href of a local file link. Default opens `file:`, which browsers refuse from an http page. */
+  localHref?: (link: UrlLinkInfo) => string | null;
   /** What to show when the value is empty. Never a dash: a dash reads like a value. */
   emptyLabel?: string;
 }
@@ -52,6 +54,7 @@ export function FieldValue({
   statuses = null,
   hoursPerDay,
   locale,
+    localHref,
   emptyLabel = 'empty',
   className,
   ...rest
@@ -61,7 +64,9 @@ export function FieldValue({
   // value is a real one (field_types/checkbox).
   const empty = kind !== 'checkbox' && (kind === 'empty' || isEmptyValue(value));
   const dateOptions = locale === undefined ? {} : { locale };
-  const link = kind === 'url' ? urlLink(value) : null;
+  const rawLink = kind === 'url' ? urlLink(value) : null;
+  // A local link opens through `file:`; an app that opens paths its own way rewrites the href.
+  const link = rawLink && rawLink.local && localHref ? { ...rawLink, href: localHref(rawLink) } : rawLink;
   const rgb = kind === 'color' ? parseBgColor(String(value)) : null;
   const text =
     kind === 'number'
@@ -76,7 +81,7 @@ export function FieldValue({
     empty || kind === 'entity' || kind === 'multi_entity' || kind === 'image' || kind === 'checkbox'
       ? undefined
       : kind === 'url'
-        ? (link?.label ?? undefined)
+        ? (link?.local?.path ?? link?.label ?? undefined)
         : kind === 'date' || kind === 'datetime'
           ? String(value)
           : text;

@@ -25,7 +25,7 @@
 
 <script lang="ts">
 	import type { HTMLAttributes } from 'svelte/elements';
-	import type { EntityRef, FieldSchema, StatusRecord } from '@sg-widgets/core';
+	import type { EntityRef, FieldSchema, StatusRecord, UrlLinkInfo } from '@sg-widgets/core';
 	import {
 		COLOR_SENTINEL,
 		formatDate,
@@ -54,6 +54,8 @@
 		/** The site's `hours_per_day` from `GET /preferences`; durations then render in days (field_types/duration). */
 		hoursPerDay?: number;
 		locale?: string;
+		/** Rewrites the href of a local file link. Default opens `file:`, which browsers refuse from an http page. */
+		localHref?: (link: UrlLinkInfo) => string | null;
 		/** What to show when the value is empty. Never a dash: a dash reads like a value. */
 		emptyLabel?: string;
 	};
@@ -65,6 +67,7 @@
 		statuses = null,
 		hoursPerDay,
 		locale,
+		localHref,
 		emptyLabel = 'empty',
 		class: className,
 		ref = $bindable(null),
@@ -76,7 +79,9 @@
 	// value is a real one (field_types/checkbox).
 	const empty = $derived(kind !== 'checkbox' && (kind === 'empty' || isEmptyValue(value)));
 	const dateOptions = $derived(locale === undefined ? {} : { locale });
-	const link = $derived(kind === 'url' ? urlLink(value) : null);
+	const rawLink = $derived(kind === 'url' ? urlLink(value) : null);
+	// A local link opens through `file:`; an app that opens paths its own way rewrites the href.
+	const link = $derived(rawLink && rawLink.local && localHref ? { ...rawLink, href: localHref(rawLink) } : rawLink);
 	const rgb = $derived(kind === 'color' ? parseBgColor(String(value)) : null);
 	const text = $derived(
 		kind === 'number'
@@ -92,7 +97,7 @@
 		empty || kind === 'entity' || kind === 'multi_entity' || kind === 'image' || kind === 'checkbox'
 			? undefined
 			: kind === 'url'
-				? (link?.label ?? undefined)
+				? (link?.local?.path ?? link?.label ?? undefined)
 				: kind === 'date' || kind === 'datetime'
 					? String(value)
 					: text

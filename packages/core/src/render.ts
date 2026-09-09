@@ -258,16 +258,53 @@ export function fileNameFromUrl(url: string | null | undefined): string {
   }
 }
 
+export type LocalPlatform = 'mac' | 'linux' | 'windows';
+
+/** The platform the current browser reports, for choosing which local path to open. */
+export function currentPlatform(): LocalPlatform {
+  const p = typeof navigator === 'undefined' ? '' : navigator.platform || navigator.userAgent || '';
+  if (/win/i.test(p)) return 'windows';
+  if (/mac|iphone|ipad/i.test(p)) return 'mac';
+  return 'linux';
+}
+
+/** `file:` URL for a local path: a Windows drive path gains a third slash, and every segment is encoded. */
+export function fileHref(path: string): string {
+  const win = /^[a-zA-Z]:[\\/]/.test(path);
+  const normalized = win ? path.replace(/\\/g, '/') : path;
+  const encoded = normalized.split('/').map((seg) => encodeURIComponent(seg)).join('/');
+  return win ? `file:///${encoded}` : `file://${encoded.startsWith('/') ? '' : '/'}${encoded}`;
+}
+
+export interface UrlLinkInfo {
+  /** Where to open, or null when nothing can be opened. A local link opens through `file:`. */
+  href: string | null;
+  label: string;
+  /** Present on a `local` link: the path per platform, and the one for the current platform. */
+  local?: { mac: string | null; linux: string | null; windows: string | null; path: string | null };
+}
+
 /**
  * A displayable link out of a `url` value. Three shapes exist and no fourth:
  * `upload`/`web` (has `url` and `name`), `local` (paths, no `url`), and a bare
- * string (field_types/url). `href` is null when there is nothing to open.
+ * string (field_types/url). A local link resolves to a `file:` href for the
+ * current platform; browsers refuse to follow one from an http page, so an app
+ * that opens paths another way rewrites it with its own scheme.
  */
-export function urlLink(value: unknown): { href: string | null; label: string } | null {
+export function urlLink(value: unknown, platform: LocalPlatform = currentPlatform()): UrlLinkInfo | null {
   if (isEmptyValue(value)) return null;
   if (typeof value === 'string') return { href: value, label: fileNameFromUrl(value) || value };
   if (typeof value !== 'object') return null;
   const v = value as UrlValue;
+  if (v.link_type === 'local') {
+    const mac = v.local_path_mac ?? null;
+    const linux = v.local_path_linux ?? null;
+    const windows = v.local_path_windows ?? null;
+    const path = (platform === 'mac' ? mac : platform === 'windows' ? windows : linux) ?? mac ?? linux ?? windows ?? null;
+    const label = v.name ?? fileNameFromUrl(path);
+    if (!label && !path) return null;
+    return { href: path ? fileHref(path) : null, label: label || fileNameFromUrl(path), local: { mac, linux, windows, path } };
+  }
   const href = typeof v.url === 'string' && v.url.length > 0 ? v.url : null;
   const path = v.local_path_mac ?? v.local_path_linux ?? v.local_path_windows ?? v.relative_path ?? null;
   const label = v.name ?? (href ? fileNameFromUrl(href) : fileNameFromUrl(path));

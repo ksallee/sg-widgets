@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { fileHref } from '../src/render.js';
 import {
   COLOR_SENTINEL,
   fileNameFromUrl,
@@ -189,15 +190,22 @@ describe('urlLink', () => {
     ).toEqual({ href: 'https://s3-accelerate.amazonaws.com/abc/bunny.jpg?X-Amz-Expires=900', label: 'bunny.jpg' });
   });
 
-  it('reads the local shape, which carries no url', () => {
+  it('reads the local shape, which carries no url, as a file: link', () => {
     expect(
-      urlLink({
-        link_type: 'local',
-        name: 'plate.exr',
-        local_path_mac: '/Volumes/shows/seq01/plate.exr',
-        relative_path: 'seq01/plate.exr',
-      }),
-    ).toEqual({ href: null, label: 'plate.exr' });
+      urlLink(
+        {
+          link_type: 'local',
+          name: 'plate.exr',
+          local_path_mac: '/Volumes/shows/seq01/plate.exr',
+          relative_path: 'seq01/plate.exr',
+        },
+        'mac',
+      ),
+    ).toEqual({
+      href: 'file:///Volumes/shows/seq01/plate.exr',
+      label: 'plate.exr',
+      local: { mac: '/Volumes/shows/seq01/plate.exr', linux: null, windows: null, path: '/Volumes/shows/seq01/plate.exr' },
+    });
   });
 
   it('reads the bare string shape', () => {
@@ -234,5 +242,16 @@ describe('initialsOf', () => {
 describe('COLOR_SENTINEL', () => {
   it('names the token Task.color holds instead of a colour', () => {
     expect(COLOR_SENTINEL).toBe('pipeline_step');
+  });
+});
+
+describe('local file links', () => {
+  it('resolves the path for the platform and opens it through file:', () => {
+    const value = { link_type: 'local', name: 'plate.exr', local_path_mac: '/Volumes/shows/plate.exr', local_path_windows: 'P:\\shows\\plate.exr', local_path_linux: '/mnt/shows/plate.exr' };
+    expect(urlLink(value, 'mac')?.href).toBe('file:///Volumes/shows/plate.exr');
+    expect(urlLink(value, 'windows')?.href).toBe('file:///P%3A/shows/plate.exr');
+    expect(urlLink(value, 'linux')?.local?.path).toBe('/mnt/shows/plate.exr');
+    expect(urlLink({ link_type: 'local', name: 'x', local_path_mac: '/a b/x' }, 'windows')?.href).toBe('file:///a%20b/x');
+    expect(fileHref('/a/b c')).toBe('file:///a/b%20c');
   });
 });

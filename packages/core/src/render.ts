@@ -358,6 +358,14 @@ export function nameColorIndex(name: string | null | undefined, count = 5): numb
   return h % count;
 }
 
+/** Eight hues far enough apart to tell neighbours apart, skipping the muddy yellows. */
+export const NAME_HUES = [15, 45, 95, 150, 195, 240, 285, 330] as const;
+
+/** A stable hue for a name, for tinting initials independently of the theme. */
+export function nameHue(name: string | null | undefined): number {
+  return NAME_HUES[nameColorIndex(name, NAME_HUES.length)] ?? NAME_HUES[0];
+}
+
 export function initialsOf(name: string | null | undefined, max = 2): string {
   if (isEmptyValue(name)) return '';
   const words = String(name)

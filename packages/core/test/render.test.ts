@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fileHref, nameColorIndex } from '../src/render.js';
+import { fileHref, nameColorIndex, nameHue, NAME_HUES } from '../src/render.js';
 import {
   COLOR_SENTINEL,
   fileNameFromUrl,
@@ -271,5 +271,7 @@ describe('nameColorIndex', () => {
     expect(idx.every((i) => i >= 0 && i < 5)).toBe(true);
     expect(new Set(idx).size).toBeGreaterThan(2);
     expect(nameColorIndex('')).toBe(0);
+    expect(NAME_HUES).toContain(nameHue('Ada Lovelace'));
+    expect(nameHue('Ada Lovelace')).toBe(nameHue('Ada Lovelace'));
   });
 });

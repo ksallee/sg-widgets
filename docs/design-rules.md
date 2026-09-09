@@ -7,7 +7,8 @@ The goal is one system: a page mixing ten of our widgets must read as one hand.
 
 - Colours, radius, fonts and shadows come from shadcn tokens (`bg-background`, `text-muted-foreground`,
   `border-border`, `ring-ring`, `rounded-md` via `--radius`, ...). Never a raw hex, rgb or arbitrary
-  colour class. The one exception is status colour from site data, applied inline through `parseBgColor`.
+  colour class. The exceptions are colour that is data: status colour from the site through `parseBgColor`, and the
+  name-derived hue behind initials, both applied inline.
 - Never override a shadcn primitive's look from outside. Compose it, or pass `className`/`class`.
 - Both frameworks must produce the same DOM structure and the same classes for the same widget. When in
   doubt, write the Svelte one first and port the markup verbatim.

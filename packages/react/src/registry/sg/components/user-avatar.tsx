@@ -1,6 +1,6 @@
 import type * as React from 'react';
 import { useState } from 'react';
-import { initialsOf, nameColorIndex } from '@sg-widgets/core';
+import { initialsOf, nameHue } from '@sg-widgets/core';
 import { Bot } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -18,14 +18,12 @@ const GLYPH: Record<UserAvatarSize, string> = {
   lg: 'size-5',
 };
 
-/** Initials tints, from the theme's chart palette so every theme brings its own. */
-const TINT = [
-  'bg-chart-1/15 text-chart-1',
-  'bg-chart-2/15 text-chart-2',
-  'bg-chart-3/15 text-chart-3',
-  'bg-chart-4/15 text-chart-4',
-  'bg-chart-5/15 text-chart-5',
-];
+/**
+ * Initials tint: a fixed hue from the name at a light and a dark lightness, so it
+ * reads the same under every theme. Like status colour, it is data, not a token.
+ */
+const TINT =
+  'bg-[oklch(0.93_0.05_var(--sg-hue))] text-[oklch(0.42_0.13_var(--sg-hue))] dark:bg-[oklch(0.32_0.06_var(--sg-hue))] dark:text-[oklch(0.86_0.09_var(--sg-hue))]';
 
 export interface UserAvatarProps extends Omit<React.HTMLAttributes<HTMLSpanElement>, 'children'> {
   /** The person's display name, i.e. `cached_display_name` on a HumanUser (probe 060). */
@@ -79,9 +77,10 @@ export function UserAvatar({
         className={cn(
           'bg-muted text-muted-foreground ring-border flex size-full items-center justify-center overflow-hidden rounded-full font-medium ring-1 select-none',
           apiUser && 'bg-secondary text-secondary-foreground',
-          tinted && TINT[nameColorIndex(name, TINT.length)],
+          tinted && TINT,
           inactive && 'opacity-50 grayscale',
         )}
+        style={tinted ? ({ '--sg-hue': String(nameHue(name)) } as React.CSSProperties) : undefined}
       >
         {apiUser ? (
           <>

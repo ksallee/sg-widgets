@@ -131,7 +131,7 @@
 		setMode('edit');
 		// The control does not exist until the toggle has rendered.
 		requestAnimationFrame(() => {
-			ref?.querySelector<HTMLElement>('input, textarea, [data-slot="select-trigger"]')?.focus({ preventScroll: true });
+			ref?.querySelector<HTMLElement>('input, textarea, [data-slot$="-trigger"]')?.focus({ preventScroll: true });
 		});
 	}
 
@@ -157,9 +157,12 @@
 
 	function onEditKeydown(event: KeyboardEvent): void {
 		if (!editable) return;
+		// Enter on a control that opens its own popup opens it; the session stays until the
+		// popup is done with it.
+		const onPopupTrigger = (event.target as HTMLElement | null)?.closest('[data-slot$="-trigger"]') != null;
 		// The editor commits on the same Enter, and its handler runs first on the way up.
 		// The toggle waits a frame so that commit has settled before the control goes.
-		if (event.key === 'Enter' && liveError === null && !(multiline && kind === 'text')) {
+		if (event.key === 'Enter' && !onPopupTrigger && liveError === null && !(multiline && kind === 'text')) {
 			requestAnimationFrame(leave);
 		}
 		if (event.key === 'Escape') cancel();

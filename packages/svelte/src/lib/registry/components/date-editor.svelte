@@ -43,7 +43,7 @@
 		value?: string | null;
 		onValueChange?: (value: string | null) => void;
 		field?: Pick<FieldSchema, 'displayName' | 'mandatory'> | null;
-		/** Compact for one row of a form or a filter: the typed day alone, at a fixed width. */
+		/** The row form: the button takes the width of its value. */
 		inline?: boolean;
 		size?: DateEditorSize;
 		disabled?: boolean;
@@ -77,6 +77,7 @@
 	let parseError = $state<string | null>(null);
 	let editing = $state(false);
 	let open = $state(false);
+	let dayInput = $state<HTMLInputElement | null>(null);
 
 	$effect(() => {
 		const incoming = value ?? '';
@@ -96,17 +97,20 @@
 		onValueChange?.(next);
 	}
 
-	function commit(): void {
+	/** Commits the typed day. Answers whether it parsed, so Enter knows to close. */
+	function commit(): boolean {
 		const result = toApiDate(draft);
 		if ('error' in result) {
 			parseError = result.error;
 			onErrorChange?.(result.error);
-			return;
+			return false;
 		}
 		emit(result.value);
+		return true;
 	}
 
 	function pick(picked: DateValue | undefined): void {
+		editing = false;
 		open = false;
 		emit(fromCalendarDate(picked) || null);
 	}
@@ -119,12 +123,20 @@
 	}
 
 	function onkeydown(event: KeyboardEvent): void {
-		if (event.key === 'Enter') commit();
-		if (event.key === 'Escape') {
-			draft = value ?? '';
-			parseError = null;
-			onErrorChange?.(null);
+		if (event.key !== 'Enter' && event.key !== 'Escape') return;
+		// The popover is portalled out of the widget, but React replays a synthetic event
+		// up its own tree, so a key the editor answers is stopped here in both frameworks.
+		event.stopPropagation();
+		if (event.key === 'Enter') {
+			if (!commit()) return;
+			editing = false;
+			open = false;
+			return;
 		}
+		draft = value ?? '';
+		parseError = null;
+		onErrorChange?.(null);
+		editing = false;
 	}
 </script>
 
@@ -135,8 +147,8 @@
 	rather than only parsing it, so `2026-02-30` is refused here too. A timestamp is
 	never a date on this type (field_types/date).
 
-	`inline` is the form a row of a table or a filter takes: ten characters of typed day,
-	no calendar.
+	One anatomy everywhere: a button carrying the stored day, over a popover holding the
+	typed day and the calendar. `inline` only sizes the button to its value.
 -->
 <div
 	bind:this={ref}
@@ -146,57 +158,53 @@
 	class={cn('flex w-full min-w-0 flex-col gap-2', inline && 'w-fit', className)}
 	{...rest}
 >
-	{#if inline}
-		<!-- In a row the editor is one button carrying the value; the calendar sits in its popover. -->
-		<Popover.Root bind:open>
-			<Popover.Trigger
-				data-slot="date-editor-trigger"
-				disabled={disabled || readonly}
-				aria-label={field?.displayName ?? 'Pick a date'}
-				aria-invalid={isInvalid}
-				title={value ?? undefined}
-				class={cn(buttonVariants({ variant: 'outline', size: 'sm' }), 'w-fit gap-1.5 font-normal tabular-nums', BOX[size], !value && 'text-muted-foreground')}
-			>
-				<CalendarIcon aria-hidden="true" class="size-4 shrink-0" />
-				<span class="truncate">{value ? draft : placeholder}</span>
-			</Popover.Trigger>
-			<Popover.Content strategy="fixed" class="w-auto p-0" align="start">
-				<Calendar type="single" value={day} onValueChange={pick} />
-			</Popover.Content>
-		</Popover.Root>
-	{:else}
-	<div class="flex w-full min-w-0 items-center gap-2">
-		<Input
-			bind:value={draft}
-			type="text"
-			data-slot="date-editor-day"
-			{disabled}
-			{readonly}
-			{placeholder}
-			class={cn('tabular-nums', BOX[size], inline && 'w-28 shrink-0')}
+	<Popover.Root bind:open={() => open, (next) => (open = readonly || disabled ? false : next)}>
+		<Popover.Trigger
+			data-slot="date-editor-trigger"
+			aria-label={field?.displayName ?? 'Pick a date'}
 			aria-invalid={isInvalid}
-			aria-label={field?.displayName}
-			aria-required={field?.mandatory}
-			onfocus={() => (editing = true)}
-			{onblur}
-			{onkeydown}
-		/>
-		{#if !inline}
-			<Popover.Root bind:open>
-				<Popover.Trigger
-					disabled={disabled || readonly}
-					aria-label="Pick a date"
-					class={cn(buttonVariants({ variant: 'outline', size: 'icon' }), 'shrink-0', BOX[size])}
-				>
-					<CalendarIcon aria-hidden="true" class="size-4" />
-				</Popover.Trigger>
-				<Popover.Content strategy="fixed" class="w-auto p-0" align="start">
-					<Calendar type="single" value={day} onValueChange={pick} />
-				</Popover.Content>
-			</Popover.Root>
-		{/if}
-	</div>
-	{/if}
+			aria-disabled={disabled ? 'true' : undefined}
+			data-readonly={readonly ? 'true' : undefined}
+			{disabled}
+			title={value ?? undefined}
+			class={cn(
+				buttonVariants({ variant: 'outline', size: 'sm' }),
+				'w-full justify-start gap-1.5 font-normal tabular-nums',
+				BOX[size],
+				!value && 'text-muted-foreground'
+			)}
+		>
+			<CalendarIcon aria-hidden="true" class="size-4 shrink-0" />
+			<span class="truncate">{value ?? placeholder}</span>
+		</Popover.Trigger>
+		<Popover.Content
+			strategy="fixed"
+			align="start"
+			class="flex w-auto flex-col gap-3 p-3"
+			onOpenAutoFocus={(event) => {
+				event.preventDefault();
+				dayInput?.focus({ preventScroll: true });
+			}}
+		>
+			<Input
+				bind:ref={dayInput}
+				bind:value={draft}
+				type="text"
+				data-slot="date-editor-day"
+				{disabled}
+				{readonly}
+				{placeholder}
+				class={cn('tabular-nums', BOX[size])}
+				aria-invalid={isInvalid}
+				aria-label={field?.displayName ?? 'Date'}
+				aria-required={field?.mandatory}
+				onfocus={() => (editing = true)}
+				{onblur}
+				{onkeydown}
+			/>
+			<Calendar type="single" class="p-0" value={day} onValueChange={pick} />
+		</Popover.Content>
+	</Popover.Root>
 	{#if message}
 		{#if errorMessage}
 			{@render errorMessage(message)}

@@ -14,7 +14,7 @@ import {
   rgbToCss,
   urlLink,
 } from '@sg-widgets/core';
-import { Check, X } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 import { EntityChip } from '@/registry/sg/components/entity-chip';
 import { StatusBadge } from '@/registry/sg/components/status-badge';
@@ -104,11 +104,15 @@ export function FieldValue({
       ) : kind === 'image' ? (
         <Thumbnail src={String(value)} size="sm" alt="" />
       ) : kind === 'checkbox' ? (
-        value === true ? (
-          <Check aria-label="Yes" className="text-foreground size-4" />
-        ) : (
-          <X aria-label="No" className="text-muted-foreground size-4" />
-        )
+        <Switch
+          size="sm"
+          checked={value === true}
+          disabled
+          aria-readonly="true"
+          aria-label={value === true ? 'Yes' : 'No'}
+          tabIndex={-1}
+          className="data-disabled:cursor-default data-disabled:opacity-100"
+        />
       ) : kind === 'url' ? (
         link?.href ? (
           <a

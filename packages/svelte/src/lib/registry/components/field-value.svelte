@@ -36,8 +36,7 @@
 		rgbToCss,
 		urlLink
 	} from '@sg-widgets/core';
-	import Check from '@lucide/svelte/icons/check';
-	import X from '@lucide/svelte/icons/x';
+	import { Switch } from '$lib/components/ui/switch/index.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
 	import EntityChip from '$lib/registry/components/entity-chip.svelte';
 	import StatusBadge from '$lib/registry/components/status-badge.svelte';
@@ -137,11 +136,15 @@
 	{:else if kind === 'image'}
 		<Thumbnail src={String(value)} size="sm" alt="" />
 	{:else if kind === 'checkbox'}
-		{#if value === true}
-			<Check aria-label="Yes" class="text-foreground size-4" />
-		{:else}
-			<X aria-label="No" class="text-muted-foreground size-4" />
-		{/if}
+		<Switch
+			size="sm"
+			checked={value === true}
+			disabled
+			aria-readonly="true"
+			aria-label={value === true ? 'Yes' : 'No'}
+			tabindex={-1}
+			class="data-disabled:cursor-default data-disabled:opacity-100"
+		/>
 	{:else if kind === 'url'}
 		{#if link?.href}
 			<a

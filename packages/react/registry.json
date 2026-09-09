@@ -8,8 +8,14 @@
       "type": "registry:component",
       "title": "Status Badge",
       "description": "One Flow Production Tracking status as a coloured badge, using the site's own bg_color and icon.",
-      "categories": ["flow-production-tracking", "atom"],
-      "dependencies": ["@sg-widgets/core", "lucide-react"],
+      "categories": [
+        "flow-production-tracking",
+        "atom"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react"
+      ],
       "registryDependencies": [],
       "docs": "Pass the resolved Status row for colour and icon, or just a field schema for the label. An unknown code renders as itself in a muted badge.",
       "files": [
@@ -24,8 +30,14 @@
       "type": "registry:component",
       "title": "Entity Chip",
       "description": "A linked Flow Production Tracking row as a chip, with a per-type glyph, optional thumbnail and a remove control.",
-      "categories": ["flow-production-tracking", "atom"],
-      "dependencies": ["@sg-widgets/core", "lucide-react"],
+      "categories": [
+        "flow-production-tracking",
+        "atom"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react"
+      ],
       "registryDependencies": [],
       "docs": "Takes an EntityRef exactly as an entity field returns it. With no name it falls back to `Type #id`.",
       "files": [
@@ -40,8 +52,14 @@
       "type": "registry:component",
       "title": "Thumbnail",
       "description": "A row's thumbnail, with aspect ratio, an explicit no-image placeholder and a play overlay.",
-      "categories": ["flow-production-tracking", "atom"],
-      "dependencies": ["@sg-widgets/core", "lucide-react"],
+      "categories": [
+        "flow-production-tracking",
+        "atom"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react"
+      ],
       "registryDependencies": [],
       "docs": "The value of an image field is the only state marker there is: null, still transcoding, or ready. All three render.",
       "files": [
@@ -56,8 +74,14 @@
       "type": "registry:component",
       "title": "User Avatar",
       "description": "A person as a round avatar, with an initials fallback, inactive styling and an API-user badge.",
-      "categories": ["flow-production-tracking", "atom"],
-      "dependencies": ["@sg-widgets/core", "lucide-react"],
+      "categories": [
+        "flow-production-tracking",
+        "atom"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react"
+      ],
       "registryDependencies": [],
       "docs": "Initials come from core's initialsOf so both frameworks derive them identically.",
       "files": [
@@ -72,12 +96,19 @@
       "type": "registry:component",
       "title": "Field Value",
       "description": "Any Flow Production Tracking attribute value, rendered for display by its data type.",
-      "categories": ["flow-production-tracking", "atom"],
-      "dependencies": ["@sg-widgets/core", "lucide-react"],
+      "categories": [
+        "flow-production-tracking",
+        "atom"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react"
+      ],
       "registryDependencies": [
         "https://sg-widgets.dev/r/react/entity-chip.json",
         "https://sg-widgets.dev/r/react/status-badge.json",
-        "https://sg-widgets.dev/r/react/thumbnail.json"
+        "https://sg-widgets.dev/r/react/thumbnail.json",
+        "switch"
       ],
       "docs": "Installs EntityChip, StatusBadge and Thumbnail alongside it.",
       "files": [

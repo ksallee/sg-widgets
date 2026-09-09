@@ -175,7 +175,7 @@
       "name": "column-picker",
       "type": "registry:component",
       "title": "Column Picker",
-      "description": "An ordered list of field paths, built with the field picker, reordered by drag or keyboard.",
+      "description": "The columns of a grid as a dual list: the type's fields on the left, the chosen paths in order on the right.",
       "categories": [
         "flow-production-tracking",
         "picker"
@@ -185,11 +185,13 @@
         "lucide-react"
       ],
       "registryDependencies": [
-        "https://sg-widgets.dev/r/react/field-picker.json",
-        "badge",
+        "button",
+        "checkbox",
+        "command",
+        "popover",
         "skeleton"
       ],
-      "docs": "Installs FieldPicker alongside it. Paths already chosen are fed back as exclusions, so a column cannot be added twice.",
+      "docs": "The left list checks the paths already chosen; the right list holds them in order, moved with its buttons or with Alt and an arrow key.",
       "files": [
         {
           "path": "src/registry/sg/components/column-picker.tsx",

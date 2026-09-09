@@ -9,8 +9,10 @@ import {
   filterEntityTypes,
   friendlyFieldPath,
   matchesTokens,
+  moveFieldPath,
   pathTypes,
   searchFieldOptions,
+  toggleFieldPath,
   traversalTargets,
   type FieldHop,
 } from '../src/pickers.js';
@@ -219,5 +221,35 @@ describe('searchFieldOptions', () => {
     expect(pathsOf(searchFieldOptions(options, 'sg_cut_in'))).toEqual(['sg_cut_in']);
     expect(searchFieldOptions(options, '   ')).toHaveLength(options.length);
     expect(searchFieldOptions(options, 'zzznope')).toHaveLength(0);
+  });
+});
+
+describe('toggleFieldPath', () => {
+  it('appends a path that is absent and drops one that is there', () => {
+    expect(toggleFieldPath(['code'], 'sg_status_list')).toEqual(['code', 'sg_status_list']);
+    expect(toggleFieldPath(['code', 'sg_status_list'], 'code')).toEqual(['sg_status_list']);
+    expect(toggleFieldPath([], 'code')).toEqual(['code']);
+  });
+
+  it('leaves the source alone', () => {
+    const paths = ['code'];
+    expect(toggleFieldPath(paths, 'description')).not.toBe(paths);
+    expect(paths).toEqual(['code']);
+  });
+});
+
+describe('moveFieldPath', () => {
+  const paths = ['code', 'sg_status_list', 'entity.Shot.sg_turnover_date'];
+
+  it('moves an entry and keeps the rest in order', () => {
+    expect(moveFieldPath(paths, 2, 1)).toEqual(['code', 'entity.Shot.sg_turnover_date', 'sg_status_list']);
+    expect(moveFieldPath(paths, 0, 2)).toEqual(['sg_status_list', 'entity.Shot.sg_turnover_date', 'code']);
+  });
+
+  it('leaves the order alone off either end', () => {
+    expect(moveFieldPath(paths, 0, -1)).toEqual(paths);
+    expect(moveFieldPath(paths, 2, 3)).toEqual(paths);
+    expect(moveFieldPath(paths, 1, 1)).toEqual(paths);
+    expect(moveFieldPath([], 0, 0)).toEqual([]);
   });
 });

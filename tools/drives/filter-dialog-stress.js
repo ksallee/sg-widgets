@@ -58,7 +58,7 @@ const height = (el) => Math.round(el.getBoundingClientRect().height);
 
 async function addRow(label) {
   const before = rowsIn().length;
-  press($('[data-slot="filter-add-condition"]', dialog()));
+  press($('[data-slot="filter-add-condition"][data-path=""]', dialog()));
   await until(() => rowsIn().length > before, 'the new row');
   const row = () => rowsIn().at(-1);
   press($('[data-slot="filter-field"] [data-slot="field-picker-trigger"]', row()));

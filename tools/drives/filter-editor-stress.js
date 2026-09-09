@@ -7,12 +7,13 @@
 // controls: the field picker chooses a field of the data type, and the operator select
 // names every preset that type offers, so the matrix is whatever `presetsFor` allows.
 // A combination passes when the row is as tall as the `Version Name is` row at the same
-// width. `date_time between` is the one combination allowed to wrap at 800.
+// width. Nothing is allowed to wrap: the row's remove control sits outside the wrapping
+// band, so every width the field, operator and value fit in is a one-line row.
 //
 // The run leaves each row on its widest preset at 1000px, which is what the screenshots
 // take.
 const WIDTHS = [800, 1000, 1200];
-const ALLOWED_TO_WRAP = ['date_time|between'];
+const ALLOWED_TO_WRAP = [];
 const WIDEST = ['between', 'in_last', 'in', 'name_contains', 'is', 'is_empty'];
 
 // One field per filterable data type on Version. `percent`, `duration`, `date` and
@@ -118,7 +119,7 @@ async function settledItem(label) {
 /** Add a condition and point it at one field, descending through a link when asked. */
 async function addRow(pane, spec) {
   const before = rowsOf(pane).length;
-  press($('[data-slot="filter-add-condition"]', pane));
+  press($('[data-slot="filter-add-condition"][data-path=""]', pane));
   await until(() => rowsOf(pane).length > before, 'the new row');
   const row = () => rowsOf(pane).at(-1);
 

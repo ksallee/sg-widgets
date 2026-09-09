@@ -318,15 +318,22 @@ export function FilterEditor({
   );
 }
 
+/**
+ * A group is a header, its rows and a foot. The header says how the rows join and
+ * removes the group; the rows hang off one rail, so a level of nesting is one
+ * indent; the foot is where rows and groups are added.
+ */
 function GroupNode({ ctx, path, node }: { ctx: EditorContext; path: NodePath; node: FilterGroup }) {
+  const depth = path.length;
   return (
     <div
-      className="border-border flex min-w-0 flex-col gap-2 rounded-lg border p-3"
+      className={cn('flex min-w-0 flex-col gap-2', depth > 0 && 'bg-muted/40 rounded-lg p-2')}
       data-slot="filter-group"
       data-path={path.join('.')}
+      data-depth={depth}
       data-logical-operator={node.logicalOperator}
     >
-      <div className="flex min-w-0 items-center gap-2">
+      <div className="flex min-h-9 min-w-0 items-center gap-2" data-slot="filter-group-header">
         <ToggleGroup
           size="sm"
           variant="outline"
@@ -346,30 +353,11 @@ function GroupNode({ ctx, path, node }: { ctx: EditorContext; path: NodePath; no
           </ToggleGroupItem>
         </ToggleGroup>
         <span className="text-muted-foreground min-w-0 flex-1 truncate text-xs">of these match</span>
-        <Button
-          variant="ghost"
-          size="sm"
-          disabled={ctx.disabled}
-          data-slot="filter-add-condition"
-          onClick={() => ctx.append(path, makeCondition('', 'is', ''))}
-        >
-          <PlusIcon />
-          Condition
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          disabled={ctx.disabled}
-          data-slot="filter-add-group"
-          onClick={() => ctx.append(path, makeGroup('or'))}
-        >
-          <PlusIcon />
-          Group
-        </Button>
-        {path.length > 0 ? (
+        {depth > 0 ? (
           <Button
             variant="ghost"
             size="icon-sm"
+            className="text-muted-foreground hover:text-foreground shrink-0"
             disabled={ctx.disabled}
             aria-label="Remove group"
             data-slot="filter-remove"
@@ -379,7 +367,7 @@ function GroupNode({ ctx, path, node }: { ctx: EditorContext; path: NodePath; no
           </Button>
         ) : null}
       </div>
-      <div className="flex min-w-0 flex-col gap-2">
+      <div className="border-border flex min-w-0 flex-col gap-2 border-l pl-3" data-slot="filter-group-body">
         {node.conditions.map((child, i) =>
           child.kind === 'group' ? (
             <GroupNode key={i} ctx={ctx} path={[...path, i]} node={child} />
@@ -391,20 +379,53 @@ function GroupNode({ ctx, path, node }: { ctx: EditorContext; path: NodePath; no
           <p className="text-muted-foreground py-6 text-center text-sm">No conditions.</p>
         ) : null}
       </div>
+      <div className="flex min-w-0 flex-wrap items-center gap-1 pl-3" data-slot="filter-foot">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="text-muted-foreground hover:text-foreground"
+          disabled={ctx.disabled}
+          data-slot="filter-add-condition"
+          data-path={path.join('.')}
+          onClick={() => ctx.append(path, makeCondition('', 'is', ''))}
+        >
+          <PlusIcon />
+          Condition
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="text-muted-foreground hover:text-foreground"
+          disabled={ctx.disabled}
+          data-slot="filter-add-group"
+          data-path={path.join('.')}
+          onClick={() => ctx.append(path, makeGroup('or'))}
+        >
+          <PlusIcon />
+          Group
+        </Button>
+      </div>
     </div>
   );
 }
 
+/**
+ * A row is two bands: the field, the operator and the value on one 36px line, and
+ * the remove button on its own. The remove sits outside the wrapping band, so it
+ * holds the same vertical axis at every depth and never costs the row a line.
+ */
 function ConditionRow({ ctx, path, node }: { ctx: EditorContext; path: NodePath; node: FilterCondition }) {
   return (
-    <div className="flex min-w-0 flex-wrap items-center gap-2" data-slot="filter-row" data-path={path.join('.')}>
-      <FieldSlot ctx={ctx} path={path} node={node} />
-      <OperatorSlot ctx={ctx} path={path} node={node} />
-      <ValueSlot ctx={ctx} path={path} node={node} />
+    <div className="flex min-h-9 min-w-0 items-center gap-2" data-slot="filter-row" data-path={path.join('.')}>
+      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2" data-slot="filter-row-content">
+        <FieldSlot ctx={ctx} path={path} node={node} />
+        <OperatorSlot ctx={ctx} path={path} node={node} />
+        <ValueSlot ctx={ctx} path={path} node={node} />
+      </div>
       <Button
         variant="ghost"
         size="icon-sm"
-        className="shrink-0"
+        className="text-muted-foreground hover:text-foreground shrink-0"
         disabled={ctx.disabled}
         aria-label="Remove condition"
         data-slot="filter-remove"

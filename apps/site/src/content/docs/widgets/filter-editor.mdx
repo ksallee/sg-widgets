@@ -19,6 +19,11 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/filter-editor.
 
 <Demo name="filter-editor" title="FilterEditor: a nested tree on Version, with its serialised filter" />
 
+A row is one 36px line: the field, the operator, the value and, on its own axis at the end, the
+remove control. A group is a header, its rows and a foot. The header carries the All and Any toggle
+and, on a nested group, the control that removes it; the rows hang off one rail, so a level of
+nesting reads as one indent; the foot carries the add-condition and add-group controls.
+
 ## Props
 
 | prop | type | default | meaning |
@@ -104,9 +109,9 @@ The menu shows wording, not wire names. Every entry names one raw operator.
 | in the last, not in the last | `in_last`, `not_in_last` | `[count, UNIT]`, count positive |
 | in the next, not in the next | `in_next`, `not_in_next` | `[count, UNIT]` |
 | today, yesterday, tomorrow | `in_calendar_day` | `0`, `-1`, `1` |
-| this week, last week | `in_calendar_week` | `0`, `-1` |
-| this month, last month | `in_calendar_month` | `0`, `-1` |
-| this year, last year | `in_calendar_year` | `0`, `-1` |
+| this week, last week, next week | `in_calendar_week` | `0`, `-1`, `1` |
+| this month, last month, next month | `in_calendar_month` | `0`, `-1`, `1` |
+| this year, last year, next year | `in_calendar_year` | `0`, `-1`, `1` |
 | is empty | `is` | `null` |
 | is not empty | `is_not` | `null` |
 | name is, name contains, name does not contain | `name_is`, `name_contains`, `name_not_contains` | one string |
@@ -151,3 +156,12 @@ A dotted path filters through a link, and the middle segment names the type it t
 `entity.Shot.sg_sequence` reads Shot from Version's Link field. Only a single `entity` field is
 descended into; a path through a `multi_entity` field reads back nothing, 200 with the key absent
 (probe 016).
+
+## Reference
+
+The row and group anatomy follows ReUI's Filters 2.5.2: the field, operator and value cells on one
+band and the row's trailing control on a second, so the trailing controls of every row share an axis
+whatever the depth. The chip wording follows bazza/ui's data-table-filter 2025.04.12. The named
+buckets around today come from Dice UI's data table config, its `isRelativeToToday` date operator
+(`docs/config/data-table.ts`, commit `6e0ab98`), mapped onto the calendar operators this API
+documents. None of the three is installed.

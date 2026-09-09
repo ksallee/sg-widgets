@@ -556,7 +556,7 @@
       "name": "filter-bar",
       "type": "registry:component",
       "title": "Filter Bar",
-      "description": "Quick facet pills over one entity type, each listing a field values with counts and writing an in condition into a bound filter tree.",
+      "description": "Quick facet pills over one entity type, each a segmented pill of field, operator and values writing a condition into a bound filter tree.",
       "categories": [
         "flow-production-tracking",
         "filter"
@@ -571,6 +571,7 @@
         "checkbox",
         "command",
         "popover",
+        "select",
         "https://sg-widgets.dev/r/react/filter-dialog.json"
       ],
       "docs": "Pass counts to compute the numbers with a _summarize grouping call; without it the bar tallies one page of rows.",

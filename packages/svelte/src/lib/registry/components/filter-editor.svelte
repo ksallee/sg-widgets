@@ -584,15 +584,22 @@
 	</div>
 {/snippet}
 
+<!--
+	A row is two bands: the field, the operator and the value on one 36px line, and
+	the remove button on its own. The remove sits outside the wrapping band, so it
+	holds the same vertical axis at every depth and never costs the row a line.
+-->
 {#snippet conditionRow(path: NodePath, node: FilterCondition)}
-	<div class="flex min-w-0 flex-wrap items-center gap-2" data-slot="filter-row" data-path={path.join('.')}>
-		{@render fieldSlot(path, node)}
-		{@render operatorSlot(path, node)}
-		{@render valueSlot(path, node)}
+	<div class="flex min-h-9 min-w-0 items-center gap-2" data-slot="filter-row" data-path={path.join('.')}>
+		<div class="flex min-w-0 flex-1 flex-wrap items-center gap-2" data-slot="filter-row-content">
+			{@render fieldSlot(path, node)}
+			{@render operatorSlot(path, node)}
+			{@render valueSlot(path, node)}
+		</div>
 		<Button
 			variant="ghost"
 			size="icon-sm"
-			class="shrink-0"
+			class="text-muted-foreground hover:text-foreground shrink-0"
 			{disabled}
 			aria-label="Remove condition"
 			data-slot="filter-remove"
@@ -603,14 +610,21 @@
 	</div>
 {/snippet}
 
+<!--
+	A group is a header, its rows and a foot. The header says how the rows join and
+	removes the group; the rows hang off one rail, so a level of nesting is one
+	indent; the foot is where rows and groups are added.
+-->
 {#snippet groupNode(path: NodePath, node: FilterGroup)}
+	{@const depth = path.length}
 	<div
-		class="border-border flex min-w-0 flex-col gap-2 rounded-lg border p-3"
+		class={cn('flex min-w-0 flex-col gap-2', depth > 0 && 'bg-muted/40 rounded-lg p-2')}
 		data-slot="filter-group"
 		data-path={path.join('.')}
+		data-depth={depth}
 		data-logical-operator={node.logicalOperator}
 	>
-		<div class="flex min-w-0 items-center gap-2">
+		<div class="flex min-h-9 min-w-0 items-center gap-2" data-slot="filter-group-header">
 			<ToggleGroup.Root
 				type="single"
 				size="sm"
@@ -625,30 +639,11 @@
 				<ToggleGroup.Item value="or" aria-label="Match any">Any</ToggleGroup.Item>
 			</ToggleGroup.Root>
 			<span class="text-muted-foreground min-w-0 flex-1 truncate text-xs">of these match</span>
-			<Button
-				variant="ghost"
-				size="sm"
-				{disabled}
-				data-slot="filter-add-condition"
-				onclick={() => commit(appendAt(value, path, makeCondition('', 'is', '')))}
-			>
-				<PlusIcon />
-				Condition
-			</Button>
-			<Button
-				variant="ghost"
-				size="sm"
-				{disabled}
-				data-slot="filter-add-group"
-				onclick={() => commit(appendAt(value, path, makeGroup('or')))}
-			>
-				<PlusIcon />
-				Group
-			</Button>
-			{#if path.length > 0}
+			{#if depth > 0}
 				<Button
 					variant="ghost"
 					size="icon-sm"
+					class="text-muted-foreground hover:text-foreground shrink-0"
 					{disabled}
 					aria-label="Remove group"
 					data-slot="filter-remove"
@@ -658,7 +653,10 @@
 				</Button>
 			{/if}
 		</div>
-		<div class="flex min-w-0 flex-col gap-2">
+		<div
+			class="border-border flex min-w-0 flex-col gap-2 border-l pl-3"
+			data-slot="filter-group-body"
+		>
 			{#each node.conditions as child, i (i)}
 				{#if child.kind === 'group'}
 					{@render groupNode([...path, i], child)}
@@ -669,6 +667,32 @@
 			{#if node.conditions.length === 0}
 				<p class="text-muted-foreground py-6 text-center text-sm">No conditions.</p>
 			{/if}
+		</div>
+		<div class="flex min-w-0 flex-wrap items-center gap-1 pl-3" data-slot="filter-foot">
+			<Button
+				variant="ghost"
+				size="sm"
+				class="text-muted-foreground hover:text-foreground"
+				{disabled}
+				data-slot="filter-add-condition"
+				data-path={path.join('.')}
+				onclick={() => commit(appendAt(value, path, makeCondition('', 'is', '')))}
+			>
+				<PlusIcon />
+				Condition
+			</Button>
+			<Button
+				variant="ghost"
+				size="sm"
+				class="text-muted-foreground hover:text-foreground"
+				{disabled}
+				data-slot="filter-add-group"
+				data-path={path.join('.')}
+				onclick={() => commit(appendAt(value, path, makeGroup('or')))}
+			>
+				<PlusIcon />
+				Group
+			</Button>
 		</div>
 	</div>
 {/snippet}

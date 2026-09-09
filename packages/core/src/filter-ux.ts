@@ -141,16 +141,24 @@ export function supportsEmpty(dataType: string): boolean {
   return emptyValueFor(dataType) !== undefined;
 }
 
+/**
+ * The calendar bucket a date sits in, named. The offset is a bare signed integer
+ * relative to today: `0` is the bucket today falls in, `-1` the one before it and
+ * `+1` the one after (field_types/date).
+ */
 const CALENDAR_PRESETS: ReadonlyArray<{ id: string; label: string; operator: Operator; offset: number }> = [
   { id: 'today', label: 'today', operator: 'in_calendar_day', offset: 0 },
   { id: 'yesterday', label: 'yesterday', operator: 'in_calendar_day', offset: -1 },
   { id: 'tomorrow', label: 'tomorrow', operator: 'in_calendar_day', offset: 1 },
   { id: 'this_week', label: 'this week', operator: 'in_calendar_week', offset: 0 },
   { id: 'last_week', label: 'last week', operator: 'in_calendar_week', offset: -1 },
+  { id: 'next_week', label: 'next week', operator: 'in_calendar_week', offset: 1 },
   { id: 'this_month', label: 'this month', operator: 'in_calendar_month', offset: 0 },
   { id: 'last_month', label: 'last month', operator: 'in_calendar_month', offset: -1 },
+  { id: 'next_month', label: 'next month', operator: 'in_calendar_month', offset: 1 },
   { id: 'this_year', label: 'this year', operator: 'in_calendar_year', offset: 0 },
   { id: 'last_year', label: 'last year', operator: 'in_calendar_year', offset: -1 },
+  { id: 'next_year', label: 'next year', operator: 'in_calendar_year', offset: 1 },
 ];
 
 /** The editor a value shape needs. */
@@ -384,18 +392,37 @@ function valueSummary(condition: FilterCondition, field?: FieldSchema | null): s
   }
 }
 
+/** A condition read as three segments: what is compared, how, and against what. */
+export interface ConditionParts {
+  field: string;
+  operator: string;
+  /** Empty when the operator pins its own value, as `is empty` and the calendar presets do. */
+  value: string;
+}
+
+/**
+ * The three segments of a condition's summary. A pill draws them apart and a
+ * sentence joins them; both read the same words.
+ */
+export function conditionParts(condition: FilterCondition, field?: FieldSchema | null): ConditionParts {
+  const dataType = field?.dataType ?? '';
+  const preset = presetById(dataType, presetIdOf(condition, dataType));
+  return {
+    field: field?.displayName ?? condition.path,
+    operator: preset?.label ?? operatorLabel(condition.operator, dataType),
+    value: valueSummary(condition, field),
+  };
+}
+
 /**
  * One line naming what a condition matches, such as
  * `Status is any of Approved, Final`. Without a schema the field's dotted path
  * stands in for its label and codes stand in for their display values.
  */
 export function describeCondition(condition: FilterCondition, field?: FieldSchema | null): string {
-  const label = field?.displayName ?? condition.path;
-  const dataType = field?.dataType ?? '';
-  const preset = presetById(dataType, presetIdOf(condition, dataType));
-  const wording = preset?.label ?? operatorLabel(condition.operator, dataType);
-  const value = valueSummary(condition, field);
-  return value ? `${label} ${wording} ${value}` : `${label} ${wording}`;
+  const parts = conditionParts(condition, field);
+  const head = `${parts.field} ${parts.operator}`;
+  return parts.value ? `${head} ${parts.value}` : head;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -673,13 +700,27 @@ export function withoutPaths(root: FilterGroup, paths: readonly string[]): Filte
 }
 
 /**
- * Set the `in` condition a facet contributes: replaced where one exists, appended
- * to the root where none does, removed when nothing is ticked.
+ * Set the condition a facet contributes: replaced where one exists, appended to
+ * the root where none does, removed when nothing is ticked. `operator` is one of
+ * the list operators a facet offers.
  */
-export function setFacet(root: FilterGroup, path: string, values: readonly Scalar[]): FilterGroup {
+export function setFacet(
+  root: FilterGroup,
+  path: string,
+  values: readonly Scalar[],
+  operator: Operator = 'in',
+): FilterGroup {
   const found = findCondition(root, path);
   if (values.length === 0) return found ? removeAt(root, found.at) : root;
-  const next: FilterCondition = { kind: 'condition', path, operator: 'in', value: [...values] };
+  const next: FilterCondition = { kind: 'condition', path, operator, value: [...values] };
+  return found ? replaceAt(root, found.at, next) : appendAt(root, [], next);
+}
+
+/** A facet's condition moved onto another of its menu entries. */
+export function setFacetPreset(root: FilterGroup, path: string, preset: OperatorPreset, dataType: string): FilterGroup {
+  const found = findCondition(root, path);
+  const current = found?.condition ?? { kind: 'condition' as const, path, operator: 'in' as Operator, value: [] };
+  const next = applyPreset(current, preset, dataType);
   return found ? replaceAt(root, found.at, next) : appendAt(root, [], next);
 }
 
@@ -737,6 +778,14 @@ export function facetValues(rows: readonly EntityRow[], field: FieldSchema): Fac
   }
   for (const row of rows) for (const value of rowValues(row, field)) add(value, 1);
   return [...found.values()].sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
+}
+
+/**
+ * The menu a facet pill's operator segment offers: the operators that take the
+ * checklist's list of values, and the empty tests, which take none.
+ */
+export function facetPresets(dataType: string): OperatorPreset[] {
+  return presetsFor(dataType).filter((p) => p.input === 'list' || p.id === 'is_empty' || p.id === 'is_not_empty');
 }
 
 function facetLabel(value: Scalar, field: FieldSchema): string {

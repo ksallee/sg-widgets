@@ -460,7 +460,7 @@
       "name": "filter-bar",
       "type": "registry:component",
       "title": "Filter Bar",
-      "description": "Quick facet pills over one entity type, each listing a field values with counts and writing an in condition into a bound filter tree.",
+      "description": "Quick facet pills over one entity type, each a segmented pill of field, operator and values writing a condition into a bound filter tree.",
       "dependencies": [
         "@sg-widgets/core",
         "@lucide/svelte"
@@ -471,6 +471,7 @@
         "checkbox",
         "command",
         "popover",
+        "select",
         "local:filter-dialog"
       ],
       "files": [

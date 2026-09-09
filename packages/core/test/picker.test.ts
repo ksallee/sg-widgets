@@ -8,6 +8,7 @@ import {
   asFilterGroup,
   createEntitySearch,
   entityKey,
+  fitChips,
   flattenRow,
   highlightRuns,
   isBareRef,
@@ -262,6 +263,36 @@ describe('withSelectedPinned', () => {
   });
 });
 
+describe('fitChips', () => {
+  it('keeps every chip when they all fit, and holds nothing back', () => {
+    expect(fitChips([100, 80, 60], 240, 40)).toEqual({ visible: 3, hidden: 0 });
+    expect(fitChips([100, 80, 60], 1000, 40)).toEqual({ visible: 3, hidden: 0 });
+  });
+
+  it('has nothing to fit for an empty row', () => {
+    expect(fitChips([], 0, 40)).toEqual({ visible: 0, hidden: 0 });
+  });
+
+  it('hides every chip when the first one does not fit', () => {
+    expect(fitChips([100, 80], 90, 40)).toEqual({ visible: 0, hidden: 2 });
+  });
+
+  it('cuts at a whole chip, never inside one', () => {
+    expect(fitChips([100, 80, 60], 200, 40)).toEqual({ visible: 1, hidden: 2 });
+  });
+
+  it('spends the reserve only once the row overflows', () => {
+    // 200 of chips in 205 is every chip; the same chips in 199 lose two, because the
+    // "+n" pill takes its 40 out of what is left.
+    expect(fitChips([100, 100], 205, 40)).toEqual({ visible: 2, hidden: 0 });
+    expect(fitChips([100, 100], 199, 40)).toEqual({ visible: 1, hidden: 1 });
+  });
+
+  it('fits nothing into a row narrower than its reserve', () => {
+    expect(fitChips([100], 30, 40)).toEqual({ visible: 0, hidden: 1 });
+  });
+});
+
 describe('summariseSelection', () => {
   const codes = ['ip', 'apr', 'fin', 'hld', 'omt'];
 
@@ -298,6 +329,34 @@ describe('summariseSelection', () => {
         'IP, APR, FIN, HLD, OMT',
       );
     }
+  });
+
+  it('fits the ellipsis chips to a measured row', () => {
+    const fit = { widths: [60, 60, 60, 60, 60], available: 150, reserve: 30 };
+    const plan = summariseSelection(codes, (c) => c, { summary: 'ellipsis', fit });
+    expect(plan.shown).toEqual(['ip', 'apr']);
+    expect(plan.overflow).toBe(3);
+  });
+
+  it('lets a measured row draw more than three chips, and max still caps it', () => {
+    const fit = { widths: [40, 40, 40, 40, 40], available: 400, reserve: 30 };
+    expect(summariseSelection(codes, (c) => c, { summary: 'ellipsis', fit }).shown).toEqual(codes);
+    expect(summariseSelection(codes, (c) => c, { summary: 'ellipsis', max: 2, fit }).shown).toEqual([
+      'ip',
+      'apr',
+    ]);
+  });
+
+  it('draws no chip when the row fits none, and counts them all', () => {
+    const fit = { widths: [60, 60, 60, 60, 60], available: 40, reserve: 30 };
+    const plan = summariseSelection(codes, (c) => c, { summary: 'ellipsis', fit });
+    expect(plan.shown).toEqual([]);
+    expect(plan.overflow).toBe(5);
+  });
+
+  it('ignores a measured row outside ellipsis', () => {
+    const fit = { widths: [60, 60, 60, 60, 60], available: 40, reserve: 30 };
+    expect(summariseSelection(codes, (c) => c, { summary: 'chips', fit }).shown).toEqual(codes);
   });
 
   it('is empty for an empty selection', () => {

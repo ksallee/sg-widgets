@@ -14,16 +14,25 @@
 	// A bare reference: type and id, no name. Resolved on mount.
 	let bare = $state<EntityRef[]>([{ type: 'HumanUser', id: 22 }]);
 	const preset: EntityRef = { type: 'HumanUser', id: 20, name: 'Ada Lovelace' };
+	const SIZES = [
+		{ size: 'sm', caption: 'Small' },
+		{ size: 'md', caption: 'Medium, the default' },
+		{ size: 'lg', caption: 'Large' }
+	] as const;
 
 	const group = 'flex flex-col gap-2';
 	const label = 'text-muted-foreground text-xs font-medium tracking-wide uppercase';
-	const field = 'flex max-w-sm flex-col gap-2';
+	// One control per row, full width of the pane, its caption on the line above.
+	const field = 'flex w-full flex-col gap-2';
+	const stack = 'flex flex-col gap-4';
+	const caption = 'text-muted-foreground text-xs';
 </script>
 
-<div class="flex flex-col gap-4">
+<div class="flex flex-col gap-3">
 	<section class={group} data-demo-case="single">
 		<h4 class={label}>One person or script</h4>
 		<div class={field}>
+			<span class={caption}>One person or script, clearable</span>
 			<UserPicker {client} bind:value={one} clearable />
 		</div>
 	</section>
@@ -31,6 +40,7 @@
 	<section class={group} data-demo-case="multi">
 		<h4 class={label}>Several, with checkbox rows</h4>
 		<div class={field}>
+			<span class={caption}>Several people at once</span>
 			<UserMultiPicker {client} bind:value={people} clearable />
 		</div>
 	</section>
@@ -38,6 +48,7 @@
 	<section class={group} data-demo-case="by-address">
 		<h4 class={label}>Matched on the name, the address or the login</h4>
 		<div class={field}>
+			<span class={caption}>Matched on the name, the address or the login</span>
 			<UserPicker
 				{client}
 				bind:value={byAddress}
@@ -49,6 +60,7 @@
 	<section class={group} data-demo-case="people-only">
 		<h4 class={label}>People only</h4>
 		<div class={field}>
+			<span class={caption}>People only, no script users</span>
 			<UserPicker {client} includeApiUsers={false} bind:value={peopleOnly} />
 		</div>
 	</section>
@@ -56,6 +68,7 @@
 	<section class={group} data-demo-case="inactive">
 		<h4 class={label}>Inactive people included</h4>
 		<div class={field}>
+			<span class={caption}>Inactive people included</span>
 			<UserPicker {client} includeInactive bind:value={withInactive} />
 		</div>
 	</section>
@@ -63,19 +76,32 @@
 	<section class={group} data-demo-case="hydrate">
 		<h4 class={label}>Bare reference, resolved on mount</h4>
 		<div class={field}>
+			<span class={caption}>Type and id in, name resolved on mount</span>
 			<UserMultiPicker {client} bind:value={bare} clearable />
 		</div>
 	</section>
 
 	<section class={group} data-demo-case="states">
 		<h4 class={label}>Sizes, then disabled, read-only, invalid</h4>
-		<div class="flex flex-col gap-2">
-			{#each ['sm', 'md', 'lg'] as const as size (size)}
-				<div class={field}><UserPicker {client} value={preset} {size} /></div>
+		<div class={stack}>
+			{#each SIZES as { size, caption: sizeCaption } (size)}
+				<div class={field}>
+					<span class={caption}>{sizeCaption}</span>
+					<UserPicker {client} value={preset} {size} />
+				</div>
 			{/each}
-			<div class={field}><UserPicker {client} value={preset} disabled /></div>
-			<div class={field}><UserPicker {client} value={preset} readonly /></div>
-			<div class={field}><UserPicker {client} value={preset} invalid /></div>
+			<div class={field}>
+				<span class={caption}>Disabled</span>
+				<UserPicker {client} value={preset} disabled />
+			</div>
+			<div class={field}>
+				<span class={caption}>Read-only</span>
+				<UserPicker {client} value={preset} readonly />
+			</div>
+			<div class={field}>
+				<span class={caption}>Invalid</span>
+				<UserPicker {client} value={preset} invalid />
+			</div>
 		</div>
 	</section>
 </div>

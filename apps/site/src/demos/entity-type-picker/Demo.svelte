@@ -10,11 +10,19 @@
 
 	const PRODUCTION = ['Project', 'Sequence', 'Shot', 'Asset', 'Version', 'Task'];
 	const SUMMARIES = ['chips', 'ellipsis', 'count'] as const;
+
+	const group = 'flex flex-col gap-3';
+	/** One control per row, at the pane's full width, with its caption above it. */
+	const stack = 'flex flex-col gap-4';
+	const field = 'flex w-full flex-col gap-2';
 	const label = 'text-muted-foreground text-xs';
+	const readout = 'text-muted-foreground font-mono text-xs';
+	/** At most 20rem, so the fit has something to cut against. */
+	const narrow = 'max-w-80';
 </script>
 
 <div class="flex flex-col gap-4">
-	<div class="flex flex-col gap-2" data-demo="single">
+	<div class={field} data-demo="single">
 		<span class={label}>Single, allow list: the six production types</span>
 		<EntityTypePicker
 			{schema}
@@ -22,10 +30,10 @@
 			onValueChange={(next) => (one = next as string | null)}
 			allow={PRODUCTION}
 		/>
-		<span class="text-muted-foreground font-mono text-xs">{one ?? 'null'}</span>
+		<span class={readout}>{one ?? 'null'}</span>
 	</div>
 
-	<div class="flex flex-col gap-2" data-demo="multi">
+	<div class={field} data-demo="multi">
 		<span class={label}>Multi, deny list: everything but the two user types</span>
 		<EntityTypePicker
 			{schema}
@@ -35,30 +43,78 @@
 			deny={['HumanUser', 'ApiUser']}
 			placeholder="Select entity types"
 		/>
-		<span class="text-muted-foreground font-mono text-xs">[{many.join(', ')}]</span>
+		<span class={readout}>[{many.join(', ')}]</span>
 	</div>
 
-	<div class="flex flex-col gap-2" data-demo="summary">
-		<span class={label}>What the control shows for six selected</span>
-		{#each SUMMARIES as summary (summary)}
-			<div data-demo-summary={summary}>
-				<EntityTypePicker {schema} multiple value={PRODUCTION} {summary} allow={PRODUCTION} clearable={false} />
-			</div>
-		{/each}
+	<div class={group} data-demo="summary">
+		<span class={label}>What the control shows for six selected, wide and narrow</span>
+		<div class={stack}>
+			{#each SUMMARIES as summary (summary)}
+				<div class={field} data-demo-summary={summary}>
+					<span class={label}>{summary}, full width</span>
+					<EntityTypePicker
+						{schema}
+						multiple
+						value={PRODUCTION}
+						{summary}
+						allow={PRODUCTION}
+						clearable={false}
+					/>
+				</div>
+				<div class={field} data-demo-summary="{summary}-narrow">
+					<span class={label}>{summary}, at most 20rem</span>
+					<div class={narrow}>
+						<EntityTypePicker
+							{schema}
+							multiple
+							value={PRODUCTION}
+							{summary}
+							allow={PRODUCTION}
+							clearable={false}
+						/>
+					</div>
+				</div>
+			{/each}
+		</div>
 	</div>
 
-	<div class="flex flex-col gap-2" data-demo="codes">
+	<div class={group} data-demo="codes">
 		<span class={label}>The code under the display name, and without it</span>
-		<EntityTypePicker {schema} value="Version" allow={PRODUCTION} />
-		<EntityTypePicker {schema} value="Version" allow={PRODUCTION} showCode={false} />
+		<div class={stack}>
+			<div class={field}>
+				<span class={label}>With the code</span>
+				<EntityTypePicker {schema} value="Version" allow={PRODUCTION} />
+			</div>
+			<div class={field}>
+				<span class={label}>Without it</span>
+				<EntityTypePicker {schema} value="Version" allow={PRODUCTION} showCode={false} />
+			</div>
+		</div>
 	</div>
 
-	<div class="flex flex-col gap-2">
+	<div class={group}>
 		<span class={label}>Sizes, read-only and invalid</span>
-		<EntityTypePicker {schema} value="Shot" size="sm" allow={PRODUCTION} />
-		<EntityTypePicker {schema} value="Asset" size="lg" allow={PRODUCTION} />
-		<EntityTypePicker {schema} value="Task" readonly />
-		<EntityTypePicker {schema} value={null} invalid />
-		<EntityTypePicker {schema} value="Version" disabled />
+		<div class={stack}>
+			<div class={field}>
+				<span class={label}>sm</span>
+				<EntityTypePicker {schema} value="Shot" size="sm" allow={PRODUCTION} />
+			</div>
+			<div class={field}>
+				<span class={label}>lg</span>
+				<EntityTypePicker {schema} value="Asset" size="lg" allow={PRODUCTION} />
+			</div>
+			<div class={field}>
+				<span class={label}>Read-only</span>
+				<EntityTypePicker {schema} value="Task" readonly />
+			</div>
+			<div class={field}>
+				<span class={label}>Invalid</span>
+				<EntityTypePicker {schema} value={null} invalid />
+			</div>
+			<div class={field}>
+				<span class={label}>Disabled</span>
+				<EntityTypePicker {schema} value="Version" disabled />
+			</div>
+		</div>
 	</div>
 </div>

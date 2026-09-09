@@ -36,14 +36,21 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/entity-type-pi
 | `invalid` | `boolean` | `false` | Applies the invalid ring and `aria-invalid`. |
 | `showCode` | `boolean` | `true` | Shows the code under the display name where the two differ. |
 | `summary` | `'chips' \| 'ellipsis' \| 'count'` | `'ellipsis'` | What the control shows for the selection in multi mode. |
-| `max` | `number` | `0` | Chips drawn before the rest becomes `+n`. `0` draws every chip. |
+| `max` | `number` | `0` | Chips drawn before the rest becomes `+n`. `0` lets the row fit what it can. |
 | `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | |
 | `className` / `class` | `string` | — | Merged after the widget's own classes. |
 
 Each row shows the display name, with the code beneath it in mono when the two differ, unless
-`showCode` is off. The control shows the chosen type as a chip, and one chip per type in multi mode,
-capped by `max` and summarised by `summary`. In multi mode every row carries a checkbox and the list
-stays open across selections.
+`showCode` is off. In multi mode every row carries a checkbox and the list stays open across
+selections.
+
+`chips` makes the control a token field: every chip, wrapped, with the caret beside them, and
+`+n` after the last chip `max` allows.
+`ellipsis` makes it a one-line trigger: as many whole chips as the row fits, never a cut one,
+then `+n` inline after the last, the whole list in the tooltip, and the search box at the top of
+the popup.
+`count` makes it the same trigger reading `3 selected`.
+A single picker is always a token field, whatever `summary` says.
 
 `allow` is applied first and `deny` second, both to the derived list rather than to the read, so a
 caller narrowing the set sees the list change with no second call.
@@ -62,7 +69,7 @@ None.
 
 | key | does |
 |---|---|
-| any text | Opens the list and narrows the rows. |
+| any text | Narrows the rows, from the caret in a token field and from the popup's search box otherwise. |
 | `Enter`, `Space` | On the chevron, opens the list. |
 | `Down`, `Up` | Move the cursor through the rows. |
 | `Enter` | Choose the highlighted type. In multi mode, toggles it and keeps the list open. |

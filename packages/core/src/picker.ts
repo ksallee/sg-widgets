@@ -250,8 +250,47 @@ export function withSelectedPinned(
 /** What a multi picker's control shows for the selection. */
 export type PickerSummary = 'chips' | 'ellipsis' | 'count';
 
-/** Chips `ellipsis` draws before the rest becomes `+n`, when `max` names no number. */
+/** Chips `ellipsis` draws before the rest becomes `+n`, when nothing has measured the row. */
 export const ELLIPSIS_CHIPS = 3;
+
+/** How many chips a row shows, and how many it hides behind `+n`. */
+export interface ChipFit {
+  visible: number;
+  hidden: number;
+}
+
+/** A measured chip row: each chip's width, the room it has, and the room held back. */
+export interface ChipRow {
+  /** Chip widths in order, each carrying the gap that follows it. */
+  widths: readonly number[];
+  /** The room the chips may occupy. */
+  available: number;
+  /** Room held back for the `+n` pill, spent only when something is hidden. */
+  reserve: number;
+}
+
+/**
+ * How many whole chips fit `available`, taken greedily from the first.
+ *
+ * A chip is never cut: one that does not fit whole is hidden, and so is every chip
+ * after it. `reserve` is the room the `+n` pill needs, so it is subtracted only
+ * once the row overflows and the pill is drawn. Each width carries its own trailing
+ * gap, so `k` chips cost the sum of the first `k` widths whatever follows them.
+ */
+export function fitChips(widths: readonly number[], available: number, reserve: number): ChipFit {
+  let total = 0;
+  for (const width of widths) total += width;
+  if (total <= available) return { visible: widths.length, hidden: 0 };
+  const budget = Math.max(0, available - reserve);
+  let used = 0;
+  let visible = 0;
+  for (const width of widths) {
+    if (used + width > budget) break;
+    used += width;
+    visible += 1;
+  }
+  return { visible, hidden: widths.length - visible };
+}
 
 export interface SelectionSummary<T> {
   /** The items drawn as chips, in order. Empty under `count`. */
@@ -269,20 +308,32 @@ export interface SelectionSummary<T> {
 /**
  * What a multi picker draws for its selection.
  *
- * `chips` draws every chip and wraps. `ellipsis` keeps one line: the first `max`
- * chips, then `+n`, with the whole list in the title. `count` draws neither and
- * reads `3 selected`. `max` bounds the chips in either chip mode; `0` means every
- * chip, which `ellipsis` reads as three because it cannot wrap.
+ * `chips` draws every chip and wraps. `ellipsis` keeps one line: as many whole
+ * chips as the measured row fits, then `+n`, with the whole list in the title.
+ * `count` draws neither and reads `3 selected`. `max` bounds the chips in either
+ * chip mode; `0` means every chip. An `ellipsis` row nothing has measured yet
+ * falls back to three chips.
  */
 export function summariseSelection<T>(
   items: readonly T[],
   labelOf: (item: T) => string,
-  options: { summary?: PickerSummary | undefined; max?: number | undefined } = {},
+  options: {
+    summary?: PickerSummary | undefined;
+    max?: number | undefined;
+    /** The measured row. `ellipsis` fits whole chips to it; the other modes ignore it. */
+    fit?: ChipRow | undefined;
+  } = {},
 ): SelectionSummary<T> {
   const summary = options.summary ?? 'chips';
   const asked = options.max ?? 0;
-  const max = asked > 0 ? asked : summary === 'ellipsis' ? ELLIPSIS_CHIPS : 0;
-  const shown = summary === 'count' ? [] : max > 0 ? items.slice(0, max) : [...items];
+  const fitted =
+    summary === 'ellipsis' && options.fit
+      ? fitChips(options.fit.widths, options.fit.available, options.fit.reserve).visible
+      : null;
+  const max = asked > 0 ? asked : summary === 'ellipsis' && fitted === null ? ELLIPSIS_CHIPS : 0;
+  const limit = fitted === null ? max : max > 0 ? Math.min(fitted, max) : fitted;
+  const shown =
+    summary === 'count' ? [] : fitted === null && limit === 0 ? [...items] : items.slice(0, limit);
   return {
     shown,
     overflow: items.length - shown.length,

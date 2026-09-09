@@ -833,6 +833,90 @@
           "type": "registry:component"
         }
       ]
+    },
+    {
+      "name": "global-search",
+      "type": "registry:component",
+      "title": "Global Search",
+      "description": "A command palette that searches Flow Production Tracking by name across several entity types.",
+      "categories": [
+        "flow-production-tracking",
+        "search"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "https://sg-widgets.dev/r/react/entity-chip.json",
+        "https://sg-widgets.dev/r/react/thumbnail.json",
+        "https://sg-widgets.dev/r/react/user-avatar.json",
+        "command",
+        "dialog",
+        "button",
+        "kbd",
+        "skeleton"
+      ],
+      "docs": "One text search covers every configured type. Results are grouped by type with the matched words in bold; Cmd/Ctrl+K opens it when hotkey is on.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/global-search.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "hierarchical-search",
+      "type": "registry:component",
+      "title": "Hierarchical Search",
+      "description": "A drill-down over the Flow Production Tracking navigation tree, with breadcrumb results.",
+      "categories": [
+        "flow-production-tracking",
+        "search"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "command",
+        "skeleton"
+      ],
+      "docs": "Browses one level per call and searches by matching words, then asking where each hit sits. Emits the row picked and the path that reaches it.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/hierarchical-search.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "context-selector",
+      "type": "registry:component",
+      "title": "Context Selector",
+      "description": "The project, row and task a user is working on, changed from recents, assigned tasks or the tree.",
+      "categories": [
+        "flow-production-tracking",
+        "search"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "https://sg-widgets.dev/r/react/entity-chip.json",
+        "https://sg-widgets.dev/r/react/status-badge.json",
+        "https://sg-widgets.dev/r/react/hierarchical-search.json",
+        "popover",
+        "skeleton"
+      ],
+      "docs": "Installs HierarchicalSearch alongside it. Assigned tasks are one search on Task filtered by task_assignees.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/context-selector.tsx",
+          "type": "registry:component"
+        }
+      ]
     }
   ]
 }

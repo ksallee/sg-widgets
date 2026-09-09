@@ -30,10 +30,10 @@
  */
 import type { SearchOptions, SgClient, SummarizeOptions } from './client.js';
 import { SgApiError } from './client.js';
-import type { WireGroup } from './filter.js';
+import type { EntityRef, TextSearchFilter } from './filter.js';
 
 /** The methods the protocol carries, one POST each. */
-export const PROXY_METHODS = ['entityTypes', 'fields', 'fieldWithProject', 'search', 'textSearch', 'statuses', 'update', 'hierarchyExpand', 'summarize'] as const;
+export const PROXY_METHODS = ['entityTypes', 'fields', 'fieldWithProject', 'search', 'textSearch', 'statuses', 'update', 'hierarchyExpand', 'hierarchySearch', 'summarize'] as const;
 
 export type ProxyMethod = (typeof PROXY_METHODS)[number];
 
@@ -69,9 +69,17 @@ interface Params {
   id?: unknown;
   patch?: unknown;
   path?: unknown;
+  rootPath?: unknown;
+  entity?: unknown;
 }
 
 class BadRequest extends Error {}
+
+function entityRef(value: unknown, name: string): EntityRef {
+  const ref = value as EntityRef | null;
+  if (ref === null || typeof ref !== 'object') throw new BadRequest(`'${name}' must be a {type, id} object`);
+  return { type: str(ref.type, `${name}.type`), id: num(ref.id, `${name}.id`) };
+}
 
 function str(value: unknown, name: string): string {
   if (typeof value !== 'string' || value.length === 0) throw new BadRequest(`'${name}' must be a non-empty string`);
@@ -126,13 +134,15 @@ function call(client: SgClient, method: ProxyMethod, p: Params): Promise<unknown
     case 'textSearch':
       return client.textSearch(
         str(p.text, 'text'),
-        (p.entityTypes ?? {}) as Record<string, WireGroup | null>,
+        (p.entityTypes ?? {}) as Record<string, TextSearchFilter>,
         (p.page ?? undefined) as { size?: number; number?: number } | undefined,
       );
     case 'statuses':
       return client.statuses();
     case 'update':
       return client.update(str(p.entityType, 'entityType'), num(p.id, 'id'), obj(p.patch, 'patch'));
+    case 'hierarchySearch':
+      return client.hierarchySearch(str(p.rootPath, 'rootPath'), entityRef(p.entity, 'entity'));
     case 'hierarchyExpand':
       return client.hierarchyExpand(str(p.path, 'path'));
     case 'summarize':

@@ -18,6 +18,7 @@ import type {
   EntityRow,
   EntityTypeInfo,
   HierarchyNode,
+  HierarchyPath,
   SummarizeOptions,
   SummarizeResult,
   SearchOptions,
@@ -26,7 +27,7 @@ import type {
   TextSearchRow,
 } from './client.js';
 import { SgApiError } from './client.js';
-import type { WireGroup } from './filter.js';
+import type { EntityRef, TextSearchFilter } from './filter.js';
 import type { ProxyError, ProxyMethod } from './proxy-handler.js';
 import type { FieldSchema } from './schema.js';
 import type { StatusRecord } from './status.js';
@@ -95,7 +96,7 @@ export class ProxyClient implements SgClient {
 
   textSearch(
     text: string,
-    entityTypes: Record<string, WireGroup | null>,
+    entityTypes: Record<string, TextSearchFilter>,
     page?: { size?: number; number?: number },
   ): Promise<TextSearchRow[]> {
     return this.post('textSearch', { text, entityTypes, page: page ?? null });
@@ -107,6 +108,10 @@ export class ProxyClient implements SgClient {
 
   update(entityType: string, id: number, patch: Record<string, unknown>): Promise<EntityRow> {
     return this.post('update', { entityType, id, patch });
+  }
+
+  hierarchySearch(rootPath: string, entity: EntityRef): Promise<HierarchyPath[]> {
+    return this.post('hierarchySearch', { rootPath, entity });
   }
 
   hierarchyExpand(path: string): Promise<HierarchyNode> {

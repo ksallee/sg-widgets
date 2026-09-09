@@ -338,13 +338,24 @@ describe('textSearch', () => {
   });
 
   it('respects the per-type filter and returns the flattened row', async () => {
-    const scoped = await c.textSearch('0010', {
-      Shot: { logical_operator: 'and', conditions: [['project', 'is', { type: 'Project', id: 71 }]] },
-    });
+    // The map's value is a filter array, which is the only shape `entity_types` takes.
+    const scoped = await c.textSearch('0010', { Shot: [['project', 'is', { type: 'Project', id: 71 }]] });
     expect(scoped.length).toBeGreaterThan(0);
     expect(scoped.every((row) => row.name.startsWith('hb'))).toBe(true);
     const row = scoped[0];
-    expect(Object.keys(row ?? {}).sort()).toEqual(['id', 'image', 'name', 'projectId', 'status', 'type']);
+    // There is no `fields` parameter: name, links and status, whatever the type.
+    expect(Object.keys(row ?? {}).sort()).toEqual(['id', 'links', 'name', 'status', 'type']);
+    expect(row?.links).toEqual(['Sequence', 'hb010']);
+  });
+
+  it('takes an and-group as well, and refuses a shape the array form cannot carry', async () => {
+    const group = await c.textSearch('0010', {
+      Shot: { logical_operator: 'and', conditions: [['project', 'is', { type: 'Project', id: 71 }]] },
+    });
+    expect(group.map((r) => r.name)).toEqual(
+      (await c.textSearch('0010', { Shot: [['project', 'is', { type: 'Project', id: 71 }]] })).map((r) => r.name),
+    );
+    await expect(c.textSearch('0010', { Shot: { logical_operator: 'or', conditions: [] } })).rejects.toThrow(/'and' only/);
   });
 
   it('caps page size at 25 and pages with page.number', async () => {
@@ -527,7 +538,7 @@ describe('the navigation tree', () => {
     expect(root.children.every((n) => n.hasChildren)).toBe(true);
   });
 
-  it('walks Project > Sequence > Shot', async () => {
+  it('walks Project > Sequence > Shot > Task', async () => {
     const c = client();
     const shots = await c.hierarchyExpand('/Project/70/Shot');
     const sequence = shots.children[0];
@@ -538,8 +549,25 @@ describe('the navigation tree', () => {
     expect(level.children.length).toBeGreaterThan(0);
     const shot = level.children[0];
     if (!shot) throw new Error('no shot');
-    expect(shot.hasChildren).toBe(false);
     expect(hierarchyEntity(shot.ref)?.type).toBe('Shot');
+    // A Shot carries its Tasks, so the tree goes one level further.
+    expect(shot.hasChildren).toBe(true);
+    const shotNode = await c.hierarchyExpand(shot.path);
+    expect(shotNode.children.map((n) => n.label)).toEqual(['Tasks']);
+    const tasks = await c.hierarchyExpand(shotNode.children[0]?.path ?? '');
+    expect(tasks.children.length).toBeGreaterThan(0);
+    expect(hierarchyEntity(tasks.children[0]?.ref)?.type).toBe('Task');
+  });
+
+  it('walks Project > Asset > Task', async () => {
+    const c = client();
+    const assets = await c.hierarchyExpand('/Project/70/Asset');
+    const asset = assets.children[0];
+    if (!asset) throw new Error('no asset');
+    expect(hierarchyEntity(asset.ref)?.type).toBe('Asset');
+    const assetNode = await c.hierarchyExpand(asset.path);
+    const tasks = await c.hierarchyExpand(assetNode.children[0]?.path ?? '');
+    expect(hierarchyEntity(tasks.children[0]?.ref)?.type).toBe('Task');
   });
 
   it('400s on a project that is not there', async () => {

@@ -1,0 +1,74 @@
+---
+title: HierarchicalSearch
+description: A drill-down over the Flow Production Tracking navigation tree, with breadcrumb results.
+---
+
+import Demo from '../../../components/Demo.astro';
+
+Walks the navigation tree level by level, or searches it, and emits the row you pick with the path
+that reaches it.
+
+## Install
+
+```sh
+pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/hierarchical-search.json
+pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/hierarchical-search.json
+```
+
+<Demo name="hierarchical-search" title="HierarchicalSearch: browse a project, or search it and read the path" />
+
+## Props
+
+| prop | type | default | meaning |
+|---|---|---|---|
+| `client` | `SgClient` | required | Where rows come from. Wrap it in `createQueryCache` once for the app. |
+| `rootPath` | `string` | `'/'` | Where the tree starts. `/Project/70` scopes it to that project. |
+| `entityTypes` | `string[] \| Record<string, WireCondition[] \| null>` | Shot, Asset, Sequence, Task | Types a search may end on. |
+| `placeholder` | `string` | `'Search the hierarchy…'` | Text in the search input. |
+| `class` / `className` | `string` | — | Merged after the widget's own classes. |
+
+With no query the list is one level of the tree. With a query it is the rows that match, each shown
+as the breadcrumb that reaches it, the row itself last and in bold.
+
+`entityTypes` limits what a search returns. Browsing reaches every level whatever it says; a row that
+is not one of these types opens instead of being picked.
+
+## Events
+
+| event | React | Svelte | payload |
+|---|---|---|---|
+| select | `onSelect` | `onselect` | The row picked, then every row the path runs through, root first. |
+
+## Slots
+
+None.
+
+## Keyboard
+
+| key | does |
+|---|---|
+| `Down` / `Up` | Moves through the level. |
+| `Enter` | Picks the row, or opens it when it is not a searchable type. |
+| `Right` | Opens the level below the row. |
+| `Left` / `Backspace` | Goes back up one level. |
+| `Escape` | Clears the query. |
+
+`Backspace` goes up only when the query is empty; otherwise it edits the query.
+
+## API behaviour
+
+The tree is read one level per call: the answer names the paths of its children and says which of
+them are worth opening (post_hierarchy_expand).
+
+A path runs through field names, such as `sg_sequence` between a project's shots and a sequence, so
+the shape of the tree is the site's own navigation configuration rather than a fixed hierarchy
+(post_hierarchy_search).
+
+Searching does not go through the hierarchy endpoints. `hierarchy/_search` takes an entity and
+answers where it sits; its criteria accepts the single key `entity` and any other key answers
+`search_criteria size must be 1`, which counts the keys it recognises rather than the ones sent
+(post_hierarchy_search). So the words are matched by `_text_search` and each hit is then asked for
+its path.
+
+The hierarchy endpoints take `application/json` and refuse the vendor content types every other POST
+on this API demands (046_search_without_a_path).

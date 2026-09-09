@@ -1,0 +1,72 @@
+---
+title: ContextSelector
+description: The project, row and task a user is working on, changed from recents, assigned tasks or the tree.
+---
+
+import Demo from '../../../components/Demo.astro';
+
+Shows the project, the linked row and the task the user is working on, and changes them from one
+popover.
+
+## Install
+
+```sh
+pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/context-selector.json
+pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/context-selector.json
+```
+
+<Demo name="context-selector" title="ContextSelector: recents, assigned tasks and the tree in one popover" />
+
+## Props
+
+| prop | type | default | meaning |
+|---|---|---|---|
+| `client` | `SgClient` | required | Where rows come from. Wrap it in `createQueryCache` once for the app. |
+| `context` | `WorkContext` | empty | The project, row and task on show. |
+| `currentUser` | `EntityRef \| null` | `null` | Whose assigned tasks the second section lists. |
+| `recents` | `WorkContext[]` | `[]` | Contexts used before, newest first. |
+| `recentLimit` | `number` | `5` | How many recents survive a change. |
+| `open` | `boolean` | `false` | Whether the popover is open. |
+| `class` / `className` | `string` | — | Merged after the widget's own classes. |
+
+A `WorkContext` is a project, an entity and a task, each of them a row reference or null.
+
+The popover holds three sections in this order: the recents the caller passed, the tasks assigned to
+`currentUser` grouped by project with their step and status, and a drill-down over the navigation
+tree scoped to the current project.
+
+Picking an assigned task sets all three parts at once: the task, the row it hangs off and its
+project. Picking from the tree reads the same three out of the path.
+
+## Events
+
+| event | React | Svelte | payload |
+|---|---|---|---|
+| contextChange | `onContextChange` | `oncontextChange` | The new project, entity and task. |
+| recents | `onRecentsChange` | `onrecents` | The new recents list, the change first. |
+| open | `onOpenChange` | `bind:open` | Whether the popover is open. |
+
+## Slots
+
+None.
+
+## Keyboard
+
+| key | does |
+|---|---|
+| `Enter` / `Space` | Opens the popover from the trigger, and picks the row under focus. |
+| `Tab` | Moves through the recents, the assigned tasks and into the tree. |
+| `Down` / `Up` | Moves through the tree, once focus is in its input. |
+| `Right` / `Left` | Opens the level below a tree row, and goes back up. |
+| `Escape` | Closes the popover and returns focus to the trigger. |
+
+## API behaviour
+
+Assigned tasks are one search on Task filtered by `task_assignees`, a multi-entity field of Group and
+HumanUser (entity_types/Task).
+
+A Task is named by `content`. It has no `code` and no `name` field, and asking for one is a 400
+rather than an empty result (entity_types/Task).
+
+A task's status is a bare code with no row behind it, so its label comes from the field's display
+values and its colour from the site's Status table (field_types/status_list, 010_status_icons).

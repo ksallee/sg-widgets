@@ -6,7 +6,8 @@
  * against their own proxy. `RestClient` is the reference implementation against
  * the REST API itself, for tests, tools and apps that can hold a token.
  */
-import type { WireGroup } from './filter.js';
+import type { TextSearchFilter, WireCondition, WireGroup } from './filter.js';
+import { toFilterArray } from './filter.js';
 import type { FieldSchema, RawFieldSchema, RawFieldsResponse } from './schema.js';
 import { normalizeField, normalizeFields } from './schema.js';
 import type { StatusRecord } from './status.js';
@@ -33,14 +34,20 @@ export interface SearchResult {
   hasMore: boolean;
 }
 
-/** Row of `_text_search`, which is flattened and not the `_search` shape. */
+/**
+ * Row of `_text_search`, which is flattened and not the `_search` shape. There is
+ * no `fields` parameter: every row is name, links and status whatever the type, so
+ * a caller that needs a thumbnail or a project re-reads with `search`
+ * (post_entity_text_search).
+ */
 export interface TextSearchRow {
   type: string;
   id: number;
   name: string;
-  image?: string | null;
-  projectId?: number | null;
-  status?: string | null;
+  /** The linked row's type and name, `['', '']` when it links to nothing. Two bare strings, not a reference. */
+  links: [string, string];
+  /** Status code, never a label. */
+  status: string | null;
 }
 
 /**
@@ -63,6 +70,18 @@ export interface HierarchyNode {
   hasChildren: boolean;
   /** One level only: a child's own children come from its own call. */
   children: HierarchyNode[];
+}
+
+/** Where one row sits in the navigation tree, as `POST /hierarchy/_search` answers it. */
+export interface HierarchyPath {
+  /** The row's own display name. */
+  label: string;
+  /** The same breadcrumb rendered for a person. The project is not in it. */
+  pathLabel: string;
+  /** One path per level, root first; the last entry is the row itself. */
+  incrementalPath: string[];
+  ref: EntityRef;
+  projectId: number | null;
 }
 
 /** The row a node stands for, or null when it stands for a type or nothing. */
@@ -128,8 +147,17 @@ export interface SgClient {
    */
   fieldWithProject(entityType: string, field: string, projectId: number): Promise<FieldSchema>;
   search(entityType: string, options: SearchOptions): Promise<SearchResult>;
-  /** Free-text search across several types. Every word must match. Page size is 1 to 25. */
-  textSearch(text: string, entityTypes: Record<string, WireGroup | null>, page?: { size?: number; number?: number }): Promise<TextSearchRow[]>;
+  /**
+   * Free-text search across several types at once. Every word must match, each as
+   * a case-insensitive substring of the row's name or of the linked row's name
+   * (probe 053). Page size is 1 to 25 and 25 is also the default; there is no
+   * `links`, so page until the answer is empty.
+   */
+  textSearch(
+    text: string,
+    entityTypes: Record<string, TextSearchFilter>,
+    page?: { size?: number; number?: number },
+  ): Promise<TextSearchRow[]>;
   /** Status entities with colour and icon. */
   statuses(): Promise<StatusRecord[]>;
   /**
@@ -145,6 +173,13 @@ export interface SgClient {
    * and a child's own `path` below it (post_hierarchy_expand).
    */
   hierarchyExpand(path: string): Promise<HierarchyNode>;
+  /**
+   * Where a row sits in the navigation tree, under `rootPath` (`/Project/<id>`).
+   * The search criteria takes the literal key `entity` and nothing else: any other
+   * key answers `search_criteria size must be 1`, which counts the keys it
+   * recognises rather than the ones sent (post_hierarchy_search).
+   */
+  hierarchySearch(rootPath: string, entity: EntityRef): Promise<HierarchyPath[]>;
   /**
    * Aggregate rows without paging them. One `grouping` returns a field's distinct
    * values and their counts (020_summarize).
@@ -282,19 +317,20 @@ export class RestClient implements SgClient {
     return { data: res.data, hasMore: res.data.length === size };
   }
 
-  async textSearch(text: string, entityTypes: Record<string, WireGroup | null>, page?: { size?: number; number?: number }): Promise<TextSearchRow[]> {
-    const types: Record<string, unknown> = {};
-    for (const [t, f] of Object.entries(entityTypes)) types[t] = f ?? [];
+  async textSearch(
+    text: string,
+    entityTypes: Record<string, TextSearchFilter>,
+    page?: { size?: number; number?: number },
+  ): Promise<TextSearchRow[]> {
+    // `entity_types` maps a type to a filter array, `[]` for none. It is the only
+    // place in the API where a filter is keyed by the type it applies to.
+    const types: Record<string, WireCondition[]> = {};
+    for (const [t, f] of Object.entries(entityTypes)) types[t] = toFilterArray(f);
+    // 25 is the cap and the default, and the message is off by one: 26 answers
+    // `size must be less than 25` while 25 answers 25 rows (probe 053).
     const body = { text, entity_types: types, page: { size: Math.min(page?.size ?? 25, 25), number: page?.number ?? 1 } };
-    const res = await this.request<{ data: Array<Record<string, unknown>> }>('POST', '/entity/_text_search', body);
-    return res.data.map((row) => ({
-      type: String(row['type']),
-      id: Number(row['id']),
-      name: String(row['name'] ?? ''),
-      image: (row['image'] as string | null | undefined) ?? null,
-      projectId: (row['project_id'] as number | null | undefined) ?? null,
-      status: (row['status'] as string | null | undefined) ?? null,
-    }));
+    const res = await this.request<{ data: TextSearchWire[] }>('POST', '/entity/_text_search', body);
+    return res.data.map(toTextSearchRow);
   }
 
   async update(entityType: string, id: number, patch: Record<string, unknown>): Promise<EntityRow> {
@@ -324,6 +360,14 @@ export class RestClient implements SgClient {
     // sent (post_hierarchy_expand).
     const res = await this.request<{ data: RawHierarchyNode }>('POST', '/hierarchy/_expand', { path }, undefined, 'application/json');
     return normalizeHierarchyNode(res.data, path);
+  }
+
+  async hierarchySearch(rootPath: string, entity: EntityRef): Promise<HierarchyPath[]> {
+    // The criteria takes the literal key `entity`; every other key answers the same
+    // misleading `search_criteria size must be 1` (post_hierarchy_search).
+    const body = { root_path: rootPath, search_criteria: { entity: { type: entity.type, id: entity.id } } };
+    const res = await this.request<{ data: HierarchyPathWire[] }>('POST', '/hierarchy/_search', body, undefined, 'application/json');
+    return res.data.map(toHierarchyPath);
   }
 
   async statuses(): Promise<StatusRecord[]> {
@@ -376,6 +420,44 @@ function normalizeSummarize(res: SummarizeEnvelope): SummarizeResult {
       groupValue: g.group_value ?? null,
       summaries: g.summaries ?? {},
     })),
+  };
+}
+
+/** `{id, type, attributes: {name, links, status}, links: {self}}`, and nothing else. */
+interface TextSearchWire {
+  id: number;
+  type: string;
+  attributes?: { name?: string | null; links?: unknown; status?: string | null };
+}
+
+function toTextSearchRow(row: TextSearchWire): TextSearchRow {
+  const links = row.attributes?.links;
+  const pair: [string, string] = Array.isArray(links) ? [String(links[0] ?? ''), String(links[1] ?? '')] : ['', ''];
+  return {
+    type: String(row.type),
+    id: Number(row.id),
+    name: String(row.attributes?.name ?? ''),
+    links: pair,
+    status: row.attributes?.status ?? null,
+  };
+}
+
+/** `ref` is the flat `{id, type}` here, not the `{kind, value}` of `_expand`. */
+interface HierarchyPathWire {
+  label?: string;
+  path_label?: string;
+  incremental_path?: string[];
+  ref: { type: string; id: number };
+  project_id?: number | null;
+}
+
+function toHierarchyPath(row: HierarchyPathWire): HierarchyPath {
+  return {
+    label: String(row.label ?? ''),
+    pathLabel: String(row.path_label ?? ''),
+    incrementalPath: row.incremental_path ?? [],
+    ref: { type: row.ref.type, id: row.ref.id },
+    projectId: row.project_id ?? null,
   };
 }
 

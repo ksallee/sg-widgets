@@ -695,6 +695,75 @@
           "type": "registry:component"
         }
       ]
+    },
+    {
+      "name": "global-search",
+      "type": "registry:component",
+      "title": "Global Search",
+      "description": "A command palette that searches Flow Production Tracking by name across several entity types.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte"
+      ],
+      "registryDependencies": [
+        "local:entity-chip",
+        "local:thumbnail",
+        "local:user-avatar",
+        "command",
+        "dialog",
+        "button",
+        "kbd",
+        "skeleton"
+      ],
+      "files": [
+        {
+          "path": "src/lib/registry/components/global-search.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "hierarchical-search",
+      "type": "registry:component",
+      "title": "Hierarchical Search",
+      "description": "A drill-down over the Flow Production Tracking navigation tree, with breadcrumb results.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte"
+      ],
+      "registryDependencies": [
+        "command",
+        "skeleton"
+      ],
+      "files": [
+        {
+          "path": "src/lib/registry/components/hierarchical-search.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "context-selector",
+      "type": "registry:component",
+      "title": "Context Selector",
+      "description": "The project, row and task a user is working on, changed from recents, assigned tasks or the tree.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte"
+      ],
+      "registryDependencies": [
+        "local:entity-chip",
+        "local:status-badge",
+        "local:hierarchical-search",
+        "popover",
+        "skeleton"
+      ],
+      "files": [
+        {
+          "path": "src/lib/registry/components/context-selector.svelte",
+          "type": "registry:component"
+        }
+      ]
     }
   ]
 }

@@ -18,6 +18,7 @@ import type {
   EntityRow,
   EntityTypeInfo,
   HierarchyNode,
+  HierarchyPath,
   SearchOptions,
   SearchResult,
   SgClient,
@@ -25,7 +26,7 @@ import type {
   SummarizeResult,
   TextSearchRow,
 } from './client.js';
-import type { WireGroup } from './filter.js';
+import type { EntityRef, TextSearchFilter } from './filter.js';
 import type { FieldSchema } from './schema.js';
 import type { StatusRecord } from './status.js';
 
@@ -128,7 +129,7 @@ export function createQueryCache(client: SgClient, options: QueryCacheOptions = 
     },
     textSearch(
       text: string,
-      entityTypes: Record<string, WireGroup | null>,
+      entityTypes: Record<string, TextSearchFilter>,
       page?: { size?: number; number?: number },
     ): Promise<TextSearchRow[]> {
       return run('textSearch', [text, entityTypes, page ?? null], () => client.textSearch(text, entityTypes, page));
@@ -138,6 +139,11 @@ export function createQueryCache(client: SgClient, options: QueryCacheOptions = 
     },
     summarize(entityType: string, summarizeOptions?: SummarizeOptions): Promise<SummarizeResult> {
       return run('summarize', [entityType, summarizeOptions ?? null], () => client.summarize(entityType, summarizeOptions));
+    },
+    hierarchySearch(rootPath: string, entity: EntityRef): Promise<HierarchyPath[]> {
+      // A search result's path is asked for once per row shown, so deduping it matters
+      // more here than caching it: several rows of one query hit the same branch.
+      return run('hierarchySearch', [rootPath, entity.type, entity.id], () => client.hierarchySearch(rootPath, entity));
     },
     hierarchyExpand(path: string): Promise<HierarchyNode> {
       // One level per call, so a tree that walks a project is one cached entry per node

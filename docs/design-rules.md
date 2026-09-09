@@ -40,7 +40,8 @@ The goal is one system: a page mixing ten of our widgets must read as one hand.
 
 - Controls come in `sm`, `md` (default), `lg`, matching shadcn's button and input heights (`h-8`, `h-9`,
   `h-10`). Icons inside controls are `size-4` for sm/md and `size-5` for lg. Thumbnails in list rows are
-  `size-6` (sm), `size-8` (md), `size-10` (lg). Avatars follow the same three sizes.
+  `size-6` (sm), `size-8` (md), `size-10` (lg); cards and detail panes use `xl` (h-16) and `2xl` (h-24).
+  Avatars follow the first three sizes.
 - Width is the caller's business: widgets are `w-full` by default and never set a fixed width. A caller
   wraps in a sized container.
 

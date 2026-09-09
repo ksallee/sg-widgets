@@ -1,28 +1,36 @@
 <script lang="ts" module>
 	export type ThumbnailAspect = '16:9' | 'square';
-	export type ThumbnailSize = 'sm' | 'md' | 'lg';
+	export type ThumbnailSize = 'sm' | 'md' | 'lg' | 'xl' | '2xl';
 
 	/** The thumbnail ladder of `docs/design-rules.md`. Width comes from the aspect, never a fixed class. */
 	const BOX: Record<ThumbnailSize, string> = {
 		sm: 'h-6',
 		md: 'h-8',
-		lg: 'h-10'
+		lg: 'h-10',
+		xl: 'h-16',
+		'2xl': 'h-24'
 	};
 	const GLYPH: Record<ThumbnailSize, string> = {
 		sm: 'size-4',
 		md: 'size-4',
-		lg: 'size-5'
+		lg: 'size-5',
+		xl: 'size-6',
+		'2xl': 'size-8'
 	};
 	/** The play badge is decorative chrome, not control iconography, so it scales with the box. */
 	const PLAY_BADGE: Record<ThumbnailSize, string> = {
 		sm: 'size-4',
 		md: 'size-5',
-		lg: 'size-6'
+		lg: 'size-6',
+		xl: 'size-8',
+		'2xl': 'size-10'
 	};
 	const PLAY_GLYPH: Record<ThumbnailSize, string> = {
 		sm: 'size-2.5',
 		md: 'size-3',
-		lg: 'size-3.5'
+		lg: 'size-3.5',
+		xl: 'size-4',
+		'2xl': 'size-5'
 	};
 </script>
 

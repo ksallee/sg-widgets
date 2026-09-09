@@ -51,6 +51,8 @@ function FromTheSite() {
           <Thumbnail src={shots[0]?.src} alt={shots[0]?.code ?? ''} size="sm" />
           <Thumbnail src={shots[0]?.src} alt={shots[0]?.code ?? ''} size="md" />
           <Thumbnail src={shots[0]?.src} alt={shots[0]?.code ?? ''} size="lg" />
+          <Thumbnail src={shots[0]?.src} alt={shots[0]?.code ?? ''} size="xl" />
+          <Thumbnail src={shots[0]?.src} alt={shots[0]?.code ?? ''} size="2xl" />
         </div>
       </section>
 
@@ -68,6 +70,8 @@ function FromTheSite() {
           <Thumbnail src={shots[2]?.src} alt={shots[2]?.code ?? ''} size="sm" playable />
           <Thumbnail src={shots[2]?.src} alt={shots[2]?.code ?? ''} size="md" playable />
           <Thumbnail src={shots[2]?.src} alt={shots[2]?.code ?? ''} size="lg" playable />
+          <Thumbnail src={shots[2]?.src} alt={shots[2]?.code ?? ''} size="xl" playable />
+          <Thumbnail src={shots[2]?.src} alt={shots[2]?.code ?? ''} size="2xl" playable />
         </div>
       </section>
     </>

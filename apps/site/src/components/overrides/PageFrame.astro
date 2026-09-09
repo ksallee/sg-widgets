@@ -1,0 +1,20 @@
+---
+/**
+ * Starlight's page frame, with the demo control bar as the first thing in the main
+ * column: a strip directly under the header, above the page title, rendered once per
+ * page. It shows on the pages that carry a demo, read from `body`, the page's own
+ * source; a page with no body has no demo to drive.
+ */
+import Default from '@astrojs/starlight/components/PageFrame.astro';
+import DemoBar from '../DemoBar.astro';
+
+const { body } = Astro.locals.starlightRoute.entry;
+const hasDemo = body?.includes('<Demo') ?? false;
+---
+
+<Default>
+  <slot name="header" slot="header" />
+  <slot name="sidebar" slot="sidebar" />
+  {hasDemo && <DemoBar />}
+  <slot />
+</Default>

@@ -1,5 +1,5 @@
 /**
- * The Mock/Live half of the demo toolbar.
+ * The Mock/Live half of the site's control bar.
  *
  * Source, site, login and project are page-wide and persisted, so every demo on
  * the page reads the same site. A demo is built once, when the island mounts, so
@@ -19,15 +19,15 @@ import {
   type DemoProject,
 } from '../demos/_shared/live';
 
-function figures(): HTMLElement[] {
-  return [...document.querySelectorAll<HTMLElement>('[data-sg-demo]')];
+function bar(): HTMLElement | null {
+  return document.querySelector<HTMLElement>('[data-sg-bar]');
 }
 
 function say(message: string): void {
-  for (const figure of figures()) {
-    const line = figure.querySelector<HTMLElement>('[data-live-status]');
-    if (line) line.textContent = message;
-  }
+  const line = bar()?.querySelector<HTMLElement>('[data-live-status]');
+  if (!line) return;
+  line.textContent = message;
+  line.title = message; // The line truncates; the whole of it stays readable.
 }
 
 /** `anon` offers the login, `in` the logout, `dev` neither. */
@@ -41,16 +41,24 @@ function paint(): void {
   const state = liveState();
   const source = demoSource();
   const mode = liveMode();
-  for (const figure of figures()) {
+
+  // Each demo states the source its islands were built against.
+  for (const figure of document.querySelectorAll<HTMLElement>('[data-sg-demo]')) {
     figure.dataset.source = source;
-    for (const pick of figure.querySelectorAll<HTMLButtonElement>('[data-source-pick]')) {
+  }
+
+  const strip = bar();
+  if (strip) {
+    strip.dataset.source = source;
+    for (const pick of strip.querySelectorAll<HTMLButtonElement>('[data-source-pick]')) {
       pick.setAttribute('aria-pressed', String(pick.dataset.sourcePick === source));
     }
-    const bar = figure.querySelector<HTMLElement>('[data-live-bar]');
-    if (bar) bar.dataset.liveState = mode;
-    const site = figure.querySelector<HTMLInputElement>('[data-live-site]');
+    const live = strip.querySelector<HTMLElement>('[data-live-bar]');
+    if (live) live.dataset.liveState = mode;
+    const site = strip.querySelector<HTMLInputElement>('[data-live-site]');
     if (site && document.activeElement !== site) site.value = state.siteUrl || demoSiteUrl();
   }
+
   if (source !== 'live') return;
   if (state.problem) say(state.problem);
   else if (mode === 'dev') say('Reading the site with the dev token from .env.local. No login needed.');
@@ -59,12 +67,10 @@ function paint(): void {
 }
 
 /** The site's own project picker, bound to `sg-demo:project`. */
-async function mountProjectPickers(): Promise<void> {
+async function mountProjectPicker(): Promise<void> {
   const state = liveState();
-  const hosts = figures()
-    .map((figure) => figure.querySelector<HTMLElement>('[data-live-project]'))
-    .filter((host): host is HTMLElement => host !== null && !host.dataset.mounted);
-  if (hosts.length === 0 || state.source !== 'live' || state.problem) return;
+  const host = bar()?.querySelector<HTMLElement>('[data-live-project]');
+  if (!host || host.dataset.mounted || state.source !== 'live' || state.problem) return;
 
   // Svelte, because the picker exists in both frameworks and one island is enough here.
   const [{ mount }, { liveClient }, picker] = await Promise.all([
@@ -72,30 +78,27 @@ async function mountProjectPickers(): Promise<void> {
     import('../demos/_shared/live'),
     import('$lib/registry/components/project-picker.svelte'),
   ]);
-  for (const host of hosts) {
-    host.dataset.mounted = 'true';
-    host.replaceChildren();
-    mount(picker.default, {
-      target: host,
-      props: {
-        client: liveClient(),
-        size: 'sm',
-        placeholder: 'Whole site',
-        clearable: true,
-        value: state.project ? { type: 'Project', id: state.project.id, name: state.project.name } : null,
-        onValueChange: (value: { id: number; name?: string } | null) => {
-          const project: DemoProject | null = value ? { id: value.id, name: value.name } : null;
-          setDemoProject(project);
-          location.reload();
-        },
+  host.dataset.mounted = 'true';
+  host.replaceChildren();
+  mount(picker.default, {
+    target: host,
+    props: {
+      client: liveClient(),
+      size: 'sm',
+      placeholder: 'Whole site',
+      clearable: true,
+      value: state.project ? { type: 'Project', id: state.project.id, name: state.project.name } : null,
+      onValueChange: (value: { id: number; name?: string } | null) => {
+        const project: DemoProject | null = value ? { id: value.id, name: value.name } : null;
+        setDemoProject(project);
+        location.reload();
       },
-    });
-  }
+    },
+  });
 }
 
 async function runLogin(button: HTMLButtonElement): Promise<void> {
-  const bar = button.closest<HTMLElement>('[data-live-bar]');
-  const siteUrl = bar?.querySelector<HTMLInputElement>('[data-live-site]')?.value.trim() ?? '';
+  const siteUrl = bar()?.querySelector<HTMLInputElement>('[data-live-site]')?.value.trim() ?? '';
   if (!siteUrl) {
     say('Give the site url first.');
     return;
@@ -114,10 +117,10 @@ async function runLogin(button: HTMLButtonElement): Promise<void> {
   }
 }
 
-export async function mountLiveToolbar(): Promise<void> {
+export async function mountLiveControls(): Promise<void> {
   document.addEventListener('click', (event) => {
     const target = event.target as HTMLElement | null;
-    if (!target?.closest('[data-sg-demo]')) return;
+    if (!target?.closest('[data-sg-bar]')) return;
 
     const pick = target.closest<HTMLElement>('[data-source-pick]');
     if (pick?.dataset.sourcePick) {
@@ -149,5 +152,5 @@ export async function mountLiveToolbar(): Promise<void> {
   paint();
   await prepareDemoSource();
   paint();
-  await mountProjectPickers();
+  await mountProjectPicker();
 }

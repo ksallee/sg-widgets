@@ -216,6 +216,121 @@ export function formatTimecodeFrames(ms: number, frameRate: number): string {
   );
 }
 
+// --- stepping ----------------------------------------------------------------
+
+/** The bounds and the amount one step moves, for one numeric data type. */
+export interface NumberSteps {
+  step: number;
+  min?: number;
+  max?: number;
+}
+
+export interface NumberStepsOptions {
+  /** Frames per second. A timecode steps one frame when it is known, one second when it is not. */
+  frameRate?: number;
+}
+
+/**
+ * The step and the bounds a numeric data type takes when the caller names none.
+ *
+ * A percent runs 0 to 100 because that is the scale it is read on; the column
+ * itself clamps nothing, so a caller with out-of-scale data widens the bounds
+ * (field_types/percent). A duration steps a quarter of an hour, a timecode one
+ * frame, and a float a tenth.
+ */
+export function numberSteps(dataType: string, options: NumberStepsOptions = {}): NumberSteps {
+  switch (dataType) {
+    case 'percent':
+      return { step: 1, min: 0, max: 100 };
+    case 'float':
+      return { step: 0.1 };
+    case 'currency':
+      return { step: 1 };
+    case 'duration':
+      return { step: 15, min: INT32_MIN, max: INT32_MAX };
+    case 'timecode': {
+      const rate = options.frameRate;
+      const frame = rate !== undefined && rate > 0 ? Math.max(1, Math.round(1000 / rate)) : 1000;
+      return { step: frame, min: INT32_MIN, max: INT32_MAX };
+    }
+    default:
+      return { step: 1, min: INT32_MIN, max: INT32_MAX };
+  }
+}
+
+export interface StepOptions {
+  step: number;
+  /** Steps taken at once: ten with Shift, a hundred with Page Up and Page Down. */
+  multiplier?: number;
+  min?: number;
+  max?: number;
+}
+
+/** Decimals a number is written with, capped at the six a float keeps. */
+function decimalsOf(n: number): number {
+  if (!Number.isFinite(n)) return 0;
+  const text = String(n);
+  if (text.includes('e') || text.includes('E')) return FLOAT_PRECISION;
+  const dot = text.indexOf('.');
+  return dot === -1 ? 0 : Math.min(FLOAT_PRECISION, text.length - dot - 1);
+}
+
+/**
+ * Where a step lands: rounded to the decimals the step and the starting value
+ * carry, then clamped. The rounding is what keeps a tenth-sized step off
+ * `0.30000000000000004`.
+ */
+export function settleStep(from: number | null, to: number, options: StepOptions): number {
+  const decimals = Math.max(decimalsOf(options.step), from === null ? 0 : decimalsOf(from));
+  const settled = round(to, decimals);
+  const min = options.min ?? Number.NEGATIVE_INFINITY;
+  const max = options.max ?? Number.POSITIVE_INFINITY;
+  return Math.min(max, Math.max(min, settled));
+}
+
+/** The value one step away. An empty field lands on zero first, then steps. */
+export function stepNumber(from: number | null, direction: 1 | -1, options: StepOptions): number {
+  if (from === null) return settleStep(null, 0, options);
+  return settleStep(from, from + options.step * (options.multiplier ?? 1) * direction, options);
+}
+
+// --- locale numbers ----------------------------------------------------------
+
+export interface NumberInputFormat {
+  locale?: string;
+  /** Exactly this many decimals, zeros kept. */
+  decimals?: number;
+}
+
+/** A number written the way the locale writes it, for putting a stored value back in an input. */
+export function formatNumberInput(value: number, options: NumberInputFormat = {}): string {
+  if (!Number.isFinite(value)) return '';
+  const decimals = options.decimals;
+  return new Intl.NumberFormat(options.locale, {
+    useGrouping: true,
+    ...(decimals === undefined
+      ? { maximumFractionDigits: FLOAT_PRECISION }
+      : { minimumFractionDigits: decimals, maximumFractionDigits: decimals }),
+  }).format(value);
+}
+
+/**
+ * The digits behind a locale-formatted number: spacing and group marks dropped,
+ * the decimal mark turned into a point, so the parsers above read back what the
+ * formatter wrote. A comma is a group mark in every locale that does not spell
+ * its decimal with one.
+ */
+export function unformatNumberInput(raw: string, locale?: string): string {
+  const parts = new Intl.NumberFormat(locale).formatToParts(12345.6);
+  const group = parts.find((part) => part.type === 'group')?.value ?? ',';
+  const decimal = parts.find((part) => part.type === 'decimal')?.value ?? '.';
+  let text = raw.replace(/[\s\u00a0\u202f]/gu, '');
+  text = text.split(group).join('');
+  if (decimal !== ',') text = text.split(',').join('');
+  if (decimal !== '.') text = text.split(decimal).join('.');
+  return text;
+}
+
 // --- dates -------------------------------------------------------------------
 
 const DATE_ONLY = /^(\d{4})-(\d{2})-(\d{2})$/;

@@ -288,9 +288,10 @@
         "lucide-react"
       ],
       "registryDependencies": [
+        "button",
         "input"
       ],
-      "docs": "The data type picks the parse and the format. A duration takes 1h 30m and shows the minutes it will store.",
+      "docs": "The data type picks the parse, the format and the step. A duration takes 1h 30m, steps by a quarter of an hour, and shows the minutes it will store.",
       "files": [
         {
           "path": "src/registry/sg/components/number-editor.tsx",

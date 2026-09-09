@@ -8,6 +8,10 @@ const row = 'flex flex-wrap items-start gap-3';
 const box = 'w-64';
 const readout = 'text-muted-foreground font-mono text-xs tabular-nums';
 
+const MODES = ['icons', 'names', 'both', 'count'] as const;
+const TWO = ['ip', 'apr'];
+const FIVE = ['ip', 'apr', 'rev', 'fin', 'vwd'];
+
 function Pickers() {
   const client = useSgClient();
   const [inProject70, setInProject70] = useState<string[]>(['ip', 'apr']);
@@ -91,6 +95,53 @@ function Pickers() {
               projectId={70}
               value={['ip', 'fin']}
               showCode
+              clearable={false}
+            />
+          </div>
+        </div>
+      </section>
+
+      <section className={group}>
+        <h4 className={label}>What the closed trigger shows, with two and with five selected</h4>
+        <div className={row}>
+          {MODES.map((mode) => (
+            <div className={group} key={mode}>
+              <span className={readout}>{mode}</span>
+              <div className={box} data-demo={`summary-${mode}-2`}>
+                <StatusMultiPicker
+                  client={client}
+                  entityType="Version"
+                  projectId={70}
+                  value={TWO}
+                  summary={mode}
+                  clearable={false}
+                />
+              </div>
+              <div className={box} data-demo={`summary-${mode}-5`}>
+                <StatusMultiPicker
+                  client={client}
+                  entityType="Version"
+                  projectId={70}
+                  value={FIVE}
+                  summary={mode}
+                  clearable={false}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className={group}>
+        <h4 className={label}>Two selected, collapsing above one</h4>
+        <div className={row}>
+          <div className={box} data-demo="max-one">
+            <StatusMultiPicker
+              client={client}
+              entityType="Version"
+              projectId={70}
+              value={TWO}
+              max={1}
               clearable={false}
             />
           </div>

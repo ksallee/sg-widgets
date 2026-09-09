@@ -1,5 +1,7 @@
 <script lang="ts" module>
 	export type StatusMultiPickerSize = 'sm' | 'md' | 'lg';
+	/** What the closed trigger shows for the selection. */
+	export type StatusMultiPickerSummary = 'icons' | 'names' | 'both' | 'count';
 
 	/** Controls follow the input ladder of `docs/design-rules.md`. */
 	const BOX: Record<StatusMultiPickerSize, string> = {
@@ -14,6 +16,12 @@
 	};
 	/** A badge inside a control sits one step down the leaf ladder. */
 	const BADGE: Record<StatusMultiPickerSize, 'sm' | 'md'> = { sm: 'sm', md: 'sm', lg: 'md' };
+	/** The badge row in the trigger: one line, clipped, never taller than the control. */
+	const BADGES = 'flex min-w-0 items-center gap-1 overflow-hidden';
+
+	function countLabel(n: number): string {
+		return `${n} ${n === 1 ? 'status' : 'statuses'}`;
+	}
 
 	const TRIGGER =
 		'border-input bg-background focus-visible:ring-ring focus-visible:ring-offset-background aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 flex w-full min-w-0 items-center rounded-md border text-sm outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 aria-invalid:ring-2';
@@ -55,6 +63,10 @@
 		invalid?: boolean;
 		/** Show the raw code instead of the label. The other one stays in the tooltip. */
 		showCode?: boolean;
+		/** What the closed trigger shows for the selection. */
+		summary?: StatusMultiPickerSummary;
+		/** Above this many selected, every mode reads as a count. `icons` collapses at twice this. */
+		max?: number;
 		/** The site the stock sprite is served from, passed to every badge. */
 		siteUrl?: string;
 		size?: StatusMultiPickerSize;
@@ -77,6 +89,8 @@
 		disabled = false,
 		invalid = false,
 		showCode = false,
+		summary = 'both',
+		max = 3,
 		siteUrl = undefined,
 		size = 'md',
 		class: className
@@ -147,7 +161,10 @@
 	// Read-only wins over disabled and over the loading window.
 	const inert = $derived(!readonly && (disabled || query.loading));
 	const showClear = $derived(clearable && value.length > 0 && !readonly && !disabled);
-	const only = $derived(value.length === 1 ? value[0] : undefined);
+	// Icons take half the width of a badge, so that mode holds twice as many.
+	const collapsed = $derived(
+		summary === 'count' || value.length > (summary === 'icons' ? max * 2 : max)
+	);
 
 	let open = $state(false);
 	let inputEl = $state<HTMLInputElement | null>(null);
@@ -163,11 +180,12 @@
 	}
 </script>
 
-{#snippet badge(code: string)}
+{#snippet badge(code: string, variant: 'both' | 'icon')}
 	<StatusBadge
 		{code}
 		status={query.statuses.get(code) ?? null}
 		field={badgeField}
+		{variant}
 		size={BADGE[size]}
 		label={showCode ? 'code' : 'name'}
 		{siteUrl}
@@ -177,12 +195,18 @@
 
 {#snippet selection()}
 	<span data-slot="status-multi-picker-value" class="flex min-w-0 flex-1 items-center">
-		{#if only !== undefined}
-			{@render badge(only)}
-		{:else if value.length === 0}
+		{#if value.length === 0}
 			<span class="text-muted-foreground truncate">{placeholder}</span>
+		{:else if collapsed}
+			<span class="truncate">{countLabel(value.length)}</span>
+		{:else if summary === 'names'}
+			<span {title} class="truncate">{title}</span>
 		{:else}
-			<span class="truncate">{value.length} statuses</span>
+			<span data-slot="status-multi-picker-badges" class={BADGES}>
+				{#each value as code (code)}
+					{@render badge(code, summary === 'icons' ? 'icon' : 'both')}
+				{/each}
+			</span>
 		{/if}
 	</span>
 {/snippet}
@@ -282,7 +306,7 @@
 										aria-hidden="true"
 										class="pointer-events-none"
 									/>
-									{@render badge(option.code)}
+									{@render badge(option.code, 'both')}
 								</Command.Item>
 							{/each}
 						{/if}

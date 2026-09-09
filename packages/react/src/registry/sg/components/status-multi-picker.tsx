@@ -17,6 +17,8 @@ import { cn } from '@/lib/utils';
 import { StatusBadge } from '@/registry/sg/components/status-badge';
 
 export type StatusMultiPickerSize = 'sm' | 'md' | 'lg';
+/** What the closed trigger shows for the selection. */
+export type StatusMultiPickerSummary = 'icons' | 'names' | 'both' | 'count';
 
 /** Controls follow the input ladder of `docs/design-rules.md`. */
 const BOX: Record<StatusMultiPickerSize, string> = {
@@ -31,6 +33,12 @@ const GLYPH: Record<StatusMultiPickerSize, string> = {
 };
 /** A badge inside a control sits one step down the leaf ladder. */
 const BADGE: Record<StatusMultiPickerSize, 'sm' | 'md'> = { sm: 'sm', md: 'sm', lg: 'md' };
+/** The badge row in the trigger: one line, clipped, never taller than the control. */
+const BADGES = 'flex min-w-0 items-center gap-1 overflow-hidden';
+
+function countLabel(n: number): string {
+  return `${n} ${n === 1 ? 'status' : 'statuses'}`;
+}
 
 const TRIGGER =
   'border-input bg-background focus-visible:ring-ring focus-visible:ring-offset-background aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 flex w-full min-w-0 items-center rounded-md border text-sm outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 aria-invalid:ring-2';
@@ -57,6 +65,10 @@ export interface StatusMultiPickerProps {
   invalid?: boolean;
   /** Show the raw code instead of the label. The other one stays in the tooltip. */
   showCode?: boolean;
+  /** What the closed trigger shows for the selection. */
+  summary?: StatusMultiPickerSummary;
+  /** Above this many selected, every mode reads as a count. `icons` collapses at twice this. */
+  max?: number;
   /** The site the stock sprite is served from, passed to every badge. */
   siteUrl?: string;
   size?: StatusMultiPickerSize;
@@ -149,6 +161,8 @@ export function StatusMultiPicker({
   disabled = false,
   invalid = false,
   showCode = false,
+  summary = 'both',
+  max = 3,
   siteUrl,
   size = 'md',
   className,
@@ -176,17 +190,20 @@ export function StatusMultiPicker({
   // Read-only wins over disabled and over the loading window.
   const inert = !readOnly && (disabled || query.loading);
   const showClear = clearable && value.length > 0 && !readOnly && !disabled;
-  const only = value.length === 1 ? value[0] : undefined;
+  // Icons take half the width of a badge, so that mode holds twice as many.
+  const collapsed = summary === 'count' || value.length > (summary === 'icons' ? max * 2 : max);
 
   const toggle = (code: string) => {
     onValueChange?.(value.includes(code) ? value.filter((c) => c !== code) : [...value, code]);
   };
 
-  const badge = (code: string) => (
+  const badge = (code: string, variant: 'both' | 'icon') => (
     <StatusBadge
+      key={code}
       code={code}
       status={query.statuses.get(code) ?? null}
       field={badgeField}
+      variant={variant}
       size={BADGE[size]}
       label={showCode ? 'code' : 'name'}
       siteUrl={siteUrl}
@@ -194,14 +211,25 @@ export function StatusMultiPicker({
     />
   );
 
-  let summary: ReactNode;
-  if (only !== undefined) summary = badge(only);
-  else if (value.length === 0) summary = <span className="text-muted-foreground truncate">{placeholder}</span>;
-  else summary = <span className="truncate">{value.length} statuses</span>;
+  let shown: ReactNode;
+  if (value.length === 0) shown = <span className="text-muted-foreground truncate">{placeholder}</span>;
+  else if (collapsed) shown = <span className="truncate">{countLabel(value.length)}</span>;
+  else if (summary === 'names')
+    shown = (
+      <span title={title} className="truncate">
+        {title}
+      </span>
+    );
+  else
+    shown = (
+      <span data-slot="status-multi-picker-badges" className={BADGES}>
+        {value.map((code) => badge(code, summary === 'icons' ? 'icon' : 'both'))}
+      </span>
+    );
 
   const selection = (
     <span data-slot="status-multi-picker-value" className="flex min-w-0 flex-1 items-center">
-      {summary}
+      {shown}
     </span>
   );
 
@@ -246,7 +274,7 @@ export function StatusMultiPicker({
               aria-hidden="true"
               className="pointer-events-none"
             />
-            {badge(option.code)}
+            {badge(option.code, 'both')}
           </CommandItem>
         ))}
       </>

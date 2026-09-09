@@ -4,9 +4,12 @@
  *
  * `<Demo name="hello" />` renders the Svelte and the React implementation of the same
  * widget side by side, on a stage that carries the shadcn tokens and its own `dark`
- * class -- so a reviewer can compare the two frameworks, in both themes and with
- * motion reduced, without leaving the page and without touching Starlight's theme or
- * their OS settings.
+ * class -- so a reviewer can compare the two frameworks, under any of the palettes in
+ * src/styles/themes.css, light or dark, at any radius and with motion reduced, without
+ * leaving the page and without touching Starlight's theme or their OS settings.
+ *
+ * A palette swaps token values on the stage and nothing else. No widget reads the
+ * palette, and none of these controls changes what a widget renders.
  *
  * A demo is a directory under `src/demos/<name>/` holding `Demo.svelte` and
  * `Demo.tsx`. Both are found by name through a glob -- no registration step -- and
@@ -43,6 +46,37 @@ if (!svelteDemos[`../demos/${name}/Demo.svelte`] || !reactDemos[`../demos/${name
   );
 }
 
+/*
+ * The looks offered by the theme select, called the palette everywhere a name could be
+ * read as the light/dark theme the Dark toggle switches. `name` is the `data-theme` the
+ * stage carries and the key under which src/styles/themes.css holds the values;
+ * `default` has no block there and leaves the stage on the nova tokens. `font` is the
+ * `family` query a palette's own typeface needs from Google Fonts, fetched the first
+ * time that palette is picked -- a palette without one uses its own fallback stack.
+ */
+const palettes = [
+  { name: 'default', label: 'Default' },
+  { name: 'stone', label: 'Stone' },
+  { name: 'zinc', label: 'Zinc' },
+  { name: 'mauve', label: 'Mauve' },
+  { name: 'mist', label: 'Mist' },
+  { name: 'vercel', label: 'Vercel', font: 'Geist:wght@100..900' },
+  { name: 'supabase', label: 'Supabase', font: 'Outfit:wght@100..900' },
+  { name: 'claude', label: 'Claude' },
+  { name: 'twitter', label: 'Twitter', font: 'Open+Sans:ital,wght@0,300..800;1,300..800' },
+  { name: 'catppuccin', label: 'Catppuccin', font: 'Montserrat:ital,wght@0,100..900;1,100..900' },
+];
+
+/* `default` keeps whatever `--radius` the palette sets; the rest override it. */
+const radii = [
+  { name: 'default', label: 'Radius: theme' },
+  { name: 'none', label: 'Radius: none' },
+  { name: 'sm', label: 'Radius: sm' },
+  { name: 'md', label: 'Radius: md' },
+  { name: 'lg', label: 'Radius: lg' },
+  { name: 'xl', label: 'Radius: xl' },
+];
+
 const control =
   'inline-flex h-8 items-center justify-center px-2 text-sm text-muted-foreground select-none ' +
   'transition-[color,background-color,opacity,transform] duration-150 ease-out ' +
@@ -53,6 +87,13 @@ const control =
 
 const segmentClass = `${control} border-l border-border first:border-l-0`;
 const toggleClass = `${control} rounded-md border border-border bg-background`;
+
+// The native chevron is not a token, so it is drawn from `currentColor` alongside.
+const selectWrapClass = 'group relative inline-flex items-center text-muted-foreground';
+const selectClass = `${toggleClass} appearance-none pr-7`;
+const chevronClass =
+  'pointer-events-none absolute right-2 size-4 transition-colors duration-150 ease-out ' +
+  'group-hover:text-accent-foreground';
 ---
 
 <figure
@@ -62,7 +103,7 @@ const toggleClass = `${control} rounded-md border border-border bg-background`;
   data-framework="both"
   data-motion="normal"
 >
-  <div class="flex items-center gap-3 border-b border-border bg-muted px-3 py-2">
+  <div class="flex flex-wrap items-center gap-3 border-b border-border bg-muted px-3 py-2">
     <div
       class="inline-flex h-8 items-center overflow-hidden rounded-md border border-border bg-background"
       role="group"
@@ -84,6 +125,48 @@ const toggleClass = `${control} rounded-md border border-border bg-background`;
     </figcaption>
 
     <div class="flex items-center gap-2">
+      <span class={selectWrapClass}>
+        <select class={selectClass} data-palette-pick aria-label="Theme">
+          {
+            palettes.map((palette) => (
+              <option value={palette.name} data-font={palette.font}>
+                {palette.label}
+              </option>
+            ))
+          }
+        </select>
+        <svg
+          class={chevronClass}
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="m6 9 6 6 6-6"></path>
+        </svg>
+      </span>
+
+      <span class={selectWrapClass}>
+        <select class={selectClass} data-radius-pick aria-label="Radius">
+          {radii.map((radius) => <option value={radius.name}>{radius.label}</option>)}
+        </select>
+        <svg
+          class={chevronClass}
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="m6 9 6 6 6-6"></path>
+        </svg>
+      </span>
+
       <button type="button" class={toggleClass} data-theme-toggle aria-pressed="false">Dark</button>
       <button type="button" class={toggleClass} data-motion-toggle aria-pressed="false">
         Reduce motion
@@ -91,7 +174,7 @@ const toggleClass = `${control} rounded-md border border-border bg-background`;
     </div>
   </div>
 
-  <div class="sg-demo grid gap-px bg-border" data-stage>
+  <div class="sg-demo grid gap-px bg-border" data-stage data-theme="default" data-radius="default">
     <section class="min-w-0 bg-background p-4" data-pane="svelte">
       <h3 class="pb-3 text-xs font-medium tracking-wide text-muted-foreground uppercase" data-pane-title>
         Svelte
@@ -113,24 +196,45 @@ const toggleClass = `${control} rounded-md border border-border bg-background`;
 
 <script>
   /**
-   * Wires every `<Demo>` on the page. Framework, demo theme and reduced motion are
-   * shared across demos and persisted, so paging through the docs keeps the view a
-   * reviewer set. Both islands stay mounted; the control only shows and hides, so
+   * Wires every `<Demo>` on the page. Framework, palette, radius, light/dark and reduced
+   * motion are shared across demos and persisted, so paging through the docs keeps the
+   * view a reviewer set. Both islands stay mounted; the control only shows and hides, so
    * switching frameworks never remounts and never loses a widget's state.
    */
   const KEYS = {
     framework: 'sg-demo:framework',
     theme: 'sg-demo:theme',
     motion: 'sg-demo:motion',
+    palette: 'sg-demo:palette',
+    radius: 'sg-demo:radius',
   } as const;
 
-  function read(key: string, allowed: string[], fallback: string): string {
+  const FRAMEWORKS = ['svelte', 'react', 'both'];
+
+  /*
+   * Values are raw strings, the spelling tools/qa.mjs writes for the initial load. Its
+   * `harness.set` quotes them as JSON before a reload, so a quoted value reads as the
+   * string inside.
+   */
+  function stored(key: string): string | null {
+    let raw: string | null;
     try {
-      const value = localStorage.getItem(key);
-      return value && allowed.includes(value) ? value : fallback;
+      raw = localStorage.getItem(key);
     } catch {
-      return fallback; // Private mode or blocked storage: fall back, never throw.
+      return null; // Private mode or blocked storage: fall back, never throw.
     }
+    if (raw === null) return null;
+    try {
+      const parsed: unknown = JSON.parse(raw);
+      return typeof parsed === 'string' ? parsed : raw;
+    } catch {
+      return raw;
+    }
+  }
+
+  function read(key: string, allowed: string[], fallback: string): string {
+    const value = stored(key);
+    return value !== null && allowed.includes(value) ? value : fallback;
   }
 
   function write(key: string, value: string): void {
@@ -141,11 +245,38 @@ const toggleClass = `${control} rounded-md border border-border bg-background`;
     }
   }
 
+  /* The two selects are the list of legal palette and radius names. */
+  function names(selector: string): string[] {
+    const select = document.querySelector<HTMLSelectElement>(selector);
+    return select ? [...select.options].map((option) => option.value) : [];
+  }
+
+  const PALETTES = names('[data-palette-pick]');
+  const RADII = names('[data-radius-pick]');
+
   const state = {
-    framework: read(KEYS.framework, ['svelte', 'react', 'both'], 'both'),
+    framework: read(KEYS.framework, FRAMEWORKS, 'both'),
     theme: read(KEYS.theme, ['light', 'dark'], 'light'),
     motion: read(KEYS.motion, ['normal', 'reduced'], 'normal'),
+    palette: read(KEYS.palette, PALETTES, 'default'),
+    radius: read(KEYS.radius, RADII, 'default'),
   };
+
+  /*
+   * A palette's own typeface, fetched when that palette is first picked and never on
+   * page load. Until the stylesheet arrives the stage renders the rest of the palette's
+   * stack, so nothing waits on the network.
+   */
+  const fetched = new Set<string>();
+
+  function loadFont(family: string | undefined): void {
+    if (!family || fetched.has(family)) return;
+    fetched.add(family);
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = `https://fonts.googleapis.com/css2?family=${family}&display=swap`;
+    document.head.append(link);
+  }
 
   /*
    * Mounting the two demos.
@@ -248,7 +379,25 @@ const toggleClass = `${control} rounded-md border border-border bg-background`;
         pick.setAttribute('aria-pressed', String(pick.dataset.frameworkPick === state.framework));
       }
 
-      root.querySelector('[data-stage]')?.classList.toggle('dark', state.theme === 'dark');
+      // Palette and radius land on the stage, never on the figure: the toolbar and frame
+      // follow the docs page, and Starlight's chrome is outside both. The palette's
+      // attribute is `data-theme` because that is the hook themes.css selects on.
+      const stage = root.querySelector<HTMLElement>('[data-stage]');
+      if (stage) {
+        stage.classList.toggle('dark', state.theme === 'dark');
+        stage.dataset.theme = state.palette;
+        stage.dataset.radius = state.radius;
+      }
+
+      const palettePick = root.querySelector<HTMLSelectElement>('[data-palette-pick]');
+      if (palettePick) {
+        palettePick.value = state.palette;
+        loadFont(palettePick.selectedOptions[0]?.dataset.font);
+      }
+
+      const radiusPick = root.querySelector<HTMLSelectElement>('[data-radius-pick]');
+      if (radiusPick) radiusPick.value = state.radius;
+
       root
         .querySelector('[data-theme-toggle]')
         ?.setAttribute('aria-pressed', String(state.theme === 'dark'));
@@ -275,6 +424,36 @@ const toggleClass = `${control} rounded-md border border-border bg-background`;
     } else {
       return;
     }
+    apply();
+  });
+
+  document.addEventListener('change', (event) => {
+    const select = (event.target as HTMLElement | null)?.closest<HTMLSelectElement>('select');
+    if (!select?.closest('[data-sg-demo]')) return;
+
+    if (select.matches('[data-palette-pick]')) {
+      state.palette = select.value;
+      write(KEYS.palette, state.palette);
+    } else if (select.matches('[data-radius-pick]')) {
+      state.radius = select.value;
+      write(KEYS.radius, state.radius);
+    } else {
+      return;
+    }
+    apply();
+  });
+
+  /*
+   * The headless driver (tools/qa.mjs) sets these keys and fires `storage` instead of
+   * clicking, so a drive script reaches every control without knowing the markup. The
+   * same listener keeps two open tabs in step.
+   */
+  window.addEventListener('storage', () => {
+    state.framework = read(KEYS.framework, FRAMEWORKS, state.framework);
+    state.theme = read(KEYS.theme, ['light', 'dark'], state.theme);
+    state.motion = read(KEYS.motion, ['normal', 'reduced'], state.motion);
+    state.palette = read(KEYS.palette, PALETTES, state.palette);
+    state.radius = read(KEYS.radius, RADII, state.radius);
     apply();
   });
 

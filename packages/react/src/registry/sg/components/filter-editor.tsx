@@ -1,16 +1,16 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type {
   ConditionValue,
   EntityRef,
   FieldSchema,
   FilterCondition,
   FilterGroup,
+  FilterNode,
   NodePath,
   Operator,
   Scalar,
   SchemaService,
   SgClient,
-  TextSearchRow,
   TimeUnit,
 } from '@sg-widgets/core';
 import {
@@ -20,7 +20,6 @@ import {
   createSchemaService,
   defaultCondition,
   emptyFilter,
-  filterableFields,
   group as makeGroup,
   operatorMenu,
   presetById,
@@ -47,8 +46,20 @@ import {
   SelectLabel,
   SelectTrigger,
 } from '@/components/ui/select';
+import { Skeleton } from '@/components/ui/skeleton';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { cn } from '@/lib/utils';
+import { CheckboxEditor } from '@/registry/sg/components/checkbox-editor';
+import { DateEditor } from '@/registry/sg/components/date-editor';
+import { DateTimeEditor } from '@/registry/sg/components/date-time-editor';
+import { EntityMultiPicker } from '@/registry/sg/components/entity-multi-picker';
+import { EntityPicker } from '@/registry/sg/components/entity-picker';
+import { FieldPicker } from '@/registry/sg/components/field-picker';
+import { ListSelect } from '@/registry/sg/components/list-select';
+import { NumberEditor } from '@/registry/sg/components/number-editor';
+import { StatusMultiPicker } from '@/registry/sg/components/status-multi-picker';
+import { StatusPicker } from '@/registry/sg/components/status-picker';
+import { TextEditor } from '@/registry/sg/components/text-editor';
 
 /** What the field slot is given. Its job is to call `onSelect` with a dotted path. */
 export interface FieldChooserArgs {
@@ -80,57 +91,73 @@ function unitLabel(unit: string): string {
   return timeUnitLabel(unit as TimeUnit, 2);
 }
 
-/** The `type` a plain input takes for a value editor kind. */
-function inputType(kind: string): 'text' | 'number' | 'date' | 'datetime-local' {
-  if (kind === 'number') return 'number';
-  if (kind === 'date') return 'date';
-  if (kind === 'date_time') return 'datetime-local';
-  return 'text';
+/** The six types NumberEditor parses. `footage` is numeric to the API and reads as a plain number. */
+const NUMERIC_EDITORS = ['number', 'float', 'percent', 'duration', 'timecode', 'currency'] as const;
+type NumericEditor = (typeof NUMERIC_EDITORS)[number];
+
+function numericType(dataType: string): NumericEditor {
+  return (NUMERIC_EDITORS as readonly string[]).includes(dataType) ? (dataType as NumericEditor) : 'number';
 }
 
-/** A `datetime-local` control edits `YYYY-MM-DDTHH:MM`; the wire is `YYYY-MM-DDTHH:MM:SSZ` (field_types/date_time). */
+function textValue(value: Scalar | undefined): string | null {
+  if (value === null || value === undefined) return null;
+  return typeof value === 'object' ? null : String(value);
+}
+
+function numberValue(value: Scalar | undefined): number | string | null {
+  if (value === null || value === undefined || value === '') return null;
+  return typeof value === 'number' || typeof value === 'string' ? value : null;
+}
+
+function codesOf(value: ConditionValue): string[] {
+  if (!Array.isArray(value)) return [];
+  return (value as Scalar[]).filter((v): v is string => typeof v === 'string');
+}
+
 function scalarText(value: Scalar | undefined): string {
   if (value === null || value === undefined || typeof value === 'object') return '';
-  const text = String(value);
-  return /^\d{4}-\d{2}-\d{2}T/.test(text) ? text.slice(0, 16) : text;
+  return String(value);
 }
 
 function parseScalar(kind: string, text: string): Scalar {
   if (text === '') return '';
-  if (kind === 'number') return Number(text);
-  if (kind === 'date_time') return `${text.length === 16 ? text : text.slice(0, 16)}:00Z`;
-  return text;
+  return kind === 'number' ? Number(text) : text;
 }
 
+/** `is` takes one entity hash and `in` a list of them; a list under `is` is a 400 (field_types/entity). */
 function entityRefs(value: ConditionValue): EntityRef[] {
   if (Array.isArray(value)) return value.filter((v) => v !== null && typeof v === 'object') as EntityRef[];
   return value !== null && typeof value === 'object' ? [value as EntityRef] : [];
 }
 
-function sameRef(a: EntityRef, b: EntityRef): boolean {
-  return a.type === b.type && a.id === b.id;
+function entityRef(value: ConditionValue): EntityRef | null {
+  return value !== null && typeof value === 'object' && !Array.isArray(value) ? (value as EntityRef) : null;
 }
 
-/** `is` takes one entity hash and `in` a list of them; a list under `is` is a 400 (field_types/entity). */
-function toggleRef(refs: EntityRef[], ref: EntityRef, arity: string): ConditionValue {
-  if (arity !== 'many') return refs.some((r) => sameRef(r, ref)) ? '' : ref;
-  return refs.some((r) => sameRef(r, ref)) ? refs.filter((r) => !sameRef(r, ref)) : [...refs, ref];
+/** Every dotted path the tree holds. A flat name needs no resolution. */
+function dottedPaths(node: FilterNode, out: string[] = []): string[] {
+  if (node.kind === 'condition') {
+    if (node.path.includes('.')) out.push(node.path);
+    return out;
+  }
+  for (const child of node.conditions) dottedPaths(child, out);
+  return out;
 }
 
 /** Everything a row needs that does not come from its own node. */
 interface EditorContext {
   entityType: string;
-  fields: Record<string, FieldSchema>;
+  client: SgClient;
+  service: SchemaService;
   hidePaths: string[];
+  projectId?: number;
   disabled: boolean;
   fieldChooser?: (args: FieldChooserArgs) => ReactNode;
   valueEditor?: (args: ValueEditorArgs) => ReactNode;
-  search: string;
-  setSearch: (value: string) => void;
-  setSearchTypes: (types: string[]) => void;
-  results: TextSearchRow[];
-  searching: boolean;
+  entityEditor?: (args: ValueEditorArgs) => ReactNode;
   fieldOf: (path: string) => FieldSchema | null;
+  /** True while a dotted path is still being walked; its leaf decides the whole row. */
+  unresolved: (path: string) => boolean;
   edit: (path: NodePath, node: FilterCondition | FilterGroup) => void;
   remove: (path: NodePath) => void;
   append: (path: NodePath, node: FilterCondition | FilterGroup) => void;
@@ -147,10 +174,13 @@ export interface FilterEditorProps {
   value: FilterGroup;
   /** Paths to keep out of the field list, each hiding itself and everything under it. */
   hidePaths?: string[];
+  /** Scopes the status pickers to the codes one project allows. */
+  projectId?: number;
   disabled?: boolean;
   onChange?: (value: FilterGroup) => void;
   fieldChooser?: (args: FieldChooserArgs) => ReactNode;
   valueEditor?: (args: ValueEditorArgs) => ReactNode;
+  entityEditor?: (args: ValueEditorArgs) => ReactNode;
   className?: string;
 }
 
@@ -163,9 +193,10 @@ export interface FilterEditorProps {
  * (017_filter_operators). A row with no field, or one whose operator still has no
  * value, is dropped on serialisation rather than sent.
  *
- * The field chooser and the value editors are slots. Left empty they fall back to
- * a flat list of the type's filterable fields and to plain inputs and selects; the
- * drill-down field picker and the per-type editors plug into the same two slots.
+ * The field is chosen with FieldPicker, which descends through links, so a row may
+ * filter on a dotted path; the leaf of that path is resolved through the schema
+ * service and is what picks the operator menu and the value editor. An operator that
+ * pins its value draws no editor at all.
  */
 export function FilterEditor({
   entityType,
@@ -173,10 +204,12 @@ export function FilterEditor({
   schema,
   value = emptyFilter(),
   hidePaths = [],
+  projectId,
   disabled = false,
   onChange,
   fieldChooser,
   valueEditor,
+  entityEditor,
   className,
 }: FilterEditorProps) {
   const service = useMemo(() => schema ?? createSchemaService(client), [schema, client]);
@@ -194,44 +227,42 @@ export function FilterEditor({
     };
   }, [service, entityType]);
 
-  /* The entity fallback combobox: one popover is open at a time, so one query. */
-  const [search, setSearch] = useState('');
-  const [searchTypes, setSearchTypes] = useState<string[]>([]);
-  const [found, setFound] = useState<{ key: string; rows: TextSearchRow[] }>({ key: '', rows: [] });
+  /**
+   * The leaf schema of every dotted path the tree holds, added once and kept.
+   * The in-flight map is a ref, so filling the cache never re-runs the walk.
+   */
+  const [leaves, setLeaves] = useState<Record<string, FieldSchema | null>>({});
+  const resolving = useRef(new Map<string, Promise<FieldSchema | null>>());
 
-  // `_text_search` needs two characters to be worth a round trip and every word must
-  // match; it caps at 25 rows (053_text_search_matching).
-  const key =
-    searchTypes.length === 0 || search.trim().length < 2 ? '' : `${searchTypes.join(',')}|${search.trim()}`;
+  const resolveLeaf = useCallback(
+    (path: string): Promise<FieldSchema | null> => {
+      const at = `${entityType}|${path}`;
+      let job = resolving.current.get(at);
+      if (!job) {
+        job = service.resolvePath(entityType, path).then(
+          (segments) => segments[segments.length - 1]?.field ?? null,
+          // A path the schema no longer holds still has to be editable, so the row keeps it.
+          () => null,
+        );
+        resolving.current.set(at, job);
+        void job.then((leaf) => {
+          setLeaves((held) => ({ ...held, [at]: leaf }));
+        });
+      }
+      return job;
+    },
+    [service, entityType],
+  );
 
   useEffect(() => {
-    if (!key) return;
-    let live = true;
-    const scope: Record<string, null> = {};
-    for (const type of searchTypes) scope[type] = null;
-    void client
-      .textSearch(search, scope, { size: 10 })
-      .then((rows) => {
-        if (live) setFound({ key, rows });
-      })
-      .catch(() => {
-        if (live) setFound({ key, rows: [] });
-      });
-    return () => {
-      live = false;
-    };
-    // `key` carries both the query and the types it is asked on.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [client, key]);
+    for (const path of dottedPaths(value)) void resolveLeaf(path);
+  }, [value, resolveLeaf]);
 
-  const results = found.key === key ? found.rows : [];
-  const searching = key !== '' && found.key !== key;
-
-  /** The leaf field of a dotted path. A flat name resolves against the root type. */
+  /** The leaf field of a path. A flat name is a field of the root type. */
   const fieldOf = (path: string): FieldSchema | null => {
     if (!path) return null;
-    const parts = path.split('.');
-    return fields[parts[parts.length - 1] as string] ?? null;
+    if (!path.includes('.')) return fields[path] ?? null;
+    return leaves[`${entityType}|${path}`] ?? null;
   };
 
   const dataTypeOf = (path: string): string => fieldOf(path)?.dataType ?? '';
@@ -239,27 +270,33 @@ export function FilterEditor({
 
   const ctx: EditorContext = {
     entityType,
-    fields,
+    client,
+    service,
     hidePaths,
+    projectId,
     disabled,
     fieldChooser,
     valueEditor,
-    search,
-    setSearch,
-    setSearchTypes,
-    results,
-    searching,
+    entityEditor,
     fieldOf,
+    unresolved: (path) => path.includes('.') && !(`${entityType}|${path}` in leaves),
     edit: (path, node) => commit(replaceAt(value, path, node)),
     remove: (path) => commit(removeAt(value, path)),
     append: (path, node) => commit(appendAt(value, path, node)),
     pickField: (path, node, chosen) => {
       const before = dataTypeOf(node.path);
-      const after = dataTypeOf(chosen);
-      // The operator vocabulary is per data type, so moving to another type resets the row.
-      commit(
-        replaceAt(value, path, before === after && node.path ? { ...node, path: chosen } : defaultCondition(chosen, after)),
-      );
+      const leaf = chosen.includes('.') ? resolveLeaf(chosen) : Promise.resolve(fields[chosen] ?? null);
+      void leaf.then((after) => {
+        const type = after?.dataType ?? '';
+        // The operator vocabulary is per data type, so moving to another type resets the row.
+        commit(
+          replaceAt(
+            value,
+            path,
+            before === type && node.path ? { ...node, path: chosen } : defaultCondition(chosen, type),
+          ),
+        );
+      });
     },
     pickPreset: (path, node, id) => {
       const dataType = dataTypeOf(node.path);
@@ -378,57 +415,33 @@ function ConditionRow({ ctx, path, node }: { ctx: EditorContext; path: NodePath;
 }
 
 function FieldSlot({ ctx, path, node }: { ctx: EditorContext; path: NodePath; node: FilterCondition }) {
-  const chosen = ctx.fieldOf(node.path);
-  if (ctx.fieldChooser) {
-    // Integration point: the drill-down field picker plugs in here.
-    return (
-      <>
-        {ctx.fieldChooser({
+  return (
+    <div data-slot="filter-field" className="w-56 shrink-0">
+      {ctx.fieldChooser ? (
+        ctx.fieldChooser({
           entityType: ctx.entityType,
           path: node.path,
           hidePaths: ctx.hidePaths,
           filterableOnly: true,
           disabled: ctx.disabled,
           onSelect: (next: string) => ctx.pickField(path, node, next),
-        })}
-      </>
-    );
-  }
-  return (
-    <Popover>
-      <PopoverTrigger
-        disabled={ctx.disabled}
-        data-slot="filter-field"
-        className={cn(
-          'border-border bg-background hover:bg-muted focus-visible:border-ring focus-visible:ring-ring/50 inline-flex h-8 w-56 shrink-0 items-center justify-between gap-1.5 rounded-lg border px-2.5 text-sm outline-none focus-visible:ring-3 disabled:pointer-events-none disabled:opacity-50',
-          !chosen && 'text-muted-foreground',
-        )}
-      >
-        <span className="min-w-0 truncate" title={node.path}>
-          {chosen?.displayName ?? node.path ?? ''}
-        </span>
-        <ChevronDownIcon className="text-muted-foreground size-4" />
-      </PopoverTrigger>
-      <PopoverContent className="w-72 p-0" align="start">
-        <Command>
-          <CommandInput placeholder="Search fields…" />
-          <CommandList>
-            <CommandEmpty>No field.</CommandEmpty>
-            {filterableFields(ctx.fields, { hidePaths: ctx.hidePaths }).map((f) => (
-              <CommandItem
-                key={f.name}
-                value={`${f.displayName} ${f.name}`}
-                data-field={f.name}
-                onSelect={() => ctx.pickField(path, node, f.name)}
-              >
-                <span className="min-w-0 flex-1 truncate">{f.displayName}</span>
-                <span className="text-muted-foreground font-mono text-xs">{f.name}</span>
-              </CommandItem>
-            ))}
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
+        })
+      ) : (
+        <FieldPicker
+          schema={ctx.service}
+          entityType={ctx.entityType}
+          hidePaths={ctx.hidePaths}
+          disabled={ctx.disabled}
+          value={node.path}
+          deepLinks
+          filterableOnly
+          clearable={false}
+          size="sm"
+          placeholder="Select a field"
+          onValueChange={(next) => ctx.pickField(path, node, next)}
+        />
+      )}
+    </div>
   );
 }
 
@@ -489,60 +502,76 @@ function ValueSlot({ ctx, path, node }: { ctx: EditorContext; path: NodePath; no
   const arity = valueArity(node.operator);
   const set = (v: ConditionValue) => ctx.edit(path, { ...node, value: v });
   const disabled = ctx.disabled;
+  const args: ValueEditorArgs = { field, dataType, operator: node.operator, value: node.value, arity, disabled, onChange: set };
 
   return (
-    <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2" data-slot="filter-value">
-      {ctx.valueEditor ? (
-        // Integration point: the per-type value editors plug in here.
-        ctx.valueEditor({ field, dataType, operator: node.operator, value: node.value, arity, disabled, onChange: set })
+    <div className="flex min-w-0 grow basis-48 flex-wrap items-center gap-2" data-slot="filter-value">
+      {ctx.unresolved(node.path) ? (
+        <Skeleton className="h-8 min-w-0 flex-1" />
+      ) : ctx.valueEditor ? (
+        // Integration point: a caller's own editors replace every one below.
+        ctx.valueEditor(args)
       ) : arity === 'none' ? (
-        <span className="text-muted-foreground truncate text-sm">no value</span>
+        // `is empty` and the calendar presets pin their value; there is nothing to edit.
+        null
       ) : arity === 'relative' ? (
         <RelativeValue value={node.value} disabled={disabled} onChange={set} />
+      ) : kind === 'entity' ? (
+        ctx.entityEditor ? (
+          // Integration point: EntityMultiPicker plugs in here.
+          ctx.entityEditor(args)
+        ) : (
+          <EntityValue ctx={ctx} field={field} value={node.value} arity={arity} onChange={set} />
+        )
       ) : kind === 'checkbox' ? (
-        <Select
-          value={node.value === false ? 'false' : 'true'}
+        <CheckboxEditor
+          className="min-w-0 flex-1"
+          size="sm"
           disabled={disabled}
-          onValueChange={(v) => set(v === 'true')}
-        >
-          <SelectTrigger className="h-8 w-28" data-slot="filter-value-trigger">
-            {node.value === false ? 'No' : 'Yes'}
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="true" data-option="true">
-              Yes
-            </SelectItem>
-            <SelectItem value="false" data-option="false">
-              No
-            </SelectItem>
-          </SelectContent>
-        </Select>
+          field={{ displayName: field?.displayName ?? 'Value', mandatory: false }}
+          value={node.value === true}
+          onValueChange={(next) => set(next)}
+        />
+      ) : kind === 'options' && dataType === 'status_list' && arity === 'many' ? (
+        <StatusMultiPicker
+          className="min-w-0 flex-1"
+          size="sm"
+          client={ctx.client}
+          disabled={disabled}
+          projectId={ctx.projectId}
+          entityType={field?.entityType ?? ctx.entityType}
+          field={field?.name}
+          value={codesOf(node.value)}
+          onValueChange={(next) => set([...next])}
+        />
+      ) : kind === 'options' && dataType === 'status_list' ? (
+        <StatusPicker
+          className="min-w-0 flex-1"
+          size="sm"
+          client={ctx.client}
+          disabled={disabled}
+          projectId={ctx.projectId}
+          entityType={field?.entityType ?? ctx.entityType}
+          field={field?.name}
+          value={typeof node.value === 'string' && node.value !== '' ? node.value : undefined}
+          onValueChange={(next) => set(next ?? '')}
+        />
       ) : kind === 'options' && arity === 'many' ? (
         <OptionsMany field={field} value={node.value} disabled={disabled} onChange={set} />
       ) : kind === 'options' ? (
-        <Select
-          value={typeof node.value === 'string' ? node.value : ''}
+        <ListSelect
+          className="min-w-0 flex-1"
+          size="sm"
           disabled={disabled}
-          onValueChange={(v) => set(v as string)}
-        >
-          <SelectTrigger className="h-8 w-full min-w-0" data-slot="filter-value-trigger">
-            {typeof node.value === 'string' && node.value
-              ? (field?.displayValues?.[node.value] ?? node.value)
-              : 'Select a value…'}
-          </SelectTrigger>
-          <SelectContent>
-            {(field?.validValues ?? []).map((code) => (
-              <SelectItem key={code} value={code} data-option={code}>
-                {field?.displayValues?.[code] ?? code}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      ) : kind === 'entity' ? (
-        <EntityValue ctx={ctx} field={field} value={node.value} arity={arity} onChange={set} />
+          field={field}
+          placeholder="Select a value…"
+          value={typeof node.value === 'string' && node.value !== '' ? node.value : null}
+          onValueChange={(next) => set(next ?? '')}
+        />
       ) : arity === 'two' ? (
-        <TwoValues kind={kind} value={node.value} disabled={disabled} onChange={set} />
+        <TwoValues kind={kind} dataType={dataType} value={node.value} disabled={disabled} onChange={set} />
       ) : arity === 'many' ? (
+        // A list of dates, numbers or strings has no per-value editor: one line, comma separated.
         <Input
           className="h-8 min-w-0 flex-1"
           disabled={disabled}
@@ -560,16 +589,82 @@ function ValueSlot({ ctx, path, node }: { ctx: EditorContext; path: NodePath; no
           }
         />
       ) : (
-        <Input
-          type={inputType(kind)}
-          className="h-8 min-w-0 flex-1"
+        <ScalarEditor
+          kind={kind}
+          dataType={dataType}
+          label={field?.displayName ?? 'Value'}
+          value={node.value as Scalar}
           disabled={disabled}
-          aria-label="Value"
-          value={scalarText(node.value as Scalar)}
-          onChange={(e) => set(parseScalar(kind, e.currentTarget.value))}
+          onChange={(v) => set(v)}
         />
       )}
     </div>
+  );
+}
+
+function ScalarEditor({
+  kind,
+  dataType,
+  label,
+  value,
+  disabled,
+  onChange,
+}: {
+  kind: string;
+  dataType: string;
+  label: string;
+  value: Scalar;
+  disabled: boolean;
+  onChange: (v: Scalar) => void;
+}) {
+  const field = { displayName: label, mandatory: false };
+  if (kind === 'number') {
+    return (
+      <NumberEditor
+        className="min-w-0 flex-1"
+        size="sm"
+        disabled={disabled}
+        dataType={numericType(dataType)}
+        field={field}
+        value={numberValue(value)}
+        onValueChange={(next) => onChange(next ?? '')}
+      />
+    );
+  }
+  if (kind === 'date') {
+    return (
+      <DateEditor
+        className="min-w-0 flex-1"
+        size="sm"
+        disabled={disabled}
+        field={field}
+        value={textValue(value)}
+        onValueChange={(next) => onChange(next ?? '')}
+      />
+    );
+  }
+  if (kind === 'date_time') {
+    return (
+      <DateTimeEditor
+        className="min-w-0 flex-1"
+        size="sm"
+        hint={false}
+        disabled={disabled}
+        field={field}
+        value={textValue(value)}
+        onValueChange={(next) => onChange(next ?? '')}
+      />
+    );
+  }
+  return (
+    <TextEditor
+      className="min-w-0 flex-1"
+      size="sm"
+      disabled={disabled}
+      field={field}
+      value={textValue(value)}
+      onValueChange={(next) => onChange(next ?? '')}
+    />
   );
 }
 
@@ -614,11 +709,13 @@ function RelativeValue({
 
 function TwoValues({
   kind,
+  dataType,
   value,
   disabled,
   onChange,
 }: {
   kind: string;
+  dataType: string;
   value: ConditionValue;
   disabled: boolean;
   onChange: (v: ConditionValue) => void;
@@ -626,22 +723,22 @@ function TwoValues({
   const pair = (Array.isArray(value) ? value : [null, null]) as [Scalar, Scalar];
   return (
     <>
-      <Input
-        type={inputType(kind)}
-        className="h-8 min-w-0 flex-1"
+      <ScalarEditor
+        kind={kind}
+        dataType={dataType}
+        label="From"
+        value={pair[0]}
         disabled={disabled}
-        aria-label="From"
-        value={scalarText(pair[0])}
-        onChange={(e) => onChange([parseScalar(kind, e.currentTarget.value), pair[1]] as ConditionValue)}
+        onChange={(v) => onChange([v, pair[1]] as ConditionValue)}
       />
       <span className="text-muted-foreground shrink-0 text-sm">and</span>
-      <Input
-        type={inputType(kind)}
-        className="h-8 min-w-0 flex-1"
+      <ScalarEditor
+        kind={kind}
+        dataType={dataType}
+        label="To"
+        value={pair[1]}
         disabled={disabled}
-        aria-label="To"
-        value={scalarText(pair[1])}
-        onChange={(e) => onChange([pair[0], parseScalar(kind, e.currentTarget.value)] as ConditionValue)}
+        onChange={(v) => onChange([pair[0], v] as ConditionValue)}
       />
     </>
   );
@@ -658,7 +755,7 @@ function OptionsMany({
   disabled: boolean;
   onChange: (v: ConditionValue) => void;
 }) {
-  const codes = (Array.isArray(value) ? value : []) as string[];
+  const codes = codesOf(value);
   return (
     <Popover>
       <PickerTrigger
@@ -702,49 +799,33 @@ function EntityValue({
   arity: string;
   onChange: (v: ConditionValue) => void;
 }) {
-  const refs = entityRefs(value);
-  return (
-    <Popover
-      onOpenChange={(open) => {
-        if (open) {
-          ctx.setSearch('');
-          ctx.setSearchTypes(field?.validTypes ?? [ctx.entityType]);
-        }
-      }}
-    >
-      <PickerTrigger
+  const types = field?.validTypes?.length ? field.validTypes : [ctx.entityType];
+  if (arity === 'many') {
+    return (
+      <EntityMultiPicker
+        className="min-w-0 flex-1"
+        size="sm"
+        client={ctx.client}
         disabled={ctx.disabled}
-        label={refs.length === 0 ? 'Search…' : refs.map((r) => r.name ?? `${r.type} #${r.id}`).join(', ')}
-        count={arity === 'many' ? refs.length : 0}
+        projectId={ctx.projectId}
+        entityTypes={types}
+        placeholder="Search entities"
+        value={entityRefs(value)}
+        onValueChange={(next) => onChange([...next])}
       />
-      <PopoverContent className="w-72 p-0" align="start">
-        <Command shouldFilter={false}>
-          <CommandInput placeholder="Search…" value={ctx.search} onValueChange={ctx.setSearch} />
-          <CommandList>
-            {ctx.searching ? (
-              <p className="text-muted-foreground py-6 text-center text-sm">Searching…</p>
-            ) : ctx.results.length === 0 ? (
-              <CommandEmpty>{ctx.search.trim().length < 2 ? 'Type to search.' : 'No match.'}</CommandEmpty>
-            ) : null}
-            {ctx.results.map((row) => (
-              <CommandItem
-                key={`${row.type}:${row.id}`}
-                value={`${row.type}:${row.id}`}
-                data-entity={`${row.type}:${row.id}`}
-                onSelect={() => onChange(toggleRef(refs, { type: row.type, id: row.id, name: row.name }, arity))}
-              >
-                <Checkbox
-                  checked={refs.some((r) => r.type === row.type && r.id === row.id)}
-                  tabIndex={-1}
-                  aria-hidden="true"
-                />
-                <span className="min-w-0 flex-1 truncate">{row.name}</span>
-                <span className="text-muted-foreground text-xs">{row.type}</span>
-              </CommandItem>
-            ))}
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
+    );
+  }
+  return (
+    <EntityPicker
+      className="min-w-0 flex-1"
+      size="sm"
+      client={ctx.client}
+      disabled={ctx.disabled}
+      projectId={ctx.projectId}
+      entityTypes={types}
+      placeholder="Search entities"
+      value={entityRef(value)}
+      onValueChange={(next) => onChange(next ?? '')}
+    />
   );
 }

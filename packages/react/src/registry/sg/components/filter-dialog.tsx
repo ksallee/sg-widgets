@@ -33,6 +33,7 @@ export interface FilterDialogProps {
   onChange?: (value: FilterGroup) => void;
   fieldChooser?: (args: FieldChooserArgs) => ReactNode;
   valueEditor?: (args: ValueEditorArgs) => ReactNode;
+  entityEditor?: (args: ValueEditorArgs) => ReactNode;
   className?: string;
 }
 
@@ -56,6 +57,7 @@ export function FilterDialog({
   onChange,
   fieldChooser,
   valueEditor,
+  entityEditor,
   className,
 }: FilterDialogProps) {
   const [open, setOpen] = useState(false);
@@ -119,6 +121,7 @@ export function FilterDialog({
             onChange={setDraft}
             fieldChooser={fieldChooser}
             valueEditor={valueEditor}
+            entityEditor={entityEditor}
           />
           <DialogFooter className="sm:justify-between">
             <Button variant="ghost" data-slot="filter-clear-all" onClick={clearAll}>

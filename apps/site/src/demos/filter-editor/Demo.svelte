@@ -6,11 +6,17 @@
 
 	const client = setDemoClient();
 
-	/** A tree a person would build: one condition, then a nested any-of. */
+	/**
+	 * A tree a person would build: a status list on the multi picker, two conditions
+	 * reached through links, a duration and a nested any-of. The duration is typed
+	 * `1h 30m` or `1:30` and goes out as the 90 minutes it stores.
+	 */
 	let value = $state<FilterGroup>(
 		group('and', [
 			condition('sg_status_list', 'in', ['rev', 'vwd']),
-			condition('client_approved', 'is', true),
+			condition('entity.Shot.sg_sequence', 'is', { type: 'Sequence', id: 100, name: 'sh010' }),
+			condition('project.Project.sg_status', 'is', 'Active'),
+			condition('entity.Shot.sg_working_duration', 'greater_than', 90),
 			group('or', [
 				condition('code', 'contains', 'comp'),
 				condition('created_at', 'in_last', [30, 'DAY'])

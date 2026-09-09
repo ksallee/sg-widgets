@@ -451,7 +451,19 @@
         "input",
         "popover",
         "select",
-        "toggle-group"
+        "skeleton",
+        "toggle-group",
+        "https://sg-widgets.dev/r/react/checkbox-editor.json",
+        "https://sg-widgets.dev/r/react/date-editor.json",
+        "https://sg-widgets.dev/r/react/date-time-editor.json",
+        "https://sg-widgets.dev/r/react/entity-multi-picker.json",
+        "https://sg-widgets.dev/r/react/entity-picker.json",
+        "https://sg-widgets.dev/r/react/field-picker.json",
+        "https://sg-widgets.dev/r/react/list-select.json",
+        "https://sg-widgets.dev/r/react/number-editor.json",
+        "https://sg-widgets.dev/r/react/status-multi-picker.json",
+        "https://sg-widgets.dev/r/react/status-picker.json",
+        "https://sg-widgets.dev/r/react/text-editor.json"
       ],
       "docs": "Takes a FilterGroup and emits one on every edit. toApi3Hash turns it into the body _search takes.",
       "files": [
@@ -477,12 +489,6 @@
       "registryDependencies": [
         "badge",
         "button",
-        "checkbox",
-        "command",
-        "input",
-        "popover",
-        "select",
-        "toggle-group",
         "dialog",
         "https://sg-widgets.dev/r/react/filter-editor.json"
       ],
@@ -512,11 +518,7 @@
         "button",
         "checkbox",
         "command",
-        "input",
         "popover",
-        "select",
-        "toggle-group",
-        "dialog",
         "https://sg-widgets.dev/r/react/filter-dialog.json"
       ],
       "docs": "Pass counts to compute the numbers with a _summarize grouping call; without it the bar tallies one page of rows.",
@@ -543,13 +545,10 @@
       "registryDependencies": [
         "badge",
         "button",
-        "checkbox",
-        "command",
-        "input",
         "popover",
-        "select",
+        "separator",
         "toggle-group",
-        "separator"
+        "https://sg-widgets.dev/r/react/field-picker.json"
       ],
       "docs": "Emits both the keys and the comma-joined sort string, a leading minus marking a descending key.",
       "files": [

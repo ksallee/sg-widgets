@@ -1,5 +1,6 @@
 // Build a status condition by hand in both panes and check what it serialises to.
-// Add condition -> pick Status -> pick "is any of" -> tick two values -> read the JSON.
+// Add condition -> pick Status in the field picker -> pick "is any of" -> tick two
+// statuses in the multi picker -> read the JSON.
 const CODES = ['rev', 'fin'];
 
 function press(el) {
@@ -8,8 +9,14 @@ function press(el) {
   }
 }
 
+function setValue(el, text) {
+  const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
+  setter.call(el, text);
+  el.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
 async function until(find, label) {
-  for (let i = 0; i < 60; i++) {
+  for (let i = 0; i < 80; i++) {
     const found = find();
     if (found) return found;
     await wait(50);
@@ -32,27 +39,35 @@ async function run(framework) {
 
   press($('[data-slot="filter-add-condition"]', pane));
   await until(() => $$('[data-slot="filter-row"]', pane).length > before, 'the new row');
-  const row = $$('[data-slot="filter-row"]', pane).at(-1);
+  const rowAt = () => $$('[data-slot="filter-row"]', pane).at(-1);
 
-  press($('[data-slot="filter-field"]', row));
-  press(await until(() => $('[data-slot="popover-content"] [data-field="sg_status_list"]'), 'the field list'));
-  await until(() => $('[data-slot="filter-field"]', row).textContent.includes('Status'), 'the chosen field');
+  press($('[data-slot="filter-field"] [data-slot="field-picker-trigger"]', rowAt()));
+  const search = await until(() => $('[data-picker="field"] [data-slot="command-input"]'), 'the field picker');
+  setValue(search, 'sg_status_list');
+  const rows = () => $$('[data-picker="field"] [data-slot="command-item"]');
+  const option = await until(() => (rows().length === 1 ? rows()[0] : null), 'the field list');
+  await wait(120);
+  press(option);
+  await until(
+    () => $('[data-slot="filter-field"] [data-slot="field-picker-label"]', rowAt())?.textContent.includes('Status'),
+    'the chosen field',
+  );
 
-  press($('[data-slot="filter-operator"]', row));
+  press($('[data-slot="filter-operator"]', rowAt()));
   press(await until(() => $('[data-slot="select-item"][data-preset="in"]'), 'the operator menu'));
-  await until(() => $('[data-slot="filter-operator"]', row).textContent.includes('is any of'), 'the chosen operator');
+  await until(() => $('[data-slot="filter-operator"]', rowAt()).textContent.includes('is any of'), 'the chosen operator');
 
-  press($('[data-slot="filter-value-trigger"]', row));
-  await until(() => $(`[data-slot="popover-content"] [data-option="${CODES[0]}"]`), 'the value list');
+  press($('[data-slot="status-multi-picker-trigger"]', rowAt()));
+  await until(() => $(`[data-picker="status"] [data-status-code="${CODES[0]}"]`), 'the status list');
   for (const code of CODES) {
-    press($(`[data-slot="popover-content"] [data-option="${code}"]`));
-    await wait(60);
+    press($(`[data-picker="status"] [data-status-code="${code}"]`).closest('[data-slot="command-item"]'));
+    await wait(80);
   }
   await closePopovers();
 
   const filters = JSON.parse($('[data-testid="filter-json"]', pane).textContent);
   const added = filters.conditions.filter((c) => Array.isArray(c) && c[0] === 'sg_status_list' && c[1] === 'in');
-  return { framework, added, path: row.dataset.path };
+  return { framework, added, path: rowAt().dataset.path };
 }
 
 const svelte = await run('svelte');

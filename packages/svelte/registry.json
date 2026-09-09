@@ -371,7 +371,19 @@
         "input",
         "popover",
         "select",
-        "toggle-group"
+        "skeleton",
+        "toggle-group",
+        "local:checkbox-editor",
+        "local:date-editor",
+        "local:date-time-editor",
+        "local:entity-multi-picker",
+        "local:entity-picker",
+        "local:field-picker",
+        "local:list-select",
+        "local:number-editor",
+        "local:status-multi-picker",
+        "local:status-picker",
+        "local:text-editor"
       ],
       "files": [
         {
@@ -392,12 +404,6 @@
       "registryDependencies": [
         "badge",
         "button",
-        "checkbox",
-        "command",
-        "input",
-        "popover",
-        "select",
-        "toggle-group",
         "dialog",
         "local:filter-editor"
       ],
@@ -422,11 +428,7 @@
         "button",
         "checkbox",
         "command",
-        "input",
         "popover",
-        "select",
-        "toggle-group",
-        "dialog",
         "local:filter-dialog"
       ],
       "files": [
@@ -448,13 +450,10 @@
       "registryDependencies": [
         "badge",
         "button",
-        "checkbox",
-        "command",
-        "input",
         "popover",
-        "select",
+        "separator",
         "toggle-group",
-        "separator"
+        "local:field-picker"
       ],
       "files": [
         {

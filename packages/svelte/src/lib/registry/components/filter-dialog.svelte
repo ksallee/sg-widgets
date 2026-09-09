@@ -27,6 +27,7 @@
 		onChange?: (value: FilterGroup) => void;
 		fieldChooser?: Snippet<[FieldChooserArgs]>;
 		valueEditor?: Snippet<[ValueEditorArgs]>;
+		entityEditor?: Snippet<[ValueEditorArgs]>;
 		class?: string;
 	};
 
@@ -42,6 +43,7 @@
 		onChange,
 		fieldChooser,
 		valueEditor,
+		entityEditor,
 		class: className
 	}: Props = $props();
 
@@ -107,6 +109,7 @@
 				bind:value={draft}
 				{fieldChooser}
 				{valueEditor}
+				{entityEditor}
 			/>
 			<Dialog.Footer class="sm:justify-between">
 				<Button variant="ghost" data-slot="filter-clear-all" onclick={clearAll}>Clear all</Button>

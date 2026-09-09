@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
-import type { FieldSchema, SchemaService, SgClient, SortKey } from '@sg-widgets/core';
-import { createSchemaService, sortableFields, toSortString } from '@sg-widgets/core';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { SchemaService, SgClient, SortKey } from '@sg-widgets/core';
+import { createSchemaService, friendlyFieldPath, isSortable, toSortString } from '@sg-widgets/core';
 import {
   ArrowDownIcon,
   ArrowUpDownIcon,
@@ -11,11 +11,11 @@ import {
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Separator } from '@/components/ui/separator';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { cn } from '@/lib/utils';
+import { FieldPicker } from '@/registry/sg/components/field-picker';
 
 export interface SortPickerProps {
   entityType: string;
@@ -37,6 +37,11 @@ export interface SortPickerProps {
  * string `_search` takes, a leading `-` marking a descending key
  * (026_result_order). Order is meaningful: the first key wins, and id ascending
  * breaks every remaining tie whether or not it is in the list.
+ *
+ * A key may be a dotted path: `entity.Shot.code` sorts, and so does
+ * `project.Project.name` under `-` (026_result_order), so the field picker descends
+ * through links. An unsortable or unknown field is a silent 200 no-op with the rows
+ * in default order, so only types that sort are offered.
  */
 export function SortPicker({
   entityType,
@@ -49,28 +54,37 @@ export function SortPicker({
   className,
 }: SortPickerProps) {
   const service = useMemo(() => schema ?? createSchemaService(client), [schema, client]);
-  const [fields, setFields] = useState<Record<string, FieldSchema>>({});
+
+  /** The friendly label of every path in the list, resolved once and kept. */
+  const [labels, setLabels] = useState<Record<string, string>>({});
+  const resolving = useRef(new Map<string, Promise<string>>());
+
+  const resolveLabel = useCallback(
+    (path: string) => {
+      const at = `${entityType}|${path}`;
+      if (resolving.current.has(at)) return;
+      const job = service.resolvePath(entityType, path).then(friendlyFieldPath, () => path);
+      resolving.current.set(at, job);
+      void job.then((label) => {
+        setLabels((held) => ({ ...held, [at]: label }));
+      });
+    },
+    [service, entityType],
+  );
 
   useEffect(() => {
-    let live = true;
-    void service.fields(entityType).then((loaded) => {
-      if (live) setFields(loaded);
-    });
-    return () => {
-      live = false;
-    };
-  }, [service, entityType]);
+    for (const key of value) resolveLabel(key.field);
+  }, [value, resolveLabel]);
 
-  const chosen = new Set(value.map((k) => k.field));
-  const options = sortableFields(fields, { hidePaths }).filter((f) => !chosen.has(f.name));
-
-  const nameOf = (field: string): string => {
-    const parts = field.split('.');
-    return fields[parts[parts.length - 1] as string]?.displayName ?? field;
-  };
+  const chosen = value.map((k) => k.field);
+  const nameOf = (field: string): string => labels[`${entityType}|${field}`] ?? field;
 
   const label = value.length === 0 ? 'Sort' : value.map((k) => nameOf(k.field)).join(', ');
   const commit = (next: SortKey[]) => onChange?.(next, toSortString(next));
+
+  function add(path: string) {
+    if (path) commit([...value, { field: path, direction: 'asc' }]);
+  }
 
   function move(index: number, delta: number) {
     const to = index + delta;
@@ -168,23 +182,21 @@ export function SortPicker({
             ) : null}
           </div>
           <Separator />
-          <Command>
-            <CommandInput placeholder="Add a field…" />
-            <CommandList>
-              <CommandEmpty>No field.</CommandEmpty>
-              {options.map((f) => (
-                <CommandItem
-                  key={f.name}
-                  value={`${f.displayName} ${f.name}`}
-                  data-field={f.name}
-                  onSelect={() => commit([...value, { field: f.name, direction: 'asc' }])}
-                >
-                  <span className="min-w-0 flex-1 truncate">{f.displayName}</span>
-                  <span className="text-muted-foreground font-mono text-xs">{f.name}</span>
-                </CommandItem>
-              ))}
-            </CommandList>
-          </Command>
+          <FieldPicker
+            schema={service}
+            entityType={entityType}
+            hidePaths={hidePaths}
+            disabled={disabled}
+            value=""
+            deepLinks
+            clearable={false}
+            exclude={chosen}
+            filter={(field) => isSortable(field.dataType)}
+            placeholder="Add a field"
+            searchPlaceholder="Add a field…"
+            emptyLabel="No field left to sort on."
+            onValueChange={add}
+          />
         </PopoverContent>
       </Popover>
     </div>

@@ -30,7 +30,7 @@ async function run(framework) {
 
 const svelte = await run('svelte');
 const react = await run('react');
-const pass = svelte.unchanged && react.unchanged && svelte.rows === 5 && react.rows === 5;
+const pass = svelte.unchanged && react.unchanged && svelte.rows === 7 && react.rows === 7;
 return {
   verdict: `${pass ? 'PASS' : 'FAIL'} svelte rows=${svelte.rows} unchanged=${svelte.unchanged}, react rows=${react.rows} unchanged=${react.unchanged}`,
 };

@@ -196,6 +196,237 @@
           "type": "registry:component"
         }
       ]
+    },
+    {
+      "name": "text-editor",
+      "type": "registry:component",
+      "title": "Text Editor",
+      "description": "A text field as an input, or a textarea when the field is multi-line.",
+      "categories": [
+        "flow-production-tracking",
+        "editor"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "input",
+        "textarea"
+      ],
+      "docs": "Emits on Enter or on losing focus. An empty input emits null, because a text field has no empty string.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/text-editor.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "number-editor",
+      "type": "registry:component",
+      "title": "Number Editor",
+      "description": "The numeric family as one input: number, float, percent, currency, duration and timecode.",
+      "categories": [
+        "flow-production-tracking",
+        "editor"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "input"
+      ],
+      "docs": "The data type picks the parse and the format. A duration takes 1h 30m and shows the minutes it will store.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/number-editor.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "checkbox-editor",
+      "type": "registry:component",
+      "title": "Checkbox Editor",
+      "description": "A checkbox field as an editable switch.",
+      "categories": [
+        "flow-production-tracking",
+        "editor"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "switch"
+      ],
+      "docs": "The type is two-state and never null, so the control has no empty state.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/checkbox-editor.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "date-editor",
+      "type": "registry:component",
+      "title": "Date Editor",
+      "description": "A date field as a typed input with a calendar.",
+      "categories": [
+        "flow-production-tracking",
+        "editor"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "input",
+        "button",
+        "calendar",
+        "popover"
+      ],
+      "docs": "Takes YYYY-MM-DD and validates the day. A timestamp is never a date on this type.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/date-editor.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "date-time-editor",
+      "type": "registry:component",
+      "title": "Date Time Editor",
+      "description": "A date_time field as a date and a time input, shown local and stored UTC.",
+      "categories": [
+        "flow-production-tracking",
+        "editor"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "input",
+        "button",
+        "calendar",
+        "popover"
+      ],
+      "docs": "The zone the typed time is read in is named under the control.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/date-time-editor.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "list-editor",
+      "type": "registry:component",
+      "title": "List Editor",
+      "description": "A list field as a select over its valid values.",
+      "categories": [
+        "flow-production-tracking",
+        "editor"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "select"
+      ],
+      "docs": "With a project id the field's hidden values are subtracted, which REST does not do on write.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/list-editor.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "url-editor",
+      "type": "registry:component",
+      "title": "Url Editor",
+      "description": "A url field as a web link: address and name.",
+      "categories": [
+        "flow-production-tracking",
+        "editor"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "input"
+      ],
+      "docs": "Web links only. Uploads mint an Attachment through a separate flow.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/url-editor.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "color-editor",
+      "type": "registry:component",
+      "title": "Color Editor",
+      "description": "A color field as a swatch and a text input.",
+      "categories": [
+        "flow-production-tracking",
+        "editor"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "input"
+      ],
+      "docs": "Takes r,g,b or a hex code and emits the decimal triple the field stores.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/color-editor.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "field-editor",
+      "type": "registry:component",
+      "title": "Field Editor",
+      "description": "One field, displayed or edited: the data type picks the editor and a toggle switches between the two.",
+      "categories": [
+        "flow-production-tracking",
+        "editor"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "https://sg-widgets.dev/r/react/field-value.json",
+        "https://sg-widgets.dev/r/react/text-editor.json",
+        "https://sg-widgets.dev/r/react/number-editor.json",
+        "https://sg-widgets.dev/r/react/checkbox-editor.json",
+        "https://sg-widgets.dev/r/react/date-editor.json",
+        "https://sg-widgets.dev/r/react/date-time-editor.json",
+        "https://sg-widgets.dev/r/react/list-editor.json",
+        "https://sg-widgets.dev/r/react/url-editor.json",
+        "https://sg-widgets.dev/r/react/color-editor.json"
+      ],
+      "docs": "Installs FieldValue and all eight editors alongside it.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/field-editor.tsx",
+          "type": "registry:component"
+        }
+      ]
     }
   ]
 }

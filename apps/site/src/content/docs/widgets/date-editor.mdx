@@ -1,0 +1,70 @@
+---
+title: DateEditor
+description: A date field as a typed input with a calendar.
+---
+
+import Demo from '../../../components/Demo.astro';
+
+Edits a date field, by typing or from a calendar in a popover.
+
+## Install
+
+```sh
+pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/date-editor.json
+pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/date-editor.json
+```
+
+<Demo name="date-editor" title="DateEditor: set, unset, and the two blocked states" />
+
+## Input
+
+| typed | emitted |
+|---|---|
+| `2026-09-02` | `"2026-09-02"` |
+| a day picked in the calendar | that day, as `YYYY-MM-DD` |
+| empty | `null` |
+| `2026-02-30` | nothing; no such day |
+| `09/02/2026`, `2026-9-8`, a timestamp | nothing; wrong format |
+
+## Props
+
+| prop | type | default | meaning |
+|---|---|---|---|
+| `value` | `string \| null` | `null` | The stored day. Two-way in Svelte. |
+| `onValueChange` | `(value: string \| null) => void` | — | Called when the input commits or a day is picked. |
+| `field` | `FieldSchema \| null` | `null` | Supplies the accessible label and the required flag. |
+| `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Control height. |
+| `disabled` | `boolean` | `false` | |
+| `readonly` | `boolean` | `false` | |
+| `invalid` | `boolean` | `false` | Forced invalid state. |
+| `error` | `string \| null` | `null` | A message from the caller, shown in place of the parse error. |
+| `onErrorChange` | `(error: string \| null) => void` | — | Called when the parse error appears or clears. |
+| `placeholder` | `string` | `'YYYY-MM-DD'` | |
+| `class` / `className` | `string` | — | Merged after the widget's own classes. |
+
+## Events
+
+`onValueChange` fires on commit and on a pick. Input that does not parse emits nothing.
+
+## Slots
+
+`errorMessage` receives the message and renders it.
+
+## Keyboard
+
+| key | does |
+|---|---|
+| `Enter` | Commits what was typed. |
+| `Escape` | Restores the stored value, or closes the calendar. |
+| `Tab` | Moves to the calendar button. |
+| `Space` | Opens the calendar, from its button. |
+| arrows | Move between days, inside the calendar. |
+
+## API behaviour
+
+A date is exactly `YYYY-MM-DD`, with no time and no zone, and the API validates the day rather than
+only parsing it: `2026-02-30` is refused by the same message as `tomorrow`. Any timestamp is a 400,
+on write and as a filter value (field_types/date).
+
+Both `null` and the empty string clear the field and read back as null, so there is one empty state
+(field_types/date).

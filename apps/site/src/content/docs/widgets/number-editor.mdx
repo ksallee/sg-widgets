@@ -1,0 +1,93 @@
+---
+title: NumberEditor
+description: 'The numeric family as one input: number, float, percent, currency, duration and timecode.'
+---
+
+import Demo from '../../../components/Demo.astro';
+
+Edits any numeric field, with the parse and the format chosen by the data type.
+
+## Install
+
+```sh
+pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/number-editor.json
+pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/number-editor.json
+```
+
+<Demo name="number-editor" title="NumberEditor: one control over six data types" />
+
+## Input
+
+| data type | typed | emitted |
+|---|---|---|
+| `number`, `percent` | `42` | `42` |
+| `number`, `percent` | `3.7` | nothing; whole numbers only |
+| `float` | `1.23456789` | `"1.234568"` |
+| `float` | `2` | `"2.0"` |
+| `currency` | `12500.5` | `12500.5` |
+| `duration` | `90` | `90` |
+| `duration` | `1h 30m`, `1.5h`, `1:30` | `90` |
+| `duration` | `2d`, with an eight-hour day | `960` |
+| `timecode` | `3600000` | `3600000` |
+| `timecode` | `01:00:00` | `3600000` |
+| `timecode` | `00:00:01:00`, at 23.976 | `1000` |
+| any | empty | `null` |
+
+A duration shows the minutes it will store under the input while you type.
+
+## Props
+
+| prop | type | default | meaning |
+|---|---|---|---|
+| `value` | `number \| string \| null` | `null` | The stored value. Two-way in Svelte. |
+| `onValueChange` | `(value: number \| string \| null) => void` | — | Called when the input commits. |
+| `dataType` | `'number' \| 'float' \| 'percent' \| 'duration' \| 'timecode' \| 'currency'` | `'number'` | Picks the parse, the format and the affix. |
+| `field` | `FieldSchema \| null` | `null` | Supplies the accessible label and the required flag. |
+| `precision` | `number` | `6` | Decimals kept on a float or a currency. |
+| `hoursPerDay` | `number` | `8` | The site's working day, for the day unit on a duration. |
+| `frameRate` | `number` | — | Frames per second, for the frame form of a timecode. |
+| `symbol` | `string` | `'$'` | Shown before the value on a currency field. |
+| `min` / `max` | `number` | the 32-bit bounds | Range for the whole-number types. |
+| `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Control height. |
+| `disabled` | `boolean` | `false` | |
+| `readonly` | `boolean` | `false` | |
+| `invalid` | `boolean` | `false` | Forced invalid state. |
+| `error` | `string \| null` | `null` | A message from the caller, shown in place of the parse error. |
+| `onErrorChange` | `(error: string \| null) => void` | — | Called when the parse error appears or clears. |
+| `placeholder` | `string` | — | |
+| `class` / `className` | `string` | — | Merged after the widget's own classes. |
+
+## Events
+
+`onValueChange` fires on commit only. Input that does not parse emits nothing; it sets the invalid
+state and reports the message through `onErrorChange`.
+
+## Slots
+
+`errorMessage` receives the message and renders it.
+
+## Keyboard
+
+| key | does |
+|---|---|
+| `Enter` | Commits. |
+| `Escape` | Restores the stored value. |
+| `Tab` | Commits by leaving the control. |
+
+## API behaviour
+
+A `number`, a `percent` and a `timecode` take whole numbers and reject a decimal outright, while a
+`duration` truncates one toward zero at 200; all four sit in a signed 32-bit column
+(field_types/number, percent, timecode, duration).
+
+A `float` is returned as a quoted string rounded to six decimals, and rejects an integer on write and
+inside a filter, so a whole value is emitted with a decimal point (field_types/float).
+
+A duration is a whole number of minutes and the field names no unit. The site does:
+`GET /preferences` carries `hours_per_day` and `duration_units` (field_types/duration).
+
+A timecode is milliseconds. No schema or preference names the frame rate; a `_summarize` grouping is
+the one place the server renders one, and the rate solves out of that (field_types/timecode).
+
+The corpus has no card for `currency`. It is parsed as a decimal here, and its write shape is not
+verified.

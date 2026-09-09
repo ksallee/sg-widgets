@@ -120,7 +120,13 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-/* The one copy of the shadcn tokens, scoped to the demo stage. */
+/*
+ * The one copy of the shadcn tokens.
+ *
+ * Also on `:root`, because a popover portals to `<body>` and so leaves the stage: the
+ * stage block below still wins on the stage itself, and a portalled popup reads these.
+ */
+:root,
 .sg-demo {
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
@@ -165,9 +171,12 @@
  * - `.sg-demo-chrome` under a dark Starlight -- the harness furniture (toolbar,
  *   frame) follows the docs theme, so a demo does not glare on a dark page. The stage
  *   nested inside redefines the tokens from `.sg-demo` above, so it stays independent.
+ * - a portalled popup under a dark Starlight -- it sits on `<body>`, outside the stage,
+ *   so it follows the docs theme as the chrome does.
  */
 .sg-demo.dark,
-:root[data-theme='dark'] .sg-demo-chrome {
+:root[data-theme='dark'] .sg-demo-chrome,
+:root[data-theme='dark'] [data-slot='popover-content'] {
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);
@@ -201,17 +210,20 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
-/* The parts of Tailwind's preflight the shadcn components assume, demo-stage only. */
+/*
+ * The parts of Tailwind's preflight the shadcn components assume, on the stage and on
+ * any shadcn popup, which portals to `<body>` and would otherwise get the UA styles.
+ */
 @layer sg-demo-base {
-  .sg-demo,
-  .sg-demo *,
-  .sg-demo *::before,
-  .sg-demo *::after {
+  :is(.sg-demo, [data-slot='popover-content']),
+  :is(.sg-demo, [data-slot='popover-content']) *,
+  :is(.sg-demo, [data-slot='popover-content']) *::before,
+  :is(.sg-demo, [data-slot='popover-content']) *::after {
     box-sizing: border-box;
     border: 0 solid;
   }
 
-  .sg-demo {
+  :is(.sg-demo, [data-slot='popover-content']) {
     background-color: var(--background);
     color: var(--foreground);
     font-family: var(--font-sans);
@@ -221,27 +233,27 @@
     outline-color: color-mix(in oklab, var(--ring) 50%, transparent);
   }
 
-  .sg-demo :is(h1, h2, h3, h4, h5, h6) {
+  :is(.sg-demo, [data-slot='popover-content']) :is(h1, h2, h3, h4, h5, h6) {
     font-size: inherit;
     font-weight: inherit;
     margin: 0;
   }
 
-  .sg-demo :is(p, ul, ol, dl, figure, blockquote, pre, hr) {
+  :is(.sg-demo, [data-slot='popover-content']) :is(p, ul, ol, dl, figure, blockquote, pre, hr) {
     margin: 0;
   }
 
-  .sg-demo :is(ul, ol) {
+  :is(.sg-demo, [data-slot='popover-content']) :is(ul, ol) {
     list-style: none;
     padding: 0;
   }
 
-  .sg-demo a {
+  :is(.sg-demo, [data-slot='popover-content']) a {
     color: inherit;
     text-decoration: inherit;
   }
 
-  .sg-demo :is(button, input, optgroup, select, textarea) {
+  :is(.sg-demo, [data-slot='popover-content']) :is(button, input, optgroup, select, textarea) {
     font: inherit;
     color: inherit;
     letter-spacing: inherit;
@@ -252,32 +264,32 @@
     opacity: 1;
   }
 
-  .sg-demo :is(button, [type='button'], [type='reset'], [type='submit']) {
+  :is(.sg-demo, [data-slot='popover-content']) :is(button, [type='button'], [type='reset'], [type='submit']) {
     appearance: button;
     background-image: none;
     cursor: default;
   }
 
-  .sg-demo :is(button, [role='button']):not(:disabled) {
+  :is(.sg-demo, [data-slot='popover-content']) :is(button, [role='button']):not(:disabled) {
     cursor: pointer;
   }
 
-  .sg-demo :is(img, svg, video, canvas, audio, iframe, embed, object) {
+  :is(.sg-demo, [data-slot='popover-content']) :is(img, svg, video, canvas, audio, iframe, embed, object) {
     display: block;
     vertical-align: middle;
   }
 
-  .sg-demo :is(img, video) {
+  :is(.sg-demo, [data-slot='popover-content']) :is(img, video) {
     max-width: 100%;
     height: auto;
   }
 
-  .sg-demo ::placeholder {
+  :is(.sg-demo, [data-slot='popover-content']) ::placeholder {
     color: color-mix(in oklab, currentcolor 50%, transparent);
     opacity: 1;
   }
 
-  .sg-demo :is(code, kbd, samp, pre) {
+  :is(.sg-demo, [data-slot='popover-content']) :is(code, kbd, samp, pre) {
     font-family: var(--font-mono, ui-monospace, monospace);
     font-size: 1em;
     background: none;

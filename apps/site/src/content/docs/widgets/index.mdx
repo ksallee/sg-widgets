@@ -16,7 +16,7 @@ pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/status-badge.json
 pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/status-badge.json
 ```
 
-Every widget takes an `SgClient` from `@sg-widgets/core` for data. Wire your own, or the shipped REST
-client.
+Every widget that reads takes a service from `@sg-widgets/core`, built once over your client: the
+schema pickers take a `SchemaService`. Wire your own client, or the shipped REST one.
 
 <Demo name="hello" />

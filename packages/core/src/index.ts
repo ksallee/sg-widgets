@@ -1,4 +1,5 @@
 export * from './field-types.js';
+export * from './field-icons.js';
 export * from './filter.js';
 export * from './render.js';
 export * from './schema.js';
@@ -13,3 +14,4 @@ export * from './proxy-handler.js';
 export * from './session-auth.js';
 export * from './context.js';
 export * from './status-icons.js';
+export * from './pickers.js';

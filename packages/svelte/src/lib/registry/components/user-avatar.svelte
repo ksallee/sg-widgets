@@ -12,11 +12,19 @@
 		md: 'size-4',
 		lg: 'size-5'
 	};
+	/** Initials tints, from the theme's chart palette so every theme brings its own. */
+	const TINT = [
+	  'bg-chart-1/15 text-chart-1',
+	  'bg-chart-2/15 text-chart-2',
+	  'bg-chart-3/15 text-chart-3',
+	  'bg-chart-4/15 text-chart-4',
+	  'bg-chart-5/15 text-chart-5',
+	];
 </script>
 
 <script lang="ts">
 	import type { HTMLAttributes } from 'svelte/elements';
-	import { initialsOf } from '@sg-widgets/core';
+	import { initialsOf, nameColorIndex } from '@sg-widgets/core';
 	import Bot from '@lucide/svelte/icons/bot';
 	import { cn, type WithElementRef } from '$lib/utils.js';
 
@@ -30,6 +38,8 @@
 		inactive?: boolean;
 		/** Marks an ApiUser or a script account rather than a person. */
 		apiUser?: boolean;
+		/** `auto` tints the initials from the name, the same tint every time. */
+		color?: 'auto' | 'none';
 	};
 
 	let {
@@ -38,6 +48,7 @@
 		size = 'md',
 		inactive = false,
 		apiUser = false,
+		color = 'none',
 		class: className,
 		ref = $bindable(null),
 		...rest
@@ -47,6 +58,7 @@
 	let failed = $state<string | null>(null);
 	const src = $derived(apiUser || (image !== null && image === failed) ? null : image);
 	const initials = $derived(initialsOf(name));
+	const tinted = $derived(color === 'auto' && !apiUser && !src && initials.length > 0);
 </script>
 
 <!--
@@ -71,6 +83,7 @@
 		class={cn(
 			'bg-muted text-muted-foreground ring-border flex size-full items-center justify-center overflow-hidden rounded-full font-medium ring-1 select-none',
 			apiUser && 'bg-secondary text-secondary-foreground',
+			tinted && TINT[nameColorIndex(name, TINT.length)],
 			inactive && 'opacity-50 grayscale'
 		)}
 	>

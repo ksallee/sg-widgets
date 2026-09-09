@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fileHref } from '../src/render.js';
+import { fileHref, nameColorIndex } from '../src/render.js';
 import {
   COLOR_SENTINEL,
   fileNameFromUrl,
@@ -261,5 +261,15 @@ describe('formatFloat decimals', () => {
     expect(formatFloat('1.777778', { decimals: 2 })).toBe('1.78');
     expect(formatFloat('25.0', { decimals: 3 })).toBe('25.000');
     expect(formatFloat('25.0')).toBe('25');
+  });
+});
+
+describe('nameColorIndex', () => {
+  it('is stable, bounded, and spreads names', () => {
+    expect(nameColorIndex('Ada Lovelace')).toBe(nameColorIndex('Ada Lovelace'));
+    const idx = ['Ada Lovelace', 'Bo Chen', 'Cleo Dias', 'Grace Hopper', 'Alan Turing', 'Madonna'].map((n) => nameColorIndex(n));
+    expect(idx.every((i) => i >= 0 && i < 5)).toBe(true);
+    expect(new Set(idx).size).toBeGreaterThan(2);
+    expect(nameColorIndex('')).toBe(0);
   });
 });

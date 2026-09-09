@@ -59,6 +59,19 @@
 	</section>
 
 	<section class={group}>
+		<h4 class={label}>Initials, tinted from the name</h4>
+		<div class={row}>
+		  <UserAvatar name="Ada Lovelace" color="auto" />
+		  <UserAvatar name="Kevin van der Meer" color="auto" />
+		  <UserAvatar name="Madonna" color="auto" />
+		  <UserAvatar name="k.sallee" color="auto" />
+		  <UserAvatar name="Grace Hopper" color="auto" />
+		  <UserAvatar name="Alan Turing" color="auto" />
+		  <UserAvatar name="Bo Chen" color="auto" inactive />
+		</div>
+	</section>
+
+	<section class={group}>
 		<h4 class={label}>Inactive, and an image that fails to load</h4>
 		<div class={row}>
 			<UserAvatar name="Grace Hopper" inactive />

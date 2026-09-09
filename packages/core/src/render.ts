@@ -343,6 +343,21 @@ export const COLOR_SENTINEL = 'pipeline_step';
  * Meer" is KM. A single word gives one letter; a `login` such as `k.sallee` is
  * split on its punctuation too.
  */
+/**
+ * A stable index in `[0, count)` for a name, so the same person always gets the same
+ * tint. FNV-1a over the code points; the name alone, so a login and a display name
+ * of one person may differ.
+ */
+export function nameColorIndex(name: string | null | undefined, count = 5): number {
+  if (isEmptyValue(name) || count <= 0) return 0;
+  let h = 0x811c9dc5;
+  for (const ch of String(name)) {
+    h ^= ch.codePointAt(0) ?? 0;
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return h % count;
+}
+
 export function initialsOf(name: string | null | undefined, max = 2): string {
   if (isEmptyValue(name)) return '';
   const words = String(name)

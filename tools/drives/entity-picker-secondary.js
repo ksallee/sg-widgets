@@ -34,11 +34,16 @@ const rows = () => $$('[data-picker="entity-multi"] [data-slot="entity-picker-op
 
 /** Open one demo's picker, type, and wait for the rows the query answers. */
 async function search(pane, demoCase, query) {
-  const input = $(`[data-demo-case="${demoCase}"] [data-slot="entity-picker-input"]`, pane);
-  if (!input) return { error: `no query input in ${demoCase}` };
-  press(input);
+  const control = $(`[data-demo-case="${demoCase}"] [data-slot="entity-picker-control"]`, pane);
+  if (!control) return { error: `no control in ${demoCase}` };
+  press(control);
   const box = await until(popover);
   if (!box) return { error: `${demoCase} did not open` };
+  // A summary trigger keeps its search box in the popup; a token field keeps it inline.
+  const input =
+    $('[data-picker="entity-multi"] [data-slot="entity-picker-input"]') ??
+    $(`[data-demo-case="${demoCase}"] [data-slot="entity-picker-input"]`, pane);
+  if (!input) return { error: `no query input in ${demoCase}` };
   if (query) typeInto(input, query);
   // Past the 250ms debounce and the mock's latency, then the rows for this query.
   const matched = await until(() => {

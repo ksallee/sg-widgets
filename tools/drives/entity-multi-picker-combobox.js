@@ -39,11 +39,13 @@ const popup = () => $('[data-picker="entity-multi"]');
 const rows = () => $$('[data-picker="entity-multi"] [data-slot="entity-picker-option"]');
 const keyOf = (row) => `${row.dataset.entityType}:${row.dataset.entityId}`;
 
+/** Chips the control actually shows. The ones past the fit stay in the DOM, hidden. */
 function summaryOf(pane, mode) {
   const box = $(`[data-demo-summary="${mode}"]`, pane);
   if (!box) return null;
   return {
-    chips: $$('[data-slot="entity-chip"]', box).length,
+    chips: $$('[data-chip]:not([hidden])', box).length,
+    hidden: $$('[data-chip][hidden]', box).length,
     overflow: $('[data-slot="entity-picker-overflow"]', box)?.textContent.trim() ?? '',
     count: $('[data-slot="entity-picker-count"]', box)?.textContent.trim() ?? '',
   };
@@ -53,17 +55,24 @@ for (const framework of ['svelte', 'react']) {
   const pane = $(`[data-pane="${framework}"]`);
   if (!pane || pane.offsetParent === null) continue;
 
-  const input = $('[data-demo-case="multi"] [data-slot="entity-picker-input"]', pane);
-  if (!input) {
-    failures.push(`${framework}: the control has no query input`);
+  // The default control is a summary trigger: the search box lives in the popup.
+  const control = $('[data-demo-case="multi"] [data-slot="entity-picker-control"]', pane);
+  if (!control) {
+    failures.push(`${framework}: no control to press`);
     continue;
   }
-  input.scrollIntoView({ block: 'center' });
-  press(input);
+  control.scrollIntoView({ block: 'center' });
+  press(control);
   if (!(await until(popup))) {
     failures.push(`${framework}: a press on the field did not open the list`);
     continue;
   }
+  const input = $('[data-picker="entity-multi"] [data-slot="entity-picker-input"]');
+  if (!input) {
+    failures.push(`${framework}: the popup has no search box`);
+    continue;
+  }
+  if (input !== document.activeElement) failures.push(`${framework}: the popup's search box did not take focus`);
 
   typeInto(input, 'sh010');
   const matched = await until(() => {
@@ -116,8 +125,13 @@ for (const framework of ['svelte', 'react']) {
   seen[framework] = { bold, rows: matched.length, pinned: stillThere, chips, ellipsis, count, capped };
 
   if (chips?.chips !== 5) failures.push(`${framework}: chips drew ${chips?.chips} of 5`);
-  if (ellipsis?.chips !== 3) failures.push(`${framework}: ellipsis drew ${ellipsis?.chips} of 3 chips`);
-  if (ellipsis?.overflow !== '+2') failures.push(`${framework}: ellipsis read "${ellipsis?.overflow}", wanted "+2"`);
+  if ((ellipsis?.chips ?? 0) === 0) failures.push(`${framework}: ellipsis drew no chip at all`);
+  if ((ellipsis?.chips ?? 0) + (ellipsis?.hidden ?? 0) !== 5) {
+    failures.push(`${framework}: ellipsis holds ${(ellipsis?.chips ?? 0) + (ellipsis?.hidden ?? 0)} chips, wanted 5`);
+  }
+  if (ellipsis?.overflow !== (ellipsis?.hidden ? `+${ellipsis.hidden}` : '')) {
+    failures.push(`${framework}: ellipsis read "${ellipsis?.overflow}" for ${ellipsis?.hidden} hidden`);
+  }
   if (count?.count !== '5 selected') failures.push(`${framework}: count read "${count?.count}"`);
   if (capped?.chips !== 2 || capped?.overflow !== '+3') {
     failures.push(`${framework}: max={2} drew ${capped?.chips} chips and "${capped?.overflow}"`);
@@ -133,7 +147,7 @@ await wait(300);
 return {
   verdict:
     failures.length === 0
-      ? 'PASS rows bold the matched word, a ticked row stays pinned through a new query, and ellipsis reads "+2"'
+      ? 'PASS rows bold the matched word, a ticked row stays pinned through a new query, and ellipsis fits whole chips'
       : `FAIL ${failures.join('; ')}`,
   seen,
 };

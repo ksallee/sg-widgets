@@ -1,11 +1,15 @@
-import { useMemo, useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 import { StatusMultiPicker } from '@/registry/sg/components/status-multi-picker';
 import { createDemoContext } from '../_shared/client';
 
-const group = 'flex flex-col gap-2';
+const group = 'flex flex-col gap-3';
 const label = 'text-muted-foreground text-xs font-medium tracking-wide uppercase';
-const row = 'flex flex-wrap items-start gap-3';
-const box = 'w-64';
+/** One control per row, at the pane's full width, with its caption above it. */
+const stack = 'flex flex-col gap-4';
+const field = 'flex w-full flex-col gap-2';
+const caption = 'text-muted-foreground text-xs';
+/** At most 20rem, so the fit has something to cut against. */
+const narrow = 'max-w-80';
 const readout = 'text-muted-foreground font-mono text-xs tabular-nums';
 
 const MODES = ['icons', 'names', 'chips', 'ellipsis', 'count'] as const;
@@ -32,8 +36,9 @@ export default function StatusMultiPickerDemo() {
             ? `Version, in project ${projectId}`
             : `Version, in project ${projectId} and in project ${otherProjectId}`}
         </h4>
-        <div className={row}>
-          <div className={box} data-demo="p70">
+        <div className={stack}>
+          <div className={field} data-demo="p70">
+            <span className={caption}>Project {projectId}</span>
             <StatusMultiPicker
               client={client}
               entityType="Version"
@@ -42,7 +47,8 @@ export default function StatusMultiPickerDemo() {
               onValueChange={setInProjectA}
             />
           </div>
-          <div className={box} data-demo="p71">
+          <div className={field} data-demo="p71">
+            <span className={caption}>Project {otherProjectId}</span>
             <StatusMultiPicker
               client={client}
               entityType="Version"
@@ -56,8 +62,9 @@ export default function StatusMultiPickerDemo() {
 
       <section className={group}>
         <h4 className={label}>The statuses both projects offer</h4>
-        <div className={row}>
-          <div className={box} data-demo="both">
+        <div className={stack}>
+          <div className={field} data-demo="both">
+            <span className={caption}>The intersection of both projects&apos; codes</span>
             <StatusMultiPicker
               client={client}
               entityType="Version"
@@ -65,15 +72,16 @@ export default function StatusMultiPickerDemo() {
               value={shared}
               onValueChange={setShared}
             />
+            <span className={readout}>{shared.join(', ') || '—'}</span>
           </div>
-          <span className={readout}>{shared.join(', ') || '—'}</span>
         </div>
       </section>
 
       <section className={group}>
         <h4 className={label}>Project, whose status field is a plain list with no icons</h4>
-        <div className={row}>
-          <div className={box} data-demo="project">
+        <div className={stack}>
+          <div className={field} data-demo="project">
+            <span className={caption}>Project&apos;s own status field</span>
             <StatusMultiPicker
               client={client}
               entityType="Project"
@@ -86,8 +94,9 @@ export default function StatusMultiPickerDemo() {
 
       <section className={group}>
         <h4 className={label}>A code the field does not carry, and the code instead of the label</h4>
-        <div className={row}>
-          <div className={box} data-demo="unknown">
+        <div className={stack}>
+          <div className={field} data-demo="unknown">
+            <span className={caption}>A code the field does not carry</span>
             <StatusMultiPicker
               client={client}
               entityType="Version"
@@ -96,7 +105,8 @@ export default function StatusMultiPickerDemo() {
               onValueChange={setUnknown}
             />
           </div>
-          <div className={box}>
+          <div className={field}>
+            <span className={caption}>The code instead of the label</span>
             <StatusMultiPicker
               client={client}
               entityType="Version"
@@ -110,22 +120,12 @@ export default function StatusMultiPickerDemo() {
       </section>
 
       <section className={group}>
-        <h4 className={label}>What the closed trigger shows, with two and with five selected</h4>
-        <div className={row}>
+        <h4 className={label}>What the closed trigger shows for five selected, wide and narrow</h4>
+        <div className={stack}>
           {MODES.map((mode) => (
-            <div className={group} key={mode}>
-              <span className={readout}>{mode}</span>
-              <div className={box} data-demo={`summary-${mode}-2`}>
-                <StatusMultiPicker
-                  client={client}
-                  entityType="Version"
-                  projectId={projectId}
-                  value={TWO}
-                  summary={mode}
-                  clearable={false}
-                />
-              </div>
-              <div className={box} data-demo={`summary-${mode}-5`}>
+            <Fragment key={mode}>
+              <div className={field} data-demo={`summary-${mode}-5`}>
+                <span className={caption}>{mode}, full width</span>
                 <StatusMultiPicker
                   client={client}
                   entityType="Version"
@@ -135,15 +135,51 @@ export default function StatusMultiPickerDemo() {
                   clearable={false}
                 />
               </div>
-            </div>
+              <div className={field} data-demo={`summary-${mode}-narrow`}>
+                <span className={caption}>{mode}, at most 20rem</span>
+                <div className={narrow}>
+                  <StatusMultiPicker
+                    client={client}
+                    entityType="Version"
+                    projectId={projectId}
+                    value={FIVE}
+                    summary={mode}
+                    clearable={false}
+                  />
+                </div>
+              </div>
+            </Fragment>
           ))}
+          <div className={field} data-demo="summary-chips-2">
+            <span className={caption}>chips, two selected</span>
+            <StatusMultiPicker
+              client={client}
+              entityType="Version"
+              projectId={projectId}
+              value={TWO}
+              summary="chips"
+              clearable={false}
+            />
+          </div>
+          <div className={field} data-demo="summary-names-2">
+            <span className={caption}>names, two selected</span>
+            <StatusMultiPicker
+              client={client}
+              entityType="Version"
+              projectId={projectId}
+              value={TWO}
+              summary="names"
+              clearable={false}
+            />
+          </div>
         </div>
       </section>
 
       <section className={group}>
-        <h4 className={label}>Two selected, one chip and a &quot;+1&quot;</h4>
-        <div className={row}>
-          <div className={box} data-demo="max-one">
+        <h4 className={label}>Two selected, one badge and a &quot;+1&quot;</h4>
+        <div className={stack}>
+          <div className={field} data-demo="max-one">
+            <span className={caption}>One badge at most, whatever the room</span>
             <StatusMultiPicker
               client={client}
               entityType="Version"
@@ -158,8 +194,9 @@ export default function StatusMultiPickerDemo() {
 
       <section className={group}>
         <h4 className={label}>Disabled, read-only, invalid</h4>
-        <div className={row}>
-          <div className={box}>
+        <div className={stack}>
+          <div className={field}>
+            <span className={caption}>Disabled</span>
             <StatusMultiPicker
               client={client}
               entityType="Version"
@@ -168,7 +205,8 @@ export default function StatusMultiPickerDemo() {
               disabled
             />
           </div>
-          <div className={box}>
+          <div className={field}>
+            <span className={caption}>Read-only</span>
             <StatusMultiPicker
               client={client}
               entityType="Version"
@@ -177,7 +215,8 @@ export default function StatusMultiPickerDemo() {
               readOnly
             />
           </div>
-          <div className={box}>
+          <div className={field}>
+            <span className={caption}>Invalid</span>
             <StatusMultiPicker
               client={client}
               entityType="Version"
@@ -191,8 +230,9 @@ export default function StatusMultiPickerDemo() {
 
       <section className={group}>
         <h4 className={label}>Sizes</h4>
-        <div className={row}>
-          <div className={box}>
+        <div className={stack}>
+          <div className={field}>
+            <span className={caption}>sm</span>
             <StatusMultiPicker
               client={client}
               entityType="Version"
@@ -201,7 +241,8 @@ export default function StatusMultiPickerDemo() {
               size="sm"
             />
           </div>
-          <div className={box}>
+          <div className={field}>
+            <span className={caption}>md</span>
             <StatusMultiPicker
               client={client}
               entityType="Version"
@@ -210,7 +251,8 @@ export default function StatusMultiPickerDemo() {
               size="md"
             />
           </div>
-          <div className={box}>
+          <div className={field}>
+            <span className={caption}>lg</span>
             <StatusMultiPicker
               client={client}
               entityType="Version"

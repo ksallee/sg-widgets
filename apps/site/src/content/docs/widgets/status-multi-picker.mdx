@@ -36,14 +36,20 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/status-multi-p
 | `invalid` | `boolean` | `false` | Sets `aria-invalid` and the destructive ring. |
 | `showCode` | `boolean` | `false` | Shows the raw code instead of the label. The other one stays in the tooltip. |
 | `summary` | `'chips' \| 'ellipsis' \| 'count' \| 'icons' \| 'names'` | `'ellipsis'` | What the control shows for the selection. `both` is the old spelling of `chips`. |
-| `max` | `number` | `3` | Badges drawn before the rest becomes `+n`. `icons` draws twice as many. |
+| `max` | `number` | `0` | Badges drawn before the rest becomes `+n`. `0` lets the row fit what it can, and `icons` draws twice as many. |
 | `siteUrl` | `string` | — | Passed to every badge, for a sprite cell outside the status icon set. |
 | `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Heights 8, 9 and 10. |
 | `class` / `className` | `string` | — | Merged after the widget's own classes. |
 
-The control shows the selection as removable badges that wrap, as one clipped line of them under
-`ellipsis`, as icon-only badges, as the names joined by commas, or as `3 selected`. Past `max` the
-rest becomes `+n`, and `icons` fits twice as many. Without a project the options are the site
+`chips` makes the control a token field: every badge, wrapped, each with its own remove control,
+the caret beside them, and `+n` after the last badge `max` allows.
+`icons` is the same field with the labels dropped and no per-badge remove, so removal happens in
+the list; it fits twice as many.
+`ellipsis` makes the control a one-line trigger: as many whole badges as the row fits, never a
+cut one, then `+n` inline after the last, and the search box at the top of the popup.
+`names` and `count` make it the same trigger, reading the labels joined by commas and
+`3 selected`.
+A press on `+n` opens the list, where the hidden codes are. Without a project the options are the site
 vocabulary, which hides nothing. `projectIds` offers the intersection of what each project allows,
 in the first project's order.
 
@@ -63,7 +69,7 @@ None. The rows and the closed state are status badges.
 | key | does |
 |---|---|
 | <kbd>Space</kbd>, <kbd>Enter</kbd> | On the chevron, opens the list |
-| any text | Opens the list and narrows the rows |
+| any text | Narrows the rows, from the caret under `chips` and `icons` and from the popup's search box otherwise |
 | <kbd>↑</kbd> <kbd>↓</kbd> | Moves the highlight |
 | <kbd>Home</kbd> <kbd>End</kbd> | First and last row |
 | <kbd>Enter</kbd> | Toggles the highlighted status; the list stays open |

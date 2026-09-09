@@ -40,9 +40,14 @@
 	];
 	const SUMMARIES = ['chips', 'ellipsis', 'count'] as const;
 
-	const group = 'flex flex-col gap-2';
+	const group = 'flex flex-col gap-3';
 	const label = 'text-muted-foreground text-xs font-medium tracking-wide uppercase';
-	const field = 'flex max-w-sm flex-col gap-2';
+	/** One control per row, at the pane's full width, with its caption above it. */
+	const stack = 'flex flex-col gap-4';
+	const field = 'flex w-full flex-col gap-2';
+	const caption = 'text-muted-foreground text-xs';
+	/** At most 20rem, so the fit has something to cut against. */
+	const narrow = 'max-w-80';
 </script>
 
 <div class="flex flex-col gap-4">
@@ -145,10 +150,11 @@
 	</section>
 
 	<section class={group} data-demo-case="summary">
-		<h4 class={label}>What the control shows for five selected</h4>
-		<div class="flex flex-col gap-2">
+		<h4 class={label}>What the control shows for five selected, wide and narrow</h4>
+		<div class={stack}>
 			{#each SUMMARIES as summary (summary)}
 				<div class={field} data-demo-summary={summary}>
+					<span class={caption}>{summary}, full width</span>
 					<EntityMultiPicker
 						{client}
 						entityTypes={['Asset']}
@@ -157,18 +163,39 @@
 						clearable={false}
 					/>
 				</div>
+				<div class={field} data-demo-summary="{summary}-narrow">
+					<span class={caption}>{summary}, at most 20rem</span>
+					<div class={narrow}>
+						<EntityMultiPicker
+							{client}
+							entityTypes={['Asset']}
+							value={five}
+							{summary}
+							clearable={false}
+						/>
+					</div>
+				</div>
 			{/each}
 			<div class={field} data-demo-summary="max">
-				<EntityMultiPicker {client} entityTypes={['Asset']} value={five} max={2} clearable={false} />
+				<span class={caption}>chips, two at most</span>
+				<EntityMultiPicker
+					{client}
+					entityTypes={['Asset']}
+					value={five}
+					summary="chips"
+					max={2}
+					clearable={false}
+				/>
 			</div>
 		</div>
 	</section>
 
 	<section class={group} data-demo-case="sizes">
 		<h4 class={label}>Sizes</h4>
-		<div class="flex flex-col gap-2">
+		<div class={stack}>
 			{#each ['sm', 'md', 'lg'] as const as size (size)}
 				<div class={field}>
+					<span class={caption}>{size}</span>
 					<EntityMultiPicker {client} entityTypes={['Asset']} value={preset} {size} clearable />
 				</div>
 			{/each}
@@ -177,14 +204,17 @@
 
 	<section class={group} data-demo-case="states">
 		<h4 class={label}>Disabled, read-only, invalid</h4>
-		<div class="flex flex-col gap-2">
+		<div class={stack}>
 			<div class={field}>
+				<span class={caption}>Disabled</span>
 				<EntityMultiPicker {client} entityTypes={['Asset']} value={preset} disabled />
 			</div>
 			<div class={field}>
+				<span class={caption}>Read-only</span>
 				<EntityMultiPicker {client} entityTypes={['Asset']} value={preset} readonly />
 			</div>
 			<div class={field}>
+				<span class={caption}>Invalid</span>
 				<EntityMultiPicker {client} entityTypes={['Asset']} value={preset} invalid />
 			</div>
 		</div>

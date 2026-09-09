@@ -22,16 +22,25 @@
 	let failed = $state<EntityRef | null>(null);
 	let lastError = $state<string | null>(null);
 	const preset: EntityRef = { type: 'Asset', id: 1226, name: 'charAda' };
+	const SIZES = [
+		{ size: 'sm', caption: 'Small' },
+		{ size: 'md', caption: 'Medium, the default' },
+		{ size: 'lg', caption: 'Large' }
+	] as const;
 
 	const group = 'flex flex-col gap-2';
 	const label = 'text-muted-foreground text-xs font-medium tracking-wide uppercase';
-	const field = 'flex max-w-sm flex-col gap-2';
+	// One control per row, full width of the pane, its caption on the line above.
+	const field = 'flex w-full flex-col gap-2';
+	const stack = 'flex flex-col gap-4';
+	const caption = 'text-muted-foreground text-xs';
 </script>
 
-<div class="flex flex-col gap-4">
+<div class="flex flex-col gap-3">
 	<section class={group} data-demo-case="single">
 		<h4 class={label}>One shot</h4>
 		<div class={field}>
+			<span class={caption}>One shot, clearable</span>
 			<EntityPicker {client} entityTypes={['Shot']} bind:value={shot} clearable />
 		</div>
 	</section>
@@ -39,6 +48,7 @@
 	<section class={group} data-demo-case="status-secondary">
 		<h4 class={label}>Status as secondary</h4>
 		<div class={field}>
+			<span class={caption}>Status on the right of every row</span>
 			<EntityPicker
 				{client}
 				entityTypes={['Shot']}
@@ -52,6 +62,7 @@
 	<section class={group} data-demo-case="multi-type">
 		<h4 class={label}>Three types at once, the type on the right</h4>
 		<div class={field}>
+			<span class={caption}>Shots, assets and sequences in one list</span>
 			<EntityPicker
 				{client}
 				entityTypes={['Shot', 'Asset', 'Sequence']}
@@ -65,6 +76,7 @@
 	<section class={group} data-demo-case="custom-secondary">
 		<h4 class={label}>Custom secondary</h4>
 		<div class={field}>
+			<span class={caption}>The id, rendered by the caller</span>
 			<EntityPicker
 				{client}
 				entityTypes={['Shot']}
@@ -78,6 +90,7 @@
 	<section class={group} data-demo-case="project">
 		<h4 class={label}>Scoped to one project</h4>
 		<div class={field}>
+			<span class={caption}>Scoped to one project</span>
 			<EntityPicker
 				{client}
 				entityTypes={['Shot']}
@@ -91,6 +104,7 @@
 	<section class={group} data-demo-case="hydrate">
 		<h4 class={label}>Bare reference, resolved on mount</h4>
 		<div class={field}>
+			<span class={caption}>Type and id in, name resolved on mount</span>
 			<EntityPicker {client} entityTypes={['Shot']} bind:value={bare} clearable />
 			<button
 				type="button"
@@ -105,6 +119,7 @@
 	<section class={group} data-demo-case="more">
 		<h4 class={label}>Five a page, with a load more row</h4>
 		<div class={field}>
+			<span class={caption}>Five a page</span>
 			<EntityPicker {client} entityTypes={['Shot']} pageSize={5} bind:value={paged} />
 		</div>
 	</section>
@@ -112,6 +127,7 @@
 	<section class={group} data-demo-case="error">
 		<h4 class={label}>Error state</h4>
 		<div class={field}>
+			<span class={caption}>Reads a client whose next call can be armed to fail</span>
 			<EntityPicker
 				client={failing.client}
 				entityTypes={['Shot']}
@@ -136,11 +152,13 @@
 
 	<section class={group} data-demo-case="anatomy">
 		<h4 class={label}>Row anatomy: no thumbnail, a sub-label, the code beside the name</h4>
-		<div class="flex flex-col gap-2">
+		<div class={stack}>
 			<div class={field}>
+				<span class={caption}>No thumbnail</span>
 				<EntityPicker {client} entityTypes={['Shot']} thumbnail={false} bind:value={plain} clearable />
 			</div>
 			<div class={field}>
+				<span class={caption}>A sub-label, and the code beside the name</span>
 				<EntityPicker
 					{client}
 					entityTypes={['Version']}
@@ -156,9 +174,10 @@
 
 	<section class={group} data-demo-case="sizes">
 		<h4 class={label}>Sizes</h4>
-		<div class="flex flex-col gap-2">
-			{#each ['sm', 'md', 'lg'] as const as size (size)}
+		<div class={stack}>
+			{#each SIZES as { size, caption: sizeCaption } (size)}
 				<div class={field}>
+					<span class={caption}>{sizeCaption}</span>
 					<EntityPicker {client} entityTypes={['Asset']} value={preset} {size} clearable />
 				</div>
 			{/each}
@@ -167,10 +186,19 @@
 
 	<section class={group} data-demo-case="states">
 		<h4 class={label}>Disabled, read-only, invalid</h4>
-		<div class="flex flex-col gap-2">
-			<div class={field}><EntityPicker {client} entityTypes={['Asset']} value={preset} disabled /></div>
-			<div class={field}><EntityPicker {client} entityTypes={['Asset']} value={preset} readonly /></div>
-			<div class={field}><EntityPicker {client} entityTypes={['Asset']} value={preset} invalid /></div>
+		<div class={stack}>
+			<div class={field}>
+				<span class={caption}>Disabled</span>
+				<EntityPicker {client} entityTypes={['Asset']} value={preset} disabled />
+			</div>
+			<div class={field}>
+				<span class={caption}>Read-only</span>
+				<EntityPicker {client} entityTypes={['Asset']} value={preset} readonly />
+			</div>
+			<div class={field}>
+				<span class={caption}>Invalid</span>
+				<EntityPicker {client} entityTypes={['Asset']} value={preset} invalid />
+			</div>
 		</div>
 	</section>
 </div>

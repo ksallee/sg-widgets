@@ -1,11 +1,16 @@
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import type { EntityRef } from '@sg-widgets/core';
 import { EntityMultiPicker } from '@/registry/sg/components/entity-multi-picker';
 import { createDemoClient, getDemoClient } from '../_shared/client';
 
-const group = 'flex flex-col gap-2';
+const group = 'flex flex-col gap-3';
 const label = 'text-muted-foreground text-xs font-medium tracking-wide uppercase';
-const field = 'flex max-w-sm flex-col gap-2';
+/** One control per row, at the pane's full width, with its caption above it. */
+const stack = 'flex flex-col gap-4';
+const field = 'flex w-full flex-col gap-2';
+const caption = 'text-muted-foreground text-xs';
+/** At most 20rem, so the fit has something to cut against. */
+const narrow = 'max-w-80';
 const linkish =
   'text-muted-foreground hover:text-foreground focus-visible:ring-ring focus-visible:ring-offset-background text-sm underline underline-offset-2 outline-none focus-visible:ring-2 focus-visible:ring-offset-2';
 
@@ -169,30 +174,54 @@ export default function EntityMultiPickerDemo() {
       </section>
 
       <section className={group} data-demo-case="summary">
-        <h4 className={label}>What the control shows for five selected</h4>
-        <div className="flex flex-col gap-2">
+        <h4 className={label}>What the control shows for five selected, wide and narrow</h4>
+        <div className={stack}>
           {SUMMARIES.map((summary) => (
-            <div className={field} data-demo-summary={summary} key={summary}>
-              <EntityMultiPicker
-                client={client}
-                entityTypes={['Asset']}
-                value={five}
-                summary={summary}
-                clearable={false}
-              />
-            </div>
+            <Fragment key={summary}>
+              <div className={field} data-demo-summary={summary}>
+                <span className={caption}>{summary}, full width</span>
+                <EntityMultiPicker
+                  client={client}
+                  entityTypes={['Asset']}
+                  value={five}
+                  summary={summary}
+                  clearable={false}
+                />
+              </div>
+              <div className={field} data-demo-summary={`${summary}-narrow`}>
+                <span className={caption}>{summary}, at most 20rem</span>
+                <div className={narrow}>
+                  <EntityMultiPicker
+                    client={client}
+                    entityTypes={['Asset']}
+                    value={five}
+                    summary={summary}
+                    clearable={false}
+                  />
+                </div>
+              </div>
+            </Fragment>
           ))}
           <div className={field} data-demo-summary="max">
-            <EntityMultiPicker client={client} entityTypes={['Asset']} value={five} max={2} clearable={false} />
+            <span className={caption}>chips, two at most</span>
+            <EntityMultiPicker
+              client={client}
+              entityTypes={['Asset']}
+              value={five}
+              summary="chips"
+              max={2}
+              clearable={false}
+            />
           </div>
         </div>
       </section>
 
       <section className={group} data-demo-case="sizes">
         <h4 className={label}>Sizes</h4>
-        <div className="flex flex-col gap-2">
+        <div className={stack}>
           {SIZES.map((size) => (
             <div className={field} key={size}>
+              <span className={caption}>{size}</span>
               <EntityMultiPicker client={client} entityTypes={['Asset']} value={preset} size={size} clearable />
             </div>
           ))}
@@ -201,14 +230,17 @@ export default function EntityMultiPickerDemo() {
 
       <section className={group} data-demo-case="states">
         <h4 className={label}>Disabled, read-only, invalid</h4>
-        <div className="flex flex-col gap-2">
+        <div className={stack}>
           <div className={field}>
+            <span className={caption}>Disabled</span>
             <EntityMultiPicker client={client} entityTypes={['Asset']} value={preset} disabled />
           </div>
           <div className={field}>
+            <span className={caption}>Read-only</span>
             <EntityMultiPicker client={client} entityTypes={['Asset']} value={preset} readOnly />
           </div>
           <div className={field}>
+            <span className={caption}>Invalid</span>
             <EntityMultiPicker client={client} entityTypes={['Asset']} value={preset} invalid />
           </div>
         </div>

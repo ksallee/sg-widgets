@@ -17,10 +17,21 @@
 
 	/** The bordered field the chips and the query input sit in. */
 	const PICKER_CONTROL =
-		'border-input bg-background has-[:focus-visible]:ring-ring has-[:focus-visible]:ring-offset-background has-aria-invalid:border-destructive has-aria-invalid:ring-destructive/20 dark:has-aria-invalid:ring-destructive/40 relative flex w-full min-w-0 flex-wrap items-center gap-1.5 rounded-md border text-sm transition-colors duration-150 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-offset-2 has-aria-invalid:ring-2';
-	/** The combobox input: no box of its own, it borrows the control's. */
+		'border-input bg-background has-[:focus-visible]:ring-ring has-[:focus-visible]:ring-offset-background has-aria-invalid:border-destructive has-aria-invalid:ring-destructive/20 dark:has-aria-invalid:ring-destructive/40 data-invalid:border-destructive data-invalid:ring-destructive/20 dark:data-invalid:ring-destructive/40 relative flex w-full min-w-0 flex-wrap items-center gap-1.5 rounded-md border text-sm transition-colors duration-150 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-offset-2 has-aria-invalid:ring-2 data-invalid:ring-2';
+	/** The caret inside a token field: no box of its own, it borrows the control's. */
 	const PICKER_INPUT =
-		'placeholder:text-muted-foreground relative min-w-8 flex-1 bg-transparent outline-none disabled:cursor-not-allowed';
+		'placeholder:text-muted-foreground relative min-w-[2ch] flex-1 bg-transparent outline-none disabled:cursor-not-allowed';
+	/** The search box a summary trigger keeps in its popup instead. */
+	const PICKER_SEARCH_ROW = 'border-border flex items-center gap-1.5 border-b px-3';
+	const PICKER_SEARCH =
+		'placeholder:text-muted-foreground h-9 w-full min-w-0 bg-transparent text-sm outline-none disabled:cursor-not-allowed';
+	/** The `+n` pill. A press on it opens the list, where the hidden ones are. */
+	const PICKER_PILL =
+		'text-muted-foreground hover:text-foreground focus-visible:ring-ring focus-visible:ring-offset-background shrink-0 rounded-sm text-xs tabular-nums outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2';
+	/** Room the `+n` pill needs beside the chips, so it is never the thing that overflows. */
+	const OVERFLOW_RESERVE = 40;
+	/** The chip row's `gap-1.5`, carried by every measured width. */
+	const CHIP_GAP = 6;
 	/** The popup surface, matching the popover item of each registry. */
 	const PICKER_POPUP =
 		'bg-popover text-popover-foreground data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 ring-foreground/10 z-50 w-96 max-w-[calc(100vw-2rem)] origin-(--bits-combobox-content-transform-origin) overflow-hidden rounded-lg shadow-md ring-1 outline-hidden duration-100';
@@ -44,6 +55,7 @@
 	import { filterEntityTypes, matchesTokens, summariseSelection } from '@sg-widgets/core';
 	import { Combobox } from 'bits-ui';
 	import ChevronsUpDown from '@lucide/svelte/icons/chevrons-up-down';
+	import Search from '@lucide/svelte/icons/search';
 	import SearchX from '@lucide/svelte/icons/search-x';
 	import TriangleAlert from '@lucide/svelte/icons/triangle-alert';
 	import X from '@lucide/svelte/icons/x';
@@ -131,7 +143,72 @@
 	const shown = $derived(types.filter((t) => matchesTokens(search, t.displayName, t.name)));
 	const byName = $derived(new Map(types.map((t) => [t.name, t])));
 	const labelOf = (code: string) => byName.get(code)?.displayName ?? code;
-	const plan = $derived(summariseSelection(selected, labelOf, { summary, max }));
+	/**
+	 * A chip control is a token field, with the caret beside the chips. A multi
+	 * control summarising its selection is a trigger, and keeps its search box at the
+	 * top of the popup instead. A single picker is always a token field.
+	 */
+	const inline = $derived(!multiple || summary === 'chips');
+	/** Only a multi control measures a row; a single one draws one chip and stops. */
+	const fitted = $derived(multiple && summary === 'ellipsis');
+
+	/** What the chips look like, so a change to any of it re-measures the row. */
+	const rowKey = $derived(`${size}|${summary}|${selected.map(labelOf).join(', ')}`);
+	let chipsEl = $state<HTMLElement | null>(null);
+	let available = $state(0);
+	let widths = $state<number[]>([]);
+	let measured = $state(false);
+	/** True once the row knows its own widths and its room, so it may be drawn. */
+	const ready = $derived(!fitted || (measured && available > 0));
+
+	/** Every chip laid out, so a hidden one still reports the width it would take. */
+	function measure(row: HTMLElement): number[] {
+		const drawn = [...row.querySelectorAll<HTMLElement>('[data-chip]')];
+		const was = drawn.map((chip) => chip.hidden);
+		for (const chip of drawn) chip.hidden = false;
+		const out = drawn.map((chip) => Math.ceil(chip.getBoundingClientRect().width) + CHIP_GAP);
+		drawn.forEach((chip, i) => (chip.hidden = was[i] ?? false));
+		return out;
+	}
+
+	/** The room the chips have: the control's box, less the padding its affordances take. */
+	function roomIn(control: HTMLElement): number {
+		const style = getComputedStyle(control);
+		return control.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+	}
+
+	$effect(() => {
+		const control = controlEl;
+		if (!control || !fitted) return;
+		const observer = new ResizeObserver(() => (available = roomIn(control)));
+		observer.observe(control);
+		available = roomIn(control);
+		return () => observer.disconnect();
+	});
+
+	$effect(() => {
+		void rowKey;
+		const row = chipsEl;
+		if (!row || !fitted) return;
+		widths = measure(row);
+		measured = true;
+		let live = true;
+		// A chip drawn in the fallback font is not the chip the row ends up with.
+		void document.fonts?.ready.then(() => {
+			if (live && chipsEl) widths = measure(chipsEl);
+		});
+		return () => {
+			live = false;
+		};
+	});
+
+	const plan = $derived(
+		summariseSelection(selected, labelOf, {
+			summary,
+			max,
+			fit: fitted && measured && available > 0 ? { widths, available, reserve: OVERFLOW_RESERVE } : undefined
+		})
+	);
 	const interactive = $derived(!readonly && !disabled);
 	const showClear = $derived(clearable && selected.length > 0 && interactive);
 	const singleKey = $derived(multiple ? '' : ((value as string | null) ?? ''));
@@ -141,18 +218,24 @@
 		onValueChange?.(next);
 	}
 
-	/** A press anywhere in the field opens the list and puts the caret in the input. */
+	/** A press anywhere in the field opens the list, and a token field takes the caret. */
 	function openFromControl(event: PointerEvent): void {
 		if (!interactive) return;
 		const target = event.target as HTMLElement | null;
 		// The chip's remove control, the clear control and the chevron own their own press.
 		if (target?.closest('button')) return;
-		if (target !== inputEl) {
+		if (inline && target !== inputEl) {
 			event.preventDefault();
 			inputEl?.focus({ preventScroll: true });
 		}
 		open = true;
 	}
+
+	// A summary trigger has no caret of its own, so the popup's search box takes it.
+	$effect(() => {
+		if (!open || inline) return;
+		inputEl?.focus({ preventScroll: true });
+	});
 
 	function setOpen(next: boolean): void {
 		open = interactive ? next : false;
@@ -173,7 +256,7 @@
 
 	function clear(): void {
 		emit(multiple ? [] : null);
-		inputEl?.focus({ preventScroll: true });
+		if (inline) inputEl?.focus({ preventScroll: true });
 	}
 </script>
 
@@ -184,6 +267,7 @@
 		onpointerdown={openFromControl}
 		role="group"
 		aria-disabled={disabled ? 'true' : undefined}
+		data-invalid={invalid && !inline ? 'true' : undefined}
 		data-readonly={readonly ? 'true' : undefined}
 		title={plan.title || placeholder}
 		class={cn(PICKER_CONTROL, PICKER_BOX[size], plan.oneLine && 'flex-nowrap', readonly ? 'pr-3' : showClear ? 'pr-14' : 'pr-8')}
@@ -193,13 +277,27 @@
 				{#if summary === 'count' && multiple}
 					<span data-slot="entity-type-picker-count" class="truncate">{plan.countLabel}</span>
 				{:else}
-					<!-- The chips clip rather than shrink, so `+n` always says how many are hidden. -->
+					<!--
+						Whole chips only: the row measures itself and hides the ones that do not
+						fit, so nothing is ever cut in half. `+n` follows the last one drawn.
+							No stylesheet here gives `[hidden]` a display rule, so the row does.
+					-->
 					<span
+						bind:this={chipsEl}
 						data-slot="entity-type-picker-chips"
-						class={cn('flex min-w-0 items-center gap-1.5', plan.oneLine ? 'overflow-hidden' : 'flex-wrap')}
+						class={cn(
+							'flex min-w-0 items-center gap-1.5 [&>[hidden]]:hidden',
+							plan.oneLine ? 'flex-nowrap overflow-hidden' : 'flex-wrap',
+							ready ? undefined : 'invisible'
+						)}
 					>
-					{#each plan.shown as code (code)}
-						<span data-slot="entity-type-picker-chip" class={PICKER_TEXT_CHIP}>
+					{#each selected as code, index (code)}
+						<span
+							data-slot="entity-type-picker-chip"
+							data-chip=""
+							hidden={ready && index >= plan.shown.length}
+							class={PICKER_TEXT_CHIP}
+						>
 							<span class="truncate">{labelOf(code)}</span>
 							{#if multiple && interactive}
 								<button
@@ -214,26 +312,36 @@
 							{/if}
 						</span>
 					{/each}
-					</span>
 					{#if plan.overflow > 0}
-						<span
+						<button
+							type="button"
 							data-slot="entity-type-picker-overflow"
-							class="text-muted-foreground shrink-0 text-xs tabular-nums">+{plan.overflow}</span
+							title={plan.title}
+							aria-label={`Show all ${selected.length} types`}
+							onclick={() => setOpen(true)}
+							class={PICKER_PILL}>+{plan.overflow}</button
 						>
 					{/if}
+					</span>
 				{/if}
 			</span>
+		{:else if !inline}
+			<span data-slot="entity-type-picker-placeholder" class="text-muted-foreground truncate"
+				>{placeholder}</span
+			>
 		{/if}
-		<Combobox.Input
-			bind:ref={inputEl}
-			data-slot="entity-type-picker-input"
-			aria-invalid={invalid ? 'true' : undefined}
-			aria-label={placeholder}
-			readonly={readonly || undefined}
-			placeholder={selected.length > 0 ? searchPlaceholder : placeholder}
-			oninput={(e) => (search = e.currentTarget.value)}
-			class={PICKER_INPUT}
-		/>
+		{#if inline}
+			<Combobox.Input
+				bind:ref={inputEl}
+				data-slot="entity-type-picker-input"
+				aria-invalid={invalid ? 'true' : undefined}
+				aria-label={placeholder}
+				readonly={readonly || undefined}
+				placeholder={selected.length > 0 ? '' : placeholder}
+				oninput={(e) => (search = e.currentTarget.value)}
+				class={PICKER_INPUT}
+			/>
+		{/if}
 	</div>
 {/snippet}
 
@@ -253,6 +361,19 @@
 			sideOffset={4}
 			class={PICKER_POPUP}
 		>
+			{#if !inline}
+				<div data-slot="entity-type-picker-search" class={PICKER_SEARCH_ROW}>
+					<Search aria-hidden="true" class="size-4 shrink-0 opacity-50" />
+					<Combobox.Input
+						bind:ref={inputEl}
+						data-slot="entity-type-picker-input"
+						aria-label={searchPlaceholder}
+						placeholder={searchPlaceholder}
+						oninput={(e) => (search = e.currentTarget.value)}
+						class={PICKER_SEARCH}
+					/>
+				</div>
+			{/if}
 			<div data-slot="entity-type-picker-list" class={PICKER_LIST}>
 				{#if failure}
 					<div data-slot="entity-type-picker-error" class={cn(PICKER_NOTE, 'text-destructive')}>
@@ -321,7 +442,7 @@
 				data-slot="entity-type-picker-trigger"
 				aria-label="Show the entity types"
 				{disabled}
-				class="pointer-events-auto shrink-0 outline-none"
+				class="focus-visible:ring-ring focus-visible:ring-offset-background pointer-events-auto shrink-0 rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
 			>
 				<ChevronsUpDown aria-hidden="true" class={cn('shrink-0 opacity-50', PICKER_GLYPH[size])} />
 			</Combobox.Trigger>

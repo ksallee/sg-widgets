@@ -33,11 +33,13 @@ async function until(read, timeoutMs = 8000) {
 const popup = () => $('[data-picker="entity-type"]');
 const rows = () => $$('[data-picker="entity-type"] [data-slot="entity-type-picker-option"]');
 
+/** Chips the control actually shows. The ones past the fit stay in the DOM, hidden. */
 function summaryOf(pane, mode) {
   const box = $(`[data-demo-summary="${mode}"]`, pane);
   if (!box) return null;
   return {
-    chips: $$('[data-slot="entity-type-picker-chip"]', box).length,
+    chips: $$('[data-chip]:not([hidden])', box).length,
+    hidden: $$('[data-chip][hidden]', box).length,
     overflow: $('[data-slot="entity-type-picker-overflow"]', box)?.textContent.trim() ?? '',
     count: $('[data-slot="entity-type-picker-count"]', box)?.textContent.trim() ?? '',
   };
@@ -77,8 +79,13 @@ for (const framework of ['svelte', 'react']) {
   seen[framework] = { types: all.length, narrowed: codes, chips, ellipsis, count };
 
   if (chips?.chips !== 6) failures.push(`${framework}: chips drew ${chips?.chips} of 6`);
-  if (ellipsis?.chips !== 3) failures.push(`${framework}: ellipsis drew ${ellipsis?.chips} of 3 chips`);
-  if (ellipsis?.overflow !== '+3') failures.push(`${framework}: ellipsis read "${ellipsis?.overflow}", wanted "+3"`);
+  if ((ellipsis?.chips ?? 0) === 0) failures.push(`${framework}: ellipsis drew no chip at all`);
+  if ((ellipsis?.chips ?? 0) + (ellipsis?.hidden ?? 0) !== 6) {
+    failures.push(`${framework}: ellipsis holds ${(ellipsis?.chips ?? 0) + (ellipsis?.hidden ?? 0)} chips, wanted 6`);
+  }
+  if (ellipsis?.overflow !== (ellipsis?.hidden ? `+${ellipsis.hidden}` : '')) {
+    failures.push(`${framework}: ellipsis read "${ellipsis?.overflow}" for ${ellipsis?.hidden} hidden`);
+  }
   if (count?.count !== '6 selected') failures.push(`${framework}: count read "${count?.count}"`);
 }
 

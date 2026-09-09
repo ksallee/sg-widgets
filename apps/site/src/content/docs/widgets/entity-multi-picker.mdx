@@ -26,7 +26,7 @@ Every prop of [EntityPicker](/widgets/entity-picker/), with the value as an arra
 | `exclude` | `EntityRef[]` | `[]` | Rows kept out of the results, per type. |
 | `clearable` | `boolean` | `true` | Shows the clear-all control. |
 | `summary` | `'chips' \| 'ellipsis' \| 'count'` | `'ellipsis'` | What the control shows for the selection. |
-| `max` | `number` | `0` | Chips drawn before the rest becomes `+n`. `0` draws every chip. |
+| `max` | `number` | `0` | Chips drawn before the rest becomes `+n`. `0` lets the row fit what it can. |
 
 The secondary column shows nothing until `secondaryField` or `secondary` asks for something, and
 `secondaryField` is drawn by the field's data type: a status is a badge, a date is formatted.
@@ -35,9 +35,13 @@ Selected rows are appended to the option list after the search results, so a row
 unticked whatever the query. Each selection is also a chip in the control, with its own remove
 control.
 
-`chips` draws every chip and wraps the control. `ellipsis` keeps one line: the first chips, then
-`+n`, with the whole list in the control's tooltip. `count` reads `3 selected`. `max` bounds the
-chips in either chip mode; `ellipsis` draws three when `max` is `0`, since it cannot wrap.
+`chips` makes the control a token field: every chip, wrapped, with the caret beside them, and
+`+n` after the last chip `max` allows.
+`ellipsis` makes it a one-line trigger: as many whole chips as the row fits, never a cut one,
+then `+n` inline after the last, the whole list in the tooltip, and the search box at the top of
+the popup.
+`count` makes it the same trigger reading `3 selected`.
+A press on `+n` opens the list, where the hidden rows are.
 
 ## Events
 
@@ -55,12 +59,12 @@ bold, sub-label, right-aligned secondary.
 
 | key | does |
 |---|---|
-| any text | Opens the list and searches the server. |
+| any text | Searches the server, from the caret under `chips` and from the popup's search box otherwise. |
 | `Enter`, `Space` | On the chevron, opens the list. |
 | `Up`, `Down` | Moves the highlight through the rows. |
 | `Enter` | Ticks or unticks the highlighted row. The list stays open. |
 | `Escape` | Closes the list and clears the query. |
-| `Tab` | Moves through the chips' remove controls, then the clear control and the chevron. |
+| `Tab` | Moves through the chips' remove controls, then `+n`, the clear control and the chevron. |
 
 ## API behaviour
 

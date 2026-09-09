@@ -7,6 +7,7 @@ const label = 'text-muted-foreground text-xs font-medium tracking-wide uppercase
 const row = 'flex flex-wrap items-center gap-2';
 
 interface Person {
+  id: number;
   name: string;
   image: string | null;
   inactive: boolean;
@@ -40,6 +41,8 @@ function People() {
         if (!live) return;
         setPeople(
           result.data.map((r) => ({
+            id: r.id,
+            id: r.id,
             name: String(r.attributes['name'] ?? ''),
             image: (r.attributes['image'] as string | null) ?? null,
             inactive: r.attributes['sg_status_list'] === 'dis',
@@ -70,7 +73,7 @@ function People() {
         <h4 className={label}>The site's people</h4>
         <div className={row}>
           {people.map((person) => (
-            <UserAvatar key={person.name} name={person.name} image={person.image} inactive={person.inactive} />
+            <UserAvatar key={person.id} name={person.name} image={person.image} inactive={person.inactive} />
           ))}
         </div>
       </section>

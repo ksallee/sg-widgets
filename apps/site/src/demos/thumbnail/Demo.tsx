@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Thumbnail } from '@/registry/sg/components/thumbnail';
 import { DemoClientProvider, useSgClient } from '../_shared/react';
+import { createDemoContext } from '../_shared/client';
 
 const group = 'flex flex-col gap-2';
 const label = 'text-muted-foreground text-xs font-medium tracking-wide uppercase';
@@ -23,13 +24,30 @@ function FromTheSite() {
 
   useEffect(() => {
     let live = true;
-    client
-      .search('Shot', { fields: ['code', 'image'], page: { size: 3 } })
+    const context = createDemoContext();
+    const project = { type: 'Project', id: context.projectId };
+    // The chosen project's own picture first, then that project's Versions that carry one.
+    Promise.all([
+      client.search('Project', {
+        filters: { logical_operator: 'and', conditions: [['id', 'is', context.projectId]] },
+        fields: ['name', 'image'],
+        page: { size: 1 },
+      }),
+      client.search('Version', {
+        filters: { logical_operator: 'and', conditions: [['project', 'is', project], ['image', 'is_not', null]] },
+        fields: ['code', 'image'],
+        page: { size: 3 },
+      }),
+    ])
+      .then(([projects, versions]) => {
+        const rows = [...projects.data, ...versions.data].filter((r) => r.attributes['image']);
+        return { data: rows.length >= 3 ? rows : [...rows, ...rows, ...rows].slice(0, 3) };
+      })
       .then((result) => {
         if (!live) return;
         setShots(
           result.data.map((r) => ({
-            code: String(r.attributes['code'] ?? ''),
+            code: String(r.attributes['code'] ?? r.attributes['name'] ?? ''),
             src: (r.attributes['image'] as string | null) ?? null,
           })),
         );

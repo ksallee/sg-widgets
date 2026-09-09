@@ -22,6 +22,8 @@
 				: { data: [] };
 		const people = { data: [...withImage.data, ...rest.data] };
 		return people.data.map((row) => ({
+			id: row.id,
+			id: row.id,
 			name: String(row.attributes['name'] ?? ''),
 			image: (row.attributes['image'] as string | null) ?? null,
 			inactive: row.attributes['sg_status_list'] === 'dis'
@@ -50,7 +52,7 @@
 		<section class={group}>
 			<h4 class={label}>The site's people</h4>
 			<div class={row}>
-				{#each people as person (person.name)}
+				{#each people as person (person.id)}
 					<UserAvatar name={person.name} image={person.image} inactive={person.inactive} />
 				{/each}
 			</div>

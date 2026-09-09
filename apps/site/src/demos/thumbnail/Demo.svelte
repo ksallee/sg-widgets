@@ -1,15 +1,32 @@
 <script lang="ts">
 	import Thumbnail from '$lib/registry/components/thumbnail.svelte';
 	import { setDemoClient } from '../_shared/svelte';
+	import { createDemoContext } from '../_shared/client';
 
-	const client = setDemoClient();
+	const context = createDemoContext();
+	const client = setDemoClient(context.client);
 
+	// The chosen project's own picture first, then that project's Versions that carry one:
+	// a Shot's image is filled only from its Versions, so Shots rarely have one.
 	async function load() {
-		const shots = await client.search('Shot', { fields: ['code', 'image'], page: { size: 3 } });
-		return shots.data.map((row) => ({
-			code: String(row.attributes['code'] ?? ''),
-			src: (row.attributes['image'] as string | null) ?? null
-		}));
+		const project = { type: 'Project', id: context.projectId };
+		const [projects, versions] = await Promise.all([
+			client.search('Project', {
+				filters: { logical_operator: 'and', conditions: [['id', 'is', context.projectId]] },
+				fields: ['name', 'image'],
+				page: { size: 1 }
+			}),
+			client.search('Version', {
+				filters: { logical_operator: 'and', conditions: [['project', 'is', project], ['image', 'is_not', null]] },
+				fields: ['code', 'image'],
+				page: { size: 3 }
+			})
+		]);
+		const rows = [
+			...projects.data.map((row) => ({ code: String(row.attributes['name'] ?? ''), src: (row.attributes['image'] as string | null) ?? null })),
+			...versions.data.map((row) => ({ code: String(row.attributes['code'] ?? ''), src: (row.attributes['image'] as string | null) ?? null }))
+		].filter((r) => r.src);
+		return rows.length >= 3 ? rows : [...rows, ...rows, ...rows].slice(0, 3);
 	}
 
 	const data = load();

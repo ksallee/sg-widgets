@@ -164,6 +164,39 @@
 	class={cn('flex w-full min-w-0 flex-col gap-2', inline && 'w-fit', className)}
 	{...rest}
 >
+	{#if inline}
+		<!-- In a row the editor is one button carrying the value; the calendar and the time sit in its popover. -->
+		<Popover.Root bind:open>
+			<Popover.Trigger
+				data-slot="date-time-editor-trigger"
+				disabled={disabled || readonly}
+				aria-label={field?.displayName ?? 'Pick a date and time'}
+				aria-invalid={isInvalid}
+				title={value ?? undefined}
+				class={cn(buttonVariants({ variant: 'outline', size: 'sm' }), 'w-fit gap-1.5 font-normal tabular-nums', BOX[size], !value && 'text-muted-foreground')}
+			>
+				<CalendarIcon aria-hidden="true" class="size-4 shrink-0" />
+				<span class="truncate">{value ? `${dateDraft} ${timeDraft}` : placeholder}</span>
+			</Popover.Trigger>
+			<Popover.Content strategy="fixed" class="flex w-auto flex-col gap-2 p-2" align="start">
+				<Calendar type="single" value={day} onValueChange={pick} />
+		<Input
+					bind:value={timeDraft}
+					type="time"
+					data-slot="date-time-editor-time"
+					step={showSeconds ? 1 : undefined}
+					{disabled}
+					{readonly}
+					class={cn('w-auto shrink-0 tabular-nums', BOX[size])}
+					aria-invalid={isInvalid}
+					aria-label="Time"
+					onfocus={() => (editing = true)}
+					{onblur}
+					{onkeydown}
+				/>
+			</Popover.Content>
+		</Popover.Root>
+	{:else}
 	<div class={cn('flex w-full min-w-0 items-center gap-2', !inline && 'flex-wrap')}>
 		<Input
 			bind:value={dateDraft}
@@ -209,6 +242,7 @@
 			{onkeydown}
 		/>
 	</div>
+	{/if}
 	{#if hint && !inline}
 		<p data-slot="date-time-editor-zone" class="text-muted-foreground truncate text-xs">
 			Local time in {zone}, stored as UTC.

@@ -135,6 +135,25 @@ export function DateEditor({
       className={cn('flex w-full min-w-0 flex-col gap-2', inline && 'w-fit', className)}
       {...rest}
     >
+      {inline ? (
+        // In a row the editor is one button carrying the value; the calendar sits in its popover.
+        <Popover open={open} onOpenChange={setOpen}>
+          <PopoverTrigger
+            data-slot="date-editor-trigger"
+            disabled={disabled || readonly}
+            aria-label={field?.displayName ?? 'Pick a date'}
+            aria-invalid={isInvalid}
+            title={value ?? undefined}
+            className={cn(buttonVariants({ variant: 'outline', size: 'sm' }), 'w-fit gap-1.5 font-normal tabular-nums', BOX[size], !value && 'text-muted-foreground')}
+          >
+            <CalendarIcon aria-hidden="true" className="size-4 shrink-0" />
+            <span className="truncate">{value ? draft : placeholder}</span>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar mode="single" selected={day} onSelect={pick} />
+          </PopoverContent>
+        </Popover>
+      ) : (
       <div className="flex w-full min-w-0 items-center gap-2">
         <Input
           value={draft}
@@ -169,6 +188,7 @@ export function DateEditor({
           </Popover>
         )}
       </div>
+      )}
       {message
         ? (errorMessage?.(message) ?? (
             <p data-slot="field-editor-error" className="text-destructive text-xs">

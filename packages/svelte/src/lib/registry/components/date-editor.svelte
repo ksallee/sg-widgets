@@ -146,6 +146,25 @@
 	class={cn('flex w-full min-w-0 flex-col gap-2', inline && 'w-fit', className)}
 	{...rest}
 >
+	{#if inline}
+		<!-- In a row the editor is one button carrying the value; the calendar sits in its popover. -->
+		<Popover.Root bind:open>
+			<Popover.Trigger
+				data-slot="date-editor-trigger"
+				disabled={disabled || readonly}
+				aria-label={field?.displayName ?? 'Pick a date'}
+				aria-invalid={isInvalid}
+				title={value ?? undefined}
+				class={cn(buttonVariants({ variant: 'outline', size: 'sm' }), 'w-fit gap-1.5 font-normal tabular-nums', BOX[size], !value && 'text-muted-foreground')}
+			>
+				<CalendarIcon aria-hidden="true" class="size-4 shrink-0" />
+				<span class="truncate">{value ? draft : placeholder}</span>
+			</Popover.Trigger>
+			<Popover.Content strategy="fixed" class="w-auto p-0" align="start">
+				<Calendar type="single" value={day} onValueChange={pick} />
+			</Popover.Content>
+		</Popover.Root>
+	{:else}
 	<div class="flex w-full min-w-0 items-center gap-2">
 		<Input
 			bind:value={draft}
@@ -177,6 +196,7 @@
 			</Popover.Root>
 		{/if}
 	</div>
+	{/if}
 	{#if message}
 		{#if errorMessage}
 			{@render errorMessage(message)}

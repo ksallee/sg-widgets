@@ -158,6 +158,43 @@ export function DateTimeEditor({
       className={cn('flex w-full min-w-0 flex-col gap-2', inline && 'w-fit', className)}
       {...rest}
     >
+      {inline ? (
+        // In a row the editor is one button carrying the value; the calendar and the time sit in its popover.
+        <Popover open={open} onOpenChange={setOpen}>
+          <PopoverTrigger
+            data-slot="date-time-editor-trigger"
+            disabled={disabled || readonly}
+            aria-label={field?.displayName ?? 'Pick a date and time'}
+            aria-invalid={isInvalid}
+            title={value ?? undefined}
+            className={cn(buttonVariants({ variant: 'outline', size: 'sm' }), 'w-fit gap-1.5 font-normal tabular-nums', BOX[size], !value && 'text-muted-foreground')}
+          >
+            <CalendarIcon aria-hidden="true" className="size-4 shrink-0" />
+            <span className="truncate">{value ? `${dateDraft} ${timeDraft}` : placeholder}</span>
+          </PopoverTrigger>
+          <PopoverContent className="flex w-auto flex-col gap-2 p-2" align="start">
+            <Calendar mode="single" selected={day} onSelect={pick} />
+            <Input
+              value={timeDraft}
+              type="time"
+              data-slot="date-time-editor-time"
+              step={showSeconds ? 1 : undefined}
+              disabled={disabled}
+              readOnly={readonly}
+              className={cn('w-auto shrink-0 tabular-nums', BOX[size])}
+              aria-invalid={isInvalid}
+              aria-label="Time"
+              onChange={(event) => setTimeDraft(event.target.value)}
+              onFocus={() => {
+                editing.current = true;
+              }}
+              onBlur={onBlur}
+              onKeyDown={onKeyDown}
+            />
+
+          </PopoverContent>
+        </Popover>
+      ) : (
       <div className={cn('flex w-full min-w-0 items-center gap-2', !inline && 'flex-wrap')}>
         <Input
           value={dateDraft}
@@ -209,6 +246,7 @@ export function DateTimeEditor({
           onKeyDown={onKeyDown}
         />
       </div>
+      )}
       {hint && !inline ? (
       <p data-slot="date-time-editor-zone" className="text-muted-foreground truncate text-xs">
         Local time in {zone}, stored as UTC.

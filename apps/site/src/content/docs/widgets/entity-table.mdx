@@ -41,7 +41,7 @@ const columns = await resolveColumns(context.schema, 'Version', ['code', 'entity
 | `selectable` | `boolean` | `false` | Draws a checkbox column. |
 | `groupBy` | `string \| null` | `null` | Collapses rows under headers of a shared value at this path. |
 | `editable` | `boolean` | `false` | Lets an editable cell open an editor. |
-| `editorFor` | `(dataType) => Component \| null` | — | The editor a cell opens, by data type. |
+| `editorFor` | `(dataType) => Component \| null` | — | The editor a cell opens, by data type. A type it does not answer for gets a plain input. |
 | `maxHeight` | `string` | `'28rem'` | Height of the scrolling body. |
 | `virtualizeAfter` | `number` | `100` | Rows above which the body is virtualised. |
 | `emptyLabel` | `string` | `'No rows'` | Shown when the read returned nothing. |
@@ -55,12 +55,28 @@ const columns = await resolveColumns(context.schema, 'Version', ['code', 'entity
 
 ## Slots
 
-`editorFor` is the one extension point. It is the integration point for the per-type field editors:
-return the component for a data type and a cell opens it, return nothing and the cell opens a plain
-text input. An editor is handed `value`, `dataType`, `field`, `commit` and `cancel`.
+`editorFor` is the one extension point: return the component a data type opens in a cell, return
+nothing and the cell opens a plain text input. An editor is handed `value`, `dataType`, `field`,
+`commit` and `cancel`, and owns its own keys.
 
-```ts
-editorFor={(dataType) => (dataType === 'status_list' ? StatusEditor : null)}
+The demo above wires it to the field editors. One wrapper is all it takes:
+
+```tsx
+function CellEditor({ value, dataType, field, commit, cancel }: CellEditorProps) {
+  const [draft, setDraft] = useState(value);
+  return (
+    <div
+      onKeyDown={(event) => {
+        if (event.key === 'Enter') commit(draft);
+        else if (event.key === 'Escape') cancel();
+      }}
+    >
+      <FieldEditor value={draft} onValueChange={setDraft} dataType={dataType} field={field} mode="edit" size="sm" />
+    </div>
+  );
+}
+
+<EntityTable editorFor={(dataType) => (isEditableType(dataType) ? CellEditor : null)} ... />
 ```
 
 ## Keyboard

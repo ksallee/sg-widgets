@@ -57,6 +57,7 @@ if (!input) return { verdict: 'FAIL no editor opened on the description cell', n
 const typed = 'edited in place by qa';
 Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, typed);
 input.dispatchEvent(new Event('input', { bubbles: true }));
+await wait(150);
 input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
 const shownNow = () => bodyRows()[0].querySelector('td[data-column="description"]')?.textContent.trim();
 for (let i = 0; i < 40 && shownNow() !== typed; i += 1) await wait(200);

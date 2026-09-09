@@ -1,7 +1,8 @@
 <script lang="ts">
 	import type { CollectionColumn, EntityRef, StatusRecord } from '@sg-widgets/core';
-	import { createEntitySource, resolveColumns } from '@sg-widgets/core';
+	import { createEntitySource, isEditableType, resolveColumns } from '@sg-widgets/core';
 	import EntityTable from '$lib/registry/components/entity-table.svelte';
+	import CellEditor from './CellEditor.svelte';
 	import { createDemoContext } from '../_shared/client';
 	import { setDemoClient } from '../_shared/svelte';
 
@@ -69,6 +70,7 @@
 			editable
 			density={compact ? 'compact' : 'default'}
 			groupBy={grouped ? 'sg_status_list' : null}
+			editorFor={(dataType) => (isEditableType(dataType) ? CellEditor : null)}
 			onselectionchange={(rows) => (selected = rows)}
 		/>
 	</div>

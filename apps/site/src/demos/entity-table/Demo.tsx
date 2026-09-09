@@ -1,7 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useRef, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import type { CollectionColumn, EntityRef, StatusRecord } from '@sg-widgets/core';
-import { createEntitySource, resolveColumns } from '@sg-widgets/core';
-import { EntityTable } from '@/registry/sg/components/entity-table';
+import { createEntitySource, isEditableType, resolveColumns } from '@sg-widgets/core';
+import { EntityTable, type CellEditorProps } from '@/registry/sg/components/entity-table';
+import { FieldEditor } from '@/registry/sg/components/field-editor';
 import { createDemoContext } from '../_shared/client';
 import { DemoClientProvider } from '../_shared/react';
 
@@ -26,6 +28,44 @@ interface Loaded {
   columns: CollectionColumn[];
   statuses: Record<string, StatusRecord>;
 }
+
+/**
+ * The cell's editor: the type's own control from the field-editor item, with Enter
+ * committing through the source and Escape restoring the value.
+ */
+function CellEditor({ value, dataType, field, commit, cancel }: CellEditorProps) {
+  const [draft, setDraft] = useState(value);
+  // Enter can arrive in the same tick as the change that produced the value, before a
+  // re-render, so the committed value is read off a ref rather than off state.
+  const latest = useRef(value);
+  return (
+    <div
+      onKeyDown={(event) => {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          commit(latest.current);
+        } else if (event.key === 'Escape') {
+          event.preventDefault();
+          cancel();
+        }
+      }}
+    >
+      <FieldEditor
+        value={draft}
+        onValueChange={(next) => {
+          latest.current = next;
+          setDraft(next);
+        }}
+        dataType={dataType}
+        field={field}
+        mode="edit"
+        size="sm"
+      />
+    </div>
+  );
+}
+
+const editorFor = (dataType: string) => (isEditableType(dataType) ? CellEditor : null);
 
 export default function EntityTableDemo() {
   const context = useMemo(() => createDemoContext({ counts: { versions: 320 } }), []);
@@ -85,6 +125,7 @@ export default function EntityTableDemo() {
           editable
           density={compact ? 'compact' : 'default'}
           groupBy={grouped ? 'sg_status_list' : null}
+          editorFor={editorFor}
           onSelectionChange={setSelected}
         />
       </div>

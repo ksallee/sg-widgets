@@ -45,11 +45,19 @@ None.
 | key | does |
 |---|---|
 | `Enter`, `Space` | Opens the list, and toggles a direction or a move control inside it. |
-| `Tab` | Moves through each key's direction, move and remove controls, then to the field search. |
+| `Tab` | Moves through each key's grip, direction, move and remove controls, then to the field search. |
 | `Arrow` keys | Move the cursor in the field list, and between ascending and descending. |
 | `Right arrow` | Descends into the highlighted link in the field picker. |
 | `Left arrow` | Goes back one level in the field picker. |
+| `Space`, `Enter` on the grip | Picks the key up for the arrow keys. |
+| `Up`, `Down` while carrying a key | Move it one place. |
+| `Space`, `Enter` while carrying a key | Drop it where it is. |
+| `Escape` while carrying a key | Put it back where it was. |
+| `Alt` + `Up`, `Alt` + `Down` | Move the key holding focus one place. |
 | `Escape` | Closes the list. |
+
+A key is also reordered by dragging its grip: the key lifts and the ones it passes shift to open a
+gap. Every step is announced in a live region.
 
 ## API behaviour
 
@@ -67,3 +75,10 @@ filtered.
 
 `in` does not preserve the order of the ids it was given: rows come back id ascending regardless, so
 an explicit id order has to be restored on the client.
+
+## Reference
+
+Reordering follows ReUI's Sortable 2.5.2 for the grip and the lifted row, and Dice UI's Sortable,
+its shadcn registry item, for the live-region copy and the keyboard model. Neither is installed. The
+pointer behaviour, a four-pixel activation distance with midpoint hit-testing and edge auto-scroll,
+follows dnd-kit 6.3.1.

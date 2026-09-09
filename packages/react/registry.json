@@ -201,6 +201,27 @@
       ]
     },
     {
+      "name": "sortable",
+      "type": "registry:component",
+      "title": "Sortable",
+      "description": "Pointer and keyboard reordering for one list, as a hook: drag handles, live-region announcements and transform-only motion.",
+      "categories": [
+        "flow-production-tracking",
+        "utility"
+      ],
+      "dependencies": [
+        "@sg-widgets/core"
+      ],
+      "registryDependencies": [],
+      "docs": "Put the ref on the list element, `data-sortable-id` on each item and `data-sortable-handle` on each grip, then render the announcement in a polite live region.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/sortable.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
       "name": "column-picker",
       "type": "registry:component",
       "title": "Column Picker",
@@ -218,7 +239,8 @@
         "checkbox",
         "command",
         "popover",
-        "skeleton"
+        "skeleton",
+        "https://sg-widgets.dev/r/react/sortable.json"
       ],
       "docs": "The left list checks the paths already chosen; the right list holds them in order, moved with its buttons or with Alt and an arrow key.",
       "files": [
@@ -577,7 +599,8 @@
         "popover",
         "separator",
         "toggle-group",
-        "https://sg-widgets.dev/r/react/field-picker.json"
+        "https://sg-widgets.dev/r/react/field-picker.json",
+        "https://sg-widgets.dev/r/react/sortable.json"
       ],
       "docs": "Emits both the keys and the comma-joined sort string, a leading minus marking a descending key.",
       "files": [

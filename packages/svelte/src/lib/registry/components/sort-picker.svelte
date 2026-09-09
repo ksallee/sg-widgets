@@ -4,6 +4,7 @@
 	import ArrowUpDownIcon from '@lucide/svelte/icons/arrow-up-down';
 	import ChevronDownIcon from '@lucide/svelte/icons/chevron-down';
 	import ChevronUpIcon from '@lucide/svelte/icons/chevron-up';
+	import GripVerticalIcon from '@lucide/svelte/icons/grip-vertical';
 	import XIcon from '@lucide/svelte/icons/x';
 	import type { SchemaService, SgClient, SortKey } from '@sg-widgets/core';
 	import { createSchemaService, friendlyFieldPath, isSortable, toSortString } from '@sg-widgets/core';
@@ -14,6 +15,7 @@
 	import * as ToggleGroup from '$lib/components/ui/toggle-group/index.js';
 	import { cn } from '$lib/utils.js';
 	import FieldPicker from '$lib/registry/components/field-picker.svelte';
+	import { createSortable } from '$lib/registry/components/sortable.svelte.js';
 
 	type Props = {
 		entityType: string;
@@ -89,6 +91,26 @@
 		next.splice(to, 0, key as SortKey);
 		commit(next);
 	}
+
+	const sortable = createSortable({
+		ids: () => chosen,
+		onOrderChange: (order) =>
+			commit(order.map((field) => value.find((k) => k.field === field) as SortKey)),
+		label: (field) => nameOf(field),
+		disabled: () => disabled
+	});
+
+	function onKeyKeys(event: KeyboardEvent, index: number): void {
+		// The sortable owns the arrow keys while it carries a row.
+		if (disabled || sortable.dragging !== null || !event.altKey) return;
+		if (event.key === 'ArrowUp') {
+			event.preventDefault();
+			move(index, -1);
+		} else if (event.key === 'ArrowDown') {
+			event.preventDefault();
+			move(index, 1);
+		}
+	}
 </script>
 
 <!--
@@ -118,9 +140,30 @@
 			{/if}
 		</Popover.Trigger>
 		<Popover.Content strategy="fixed" class="flex w-96 flex-col gap-3 p-3" align="start">
-			<div class="flex min-w-0 flex-col gap-2" data-slot="sort-keys">
+			<div class="flex min-w-0 flex-col gap-2" data-slot="sort-keys" {@attach sortable.attach}>
 				{#each value as key, i (key.field)}
-					<div class="flex min-w-0 items-center gap-2" data-slot="sort-key" data-field={key.field}>
+					<div
+						class={cn(
+							'bg-popover flex min-w-0 items-center gap-2 rounded-md',
+							'data-[dragging]:z-10 data-[dragging]:opacity-90 data-[dragging]:shadow-md',
+							'data-[drop-target]:bg-accent/40'
+						)}
+						data-slot="sort-key"
+						data-sortable-id={key.field}
+						data-field={key.field}
+					>
+						<Button
+							variant="ghost"
+							size="icon-sm"
+							data-slot="sort-grip"
+							data-sortable-handle="true"
+							onkeydown={(event) => onKeyKeys(event, i)}
+							aria-label={`Reorder ${nameOf(key.field)}`}
+							title="Drag to reorder, or press Space and use the arrow keys"
+							class="cursor-grab touch-none active:cursor-grabbing"
+						>
+							<GripVerticalIcon />
+						</Button>
 						<span class="min-w-0 flex-1 truncate text-sm" title={key.field}>{nameOf(key.field)}</span>
 						<ToggleGroup.Root
 							type="single"
@@ -177,6 +220,15 @@
 						No sort. Rows come back id ascending.
 					</p>
 				{/if}
+			</div>
+			<div
+				data-slot="sort-live-region"
+				role="status"
+				aria-live="polite"
+				aria-atomic="true"
+				class="sr-only"
+			>
+				{sortable.announcement}
 			</div>
 			<Separator />
 			<FieldPicker

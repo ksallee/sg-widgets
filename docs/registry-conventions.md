@@ -99,3 +99,11 @@ The site serves both trees statically at `/r/react/<name>.json` and `/r/svelte/<
 - shadcn-svelte's `registry build` drops `docs` and `categories`; React keeps both.
 - Item content is copied into the consumer's tree and edited by them. Nothing in an item may
   import from another package in this monorepo except `@sg-widgets/core`.
+
+## Dependency graph
+
+`registryDependencies` must form a tree, never a cycle. Both CLIs hang on a cycle (measured:
+an install against a registry where field-value depended on entity-chip, entity-chip on
+entity-card and entity-card on field-value never returned). The atoms therefore flow one way:
+field-value → entity-chip → entity-card → status-badge and thumbnail. A card draws its own
+values rather than reaching back to FieldValue.

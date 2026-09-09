@@ -2,16 +2,21 @@
 	import type { EntityRef } from '@sg-widgets/core';
 	import ProjectPicker from '$lib/registry/components/project-picker.svelte';
 	import ProjectMultiPicker from '$lib/registry/components/project-multi-picker.svelte';
+	import { createDemoContext } from '../_shared/client';
 	import { setDemoClient } from '../_shared/svelte';
 
-	const client = setDemoClient();
+	const context = createDemoContext();
+	const client = setDemoClient(context.client);
 
 	let one = $state<EntityRef | null>(null);
 	let several = $state<EntityRef[]>([]);
 	let archived = $state<EntityRef | null>(null);
 	// A bare reference: type and id, no name. Resolved on mount.
-	let bare = $state<EntityRef | null>({ type: 'Project', id: 71 });
-	const preset: EntityRef = { type: 'Project', id: 70, name: 'Blue Moon Rising' };
+	let bare = $state<EntityRef | null>({ type: 'Project', id: context.projectFor(71) });
+	// The name is the mock's. A live project arrives bare and the picker resolves it.
+	const preset: EntityRef = context.live
+		? { type: 'Project', id: context.projectId }
+		: { type: 'Project', id: context.projectId, name: 'Blue Moon Rising' };
 
 	const group = 'flex flex-col gap-2';
 	const label = 'text-muted-foreground text-xs font-medium tracking-wide uppercase';

@@ -2,9 +2,11 @@
 	import type { EntityRef } from '@sg-widgets/core';
 	import HierarchicalSearch from '$lib/registry/components/hierarchical-search.svelte';
 	import EntityChip from '$lib/registry/components/entity-chip.svelte';
+	import { createDemoContext } from '../_shared/client';
 	import { setDemoClient } from '../_shared/svelte';
 
-	const client = setDemoClient();
+	const context = createDemoContext();
+	const client = setDemoClient(context.client);
 
 	let picked = $state<{ leaf: EntityRef; path: EntityRef[] } | null>(null);
 </script>
@@ -12,11 +14,11 @@
 <div class="flex flex-col gap-4">
 	<section class="flex flex-col gap-2">
 		<h4 class="text-muted-foreground text-xs font-medium tracking-wide uppercase">
-			Scoped to Blue Moon Rising
+			Scoped to one project
 		</h4>
 		<HierarchicalSearch
 			{client}
-			rootPath="/Project/70"
+			rootPath={`/Project/${context.projectId}`}
 			entityTypes={['Shot', 'Asset', 'Sequence', 'Task']}
 			onselect={(leaf, path) => (picked = { leaf, path })}
 		/>

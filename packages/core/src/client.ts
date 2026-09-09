@@ -258,7 +258,8 @@ export class RestClient implements SgClient {
 
   constructor(private readonly options: RestClientOptions) {
     this.base = options.siteUrl.replace(/\/+$/, '') + '/api/v1';
-    this.fetchFn = options.fetch ?? globalThis.fetch;
+    // Bound: the default `fetch` called as a method of this object is an Illegal invocation in a browser.
+    this.fetchFn = options.fetch ?? globalThis.fetch.bind(globalThis);
   }
 
   private async request<T>(
@@ -465,9 +466,13 @@ function toStatusIcon(a: Record<string, unknown>): StatusRecord['icon'] {
   switch (a['display_type']) {
     case 'image_map':
       return { displayType: 'image_map', imageMapKey: String(a['image_map_key'] ?? '') };
-    case 'image':
+    case 'image': {
       // The data URL comes with embedded newlines that must be stripped (probe 010).
-      return { displayType: 'image', dataUrl: String(a['url'] ?? '').replace(/\s+/g, '') };
+      const dataUrl = String(a['url'] ?? '').replace(/\s+/g, '');
+      // A site can hold an `image` icon whose `url` is empty; it is no icon, and an
+      // empty `src` makes the browser re-request the page.
+      return dataUrl === '' ? null : { displayType: 'image', dataUrl };
+    }
     case 'html':
       return { displayType: 'html', html: String(a['html'] ?? '') };
     default:

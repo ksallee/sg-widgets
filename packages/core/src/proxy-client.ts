@@ -52,7 +52,8 @@ export class ProxyClient implements SgClient {
 
   constructor(private readonly options: ProxyClientOptions) {
     this.base = options.basePath.replace(/\/+$/, '');
-    this.fetchFn = options.fetch ?? globalThis.fetch;
+    // Bound: the default `fetch` called as a method of this object is an Illegal invocation in a browser.
+    this.fetchFn = options.fetch ?? globalThis.fetch.bind(globalThis);
   }
 
   private async post<T>(method: ProxyMethod, body: Record<string, unknown>): Promise<T> {

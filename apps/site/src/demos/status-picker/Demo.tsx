@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { StatusPicker } from '@/registry/sg/components/status-picker';
-import { DemoClientProvider, useSgClient } from '../_shared/react';
+import { createDemoContext } from '../_shared/client';
 
 const group = 'flex flex-col gap-2';
 const label = 'text-muted-foreground text-xs font-medium tracking-wide uppercase';
@@ -8,37 +8,45 @@ const row = 'flex flex-wrap items-start gap-3';
 const box = 'w-64';
 const readout = 'text-muted-foreground font-mono text-xs tabular-nums';
 
-function Pickers() {
-  const client = useSgClient();
-  const [inProject70, setInProject70] = useState<string | undefined>('ip');
-  const [inProject71, setInProject71] = useState<string | undefined>('pndad');
+export default function StatusPickerDemo() {
+  // Live mode has one project, the toolbar's; the mock has 70 and 71.
+  const context = useMemo(() => createDemoContext(), []);
+  const client = context.client;
+  const projectId = context.projectId;
+  const otherProjectId = context.projectFor(71);
+  const [inProjectA, setInProjectA] = useState<string | undefined>('ip');
+  const [inProjectB, setInProjectB] = useState<string | undefined>('pndad');
   const [shared, setShared] = useState<string | undefined>(undefined);
   const [project, setProject] = useState<string | undefined>('Active');
   const [unknown, setUnknown] = useState<string | undefined>('zz_retired');
   const [switching, setSwitching] = useState<string | undefined>('part');
-  const [switchTo, setSwitchTo] = useState(71);
+  const [switchTo, setSwitchTo] = useState(otherProjectId);
 
   return (
     <div className="flex flex-col gap-4">
       <section className={group}>
-        <h4 className={label}>Version, in project 70 and in project 71</h4>
+        <h4 className={label}>
+          {projectId === otherProjectId
+            ? `Version, in project ${projectId}`
+            : `Version, in project ${projectId} and in project ${otherProjectId}`}
+        </h4>
         <div className={row}>
           <div className={box} data-demo="p70">
             <StatusPicker
               client={client}
               entityType="Version"
-              projectId={70}
-              value={inProject70}
-              onValueChange={setInProject70}
+              projectId={projectId}
+              value={inProjectA}
+              onValueChange={setInProjectA}
             />
           </div>
           <div className={box} data-demo="p71">
             <StatusPicker
               client={client}
               entityType="Version"
-              projectId={71}
-              value={inProject71}
-              onValueChange={setInProject71}
+              projectId={otherProjectId}
+              value={inProjectB}
+              onValueChange={setInProjectB}
             />
           </div>
         </div>
@@ -51,7 +59,7 @@ function Pickers() {
             <StatusPicker
               client={client}
               entityType="Version"
-              projectIds={[70, 71]}
+              projectIds={[projectId, otherProjectId]}
               value={shared}
               onValueChange={setShared}
             />
@@ -81,7 +89,7 @@ function Pickers() {
             <StatusPicker
               client={client}
               entityType="Version"
-              projectId={70}
+              projectId={projectId}
               value={unknown}
               onValueChange={setUnknown}
             />
@@ -90,7 +98,7 @@ function Pickers() {
             <StatusPicker
               client={client}
               entityType="Version"
-              projectId={70}
+              projectId={projectId}
               value="ip"
               showCode
               clearable={false}
@@ -114,7 +122,7 @@ function Pickers() {
           <button
             type="button"
             className="border-border hover:bg-accent hover:text-accent-foreground h-9 rounded-md border px-2 text-sm transition-colors duration-150 ease-out"
-            onClick={() => setSwitchTo(switchTo === 70 ? 71 : 70)}
+            onClick={() => setSwitchTo(switchTo === projectId ? otherProjectId : projectId)}
           >
             Project {switchTo}
           </button>
@@ -126,13 +134,13 @@ function Pickers() {
         <h4 className={label}>Disabled, read-only, invalid</h4>
         <div className={row}>
           <div className={box}>
-            <StatusPicker client={client} entityType="Version" projectId={70} value="apr" disabled />
+            <StatusPicker client={client} entityType="Version" projectId={projectId} value="apr" disabled />
           </div>
           <div className={box}>
-            <StatusPicker client={client} entityType="Version" projectId={70} value="apr" readOnly />
+            <StatusPicker client={client} entityType="Version" projectId={projectId} value="apr" readOnly />
           </div>
           <div className={box}>
-            <StatusPicker client={client} entityType="Version" projectId={70} value="apr" invalid />
+            <StatusPicker client={client} entityType="Version" projectId={projectId} value="apr" invalid />
           </div>
         </div>
       </section>
@@ -141,24 +149,16 @@ function Pickers() {
         <h4 className={label}>Sizes</h4>
         <div className={row}>
           <div className={box}>
-            <StatusPicker client={client} entityType="Version" projectId={70} value="rev" size="sm" />
+            <StatusPicker client={client} entityType="Version" projectId={projectId} value="rev" size="sm" />
           </div>
           <div className={box}>
-            <StatusPicker client={client} entityType="Version" projectId={70} value="rev" size="md" />
+            <StatusPicker client={client} entityType="Version" projectId={projectId} value="rev" size="md" />
           </div>
           <div className={box}>
-            <StatusPicker client={client} entityType="Version" projectId={70} value="rev" size="lg" />
+            <StatusPicker client={client} entityType="Version" projectId={projectId} value="rev" size="lg" />
           </div>
         </div>
       </section>
     </div>
-  );
-}
-
-export default function StatusPickerDemo() {
-  return (
-    <DemoClientProvider>
-      <Pickers />
-    </DemoClientProvider>
   );
 }

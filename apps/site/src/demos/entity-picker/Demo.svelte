@@ -1,10 +1,11 @@
 <script lang="ts">
 	import type { EntityRef } from '@sg-widgets/core';
 	import EntityPicker from '$lib/registry/components/entity-picker.svelte';
-	import { createDemoClient } from '../_shared/client';
+	import { createDemoClient, createDemoContext } from '../_shared/client';
 	import { setDemoClient } from '../_shared/svelte';
 
-	const client = setDemoClient();
+	const context = createDemoContext();
+	const client = setDemoClient(context.client);
 	// Its own client, so arming a failure cannot land in another demo on the page.
 	const failing = createDemoClient();
 
@@ -78,9 +79,9 @@
 			<EntityPicker
 				{client}
 				entityTypes={['Shot']}
-				projectId={71}
+				projectId={context.projectFor(71)}
 				bind:value={inProject}
-				placeholder="Shots on Harbour Lights…"
+				placeholder="Shots on one project…"
 			/>
 		</div>
 	</section>

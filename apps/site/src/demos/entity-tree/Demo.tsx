@@ -14,8 +14,8 @@ export default function EntityTreeDemo() {
       <div className="flex w-full min-w-0 flex-col gap-3">
         <EntityTree
           client={context.client}
-          rootPath="/Project/70"
-          seedPath="/Project/70/Shot/sg_sequence/Sequence/100/id/862"
+          rootPath={`/Project/${context.projectId}`}
+          seedPath={context.live ? undefined : `/Project/${context.projectId}/Shot/sg_sequence/Sequence/100/id/862`}
           checkable
           filterable
           onSelect={setPicked}

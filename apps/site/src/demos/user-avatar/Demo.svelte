@@ -59,13 +59,21 @@
 	</section>
 
 	<section class={group}>
-		<h4 class={label}>Inactive and API users</h4>
+		<h4 class={label}>Inactive, and an image that fails to load</h4>
 		<div class={row}>
 			<UserAvatar name="Grace Hopper" inactive />
 			<UserAvatar name="Grace Hopper" image="https://picsum.photos/seed/grace.hopper/64/64" inactive />
+			<UserAvatar name="Alan Turing" image="data:image/png;base64,iVBORw0KGgo=" />
+		</div>
+	</section>
+
+	<section class={group} data-demo="api">
+		<h4 class={label}>API users</h4>
+		<div class={row}>
+			<UserAvatar name="sg_widgets_demo" apiUser size="sm" />
 			<UserAvatar name="sg_widgets_demo" apiUser />
 			<UserAvatar name="sg_widgets_demo" apiUser size="lg" />
-			<UserAvatar name="Alan Turing" image="data:image/png;base64,iVBORw0KGgo=" />
+			<UserAvatar name="sg_widgets_demo" apiUser inactive />
 		</div>
 	</section>
 </div>

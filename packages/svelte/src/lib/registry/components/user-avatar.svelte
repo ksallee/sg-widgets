@@ -7,15 +7,10 @@
 		md: 'size-8 text-sm',
 		lg: 'size-10 text-sm'
 	};
-	const BADGE: Record<UserAvatarSize, string> = {
-		sm: 'size-3',
-		md: 'size-3.5',
-		lg: 'size-4'
-	};
-	const BADGE_GLYPH: Record<UserAvatarSize, string> = {
-		sm: 'size-2',
-		md: 'size-2.5',
-		lg: 'size-3'
+	const GLYPH: Record<UserAvatarSize, string> = {
+		sm: 'size-4',
+		md: 'size-4',
+		lg: 'size-5'
 	};
 </script>
 
@@ -50,7 +45,7 @@
 
 	// Held as the failing URL, not a flag, so a new `image` retries on its own.
 	let failed = $state<string | null>(null);
-	const src = $derived(image !== null && image === failed ? null : image);
+	const src = $derived(apiUser || (image !== null && image === failed) ? null : image);
 	const initials = $derived(initialsOf(name));
 </script>
 
@@ -59,12 +54,15 @@
 
 	The initials fall out of the name in core (`initialsOf`) so React and Svelte cannot
 	drift. An avatar never renders blank: an image that fails to load falls back to the
-	initials, and with no name at all it is still a muted circle.
+	initials, and with no name at all it is still a muted circle. An API user is a script
+	account rather than a person, so the circle holds a bot glyph instead of a picture or
+	initials and the tooltip says so.
 -->
 <span
 	bind:this={ref}
 	data-slot="user-avatar"
 	data-inactive={inactive ? 'true' : undefined}
+	data-api-user={apiUser ? 'true' : undefined}
 	title={apiUser ? `${name} (API user)` : name}
 	class={cn('relative inline-flex shrink-0 align-middle', BOX[size], className)}
 	{...rest}
@@ -72,10 +70,14 @@
 	<span
 		class={cn(
 			'bg-muted text-muted-foreground ring-border flex size-full items-center justify-center overflow-hidden rounded-full font-medium ring-1 select-none',
+			apiUser && 'bg-secondary text-secondary-foreground',
 			inactive && 'opacity-50 grayscale'
 		)}
 	>
-		{#if src}
+		{#if apiUser}
+			<Bot aria-hidden="true" class={GLYPH[size]} />
+			<span class="sr-only">{name}</span>
+		{:else if src}
 			<img
 				{src}
 				alt={name}
@@ -89,16 +91,4 @@
 			<span class="sr-only">{name}</span>
 		{/if}
 	</span>
-	{#if apiUser}
-		<span
-			role="img"
-			aria-label="API user"
-			class={cn(
-				'border-background bg-secondary text-secondary-foreground absolute right-0 bottom-0 flex translate-x-1/4 translate-y-1/4 items-center justify-center rounded-full border',
-				BADGE[size]
-			)}
-		>
-			<Bot aria-hidden="true" class={BADGE_GLYPH[size]} />
-		</span>
-	{/if}
 </span>

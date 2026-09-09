@@ -26,7 +26,7 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/field-value.js
 | `value` | `unknown` | required | The raw attribute or relationship value, as the API returned it. |
 | `dataType` | `string` | required | The field's data type. An unknown one renders as text. |
 | `field` | `FieldSchema \| null` | `null` | Supplies a status label through its display values. |
-| `statuses` | `Record<string, StatusRecord> \| null` | `null` | Status rows by code, for status colour and icon. |
+| `statuses` | `Record<string, StatusRecord> \| null` | `null` | Status rows by code, for the status name and icon. |
 | `hoursPerDay` | `number` | — | The site's working day. Durations then render in days. |
 | `precision` | `number` | — | Decimals shown on a float, zeros kept. Without it, the value as the API sent it, trailing zeros dropped. |
 | `locale` | `string` | the runtime's | Passed through for dates. |

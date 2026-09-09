@@ -1,11 +1,11 @@
 ---
 title: StatusBadge
-description: One Flow Production Tracking status as a coloured badge.
+description: One Flow Production Tracking status as a badge.
 ---
 
 import Demo from '../../../components/Demo.astro';
 
-Renders one status code as a badge carrying the site's own label, colour and icon.
+Renders one status code as a badge carrying the site's own label and icon.
 
 ## Install
 
@@ -14,23 +14,27 @@ pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/status-badge.json
 pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/status-badge.json
 ```
 
-<Demo name="status-badge" title="StatusBadge: sizes, variants, icon types, unknown codes" />
+<Demo name="status-badge" title="StatusBadge: neutral and coloured, labels, stock icons, unknown codes" />
 
 ## Props
 
 | prop | type | default | meaning |
 |---|---|---|---|
 | `code` | `string` | required | The stored status code. An empty code renders nothing. |
-| `status` | `StatusRecord \| null` | `null` | The resolved Status row. Supplies the label, colour and icon. |
+| `status` | `StatusRecord \| null` | `null` | The resolved Status row. Supplies the name, colour and icon. |
 | `field` | `FieldSchema \| null` | `null` | Fallback label source, through its display values. |
 | `variant` | `'both' \| 'icon' \| 'text'` | `'both'` | Icon-only keeps the label as screen-reader text and a tooltip. |
 | `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Heights 6, 8 and 10. |
+| `color` | `boolean` | `false` | Paints the badge in the status colour instead of the neutral surface. |
+| `label` | `'name' \| 'code'` | `'name'` | Which of the two the badge shows. The other one is the tooltip. |
+| `siteUrl` | `string` | — | The site the stock sprite is served from. Needed for stock icons the package does not bundle. |
 | `class` / `className` | `string` | — | Merged after the widget's own classes. |
 
-The label resolves in one order: the Status row's name, then the field's display value, then the raw
-code. An unknown code renders as itself in the muted token pair.
+The name resolves in one order: the Status row's name, then the field's display value, then the raw
+code. A code unknown to both renders as itself in the label and in the tooltip.
 
-The root carries the status code and whether it was resolved, as data attributes.
+The root carries the status code and whether it was resolved, as data attributes. An image-map icon
+carries its key on the glyph, as a data attribute.
 
 ## Events
 
@@ -49,16 +53,13 @@ Not focusable.
 A status_list value is a bare code with no entity behind it, so a dotted read through it returns
 nothing and the label has to come from elsewhere (field_types/status_list, 009_status_lists).
 
-Background colour arrives as comma-separated decimal RGB, never hex. The foreground is chosen by
-relative luminance, so the badge stays readable in both themes (010_status_icons).
+Background colour arrives as comma-separated decimal RGB, never hex. Under `color` the foreground is
+chosen by relative luminance, so the badge stays readable in both themes (010_status_icons).
 
 An icon's display type picks one of three renderings. An uploaded icon is a self-contained data URI.
-An HTML icon is a short text label. An image-map icon names a sprite that lives in the customer
-site's own stylesheet and is not in the REST API, so the badge emits the key and a coloured block,
-and a rule attaches the picture (010_status_icons):
-
-```css
-[data-status-icon='icon_apr'] {
-  background: url('/images/sg_icon_image_map.png') -89px -11px no-repeat;
-}
-```
+An HTML icon is a short text label. An image-map icon names a cell of one sprite the web app serves
+unauthenticated, positioned by a rule in the site's own stylesheet; neither the sprite nor the rule
+is in the REST API (010_status_icons). The cells of the shipped statuses, the rows with no
+`created_by`, are bundled in the core package and draw with no site access (probe 061). Any other
+stock icon draws from the site's own copy of the sprite, so it needs `siteUrl`; without one it falls
+back to a neutral dot.

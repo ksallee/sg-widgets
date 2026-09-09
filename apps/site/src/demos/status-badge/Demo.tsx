@@ -1,11 +1,39 @@
 import { useEffect, useState } from 'react';
-import type { FieldSchema, StatusRecord } from '@sg-widgets/core';
+import type { FieldSchema, NativeStatus, StatusRecord } from '@sg-widgets/core';
+import { NATIVE_STATUSES } from '@sg-widgets/core';
 import { StatusBadge } from '@/registry/sg/components/status-badge';
 import { DemoClientProvider, useSgClient } from '../_shared/react';
 
 const group = 'flex flex-col gap-2';
 const label = 'text-muted-foreground text-xs font-medium tracking-wide uppercase';
 const row = 'flex flex-wrap items-center gap-2';
+
+/* No site is reachable from a demo: this one serves a stand-in sprite at the stock path. */
+const DEMO_SITE = '/demo-site';
+
+/** A shipped status as `GET /entity/statuses` returns it. `act` is the one with an html icon. */
+function nativeRecord(status: NativeStatus, index: number): StatusRecord {
+  return {
+    id: index,
+    code: status.code,
+    name: status.name,
+    bgColor: null,
+    icon: status.imageMapKey
+      ? { displayType: 'image_map', imageMapKey: status.imageMapKey }
+      : { displayType: 'html', html: status.name },
+  };
+}
+
+const natives = NATIVE_STATUSES.map(nativeRecord);
+
+/** A stock icon the package does not bundle: it draws only from a site's own sprite. */
+const cancelled: StatusRecord = {
+  id: 900,
+  code: 'cncl',
+  name: 'Cancelled',
+  bgColor: null,
+  icon: { displayType: 'image_map', imageMapKey: 'icon_x_thin_white' },
+};
 
 interface Loaded {
   statuses: Record<string, StatusRecord>;
@@ -56,25 +84,39 @@ function StatusBadges() {
         </div>
       </section>
 
-      <section className={group}>
-        <h4 className={label}>Icon display types</h4>
+      <section className={group} data-demo="color">
+        <h4 className={label}>Neutral, then coloured</h4>
+        <div className={row} data-demo="neutral">
+          <StatusBadge code="apr" status={statuses['apr']} field={field} />
+          <StatusBadge code="ip" status={statuses['ip']} field={field} />
+          <StatusBadge code="hld" status={statuses['hld']} field={field} />
+          <StatusBadge code="omt" status={statuses['omt']} field={field} />
+        </div>
+        <div className={row} data-demo="coloured">
+          <StatusBadge code="apr" status={statuses['apr']} field={field} color />
+          <StatusBadge code="ip" status={statuses['ip']} field={field} color />
+          <StatusBadge code="hld" status={statuses['hld']} field={field} color />
+          <StatusBadge code="omt" status={statuses['omt']} field={field} color />
+        </div>
+      </section>
+
+      <section className={group} data-demo="label">
+        <h4 className={label}>Name, and the code instead</h4>
         <div className={row}>
-          <StatusBadge code="na" status={statuses['na']} field={field} />
+          <StatusBadge code="rev" status={statuses['rev']} field={field} />
+          <StatusBadge code="rev" status={statuses['rev']} field={field} label="code" />
+        </div>
+      </section>
+
+      <section className={group} data-demo="icons">
+        <h4 className={label}>Uploaded icon, and an html icon</h4>
+        <div className={row}>
           <StatusBadge code="custom" status={statuses['custom']} field={field} />
           <StatusBadge code="act" status={statuses['act']} field={field} />
         </div>
       </section>
 
-      <section className={group}>
-        <h4 className={label}>Every status on the site</h4>
-        <div className={row}>
-          {Object.values(statuses).map((status) => (
-            <StatusBadge key={status.code} code={status.code} status={status} field={field} size="sm" />
-          ))}
-        </div>
-      </section>
-
-      <section className={group}>
+      <section className={group} data-demo="unknown">
         <h4 className={label}>Label from the schema, and an unknown code</h4>
         <div className={row}>
           <StatusBadge code="fin" field={field} />
@@ -90,6 +132,23 @@ export default function StatusBadgeDemo() {
     <DemoClientProvider>
       <div className="flex flex-col gap-4">
         <StatusBadges />
+
+        <section className={group} data-demo="native">
+          <h4 className={label}>The shipped statuses</h4>
+          <div className={row}>
+            {natives.map((status) => (
+              <StatusBadge key={status.code} code={status.code} status={status} size="sm" />
+            ))}
+          </div>
+        </section>
+
+        <section className={group} data-demo="sprite">
+          <h4 className={label}>A stock icon the package does not bundle, without and with a site</h4>
+          <div className={row}>
+            <StatusBadge code={cancelled.code} status={cancelled} />
+            <StatusBadge code={cancelled.code} status={cancelled} siteUrl={DEMO_SITE} />
+          </div>
+        </section>
       </div>
     </DemoClientProvider>
   );

@@ -39,3 +39,8 @@ Terse and declarative. The code says what it is; comments do not narrate how it 
 
 Invented names only, in docs, demos, tests and comments. Never the maintainer's name or a real
 person's. Ada Lovelace, Anna van der Meer, j.doe and the mock client's people are fine.
+
+## The test site
+
+Never name the test site, its hostname, its project names or its people in a PR body, an issue, a
+docs page or a comment. Say "the test site" and describe what it showed in general terms.

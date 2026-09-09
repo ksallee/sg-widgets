@@ -5,15 +5,15 @@
 	import ChevronDownIcon from '@lucide/svelte/icons/chevron-down';
 	import ChevronUpIcon from '@lucide/svelte/icons/chevron-up';
 	import XIcon from '@lucide/svelte/icons/x';
-	import type { FieldSchema, SchemaService, SgClient, SortKey } from '@sg-widgets/core';
-	import { createSchemaService, sortableFields, toSortString } from '@sg-widgets/core';
+	import type { SchemaService, SgClient, SortKey } from '@sg-widgets/core';
+	import { createSchemaService, friendlyFieldPath, isSortable, toSortString } from '@sg-widgets/core';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
-	import * as Command from '$lib/components/ui/command/index.js';
 	import * as Popover from '$lib/components/ui/popover/index.js';
 	import { Separator } from '$lib/components/ui/separator/index.js';
 	import * as ToggleGroup from '$lib/components/ui/toggle-group/index.js';
 	import { cn } from '$lib/utils.js';
+	import FieldPicker from '$lib/registry/components/field-picker.svelte';
 
 	type Props = {
 		entityType: string;
@@ -40,27 +40,40 @@
 	}: Props = $props();
 
 	const service = $derived(schema ?? createSchemaService(client));
-	let fields = $state<Record<string, FieldSchema>>({});
+
+	/** The friendly label of every path in the list, resolved once and kept. */
+	let labels = $state<Record<string, string>>({});
+	const resolving = new Map<string, Promise<string>>();
+	/** The picker's own value, cleared as soon as a key is added. */
+	let adding = $state('');
+
+	function resolveLabel(path: string): void {
+		const at = `${entityType}|${path}`;
+		if (resolving.has(at)) return;
+		const job = service.resolvePath(entityType, path).then(friendlyFieldPath, () => path);
+		resolving.set(at, job);
+		void job.then((label) => {
+			labels = { ...labels, [at]: label };
+		});
+	}
 
 	$effect(() => {
-		let live = true;
-		void service.fields(entityType).then((loaded) => {
-			if (live) fields = loaded;
-		});
-		return () => {
-			live = false;
-		};
+		for (const key of value) resolveLabel(key.field);
 	});
 
-	const chosen = $derived(new Set(value.map((k) => k.field)));
-	const options = $derived(sortableFields(fields, { hidePaths }).filter((f) => !chosen.has(f.name)));
+	const chosen = $derived(value.map((k) => k.field));
 	const label = $derived(
 		value.length === 0 ? 'Sort' : value.map((k) => nameOf(k.field)).join(', ')
 	);
 
 	function nameOf(field: string): string {
-		const parts = field.split('.');
-		return fields[parts[parts.length - 1] as string]?.displayName ?? field;
+		return labels[`${entityType}|${field}`] ?? field;
+	}
+
+	function add(path: string): void {
+		if (!path) return;
+		commit([...value, { field: path, direction: 'asc' }]);
+		adding = '';
 	}
 
 	function commit(next: SortKey[]): void {
@@ -85,6 +98,11 @@
 	string `_search` takes, a leading `-` marking a descending key
 	(026_result_order). Order is meaningful: the first key wins, and id ascending
 	breaks every remaining tie whether or not it is in the list.
+
+	A key may be a dotted path: `entity.Shot.code` sorts, and so does
+	`project.Project.name` under `-` (026_result_order), so the field picker descends
+	through links. An unsortable or unknown field is a silent 200 no-op with the rows
+	in default order, so only types that sort are offered.
 -->
 <div class={cn('inline-flex min-w-0 items-center', className)} data-slot="sort-picker">
 	<Popover.Root>
@@ -161,22 +179,21 @@
 				{/if}
 			</div>
 			<Separator />
-			<Command.Root>
-				<Command.Input placeholder="Add a field…" />
-				<Command.List>
-					<Command.Empty>No field.</Command.Empty>
-					{#each options as f (f.name)}
-						<Command.Item
-							value="{f.displayName} {f.name}"
-							data-field={f.name}
-							onSelect={() => commit([...value, { field: f.name, direction: 'asc' }])}
-						>
-							<span class="min-w-0 flex-1 truncate">{f.displayName}</span>
-							<span class="text-muted-foreground font-mono text-xs">{f.name}</span>
-						</Command.Item>
-					{/each}
-				</Command.List>
-			</Command.Root>
+			<FieldPicker
+				schema={service}
+				{entityType}
+				{hidePaths}
+				{disabled}
+				bind:value={adding}
+				deepLinks
+				clearable={false}
+				exclude={chosen}
+				filter={(field) => isSortable(field.dataType)}
+				placeholder="Add a field"
+				searchPlaceholder="Add a field…"
+				emptyLabel="No field left to sort on."
+				onValueChange={add}
+			/>
 		</Popover.Content>
 	</Popover.Root>
 </div>

@@ -153,7 +153,7 @@ export interface EntityPickerBaseProps {
   emptyLabel?: string;
   size?: EntityPickerSize;
   disabled?: boolean;
-  readOnly?: boolean;
+  readonly?: boolean;
   invalid?: boolean;
   clearable?: boolean;
   debounceMs?: number;
@@ -208,7 +208,7 @@ export function EntityPicker({
   emptyLabel = 'No entity matches.',
   size = 'md',
   disabled = false,
-  readOnly = false,
+  readonly = false,
   invalid = false,
   clearable = true,
   debounceMs = 250,
@@ -320,7 +320,7 @@ export function EntityPicker({
   const options = withSelectedPinned(state.rows, value ? [value] : [], search.known);
   const polymorphic = entityTypes.length > 1;
   const hasSubLabel = Boolean(subLabelField || subLabel);
-  const interactive = !disabled && !readOnly;
+  const interactive = !disabled && !readonly;
   const showClear = clearable && Boolean(value) && interactive;
   const selectedKey = value ? entityKey(value) : '';
   /** An id is a code, and codes are the mono treatment of `docs/design-rules.md`. */
@@ -567,9 +567,9 @@ export function EntityPicker({
       onPointerDown={openFromControl}
       role="group"
           aria-disabled={disabled ? 'true' : undefined}
-          data-readonly={readOnly ? 'true' : undefined}
+          data-readonly={readonly ? 'true' : undefined}
           title={chipEntity?.name ?? placeholder}
-          className={cn(PICKER_CONTROL, PICKER_BOX[size], readOnly ? 'pr-3' : showClear ? 'pr-14' : 'pr-8')}
+          className={cn(PICKER_CONTROL, PICKER_BOX[size], readonly ? 'pr-3' : showClear ? 'pr-14' : 'pr-8')}
         >
           {chipEntity ? (
             <span data-slot="entity-picker-value" className="flex min-w-0 items-center gap-1.5">
@@ -585,7 +585,7 @@ export function EntityPicker({
             data-slot="entity-picker-input"
             aria-invalid={invalid ? 'true' : undefined}
             aria-label={placeholder}
-            readOnly={readOnly || undefined}
+            readOnly={readonly || undefined}
             placeholder={chipEntity ? searchPlaceholder : placeholder}
             className={PICKER_INPUT}
           />
@@ -612,7 +612,7 @@ export function EntityPicker({
           </ComboboxPrimitive.Positioner>
         </ComboboxPrimitive.Portal>
 
-        {readOnly ? null : (
+        {readonly ? null : (
           <div className="pointer-events-none absolute right-2 flex items-center gap-1">
             {showClear ? (
               <button

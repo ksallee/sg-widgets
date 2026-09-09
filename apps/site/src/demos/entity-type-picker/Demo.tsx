@@ -108,7 +108,7 @@ function Pickers() {
           </div>
           <div className={field}>
             <span className={label}>Read-only</span>
-            <EntityTypePicker schema={schema} value="Task" readOnly />
+            <EntityTypePicker schema={schema} value="Task" readonly />
           </div>
           <div className={field}>
             <span className={label}>Invalid</span>

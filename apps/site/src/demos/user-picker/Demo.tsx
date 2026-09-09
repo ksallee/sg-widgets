@@ -98,7 +98,7 @@ export default function UserPickerDemo() {
           </div>
           <div className={field}>
             <span className={caption}>Read-only</span>
-            <UserPicker client={client} value={preset} readOnly />
+            <UserPicker client={client} value={preset} readonly />
           </div>
           <div className={field}>
             <span className={caption}>Invalid</span>

@@ -52,7 +52,7 @@ export interface StatusPickerProps {
   placeholder?: string;
   emptyLabel?: string;
   clearable?: boolean;
-  readOnly?: boolean;
+  readonly?: boolean;
   disabled?: boolean;
   invalid?: boolean;
   /** Show the raw code instead of the label. The other one stays in the tooltip. */
@@ -141,7 +141,7 @@ export function StatusPicker({
   placeholder = 'Select a status',
   emptyLabel = 'No status on this field.',
   clearable = true,
-  readOnly = false,
+  readonly = false,
   disabled = false,
   invalid = false,
   showCode = false,
@@ -164,8 +164,8 @@ export function StatusPicker({
   const title = value ? (rows.find((o) => o.code === value)?.label ?? value) : placeholder;
 
   // Read-only wins over disabled and over the loading window.
-  const inert = !readOnly && (disabled || query.loading);
-  const showClear = clearable && Boolean(value) && !readOnly && !disabled;
+  const inert = !readonly && (disabled || query.loading);
+  const showClear = clearable && Boolean(value) && !readonly && !disabled;
 
   // The first option set is not a change: it is what the widget was mounted to show.
   const seen = useRef<string | null>(null);
@@ -251,7 +251,7 @@ export function StatusPicker({
       data-loading={query.loading ? 'true' : undefined}
       className={cn('relative flex w-full min-w-0 items-center', className)}
     >
-      {readOnly ? (
+      {readonly ? (
         <div
           data-slot="status-picker-trigger"
           data-readonly="true"

@@ -133,7 +133,7 @@ export interface ColumnPickerProps {
   emptyLabel?: string;
   availableLabel?: string;
   chosenLabel?: string;
-  readOnly?: boolean;
+  readonly?: boolean;
   disabled?: boolean;
   invalid?: boolean;
   size?: ColumnPickerSize;
@@ -175,7 +175,7 @@ export function ColumnPicker({
   emptyLabel = 'No columns yet.',
   availableLabel = 'Available',
   chosenLabel = 'Columns',
-  readOnly = false,
+  readonly = false,
   disabled = false,
   invalid = false,
   size = 'md',
@@ -194,7 +194,7 @@ export function ColumnPicker({
   const rootRef = useRef<HTMLDivElement>(null);
 
   const type = currentType(entityType, hops);
-  const editable = !readOnly && !disabled;
+  const editable = !readonly && !disabled;
   // Paths and synthetic names as strings, so a caller passing a fresh array literal
   // on every render does not re-run the resolution.
   const joined = value.join('\n');
@@ -574,7 +574,7 @@ export function ColumnPicker({
                   ROW[size],
                 )}
               >
-                {!readOnly ? (
+                {!readonly ? (
                   <Button
                     variant="ghost"
                     size={ACTION[size]}
@@ -596,7 +596,7 @@ export function ColumnPicker({
                     {labelOf(path)}
                   </span>
                 )}
-                {!readOnly ? (
+                {!readonly ? (
                   <Button
                     variant="ghost"
                     size={ACTION[size]}
@@ -665,7 +665,7 @@ export function ColumnPicker({
       data-layout={layout}
       aria-disabled={disabled ? 'true' : undefined}
       aria-invalid={invalid ? 'true' : undefined}
-      data-readonly={readOnly ? 'true' : undefined}
+      data-readonly={readonly ? 'true' : undefined}
       className={cn(
         '@container flex w-full min-w-0 flex-col gap-3',
         disabled && 'pointer-events-none opacity-50',
@@ -675,9 +675,9 @@ export function ColumnPicker({
       {layout === 'dual' ? (
         <div
           data-slot="column-picker-panes"
-          className={cn('grid min-w-0 gap-3', !readOnly && '@lg:grid-cols-2')}
+          className={cn('grid min-w-0 gap-3', !readonly && '@lg:grid-cols-2')}
         >
-          {!readOnly ? (
+          {!readonly ? (
             <section
               data-slot="column-picker-available"
               className={cn(
@@ -707,7 +707,7 @@ export function ColumnPicker({
         </div>
       ) : (
         <>
-          {!readOnly ? picker : null}
+          {!readonly ? picker : null}
           {chosen}
         </>
       )}

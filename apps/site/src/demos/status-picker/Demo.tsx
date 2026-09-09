@@ -137,7 +137,7 @@ export default function StatusPickerDemo() {
             <StatusPicker client={client} entityType="Version" projectId={projectId} value="apr" disabled />
           </div>
           <div className={box}>
-            <StatusPicker client={client} entityType="Version" projectId={projectId} value="apr" readOnly />
+            <StatusPicker client={client} entityType="Version" projectId={projectId} value="apr" readonly />
           </div>
           <div className={box}>
             <StatusPicker client={client} entityType="Version" projectId={projectId} value="apr" invalid />

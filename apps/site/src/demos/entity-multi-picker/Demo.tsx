@@ -237,7 +237,7 @@ export default function EntityMultiPickerDemo() {
           </div>
           <div className={field}>
             <span className={caption}>Read-only</span>
-            <EntityMultiPicker client={client} entityTypes={['Asset']} value={preset} readOnly />
+            <EntityMultiPicker client={client} entityTypes={['Asset']} value={preset} readonly />
           </div>
           <div className={field}>
             <span className={caption}>Invalid</span>

@@ -238,7 +238,7 @@ export interface EntityMultiPickerBaseProps {
   max?: number;
   size?: EntityMultiPickerSize;
   disabled?: boolean;
-  readOnly?: boolean;
+  readonly?: boolean;
   invalid?: boolean;
   clearable?: boolean;
   debounceMs?: number;
@@ -293,7 +293,7 @@ export function EntityMultiPicker({
   max = 0,
   size = 'md',
   disabled = false,
-  readOnly = false,
+  readonly = false,
   invalid = false,
   clearable = true,
   debounceMs = 250,
@@ -423,7 +423,7 @@ export function EntityMultiPicker({
   const options = withSelectedPinned(state.rows, value, search.known);
   const polymorphic = entityTypes.length > 1;
   const hasSubLabel = Boolean(subLabelField || subLabel);
-  const interactive = !disabled && !readOnly;
+  const interactive = !disabled && !readonly;
   const showClear = clearable && value.length > 0 && interactive;
   /** An id is a code, and codes are the mono treatment of `docs/design-rules.md`. */
   const secondaryIsId = secondaryField === 'id';
@@ -697,9 +697,9 @@ export function EntityMultiPicker({
       role="group"
           aria-disabled={disabled ? 'true' : undefined}
           data-invalid={invalid && !inline ? 'true' : undefined}
-          data-readonly={readOnly ? 'true' : undefined}
+          data-readonly={readonly ? 'true' : undefined}
           title={plan.title || placeholder}
-          className={cn(PICKER_CONTROL, PICKER_BOX[size], plan.oneLine && 'flex-nowrap', readOnly ? 'pr-3' : showClear ? 'pr-14' : 'pr-8')}
+          className={cn(PICKER_CONTROL, PICKER_BOX[size], plan.oneLine && 'flex-nowrap', readonly ? 'pr-3' : showClear ? 'pr-14' : 'pr-8')}
         >
           {value.length > 0 ? (
             <span
@@ -764,7 +764,7 @@ export function EntityMultiPicker({
               data-slot="entity-picker-input"
               aria-invalid={invalid ? 'true' : undefined}
               aria-label={placeholder}
-              readOnly={readOnly || undefined}
+              readOnly={readonly || undefined}
               placeholder={value.length > 0 ? '' : placeholder}
               className={PICKER_INPUT}
             />
@@ -808,7 +808,7 @@ export function EntityMultiPicker({
           </ComboboxPrimitive.Positioner>
         </ComboboxPrimitive.Portal>
 
-        {readOnly ? null : (
+        {readonly ? null : (
           <div className="pointer-events-none absolute right-2 flex items-center gap-1">
             {showClear ? (
               <button

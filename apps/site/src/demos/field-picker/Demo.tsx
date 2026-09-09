@@ -84,7 +84,7 @@ function Pickers() {
         <span className={label}>Sizes, read-only and invalid</span>
         <FieldPicker schema={schema} entityType="Shot" value="code" size="sm" />
         <FieldPicker schema={schema} entityType="Shot" value="sg_status_list" size="lg" />
-        <FieldPicker schema={schema} entityType="Shot" value="description" readOnly />
+        <FieldPicker schema={schema} entityType="Shot" value="description" readonly />
         <FieldPicker schema={schema} entityType="Shot" value="" invalid />
         <FieldPicker schema={schema} entityType="Shot" value="sg_cut_in" disabled />
       </div>

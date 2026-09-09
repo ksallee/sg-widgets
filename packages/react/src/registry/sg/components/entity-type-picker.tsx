@@ -137,7 +137,7 @@ export interface EntityTypePickerProps {
   searchPlaceholder?: string;
   emptyLabel?: string;
   clearable?: boolean;
-  readOnly?: boolean;
+  readonly?: boolean;
   disabled?: boolean;
   invalid?: boolean;
   /** Show the code under the display name where the two differ. */
@@ -170,7 +170,7 @@ export function EntityTypePicker({
   searchPlaceholder = 'Search types…',
   emptyLabel = 'No entity type matches.',
   clearable = true,
-  readOnly = false,
+  readonly = false,
   disabled = false,
   invalid = false,
   showCode = true,
@@ -222,7 +222,7 @@ export function EntityTypePicker({
   const rowKey = `${size}|${summary}|${selected.map(labelOf).join(', ')}`;
   const row = useChipRow(fitted, rowKey, controlRef, chipsRef);
   const plan = summariseSelection(selected, labelOf, { summary, max, fit: row.fit });
-  const interactive = !readOnly && !disabled;
+  const interactive = !readonly && !disabled;
   const showClear = clearable && selected.length > 0 && interactive;
 
   /** A press anywhere in the field opens the list, and a token field takes the caret. */
@@ -312,9 +312,9 @@ export function EntityTypePicker({
       role="group"
       aria-disabled={disabled ? 'true' : undefined}
       data-invalid={invalid && !inline ? 'true' : undefined}
-      data-readonly={readOnly ? 'true' : undefined}
+      data-readonly={readonly ? 'true' : undefined}
       title={plan.title || placeholder}
-      className={cn(PICKER_CONTROL, PICKER_BOX[size], plan.oneLine && 'flex-nowrap', readOnly ? 'pr-3' : showClear ? 'pr-14' : 'pr-8')}
+      className={cn(PICKER_CONTROL, PICKER_BOX[size], plan.oneLine && 'flex-nowrap', readonly ? 'pr-3' : showClear ? 'pr-14' : 'pr-8')}
     >
       {selected.length > 0 ? (
         <span
@@ -388,7 +388,7 @@ export function EntityTypePicker({
           data-slot="entity-type-picker-input"
           aria-invalid={invalid ? 'true' : undefined}
           aria-label={placeholder}
-          readOnly={readOnly || undefined}
+          readOnly={readonly || undefined}
           placeholder={selected.length > 0 ? '' : placeholder}
           className={PICKER_INPUT}
         />
@@ -433,7 +433,7 @@ export function EntityTypePicker({
     </ComboboxPrimitive.Portal>
   );
 
-  const actions = readOnly ? null : (
+  const actions = readonly ? null : (
     <div className="pointer-events-none absolute right-2 flex items-center gap-1">
       {showClear ? (
         <button

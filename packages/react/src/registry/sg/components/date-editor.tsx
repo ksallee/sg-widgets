@@ -12,9 +12,16 @@ export type DateEditorSize = 'sm' | 'md' | 'lg';
 
 /** The control ladder of `docs/design-rules.md`: 8 / 9 / 10. */
 const BOX: Record<DateEditorSize, string> = {
-  sm: 'h-8',
-  md: 'h-9',
-  lg: 'h-10',
+  sm: 'h-8 px-2',
+  md: 'h-9 px-3',
+  lg: 'h-10 px-3',
+};
+
+/** The calendar glyph grows one step at `lg`, as the status picker's does. */
+const GLYPH: Record<DateEditorSize, string> = {
+  sm: 'size-4',
+  md: 'size-4',
+  lg: 'size-5',
 };
 
 const DATE_ONLY = /^(\d{4})-(\d{2})-(\d{2})$/;
@@ -157,13 +164,13 @@ export function DateEditor({
           disabled={disabled}
           title={value ?? undefined}
           className={cn(
-            buttonVariants({ variant: 'outline', size: 'sm' }),
+            buttonVariants({ variant: 'outline' }),
             'w-full justify-start gap-1.5 font-normal tabular-nums',
             BOX[size],
             !value && 'text-muted-foreground',
           )}
         >
-          <CalendarIcon aria-hidden="true" className="size-4 shrink-0" />
+          <CalendarIcon aria-hidden="true" className={cn(GLYPH[size], 'shrink-0')} />
           <span className="truncate">{value ?? placeholder}</span>
         </PopoverTrigger>
         <PopoverContent align="start" className="flex w-auto flex-col gap-3 p-3" initialFocus={dayInput}>

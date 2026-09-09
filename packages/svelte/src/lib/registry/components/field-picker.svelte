@@ -150,6 +150,7 @@
 	};
 
 	let open = $state(false);
+	let inputEl = $state<HTMLInputElement | null>(null);
 	let search = $state('');
 	let highlighted = $state('');
 	let hops = $state<FieldHop[]>([]);
@@ -331,7 +332,7 @@
 	data-depth={hops.length}
 	class={cn('relative flex w-full min-w-0 items-center', className)}
 >
-	<Popover.Root {open} onOpenChange={(next) => (open = readonly || disabled ? false : next)}>
+	<Popover.Root bind:open={() => open, (next) => (open = readonly || disabled ? false : next)}>
 		<Popover.Trigger
 			data-slot="field-picker-trigger"
 			role="combobox"
@@ -359,6 +360,10 @@
 
 		<Popover.Content
 			data-picker="field"
+			onOpenAutoFocus={(e) => {
+				e.preventDefault();
+				inputEl?.focus({ preventScroll: true });
+			}}
 			align="start"
 			onkeydown={onKeys}
 			class="w-96 max-w-[calc(100vw-2rem)] gap-0 overflow-hidden p-0"
@@ -411,9 +416,8 @@
 				value={cursor}
 				onValueChange={(next) => (highlighted = next)}
 			>
-				<!-- svelte-ignore a11y_autofocus -->
 				<Command.Input
-					autofocus
+					bind:ref={inputEl}
 					bind:value={search}
 					placeholder={choosing ? 'Which type?' : searchPlaceholder}
 				/>

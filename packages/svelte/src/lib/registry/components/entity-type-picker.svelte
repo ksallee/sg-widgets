@@ -68,6 +68,7 @@
 	}: Props = $props();
 
 	let open = $state(false);
+	let inputEl = $state<HTMLInputElement | null>(null);
 	let search = $state('');
 	let highlighted = $state('');
 	let loaded = $state<EntityTypeInfo[] | null>(null);
@@ -138,7 +139,7 @@
 	data-multiple={multiple ? 'true' : 'false'}
 	class={cn('relative flex w-full min-w-0 items-center', className)}
 >
-	<Popover.Root {open} onOpenChange={(next) => (open = readonly || disabled ? false : next)}>
+	<Popover.Root bind:open={() => open, (next) => (open = readonly || disabled ? false : next)}>
 		<Popover.Trigger
 			data-slot="entity-type-picker-trigger"
 			role="combobox"
@@ -161,6 +162,10 @@
 
 		<Popover.Content
 			data-picker="entity-type"
+			onOpenAutoFocus={(e) => {
+				e.preventDefault();
+				inputEl?.focus({ preventScroll: true });
+			}}
 			align="start"
 			class="w-96 max-w-[calc(100vw-2rem)] gap-0 overflow-hidden p-0"
 		>
@@ -170,8 +175,7 @@
 				value={cursor}
 				onValueChange={(next) => (highlighted = next)}
 			>
-				<!-- svelte-ignore a11y_autofocus -->
-				<Command.Input autofocus bind:value={search} placeholder={searchPlaceholder} />
+				<Command.Input bind:ref={inputEl} bind:value={search} placeholder={searchPlaceholder} />
 				<Command.List>
 					{#if failure}
 						<div data-slot="entity-type-picker-error" class="text-destructive flex items-center justify-center gap-1.5 py-6 text-center text-sm">

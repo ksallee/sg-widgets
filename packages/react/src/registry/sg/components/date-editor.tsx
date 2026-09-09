@@ -37,6 +37,8 @@ export interface DateEditorProps extends Omit<React.HTMLAttributes<HTMLDivElemen
   value?: string | null;
   onValueChange?: (value: string | null) => void;
   field?: Pick<FieldSchema, 'displayName' | 'mandatory'> | null;
+  /** Compact for one row of a form or a filter: the typed day alone, at a fixed width. */
+  inline?: boolean;
   size?: DateEditorSize;
   disabled?: boolean;
   readonly?: boolean;
@@ -53,11 +55,15 @@ export interface DateEditorProps extends Omit<React.HTMLAttributes<HTMLDivElemen
  * The value is exactly `YYYY-MM-DD`: no time, no zone, and the API validates the day
  * rather than only parsing it, so `2026-02-30` is refused here too. A timestamp is
  * never a date on this type (field_types/date).
+ *
+ * `inline` is the form a row of a table or a filter takes: ten characters of typed day,
+ * no calendar.
  */
 export function DateEditor({
   value = null,
   onValueChange,
   field = null,
+  inline = false,
   size = 'md',
   disabled = false,
   readonly = false,
@@ -125,17 +131,19 @@ export function DateEditor({
     <div
       data-slot="date-editor"
       data-size={size}
-      className={cn('flex w-full min-w-0 flex-col gap-2', className)}
+      data-inline={inline ? 'true' : undefined}
+      className={cn('flex w-full min-w-0 flex-col gap-2', inline && 'w-fit', className)}
       {...rest}
     >
       <div className="flex w-full min-w-0 items-center gap-2">
         <Input
           value={draft}
           type="text"
+          data-slot="date-editor-day"
           disabled={disabled}
           readOnly={readonly}
           placeholder={placeholder}
-          className={cn('tabular-nums', BOX[size])}
+          className={cn('tabular-nums', BOX[size], inline && 'w-28 shrink-0')}
           aria-invalid={isInvalid}
           aria-label={field?.displayName}
           aria-required={field?.mandatory}
@@ -146,18 +154,20 @@ export function DateEditor({
           onBlur={onBlur}
           onKeyDown={onKeyDown}
         />
-        <Popover open={open} onOpenChange={setOpen}>
-          <PopoverTrigger
-            disabled={disabled || readonly}
-            aria-label="Pick a date"
-            className={cn(buttonVariants({ variant: 'outline', size: 'icon' }), 'shrink-0', BOX[size])}
-          >
-            <CalendarIcon aria-hidden="true" className="size-4" />
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="start">
-            <Calendar mode="single" selected={day} onSelect={pick} />
-          </PopoverContent>
-        </Popover>
+        {inline ? null : (
+          <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger
+              disabled={disabled || readonly}
+              aria-label="Pick a date"
+              className={cn(buttonVariants({ variant: 'outline', size: 'icon' }), 'shrink-0', BOX[size])}
+            >
+              <CalendarIcon aria-hidden="true" className="size-4" />
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar mode="single" selected={day} onSelect={pick} />
+            </PopoverContent>
+          </Popover>
+        )}
       </div>
       {message
         ? (errorMessage?.(message) ?? (

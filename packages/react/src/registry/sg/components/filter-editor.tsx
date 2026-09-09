@@ -37,6 +37,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Input } from '@/components/ui/input';
+import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   Select,
@@ -403,6 +404,7 @@ function ConditionRow({ ctx, path, node }: { ctx: EditorContext; path: NodePath;
       <Button
         variant="ghost"
         size="icon-sm"
+        className="shrink-0"
         disabled={ctx.disabled}
         aria-label="Remove condition"
         data-slot="filter-remove"
@@ -416,7 +418,8 @@ function ConditionRow({ ctx, path, node }: { ctx: EditorContext; path: NodePath;
 
 function FieldSlot({ ctx, path, node }: { ctx: EditorContext; path: NodePath; node: FilterCondition }) {
   return (
-    <div data-slot="filter-field" className="w-56 shrink-0">
+    // The field is the row's widest cell: it takes 14rem, truncates, and gives the rest back.
+    <div data-slot="filter-field" className="w-56 min-w-24 shrink">
       {ctx.fieldChooser ? (
         ctx.fieldChooser({
           entityType: ctx.entityType,
@@ -505,7 +508,7 @@ function ValueSlot({ ctx, path, node }: { ctx: EditorContext; path: NodePath; no
   const args: ValueEditorArgs = { field, dataType, operator: node.operator, value: node.value, arity, disabled, onChange: set };
 
   return (
-    <div className="flex min-w-0 grow basis-48 flex-wrap items-center gap-2" data-slot="filter-value">
+    <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2" data-slot="filter-value">
       {ctx.unresolved(node.path) ? (
         <Skeleton className="h-8 min-w-0 flex-1" />
       ) : ctx.valueEditor ? (
@@ -602,6 +605,11 @@ function ValueSlot({ ctx, path, node }: { ctx: EditorContext; path: NodePath; no
   );
 }
 
+/**
+ * A value editor sized for a row. The typed types take the width their content needs and
+ * the free width goes to the ones that hold a name: a date, a time and a number never
+ * push the row onto a second line.
+ */
 function ScalarEditor({
   kind,
   dataType,
@@ -621,8 +629,9 @@ function ScalarEditor({
   if (kind === 'number') {
     return (
       <NumberEditor
-        className="min-w-0 flex-1"
+        className="shrink-0"
         size="sm"
+        inline
         disabled={disabled}
         dataType={numericType(dataType)}
         field={field}
@@ -634,8 +643,9 @@ function ScalarEditor({
   if (kind === 'date') {
     return (
       <DateEditor
-        className="min-w-0 flex-1"
+        className="shrink-0"
         size="sm"
+        inline
         disabled={disabled}
         field={field}
         value={textValue(value)}
@@ -646,8 +656,9 @@ function ScalarEditor({
   if (kind === 'date_time') {
     return (
       <DateTimeEditor
-        className="min-w-0 flex-1"
+        className="shrink-0"
         size="sm"
+        inline
         hint={false}
         disabled={disabled}
         field={field}
@@ -679,31 +690,36 @@ function RelativeValue({
 }) {
   const pair = (Array.isArray(value) ? value : [1, 'DAY']) as [number, string];
   return (
-    <>
-      <Input
+    // A window is one quantity: the count and its unit share a box.
+    <InputGroup className="w-40 shrink-0">
+      <InputGroupInput
         type="number"
         min="1"
-        className="h-8 w-20 shrink-0"
+        className="tabular-nums"
         disabled={disabled}
         aria-label="Count"
         value={String(pair[0] ?? '')}
         onChange={(e) => onChange([Number(e.currentTarget.value), pair[1]] as ConditionValue)}
       />
-      <Select
-        value={String(pair[1])}
-        disabled={disabled}
-        onValueChange={(unit) => onChange([pair[0], unit] as ConditionValue)}
-      >
-        <SelectTrigger className="h-8 w-28 shrink-0">{unitLabel(String(pair[1]))}</SelectTrigger>
-        <SelectContent>
-          {UNITS.map((unit) => (
-            <SelectItem key={unit} value={unit}>
-              {unitLabel(unit)}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </>
+      <InputGroupAddon align="inline-end" className="py-0 pr-1">
+        <Select
+          value={String(pair[1])}
+          disabled={disabled}
+          onValueChange={(unit) => onChange([pair[0], unit] as ConditionValue)}
+        >
+          <SelectTrigger size="sm" className="border-0 bg-transparent dark:bg-transparent">
+            {unitLabel(String(pair[1]))}
+          </SelectTrigger>
+          <SelectContent>
+            {UNITS.map((unit) => (
+              <SelectItem key={unit} value={unit}>
+                {unitLabel(unit)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </InputGroupAddon>
+    </InputGroup>
   );
 }
 
@@ -722,7 +738,8 @@ function TwoValues({
 }) {
   const pair = (Array.isArray(value) ? value : [null, null]) as [Scalar, Scalar];
   return (
-    <>
+    // Both ends on one line, joined by the word that reads the range.
+    <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2" data-slot="filter-range">
       <ScalarEditor
         kind={kind}
         dataType={dataType}
@@ -740,7 +757,7 @@ function TwoValues({
         disabled={disabled}
         onChange={(v) => onChange([pair[0], v] as ConditionValue)}
       />
-    </>
+    </div>
   );
 }
 

@@ -124,6 +124,7 @@
 	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
 	import * as Command from '$lib/components/ui/command/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
+	import * as InputGroup from '$lib/components/ui/input-group/index.js';
 	import * as Popover from '$lib/components/ui/popover/index.js';
 	import * as Select from '$lib/components/ui/select/index.js';
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
@@ -262,7 +263,8 @@
 </script>
 
 {#snippet fieldSlot(path: NodePath, node: FilterCondition)}
-	<div data-slot="filter-field" class="w-56 shrink-0">
+	<!-- The field is the row's widest cell: it takes 14rem, truncates, and gives the rest back. -->
+	<div data-slot="filter-field" class="w-56 min-w-24 shrink">
 		{#if fieldChooser}
 			{@render fieldChooser({
 				entityType,
@@ -331,11 +333,17 @@
 	</Popover.Trigger>
 {/snippet}
 
+<!--
+	A value editor sized for a row. The typed types take the width their content needs and
+	the free width goes to the ones that hold a name: a date, a time and a number never
+	push the row onto a second line.
+-->
 {#snippet scalarEditor(kind: string, dataType: string, label: string, current: Scalar, set: (v: Scalar) => void)}
 	{#if kind === 'number'}
 		<NumberEditor
-			class="min-w-0 flex-1"
+			class="shrink-0"
 			size="sm"
+			inline
 			{disabled}
 			dataType={numericType(dataType)}
 			field={{ displayName: label, mandatory: false }}
@@ -344,8 +352,9 @@
 		/>
 	{:else if kind === 'date'}
 		<DateEditor
-			class="min-w-0 flex-1"
+			class="shrink-0"
 			size="sm"
+			inline
 			{disabled}
 			field={{ displayName: label, mandatory: false }}
 			value={textValue(current)}
@@ -353,8 +362,9 @@
 		/>
 	{:else if kind === 'date_time'}
 		<DateTimeEditor
-			class="min-w-0 flex-1"
+			class="shrink-0"
 			size="sm"
+			inline
 			hint={false}
 			{disabled}
 			field={{ displayName: label, mandatory: false }}
@@ -408,7 +418,7 @@
 	{@const kind = valueEditorFor(dataType, node.operator)}
 	{@const arity = valueArity(node.operator)}
 	{@const set = (v: ConditionValue) => edit(path, { ...node, value: v })}
-	<div class="flex min-w-0 grow basis-48 flex-wrap items-center gap-2" data-slot="filter-value">
+	<div class="flex min-w-0 flex-1 flex-wrap items-center gap-2" data-slot="filter-value">
 		{#if unresolved(node.path)}
 			<Skeleton class="h-8 min-w-0 flex-1" />
 		{:else if valueEditor}
@@ -426,28 +436,35 @@
 			<!-- `is empty` and the calendar presets pin their value; there is nothing to edit. -->
 		{:else if arity === 'relative'}
 			{@const pair = (Array.isArray(node.value) ? node.value : [1, 'DAY']) as [number, string]}
-			<Input
-				type="number"
-				min="1"
-				class="h-8 w-20 shrink-0"
-				{disabled}
-				aria-label="Count"
-				value={String(pair[0] ?? '')}
-				oninput={(e) => set([Number(e.currentTarget.value), pair[1]] as ConditionValue)}
-			/>
-			<Select.Root
-				type="single"
-				value={String(pair[1])}
-				{disabled}
-				onValueChange={(unit) => set([pair[0], unit] as ConditionValue)}
-			>
-				<Select.Trigger class="h-8 w-28 shrink-0">{unitLabel(String(pair[1]))}</Select.Trigger>
-				<Select.Content>
-					{#each UNITS as unit (unit)}
-						<Select.Item value={unit} label={unitLabel(unit)} />
-					{/each}
-				</Select.Content>
-			</Select.Root>
+			<!-- A window is one quantity: the count and its unit share a box. -->
+			<InputGroup.Root class="w-40 shrink-0">
+				<InputGroup.Input
+					type="number"
+					min="1"
+					class="tabular-nums"
+					{disabled}
+					aria-label="Count"
+					value={String(pair[0] ?? '')}
+					oninput={(e) => set([Number(e.currentTarget.value), pair[1]] as ConditionValue)}
+				/>
+				<InputGroup.Addon align="inline-end" class="py-0 pr-1">
+					<Select.Root
+						type="single"
+						value={String(pair[1])}
+						{disabled}
+						onValueChange={(unit) => set([pair[0], unit] as ConditionValue)}
+					>
+						<Select.Trigger size="sm" class="border-0 bg-transparent dark:bg-transparent">
+							{unitLabel(String(pair[1]))}
+						</Select.Trigger>
+						<Select.Content>
+							{#each UNITS as unit (unit)}
+								<Select.Item value={unit} label={unitLabel(unit)} />
+							{/each}
+						</Select.Content>
+					</Select.Root>
+				</InputGroup.Addon>
+			</InputGroup.Root>
 		{:else if kind === 'entity'}
 			{#if entityEditor}
 				<!-- Integration point: EntityMultiPicker plugs in here. -->
@@ -537,9 +554,12 @@
 			/>
 		{:else if arity === 'two'}
 			{@const pair = (Array.isArray(node.value) ? node.value : [null, null]) as [Scalar, Scalar]}
-			{@render scalarEditor(kind, dataType, 'From', pair[0], (v) => set([v, pair[1]] as ConditionValue))}
-			<span class="text-muted-foreground shrink-0 text-sm">and</span>
-			{@render scalarEditor(kind, dataType, 'To', pair[1], (v) => set([pair[0], v] as ConditionValue))}
+			<!-- Both ends on one line, joined by the word that reads the range. -->
+			<div class="flex min-w-0 flex-1 flex-wrap items-center gap-2" data-slot="filter-range">
+				{@render scalarEditor(kind, dataType, 'From', pair[0], (v) => set([v, pair[1]] as ConditionValue))}
+				<span class="text-muted-foreground shrink-0 text-sm">and</span>
+				{@render scalarEditor(kind, dataType, 'To', pair[1], (v) => set([pair[0], v] as ConditionValue))}
+			</div>
 		{:else if arity === 'many'}
 			{@const items = (Array.isArray(node.value) ? node.value : []) as Scalar[]}
 			<!-- A list of dates, numbers or strings has no per-value editor: one line, comma separated. -->
@@ -572,6 +592,7 @@
 		<Button
 			variant="ghost"
 			size="icon-sm"
+			class="shrink-0"
 			{disabled}
 			aria-label="Remove condition"
 			data-slot="filter-remove"

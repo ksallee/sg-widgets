@@ -31,6 +31,19 @@ interface Shape {
   max?: number;
 }
 
+/**
+ * The comfortable width of each numeric type, in `inline` form: eight characters of
+ * number, eleven of timecode.
+ */
+const INLINE_WIDTH: Record<string, string> = {
+  number: 'w-24',
+  float: 'w-24',
+  percent: 'w-24',
+  currency: 'w-24',
+  duration: 'w-24',
+  timecode: 'w-28',
+};
+
 /** The stored value as the string the input shows. Each type round-trips through its own parse. */
 function toDraft(value: unknown, dataType: string, shape: Shape): string {
   if (value === null || value === undefined || value === '') return '';
@@ -96,6 +109,8 @@ export interface NumberEditorProps extends Omit<React.HTMLAttributes<HTMLDivElem
   symbol?: string;
   /** Show the stored form under the control, e.g. the minutes behind a duration. */
   hint?: boolean;
+  /** Compact for one row of a form or a filter: a fixed width for the type, no hint. */
+  inline?: boolean;
   min?: number;
   max?: number;
   size?: NumberEditorSize;
@@ -116,6 +131,9 @@ export interface NumberEditorProps extends Omit<React.HTMLAttributes<HTMLDivElem
  * six decimals on write, a `duration` is minutes, and a `timecode` is milliseconds.
  * Nothing is clamped server-side, so the bounds here are the client's
  * (sg-groundtruth `findings/field_types/*`).
+ *
+ * `inline` is the form a row of a table or a filter takes: the width the type needs and
+ * nothing under the control.
  */
 export function NumberEditor({
   value = null,
@@ -127,6 +145,7 @@ export function NumberEditor({
   frameRate,
   symbol = '$',
   hint: showHint = false,
+  inline = false,
   min,
   max,
   size = 'md',
@@ -198,7 +217,8 @@ export function NumberEditor({
       data-slot="number-editor"
       data-size={size}
       data-data-type={dataType}
-      className={cn('flex w-full min-w-0 flex-col gap-2', className)}
+      data-inline={inline ? 'true' : undefined}
+      className={cn('flex w-full min-w-0 flex-col gap-2', inline && 'w-fit', className)}
       {...rest}
     >
       <div className="relative flex w-full min-w-0 items-center">
@@ -218,7 +238,14 @@ export function NumberEditor({
           disabled={disabled}
           readOnly={readonly}
           placeholder={placeholder}
-          className={cn('tabular-nums', BOX[size], prefix && 'pl-7', suffix && 'pr-7')}
+          className={cn(
+            'tabular-nums',
+            BOX[size],
+            prefix && 'pl-7',
+            suffix && 'pr-7',
+            inline && 'shrink-0',
+            inline && (INLINE_WIDTH[dataType] ?? 'w-24'),
+          )}
           aria-invalid={isInvalid}
           aria-label={field?.displayName}
           aria-required={field?.mandatory}
@@ -239,7 +266,7 @@ export function NumberEditor({
           </span>
         ) : null}
       </div>
-      {showHint && hint ? (
+      {showHint && hint && !inline ? (
         <p data-slot="number-editor-hint" className="text-muted-foreground text-xs tabular-nums">
           {hint}
         </p>

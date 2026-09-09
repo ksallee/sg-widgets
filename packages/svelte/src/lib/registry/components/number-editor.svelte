@@ -29,6 +29,19 @@
 		max?: number;
 	}
 
+	/**
+	 * The comfortable width of each numeric type, in `inline` form: eight characters of
+	 * number, eleven of timecode.
+	 */
+	const INLINE_WIDTH: Record<string, string> = {
+		number: 'w-24',
+		float: 'w-24',
+		percent: 'w-24',
+		currency: 'w-24',
+		duration: 'w-24',
+		timecode: 'w-28'
+	};
+
 	/** The stored value as the string the input shows. Each type round-trips through its own parse. */
 	function toDraft(value: unknown, dataType: string, shape: Shape): string {
 		if (value === null || value === undefined || value === '') return '';
@@ -102,6 +115,8 @@
 		symbol?: string;
 		/** Show the stored form under the control, e.g. the minutes behind a duration. */
 		hint?: boolean;
+		/** Compact for one row of a form or a filter: a fixed width for the type, no hint. */
+		inline?: boolean;
 		min?: number;
 		max?: number;
 		size?: NumberEditorSize;
@@ -124,6 +139,7 @@
 		frameRate,
 		symbol = '$',
 		hint: showHint = false,
+		inline = false,
 		min,
 		max,
 		size = 'md',
@@ -208,13 +224,17 @@
 	six decimals on write, a `duration` is minutes, and a `timecode` is milliseconds.
 	Nothing is clamped server-side, so the bounds here are the client's
 	(sg-groundtruth `findings/field_types/*`).
+
+	`inline` is the form a row of a table or a filter takes: the width the type needs and
+	nothing under the control.
 -->
 <div
 	bind:this={ref}
 	data-slot="number-editor"
 	data-size={size}
 	data-data-type={dataType}
-	class={cn('flex w-full min-w-0 flex-col gap-2', className)}
+	data-inline={inline ? 'true' : undefined}
+	class={cn('flex w-full min-w-0 flex-col gap-2', inline && 'w-fit', className)}
 	{...rest}
 >
 	<div class="relative flex w-full min-w-0 items-center">
@@ -234,7 +254,14 @@
 			{disabled}
 			{readonly}
 			{placeholder}
-			class={cn('tabular-nums', BOX[size], prefix && 'pl-7', suffix && 'pr-7')}
+			class={cn(
+				'tabular-nums',
+				BOX[size],
+				prefix && 'pl-7',
+				suffix && 'pr-7',
+				inline && 'shrink-0',
+				inline && (INLINE_WIDTH[dataType] ?? 'w-24')
+			)}
 			aria-invalid={isInvalid}
 			aria-label={field?.displayName}
 			aria-required={field?.mandatory}
@@ -252,7 +279,7 @@
 			</span>
 		{/if}
 	</div>
-	{#if showHint && hint}
+	{#if showHint && hint && !inline}
 		<p data-slot="number-editor-hint" class="text-muted-foreground text-xs tabular-nums">{hint}</p>
 	{/if}
 	{#if message}

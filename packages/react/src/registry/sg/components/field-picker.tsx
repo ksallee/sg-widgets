@@ -100,6 +100,8 @@ export interface FieldPickerProps {
   onValueChange?: (value: string) => void;
   /** Allow descending through entity fields. */
   deepLinks?: boolean;
+  /** Show the programmatic name beside the display name. */
+  showCode?: boolean;
   /** How many hops a path may take. */
   maxDepth?: number;
   /** Data types a field must have to be selected. Traversal ignores this. */
@@ -146,6 +148,7 @@ export function FieldPicker({
   value = '',
   onValueChange,
   deepLinks = false,
+  showCode = false,
   maxDepth = 2,
   dataTypes,
   validTypes,
@@ -468,7 +471,7 @@ export function FieldPicker({
                         <span className="flex min-w-0 flex-1 flex-col">
                           <span className="flex min-w-0 items-center gap-1.5">
                             <span className="truncate">{row.displayName}</span>
-                            {row.name !== row.displayName ? (
+                            {showCode && row.name !== row.displayName ? (
                               <span className="text-muted-foreground shrink-0 font-mono text-xs">
                                 {row.name}
                               </span>

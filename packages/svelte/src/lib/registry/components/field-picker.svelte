@@ -68,6 +68,8 @@
 		onValueChange?: (value: string) => void;
 		/** Allow descending through entity fields. */
 		deepLinks?: boolean;
+		/** Show the programmatic name beside the display name. */
+		showCode?: boolean;
 		/** How many hops a path may take. */
 		maxDepth?: number;
 		/** Data types a field must have to be selected. Traversal ignores this. */
@@ -103,6 +105,7 @@
 		value = $bindable(''),
 		onValueChange,
 		deepLinks = false,
+		showCode = false,
 		maxDepth = 2,
 		dataTypes,
 		validTypes,
@@ -480,7 +483,7 @@
 								<span class="flex min-w-0 flex-1 flex-col">
 									<span class="flex min-w-0 items-center gap-1.5">
 										<span class="truncate">{row.displayName}</span>
-										{#if row.name !== row.displayName}
+										{#if showCode && row.name !== row.displayName}
 											<span class="text-muted-foreground shrink-0 font-mono text-xs">{row.name}</span>
 										{/if}
 									</span>

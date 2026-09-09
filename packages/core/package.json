@@ -1,0 +1,30 @@
+{
+  "name": "@sg-widgets/core",
+  "version": "0.0.1",
+  "description": "Headless, framework-agnostic model of Flow Production Tracking (ShotGrid) fields, filters, statuses and a client adapter, for building widgets.",
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsdown src/index.ts --format esm --dts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "check": "tsc --noEmit"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "tsdown": "^0.23.0",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.0"
+  }
+}

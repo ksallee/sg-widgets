@@ -1,0 +1,13 @@
+node_modules/
+dist/
+build/
+.svelte-kit/
+.astro/
+.vercel/
+.env
+.env.*
+!.env.example
+*.local
+.DS_Store
+coverage/
+apps/site/public/r/

@@ -1,0 +1,6 @@
+{
+  "$schema": "https://shadcn-svelte.com/schema/registry.json",
+  "name": "sg-widgets",
+  "homepage": "https://sg-widgets.dev",
+  "items": []
+}

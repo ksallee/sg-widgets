@@ -34,6 +34,13 @@
 @import 'shadcn/tailwind.css';
 @import '@fontsource-variable/geist';
 
+/*
+ * The palettes the demo toolbar can put on the stage. Unlayered, like the token block
+ * below, and every rule in it carries a `[data-theme]` or `[data-radius]` attribute, so
+ * it outranks the defaults on specificity wherever the import lands.
+ */
+@import './themes.css';
+
 @keyframes accordion-down {
   from {
     height: 0;

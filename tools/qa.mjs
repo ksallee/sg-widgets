@@ -9,7 +9,8 @@
 //
 // The drive file is the body of an async function receiving ({wait, $, $$, harness}). `harness.set`
 // writes the demo toolbar's localStorage keys (framework: svelte|react|both, theme: light|dark,
-// motion: normal|reduced) before a reload; the flags below set them for the initial load. Whatever the body returns is
+// motion: normal|reduced, palette: default|stone|..., radius: default|none|sm|md|lg|xl) and the
+// toolbar re-reads them at once; the flags below set them for the initial load. Whatever the body returns is
 // printed as JSON under `result`, next to `console` (errors and warnings only) and `shot`/`video`
 // paths. Exit code is 1 when the page threw, a console error was logged, or the result carries
 // `verdict` starting with FAIL.

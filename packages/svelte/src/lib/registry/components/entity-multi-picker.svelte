@@ -159,7 +159,7 @@
 		placeholder = 'Search for entities',
 		searchPlaceholder = 'Search…',
 		emptyLabel = 'No entity matches.',
-		summary = 'chips',
+		summary = 'ellipsis',
 		max = 0,
 		size = 'md',
 		disabled = false,

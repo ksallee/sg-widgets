@@ -94,7 +94,7 @@
 		disabled = false,
 		invalid = false,
 		showCode = true,
-		summary = 'chips',
+		summary = 'ellipsis',
 		max = 0,
 		size = 'md',
 		class: className

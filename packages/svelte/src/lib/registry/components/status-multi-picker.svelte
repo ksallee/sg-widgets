@@ -104,7 +104,7 @@
 		disabled = false,
 		invalid = false,
 		showCode = false,
-		summary = 'chips',
+		summary = 'ellipsis',
 		max = 3,
 		siteUrl = undefined,
 		size = 'md',

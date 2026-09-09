@@ -168,7 +168,7 @@ export function StatusMultiPicker({
   disabled = false,
   invalid = false,
   showCode = false,
-  summary = 'chips',
+  summary = 'ellipsis',
   max = 3,
   siteUrl,
   size = 'md',

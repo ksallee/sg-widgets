@@ -269,7 +269,7 @@
       ]
     },
     {
-      "name": "list-editor",
+      "name": "list-select",
       "type": "registry:component",
       "title": "List Editor",
       "description": "A list field as a select over its valid values.",
@@ -282,7 +282,7 @@
       ],
       "files": [
         {
-          "path": "src/lib/registry/components/list-editor.svelte",
+          "path": "src/lib/registry/components/list-select.svelte",
           "type": "registry:component"
         }
       ]
@@ -341,7 +341,7 @@
         "local:checkbox-editor",
         "local:date-editor",
         "local:date-time-editor",
-        "local:list-editor",
+        "local:list-select",
         "local:url-editor",
         "local:color-editor"
       ],

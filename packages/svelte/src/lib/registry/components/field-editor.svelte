@@ -25,7 +25,7 @@
 	import DateEditor from '$lib/registry/components/date-editor.svelte';
 	import DateTimeEditor from '$lib/registry/components/date-time-editor.svelte';
 	import FieldValue from '$lib/registry/components/field-value.svelte';
-	import ListEditor from '$lib/registry/components/list-editor.svelte';
+	import ListSelect from '$lib/registry/components/list-select.svelte';
 	import NumberEditor from '$lib/registry/components/number-editor.svelte';
 	import TextEditor from '$lib/registry/components/text-editor.svelte';
 	import UrlEditor from '$lib/registry/components/url-editor.svelte';
@@ -273,7 +273,7 @@
 				{errorMessage}
 			/>
 		{:else if kind === 'list'}
-			<ListEditor
+			<ListSelect
 				value={value as string | null}
 				onValueChange={emit}
 				field={field ?? null}

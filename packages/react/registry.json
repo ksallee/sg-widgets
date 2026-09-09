@@ -325,7 +325,7 @@
       ]
     },
     {
-      "name": "list-editor",
+      "name": "list-select",
       "type": "registry:component",
       "title": "List Editor",
       "description": "A list field as a select over its valid values.",
@@ -343,7 +343,7 @@
       "docs": "With a project id the field's hidden values are subtracted, which REST does not do on write.",
       "files": [
         {
-          "path": "src/registry/sg/components/list-editor.tsx",
+          "path": "src/registry/sg/components/list-select.tsx",
           "type": "registry:component"
         }
       ]
@@ -416,7 +416,7 @@
         "https://sg-widgets.dev/r/react/checkbox-editor.json",
         "https://sg-widgets.dev/r/react/date-editor.json",
         "https://sg-widgets.dev/r/react/date-time-editor.json",
-        "https://sg-widgets.dev/r/react/list-editor.json",
+        "https://sg-widgets.dev/r/react/list-select.json",
         "https://sg-widgets.dev/r/react/url-editor.json",
         "https://sg-widgets.dev/r/react/color-editor.json"
       ],

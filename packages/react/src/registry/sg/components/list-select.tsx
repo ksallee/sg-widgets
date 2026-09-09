@@ -4,10 +4,10 @@ import { statusLabel, usableStatuses } from '@sg-widgets/core';
 import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 
-export type ListEditorSize = 'sm' | 'md' | 'lg';
+export type ListSelectSize = 'sm' | 'md' | 'lg';
 
 /** The control ladder of `docs/design-rules.md`: 8 / 9 / 10. */
-const BOX: Record<ListEditorSize, string> = {
+const BOX: Record<ListSelectSize, string> = {
   sm: 'h-8',
   md: 'h-9',
   lg: 'h-10',
@@ -16,7 +16,7 @@ const BOX: Record<ListEditorSize, string> = {
 /** The sentinel the clear entry carries; the field itself is cleared with null. */
 const CLEAR = '';
 
-export interface ListEditorProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'defaultValue'> {
+export interface ListSelectProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'defaultValue'> {
   /** The stored string, one of the field's valid values, or null (field_types/list). */
   value?: string | null;
   onValueChange?: (value: string | null) => void;
@@ -28,7 +28,7 @@ export interface ListEditorProps extends Omit<React.HTMLAttributes<HTMLDivElemen
    * client's (probe 009).
    */
   projectId?: number;
-  size?: ListEditorSize;
+  size?: ListSelectSize;
   disabled?: boolean;
   readonly?: boolean;
   invalid?: boolean;
@@ -47,7 +47,7 @@ export interface ListEditorProps extends Omit<React.HTMLAttributes<HTMLDivElemen
  * may offer (field_types/list). With a project id the field's hidden values are
  * subtracted, which REST does not do on write.
  */
-export function ListEditor({
+export function ListSelect({
   value = null,
   onValueChange,
   field = null,
@@ -62,7 +62,7 @@ export function ListEditor({
   errorMessage,
   className,
   ...rest
-}: ListEditorProps) {
+}: ListSelectProps) {
   const options =
     projectId === undefined
       ? (field?.validValues ?? []).map((code) => ({ code, label: statusLabel(field ?? {}, code) }))
@@ -81,7 +81,7 @@ export function ListEditor({
 
   return (
     <div
-      data-slot="list-editor"
+      data-slot="list-select"
       data-size={size}
       className={cn('flex w-full min-w-0 flex-col gap-2', className)}
       {...rest}

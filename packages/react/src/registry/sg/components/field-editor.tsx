@@ -7,7 +7,7 @@ import { ColorEditor } from '@/registry/sg/components/color-editor';
 import { DateEditor } from '@/registry/sg/components/date-editor';
 import { DateTimeEditor } from '@/registry/sg/components/date-time-editor';
 import { FieldValue } from '@/registry/sg/components/field-value';
-import { ListEditor } from '@/registry/sg/components/list-editor';
+import { ListSelect } from '@/registry/sg/components/list-select';
 import { NumberEditor } from '@/registry/sg/components/number-editor';
 import { TextEditor } from '@/registry/sg/components/text-editor';
 import { UrlEditor } from '@/registry/sg/components/url-editor';
@@ -243,7 +243,7 @@ export function FieldEditor({
             {...shared}
           />
         ) : kind === 'list' ? (
-          <ListEditor value={value as string | null} onValueChange={emit} projectId={projectId} {...shared} />
+          <ListSelect value={value as string | null} onValueChange={emit} projectId={projectId} {...shared} />
         ) : kind === 'url' ? (
           <UrlEditor
             value={value as UrlValue | null}

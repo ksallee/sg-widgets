@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ListEditor } from '@/registry/sg/components/list-editor';
+import { ListSelect } from '@/registry/sg/components/list-select';
 
 const versionType = {
   displayName: 'Version Type',
@@ -19,7 +19,7 @@ const cell = 'px-3 py-2 align-top';
 const typeCell = 'text-muted-foreground w-28 px-3 py-2 align-top font-mono text-xs';
 const valueCell = 'text-muted-foreground truncate font-mono text-xs';
 
-export default function ListEditorDemo() {
+export default function ListSelectDemo() {
   const [type, setType] = useState<string | null>('Type A');
   const [shot, setShot] = useState<string | null>('VFX');
   const [scoped, setScoped] = useState<string | null>('Full CG');
@@ -33,7 +33,7 @@ export default function ListEditorDemo() {
           </th>
           <td className={cell}>
             <div className="flex w-full min-w-0 flex-col gap-2">
-              <ListEditor value={type} onValueChange={setType} field={versionType} />
+              <ListSelect value={type} onValueChange={setType} field={versionType} />
               <p className={valueCell}>{JSON.stringify(type)}</p>
             </div>
           </td>
@@ -44,7 +44,7 @@ export default function ListEditorDemo() {
           </th>
           <td className={cell}>
             <div className="flex w-full min-w-0 flex-col gap-2">
-              <ListEditor value={shot} onValueChange={setShot} field={shotType} />
+              <ListSelect value={shot} onValueChange={setShot} field={shotType} />
               <p className={valueCell}>{JSON.stringify(shot)}</p>
             </div>
           </td>
@@ -55,7 +55,7 @@ export default function ListEditorDemo() {
           </th>
           <td className={cell}>
             <div className="flex w-full min-w-0 flex-col gap-2">
-              <ListEditor value={scoped} onValueChange={setScoped} field={shotType} projectId={63} />
+              <ListSelect value={scoped} onValueChange={setScoped} field={shotType} projectId={63} />
               <p className={valueCell}>{JSON.stringify(scoped)}</p>
             </div>
           </td>
@@ -66,7 +66,7 @@ export default function ListEditorDemo() {
           </th>
           <td className={cell}>
             <div className="flex w-full min-w-0 flex-col gap-2">
-              <ListEditor value="Type B" field={versionType} disabled />
+              <ListSelect value="Type B" field={versionType} disabled />
               <p className={valueCell}>"Type B"</p>
             </div>
           </td>

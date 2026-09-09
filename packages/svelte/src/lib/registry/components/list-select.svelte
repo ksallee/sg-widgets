@@ -1,8 +1,8 @@
 <script lang="ts" module>
-	export type ListEditorSize = 'sm' | 'md' | 'lg';
+	export type ListSelectSize = 'sm' | 'md' | 'lg';
 
 	/** The control ladder of `docs/design-rules.md`: 8 / 9 / 10. */
-	const BOX: Record<ListEditorSize, string> = {
+	const BOX: Record<ListSelectSize, string> = {
 		sm: 'h-8',
 		md: 'h-9',
 		lg: 'h-10'
@@ -35,7 +35,7 @@
 		 * client's (probe 009).
 		 */
 		projectId?: number;
-		size?: ListEditorSize;
+		size?: ListSelectSize;
 		disabled?: boolean;
 		readonly?: boolean;
 		invalid?: boolean;
@@ -96,7 +96,7 @@
 -->
 <div
 	bind:this={ref}
-	data-slot="list-editor"
+	data-slot="list-select"
 	data-size={size}
 	class={cn('flex w-full min-w-0 flex-col gap-2', className)}
 	{...rest}

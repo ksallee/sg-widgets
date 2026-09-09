@@ -1,5 +1,5 @@
 <script lang="ts">
-	import ListEditor from '$lib/registry/components/list-editor.svelte';
+	import ListSelect from '$lib/registry/components/list-select.svelte';
 
 	const versionType = {
 		displayName: 'Version Type',
@@ -30,7 +30,7 @@
 			<th scope="row" class={typeCell}>valid values</th>
 			<td class={cell}>
 				<div class="flex w-full min-w-0 flex-col gap-2">
-					<ListEditor bind:value={type} field={versionType} />
+					<ListSelect bind:value={type} field={versionType} />
 					<p class={valueCell}>{JSON.stringify(type)}</p>
 				</div>
 			</td>
@@ -39,7 +39,7 @@
 			<th scope="row" class={typeCell}>display values</th>
 			<td class={cell}>
 				<div class="flex w-full min-w-0 flex-col gap-2">
-					<ListEditor bind:value={shot} field={shotType} />
+					<ListSelect bind:value={shot} field={shotType} />
 					<p class={valueCell}>{JSON.stringify(shot)}</p>
 				</div>
 			</td>
@@ -48,7 +48,7 @@
 			<th scope="row" class={typeCell}>project 63</th>
 			<td class={cell}>
 				<div class="flex w-full min-w-0 flex-col gap-2">
-					<ListEditor bind:value={scoped} field={shotType} projectId={63} />
+					<ListSelect bind:value={scoped} field={shotType} projectId={63} />
 					<p class={valueCell}>{JSON.stringify(scoped)}</p>
 				</div>
 			</td>
@@ -57,7 +57,7 @@
 			<th scope="row" class={typeCell}>disabled</th>
 			<td class={cell}>
 				<div class="flex w-full min-w-0 flex-col gap-2">
-					<ListEditor value="Type B" field={versionType} disabled />
+					<ListSelect value="Type B" field={versionType} disabled />
 					<p class={valueCell}>"Type B"</p>
 				</div>
 			</td>

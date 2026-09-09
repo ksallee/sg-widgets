@@ -5,7 +5,8 @@ description: 'The numeric family as one input: number, float, percent, currency,
 
 import Demo from '../../../components/Demo.astro';
 
-Edits any numeric field, with the parse and the format chosen by the data type.
+Edits any numeric field as a number field, with the parse, the format and the step chosen by the
+data type.
 
 ## Install
 
@@ -35,20 +36,44 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/number-editor.
 
 A duration shows the minutes it will store under the input while you type.
 
+The value is written in the locale's own marks, so a currency reads `12,500.50` and a number reads
+`1,001`. What is emitted keeps the API's shape. A typed unit form is parsed before it is formatted,
+so `1h 30m` becomes `1:30` on commit.
+
+## Stepping
+
+The two buttons flanking the input, the arrow keys and the scrub area all move the value by one
+step. The step is the unit the data type reads in:
+
+| data type | step | bounds |
+|---|---|---|
+| `number`, `currency` | `1` | the 32-bit bounds |
+| `float` | `0.1` | none |
+| `percent` | `1` | `0` to `100` |
+| `duration` | `15` minutes | the 32-bit bounds |
+| `timecode` | one frame at `frameRate`, one second without one | the 32-bit bounds |
+
+A step runs on the parsed value, so `1h 30m` in the input steps to `1:45`. A stepper goes disabled
+at the bound it would cross. An empty field lands on zero on its first step.
+
 ## Props
 
 | prop | type | default | meaning |
 |---|---|---|---|
 | `value` | `number \| string \| null` | `null` | The stored value. Two-way in Svelte. |
 | `onValueChange` | `(value: number \| string \| null) => void` | — | Called when the input commits. |
-| `dataType` | `'number' \| 'float' \| 'percent' \| 'duration' \| 'timecode' \| 'currency'` | `'number'` | Picks the parse, the format and the affix. |
+| `dataType` | `'number' \| 'float' \| 'percent' \| 'duration' \| 'timecode' \| 'currency'` | `'number'` | Picks the parse, the format, the affix and the step. |
 | `field` | `FieldSchema \| null` | `null` | Supplies the accessible label and the required flag. |
 | `precision` | `number` | `6` | Decimals kept on a float or a currency. |
 | `hoursPerDay` | `number` | `8` | The site's working day, for the day unit on a duration. |
-| `frameRate` | `number` | — | Frames per second, for the frame form of a timecode. |
+| `frameRate` | `number` | — | Frames per second, for the frame form of a timecode and its one-frame step. |
 | `symbol` | `string` | `'$'` | Shown before the value on a currency field. |
-| `inline` | `boolean` | `false` | Compact for one row: a fixed width for the data type, no hint. |
-| `min` / `max` | `number` | the 32-bit bounds | Range for the whole-number types. |
+| `inline` | `boolean` | `false` | Compact for one row: a fixed width for the data type, the steppers inside the input, no hint. |
+| `min` / `max` | `number` | `0` and `100` on a percent, the 32-bit bounds elsewhere | Range the value is held in. |
+| `step` | `number` | the data type's | What one step moves. |
+| `scrub` | `boolean` | `false` | Name the control and let a drag across that name change the value. |
+| `label` | `string` | the field's display name | The name over a scrub area. |
+| `locale` | `string` | the runtime's | Locale the value is written in. |
 | `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Control height. |
 | `hint` | `boolean` | `false` | Show the stored form under the control, such as the minutes behind a duration. |
 | `disabled` | `boolean` | `false` | |
@@ -72,9 +97,15 @@ state and reports the message through `onErrorChange`.
 
 | key | does |
 |---|---|
+| `Up` / `Down` | Steps once. |
+| `Shift` + `Up` / `Down` | Steps ten times. |
+| `Page Up` / `Page Down` | Steps a hundred times. |
 | `Enter` | Commits. |
 | `Escape` | Restores the stored value. |
 | `Tab` | Commits by leaving the control. |
+
+The steppers are out of the tab order: the input reaches every value they do. Holding one down
+repeats after 400ms, then every 60ms.
 
 ## API behaviour
 
@@ -93,3 +124,10 @@ the one place the server renders one, and the rate solves out of that (field_typ
 
 The corpus has no card for `currency`. It is parsed as a decimal here, and its write shape is not
 verified.
+
+## Reference
+
+The React half composes Base UI's NumberField 1.8.0 for the group, the steppers and the scrub area.
+Bits UI has no number field, so the Svelte half is written here against the same parts, classes and
+attributes; its state model — the step and its Shift and Page multipliers, the bounds, the hold that
+repeats, the pixel-per-step scrub — follows Zag's number-input 1.43.3, which is not installed.

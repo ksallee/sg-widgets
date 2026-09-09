@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   colorToHex,
   editorKindFor,
+  formatNumberInput,
   formatTimecodeFrames,
   fromApiDateTime,
   INT32_MAX,
@@ -9,6 +10,7 @@ import {
   isEditableType,
   isParseError,
   isValidListValue,
+  numberSteps,
   parseColorInput,
   parseDurationInput,
   parseFloatInput,
@@ -16,10 +18,13 @@ import {
   parseTextInput,
   parseTimecodeInput,
   parseUrlInput,
+  settleStep,
+  stepNumber,
   timeZoneName,
   toApiDate,
   toApiDateTime,
   toApiFloat,
+  unformatNumberInput,
 } from '../src/edit.js';
 
 /** The value of a parse that must have succeeded. */
@@ -365,5 +370,73 @@ describe('editorKindFor', () => {
       expect(isEditableType(type)).toBe(false);
     }
     expect(isEditableType('text')).toBe(true);
+  });
+});
+
+describe('numberSteps', () => {
+  it('gives each numeric type the step its unit reads in', () => {
+    expect(numberSteps('number')).toEqual({ step: 1, min: INT32_MIN, max: INT32_MAX });
+    expect(numberSteps('currency')).toEqual({ step: 1 });
+    expect(numberSteps('float')).toEqual({ step: 0.1 });
+    expect(numberSteps('percent')).toEqual({ step: 1, min: 0, max: 100 });
+    expect(numberSteps('duration')).toEqual({ step: 15, min: INT32_MIN, max: INT32_MAX });
+  });
+
+  it('steps a timecode one frame when the rate is known, one second when it is not', () => {
+    expect(numberSteps('timecode', { frameRate: 25 }).step).toBe(40);
+    expect(numberSteps('timecode', { frameRate: 23.976 }).step).toBe(42);
+    expect(numberSteps('timecode').step).toBe(1000);
+  });
+});
+
+describe('stepNumber', () => {
+  it('moves one step, and ten or a hundred with a multiplier', () => {
+    expect(stepNumber(480, 1, { step: 15 })).toBe(495);
+    expect(stepNumber(480, -1, { step: 15 })).toBe(465);
+    expect(stepNumber(480, 1, { step: 15, multiplier: 10 })).toBe(630);
+    expect(stepNumber(480, -1, { step: 15, multiplier: 100 })).toBe(-1020);
+  });
+
+  it('keeps a tenth-sized step off binary noise', () => {
+    expect(stepNumber(0.2, 1, { step: 0.1 })).toBe(0.3);
+    expect(stepNumber(1.23456, 1, { step: 0.1 })).toBe(1.33456);
+  });
+
+  it('clamps at both bounds', () => {
+    expect(stepNumber(100, 1, { step: 1, min: 0, max: 100 })).toBe(100);
+    expect(stepNumber(0, -1, { step: 1, min: 0, max: 100 })).toBe(0);
+    expect(stepNumber(95, 1, { step: 1, min: 0, max: 100, multiplier: 10 })).toBe(100);
+  });
+
+  it('lands an empty field on zero before it steps', () => {
+    expect(stepNumber(null, 1, { step: 15 })).toBe(0);
+    expect(stepNumber(null, -1, { step: 1, min: 0, max: 100 })).toBe(0);
+  });
+});
+
+describe('settleStep', () => {
+  it('rounds where a step landed and clamps it', () => {
+    expect(settleStep(0.2, 0.30000000000000004, { step: 0.1 })).toBe(0.3);
+    expect(settleStep(50, 150, { step: 1, min: 0, max: 100 })).toBe(100);
+    expect(settleStep(null, 0, { step: 1 })).toBe(0);
+  });
+});
+
+describe('formatNumberInput and unformatNumberInput', () => {
+  it('round-trips a grouped number back through the parsers', () => {
+    expect(formatNumberInput(12500.5, { locale: 'en-US', decimals: 2 })).toBe('12,500.50');
+    expect(unformatNumberInput('12,500.50', 'en-US')).toBe('12500.50');
+    expect(ok(parseFloatInput(unformatNumberInput('12,500.50', 'en-US')))).toBe(12500.5);
+  });
+
+  it('reads the marks the locale writes', () => {
+    expect(formatNumberInput(1001, { locale: 'de-DE' })).toBe('1.001');
+    expect(unformatNumberInput('1.234,5', 'de-DE')).toBe('1234.5');
+    expect(unformatNumberInput('1 234,5', 'fr-FR')).toBe('1234.5');
+  });
+
+  it('drops a comma wherever the locale spells its decimal with a point', () => {
+    expect(unformatNumberInput('1,001', 'en-GB')).toBe('1001');
+    expect(ok(parseInteger(unformatNumberInput('1,001', 'en-US')))).toBe(1001);
   });
 });

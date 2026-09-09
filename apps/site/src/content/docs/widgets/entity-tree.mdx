@@ -15,15 +15,33 @@ pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/entity-tree.json
 pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/entity-tree.json
 ```
 
-<Demo name="entity-tree" title="Entity Tree: a project seeded open to one shot, with checkboxes and a filter" />
+<Demo name="entity-tree" title="Entity Tree: a project seeded open to one shot, with checkboxes, a filter and a thumbnail variant" />
 
 ```ts
 <EntityTree
   client={context.client}
   rootPath="/Project/70"
   seedPath="/Project/70/Shot/sg_sequence/Sequence/100/id/862"
+  checkable
+  filterable
 />
 ```
+
+## Behaviour
+
+A node opens when it is clicked, when Right is pressed on it, or when a seed path runs through it.
+Opening reads one level and keeps it: a node closed and opened again costs nothing. The node being
+read carries `aria-busy` and shows a spinner in place of its chevron.
+
+A checkbox propagates both ways. Checking a branch checks everything under it, including a level read
+after the box was ticked. Unchecking one child leaves the branch `mixed`, and it returns to `checked`
+once every child is checked again. Only nodes that stand for a row are reported.
+
+The filter narrows the nodes already loaded, keeping every ancestor that leads to a match, and opens
+those ancestors for as long as it is set.
+
+Each level's rows are read once per type over the ids the level returned, so `subLabelField`,
+`secondaryField`, `thumbnail` and the status badge cost no read per row.
 
 ## Props
 
@@ -31,10 +49,21 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/entity-tree.js
 |---|---|---|---|
 | `client` | `SgClient` | — | Reads one level per call. Wrap it in a query cache. |
 | `rootPath` | `string` | — | Where the tree starts, `/Project/<id>`. |
-| `seedPath` | `string \| null` | `null` | Opens the tree down to this path on mount. |
-| `checkable` | `boolean` | `false` | Draws a checkbox per node. |
+| `seedPath` | `string \| string[] \| null` | `null` | Opens the tree down to this path, or to the last entry of an incremental path. |
+| `checkable` | `boolean` | `false` | Draws a checkbox per node and reports the checked rows. |
+| `selection` | `'none' \| 'single' \| 'multiple'` | `'single'` | How many nodes may be selected at once. |
 | `filterable` | `boolean` | `false` | Shows an input that narrows the nodes already loaded. |
 | `filterPlaceholder` | `string` | `'Filter loaded nodes'` | Placeholder and label of that input. |
+| `thumbnail` | `string \| false` | `false` | The image field to draw a thumbnail from. |
+| `labelField` | `string` | — | Field shown as the label, in place of the tree's own. |
+| `subLabelField` | `string` | — | Field shown under the label. |
+| `subLabel` | `(node) => string` | — | Muted line under the label. Wins over `subLabelField`. |
+| `secondaryField` | `string` | — | Right-aligned field, drawn by its data type. |
+| `secondary` | `(node) => string` | — | Right-aligned text. Wins over `secondaryField`. |
+| `showCode` | `boolean` | `false` | Show the schema name beside the label on a node that stands for a type. |
+| `fields` | `string[]` | `[]` | Extra fields to request, so a caller's own sub-label or secondary can read them. |
+| `siteUrl` | `string` | — | The site the status sprite is served from. |
+| `label` | `string` | `'Project hierarchy'` | Accessible name of the tree. |
 | `maxHeight` | `string` | `'24rem'` | Height of the scrolling body. |
 | `emptyLabel` | `string` | `'Nothing under this project'` | Shown when the root has no children. |
 | `class` / `className` | `string` | — | Merged after the widget's own classes. |
@@ -45,6 +74,7 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/entity-tree.js
 |---|---|---|
 | `onselect` / `onSelect` | `TreeNode` | A node with nothing under it was chosen. |
 | `oncheckedchange` / `onCheckedChange` | `EntityRef[]` | The checked set changed. Only nodes that stand for a row are reported. |
+| `onerror` / `onError` | `Error` | A read failed. |
 
 ## Slots
 
@@ -52,23 +82,25 @@ None.
 
 ## Keyboard
 
-The tree keeps one tab stop. Focus lands on the node the cursor is on.
+The tree keeps one tab stop. Focus follows the cursor, and the row it sits on is the one that carries
+`tabindex="0"`.
 
 | key | does |
 |---|---|
 | Down | Moves to the next visible node. |
 | Up | Moves to the previous visible node. |
-| Right | Expands a collapsed node, else moves to its first child. |
-| Left | Collapses an expanded node, else moves to its parent. |
+| Right | Opens a closed branch, else moves to its first child. |
+| Left | Closes an open branch, else moves to its parent. |
 | Home | Moves to the first node. |
 | End | Moves to the last visible node. |
-| Enter, Space | Expands or collapses a branch, or selects a leaf. |
-| Space on a checkbox | Toggles that node. |
+| Space | Toggles the node's checkbox. |
+| Enter | Selects the node. |
+| a–z, 0–9 | Moves to the next node whose label starts with what was typed. The same letter again walks the matches. |
 
 ## API behaviour
 
 `POST /hierarchy/_expand` answers one level: the node itself, and children carrying a label, a ref
-and `has_children`, which says whether expanding is worth a call. Walking a project is therefore one
+and `has_children`, which says whether opening is worth a call. Walking a project is therefore one
 call per node (post_hierarchy_expand).
 
 That endpoint refuses the vendor content types every other POST on this API requires and accepts only
@@ -78,6 +110,19 @@ That endpoint refuses the vendor content types every other POST on this API requ
 Which levels a project has is the site's own navigation configuration, not a fixed hierarchy: the
 probed site's shot path runs through the field name `sg_sequence` (post_hierarchy_search). `seedPath`
 is followed by taking whichever child is a prefix of it, never by parsing the path.
+`POST /hierarchy/_search` answers `incremental_path`, one entry per level, and that array is a seed
+path as it stands (post_hierarchy_search).
 
-The filter narrows what is already loaded. It never asks the server, so a branch that was never
-opened is not searched.
+A field name a type does not have is dropped at 200, so one list of names reads every type of a level
+(probe 003). A row's status badge comes from whichever field of its type is a `status_list`; Project's
+`sg_status` is a plain `list` with no Status row behind its values, so a project carries no badge
+(entity_types/Project, probe 009).
+
+The filter never asks the server, so a branch that was never opened is not searched.
+
+## Reference
+
+The model is this repo's own. headless-tree (`@headless-tree/core` 1.7.0) is the reference for the
+lazy loader, the tri-state checkboxes and the type-ahead; Zag's tree-view (`@zag-js/tree-view` 1.43.3)
+for the state model and the ARIA, including `aria-checked="mixed"` and the roving tab stop; ReUI's
+Tree (ReUI 2.5.2) for the markup, the `--tree-indent` step and the row classes.

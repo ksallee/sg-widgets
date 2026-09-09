@@ -754,7 +754,7 @@
       "name": "entity-tree",
       "type": "registry:component",
       "title": "Entity Tree",
-      "description": "A lazy tree over a project's navigation hierarchy, with keyboard navigation, checkboxes and a filter.",
+      "description": "A lazy tree over a project's navigation hierarchy, with a keyboard model, tri-state checkboxes and a filter.",
       "categories": [
         "flow-production-tracking",
         "collection"
@@ -764,12 +764,13 @@
         "lucide-react"
       ],
       "registryDependencies": [
-        "https://sg-widgets.dev/r/react/entity-chip.json",
-        "@shadcn/checkbox",
+        "https://sg-widgets.dev/r/react/field-value.json",
+        "https://sg-widgets.dev/r/react/status-badge.json",
+        "https://sg-widgets.dev/r/react/thumbnail.json",
         "@shadcn/skeleton",
         "@shadcn/input"
       ],
-      "docs": "Expands one level per call through POST /hierarchy/_expand. seedPath opens the tree to a row on mount.",
+      "docs": "Expands one level per call through POST /hierarchy/_expand. seedPath opens the tree to a row on mount; checkboxes propagate both ways.",
       "files": [
         {
           "path": "src/registry/sg/components/entity-tree.tsx",

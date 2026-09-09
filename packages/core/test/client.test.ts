@@ -19,7 +19,7 @@ function rest(answer: unknown): { client: RestClient; sent: Sent[] } {
 }
 
 describe('_text_search on the wire', () => {
-  it('sends a vendor content type and a filter array, and flattens the row', async () => {
+  it('sends the hash content type with a hash group per type, and flattens the row', async () => {
     const { client, sent } = rest({
       data: [
         {
@@ -35,7 +35,7 @@ describe('_text_search on the wire', () => {
     expect(sent[0]?.contentType).toBe('application/vnd+shotgun.api3_hash+json');
     expect(sent[0]?.body).toEqual({
       text: 'qat 0020',
-      entity_types: { Version: [['id', 'is', 1]] },
+      entity_types: { Version: { logical_operator: 'and', conditions: [['id', 'is', 1]] } },
       page: { size: 25, number: 1 },
     });
     // Name, links and status live under `attributes`, and there is nothing else on the row.

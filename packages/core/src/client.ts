@@ -244,6 +244,12 @@ export class SgApiError extends Error {
 
 const API3_HASH = 'application/vnd+shotgun.api3_hash+json';
 
+function toHashGroup(filter: TextSearchFilter): WireGroup {
+  if (!filter) return { logical_operator: 'and', conditions: [] };
+  if (Array.isArray(filter)) return { logical_operator: 'and', conditions: filter };
+  return filter;
+}
+
 function pluralPath(entityType: string): string {
   // The REST API addresses types by a lowercased, underscored plural: HumanUser -> human_users, Status -> statuses.
   const snake = entityType.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase();
@@ -323,10 +329,13 @@ export class RestClient implements SgClient {
     entityTypes: Record<string, TextSearchFilter>,
     page?: { size?: number; number?: number },
   ): Promise<TextSearchRow[]> {
-    // `entity_types` maps a type to a filter array, `[]` for none. It is the only
-    // place in the API where a filter is keyed by the type it applies to.
-    const types: Record<string, WireCondition[]> = {};
-    for (const [t, f] of Object.entries(entityTypes)) types[t] = toFilterArray(f);
+    // `entity_types` keys a filter by the type it applies to, and its shape follows the
+    // Content-Type: under `api3_hash` each value is a `{logical_operator, conditions}` group,
+    // an empty group for no filter; an array there is `Query is not an Hash` (measured on
+    // the probed site 2026-09-09; post_entity_text_search records the array form under
+    // `api3_array`).
+    const types: Record<string, WireGroup> = {};
+    for (const [t, f] of Object.entries(entityTypes)) types[t] = toHashGroup(f);
     // 25 is the cap and the default, and the message is off by one: 26 answers
     // `size must be less than 25` while 25 answers 25 rows (probe 053).
     const body = { text, entity_types: types, page: { size: Math.min(page?.size ?? 25, 25), number: page?.number ?? 1 } };

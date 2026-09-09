@@ -282,7 +282,7 @@ It does not forward the path-hide patterns, the synthetic computed fields, or th
 
 Display names for the chips are resolved per path through the schema-path helper, sequentially, with a load key of entity type plus site plus the joined value list to avoid redundant work, and a re-check of that key before committing results so a stale in-flight resolution cannot overwrite a newer one. Clearing the value resets the load key so names reload correctly if the value is later restored.
 
-**Rendering.** Two layouts. Reorderable mode renders one full-width row per field: a grip handle, the resolved display name (with the raw path as the hover title), a remove button — plus a summary line reading the field count and a "drag to reorder" hint. Dragging reorders live on drag-over (the array is spliced and the change callback fires on every crossing, not just on drop), with the dragged chip dimmed and slightly rotated. Compact mode renders small inline wrapping chips with a truncating label capped at 200 pixels and a small remove affordance that is hidden entirely while disabled.
+**Rendering.** Not specified here on purpose: the new widget must not reproduce the old layout. Requirements only: order is meaningful and visible; reorder by pointer and by keyboard; remove per item; a count; a compact variant without ordering for tight spaces.
 
 **Edge cases.** Long paths are truncated with ellipsis and exposed via hover title. Unresolvable display names fall back to the raw path. Duplicate selection is impossible by construction.
 

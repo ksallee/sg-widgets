@@ -195,12 +195,19 @@ function idOf(element: HTMLElement): string {
   return element.getAttribute(SORTABLE_ID_ATTRIBUTE) ?? '';
 }
 
-/** Where every item of the list sits, by id. */
+/**
+ * Where every item of the list sits, by id, in document coordinates.
+ *
+ * A measurement is compared with one taken later, and the page may have scrolled in
+ * between; viewport rects would read that scroll as a move of every row.
+ */
 export function measureSortable(container: HTMLElement): Map<string, SortableRect> {
   const measured = new Map<string, SortableRect>();
+  const x = typeof scrollX === 'number' ? scrollX : 0;
+  const y = typeof scrollY === 'number' ? scrollY : 0;
   for (const element of itemsOf(container)) {
     const { top, bottom, left, right } = element.getBoundingClientRect();
-    measured.set(idOf(element), { top, bottom, left, right });
+    measured.set(idOf(element), { top: top + y, bottom: bottom + y, left: left + x, right: right + x });
   }
   return measured;
 }

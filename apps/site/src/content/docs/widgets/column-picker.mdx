@@ -1,12 +1,12 @@
 ---
 title: ColumnPicker
-description: The columns of a grid as a dual list, the type's fields on the left and the chosen paths in order on the right.
+description: The columns of a grid as a field picker over the ordered list it fills, each row dragged into place.
 ---
 
 import Demo from '../../../components/Demo.astro';
 
-Chooses the columns of a grid. The left list holds the fields of an entity type, checked when the
-path is already a column; the right list holds the chosen paths in the order they will be drawn.
+Chooses the columns of a grid. A field picker sits over the list of chosen paths; picking a field
+appends it, and each row is dragged into the order the columns will be drawn in.
 
 ## Install
 
@@ -15,7 +15,7 @@ pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/column-picker.json
 pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/column-picker.json
 ```
 
-<Demo name="column-picker" title="ColumnPicker: the dual list, a picker restricted to dates, the compact variant, disabled and read-only" />
+<Demo name="column-picker" title="ColumnPicker: the default list, a picker restricted to dates, the dual layout, disabled and read-only" />
 
 ## Props
 
@@ -25,6 +25,8 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/column-picker.
 | `entityType` | `string` | required | The type every path starts on. |
 | `value` | `string[]` | `[]` | The chosen dotted paths, in the order they are shown. |
 | `onValueChange` | `(value: string[]) => void` | — | Receives the new array on every add, remove and move. |
+| `layout` | `'list' \| 'dual'` | `'list'` | `list` is the field picker over the ordered list; `dual` is the two lists side by side. |
+| `showCount` | `boolean` | `false` | Show how many columns are chosen under the list. |
 | `deepLinks` | `boolean` | `true` | Allow descending through entity fields. |
 | `maxDepth` | `number` | `2` | How many hops a path may take. |
 | `dataTypes` | `string \| string[]` | — | Data types a field must have to be selected. |
@@ -34,39 +36,41 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/column-picker.
 | `filterableOnly` | `boolean` | `false` | Drop the data types the API refuses in a filter. |
 | `extraFields` | `{ name, displayName? }[]` | — | Synthetic entries offered at the root only. |
 | `filter` | `(field, path) => boolean` | — | Your own visibility test over the schema and the candidate's full path. |
-| `compact` | `boolean` | `false` | The chosen list alone, with the field list behind an add button. |
-| `placeholder` | `string` | `'Add a column'` | Label of the compact add button. |
+| `placeholder` | `string` | `'Add a column'` | Placeholder of the field picker. |
 | `searchPlaceholder` | `string` | `'Search fields…'` | Shown in the search box. |
 | `emptyLabel` | `string` | `'No columns yet.'` | Shown while nothing is chosen. |
-| `availableLabel` | `string` | `'Available'` | Heading of the left list. |
-| `chosenLabel` | `string` | `'Columns'` | Heading of the right list, followed by the count. |
+| `availableLabel` | `string` | `'Available'` | Heading of the left list, `dual` only. |
+| `chosenLabel` | `string` | `'Columns'` | Heading of the right list, `dual` only. |
 | `readOnly` / `readonly` | `boolean` | `false` | Shows the chosen list alone, with no controls. |
 | `disabled` | `boolean` | `false` | |
-| `invalid` | `boolean` | `false` | Puts the invalid ring on both lists. |
+| `invalid` | `boolean` | `false` | Puts the invalid ring on the field picker, or on both lists under `dual`. |
 | `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Row height. |
 | `className` / `class` | `string` | — | Merged after the widget's own classes. |
 
-Checking a row on the left appends its path; unchecking removes it. The two lists sit side by side
-from a width of 32rem and stack under it, measured on the widget rather than on the window, so a
-column picker in a narrow panel stacks on a wide page.
+Picking a field appends its path to the end of the list and clears the picker, which takes focus
+back for the next one. A path already chosen is off the list, so a column is never added twice.
+
+Each row carries a grip, the friendly path with the raw path in its tooltip, and a remove button.
+A row is reordered by dragging its grip, which lifts the row and opens a gap where it will land,
+or from the keyboard: Space on the grip picks the row up, the arrow keys move it, and Space drops
+it. Alt with an arrow key moves the row holding focus one place. Every step is announced in a live
+region. Reduced motion keeps the reordering and drops the movement.
 
 A link field carries a chevron that descends into the type it points at, and the breadcrumb above
 the search box goes back one level or all the way to the root. A link declaring several target
 types asks which one first. `dataTypes` and `validTypes` bind what may be chosen, not what may be
 walked through, so a picker restricted to dates still reaches a date behind a link.
 
-Each row of the right list shows the friendly path, with the raw path in its tooltip.
-
-A row is reordered by dragging its grip, which lifts the row and opens a gap where it will land, or
-from the keyboard: Space on the grip picks the row up, the arrow keys move it, and Space drops it.
-Every step is announced in a live region. Reduced motion keeps the reordering and drops the
-movement.
+`layout="dual"` puts the fields of the type in a checked list beside the chosen paths. Checking a
+row appends its path; unchecking removes it. The two lists sit side by side from a width of 32rem
+and stack under it, measured on the widget rather than on the window, so a column picker in a
+narrow panel stacks on a wide page.
 
 ## Events
 
 | event | payload | when |
 |---|---|---|
-| `onValueChange` | `string[]` | A column is checked, unchecked, removed or moved. |
+| `onValueChange` | `string[]` | A column is added, removed or moved. |
 
 ## Slots
 
@@ -76,11 +80,13 @@ None.
 
 | key | does |
 |---|---|
-| `Up`, `Down` | Walk the left list. |
-| `Enter` | Check or uncheck the row under the cursor. A link that cannot be chosen descends instead. |
+| `Enter`, `Space` on the picker | Open the field list. |
+| `Up`, `Down` | Walk the field list. |
+| `Enter` | Add the field under the cursor. A link that cannot be chosen descends instead. |
 | `Right` | Descend into the link under the cursor. |
 | `Left` | Back one level. |
-| `Tab` | Moves through the search box, then the controls of each chosen row. |
+| `Escape` | Close the field list. |
+| `Tab` | Moves through the picker, then the grip and remove button of each chosen row. |
 | `Space`, `Enter` on the grip | Picks the row up for the arrow keys. |
 | `Up`, `Down` while carrying a row | Move it one place. |
 | `Space`, `Enter` while carrying a row | Drop it where it is. |

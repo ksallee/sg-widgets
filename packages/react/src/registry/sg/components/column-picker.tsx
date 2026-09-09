@@ -13,10 +13,8 @@ import {
   Braces,
   Calendar,
   CalendarClock,
-  ChevronDown,
   ChevronLeft,
   ChevronRight,
-  ChevronUp,
   CircleDollarSign,
   CircleDot,
   Columns3,
@@ -32,7 +30,6 @@ import {
   List,
   Palette,
   Percent,
-  Plus,
   RotateCcw,
   Ruler,
   SearchX,
@@ -54,12 +51,13 @@ import {
   CommandItem,
   CommandList,
 } from '@/components/ui/command';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import { FieldPicker } from '@/registry/sg/components/field-picker';
 import { useSortable } from '@/registry/sg/components/sortable';
 
 export type ColumnPickerSize = 'sm' | 'md' | 'lg';
+export type ColumnPickerLayout = 'list' | 'dual';
 
 /** Rows follow the control ladder of `docs/design-rules.md`. */
 const ROW: Record<ColumnPickerSize, string> = {
@@ -125,9 +123,11 @@ export interface ColumnPickerProps {
   extraFields?: { name: string; displayName?: string }[];
   /** Caller's own visibility test over the schema and the candidate's full path. */
   filter?: (field: FieldSchema, path: string) => boolean;
-  /** The chosen list alone, with the field list behind an add button. */
-  compact?: boolean;
-  /** Label of the compact add button. */
+  /** `list` is the field picker over the ordered list; `dual` is the two lists side by side. */
+  layout?: ColumnPickerLayout;
+  /** Show how many columns are chosen under the list. */
+  showCount?: boolean;
+  /** Placeholder of the field picker. */
   placeholder?: string;
   searchPlaceholder?: string;
   emptyLabel?: string;
@@ -141,17 +141,18 @@ export interface ColumnPickerProps {
 }
 
 /**
- * The columns of a grid, as the two lists a chooser is made of.
+ * The columns of a grid, as a field picker over the ordered list it fills.
  *
- * Left are the fields of the entity type, checked when the path is already a column;
- * right are the chosen paths in the order they are drawn, moved with the arrow buttons
- * or with Alt and an arrow key. A value is ShotGrid's dotted path: a root field is its
- * own code, and every hop names the field followed and the type it landed on. Only a
- * single `entity` field is descended into — a dotted path through a `multi_entity`
- * field reads back nothing, 200 with the key absent (probe 016). A link declaring
- * several target types asks which one first. `dataTypes` and `validTypes` bind what may
- * be chosen, not what may be walked through, so a picker restricted to dates still
- * reaches a date behind a link.
+ * Picking a field appends its path and clears the picker; each row carries a grip, the
+ * friendly path and a remove button, and moves by drag or with Alt and an arrow key.
+ * `layout="dual"` swaps that for the two lists side by side, the type's fields checked
+ * on the left and the chosen paths on the right. A value is ShotGrid's dotted path: a
+ * root field is its own code, and every hop names the field followed and the type it
+ * landed on. Only a single `entity` field is descended into — a dotted path through a
+ * `multi_entity` field reads back nothing, 200 with the key absent (probe 016). A link
+ * declaring several target types asks which one first. `dataTypes` and `validTypes` bind
+ * what may be chosen, not what may be walked through, so a picker restricted to dates
+ * still reaches a date behind a link.
  */
 export function ColumnPicker({
   schema,
@@ -167,7 +168,8 @@ export function ColumnPicker({
   filterableOnly = false,
   extraFields,
   filter,
-  compact = false,
+  layout = 'list',
+  showCount = false,
   placeholder = 'Add a column',
   searchPlaceholder = 'Search fields…',
   emptyLabel = 'No columns yet.',
@@ -179,7 +181,8 @@ export function ColumnPicker({
   size = 'md',
   className,
 }: ColumnPickerProps) {
-  const [open, setOpen] = useState(false);
+  /** The field picker's own value, cleared as soon as the path is appended. */
+  const [adding, setAdding] = useState('');
   const [search, setSearch] = useState('');
   const [highlighted, setHighlighted] = useState('');
   const [hops, setHops] = useState<FieldHop[]>([]);
@@ -188,7 +191,7 @@ export function ColumnPicker({
   const [loaded, setLoaded] = useState<{ type: string; fields: Record<string, FieldSchema> } | null>(null);
   const [labels, setLabels] = useState<Record<string, string>>({});
   const [failure, setFailure] = useState<string | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
 
   const type = currentType(entityType, hops);
   const editable = !readOnly && !disabled;
@@ -263,6 +266,9 @@ export function ColumnPicker({
   const values = choosing ? targets : rows.map((row) => row.path);
   const cursor = values.includes(highlighted) ? highlighted : (values[0] ?? '');
   const breadcrumb = hops.length > 0 || choosing !== null;
+  const count = `${value.length} column${value.length === 1 ? '' : 's'}`;
+  /** A chosen path is off the field picker's list, so the same column is never added twice. */
+  const offered = [...(exclude ?? []), ...value];
 
   function labelOf(path: string): string | undefined {
     return labels[`${entityType}::${path}`];
@@ -281,6 +287,18 @@ export function ColumnPicker({
   function move(from: number, to: number): void {
     if (!editable) return;
     onValueChange?.(moveFieldPath(value, from, to));
+  }
+
+  function append(path: string): void {
+    setAdding('');
+    if (!editable || path === '' || value.includes(path)) return;
+    onValueChange?.([...value, path]);
+    // The trigger takes focus back where the popover left it, with the page still.
+    requestAnimationFrame(() =>
+      rootRef.current
+        ?.querySelector<HTMLElement>('[data-slot="field-picker-trigger"]')
+        ?.focus({ preventScroll: true }),
+    );
   }
 
   const { ref: sortableRef, dragging, announcement } = useSortable<HTMLOListElement>({
@@ -421,7 +439,6 @@ export function ColumnPicker({
         className="gap-2 bg-transparent p-0"
       >
         <CommandInput
-          ref={inputRef}
           value={search}
           onValueChange={setSearch}
           placeholder={choosing ? 'Which type?' : searchPlaceholder}
@@ -526,11 +543,126 @@ export function ColumnPicker({
     </>
   );
 
+  const chosen = (
+    <>
+      {value.length === 0 ? (
+        <p
+          data-slot="column-picker-empty"
+          className="text-muted-foreground flex items-center justify-center gap-1.5 py-6 text-center text-sm"
+        >
+          <Columns3 aria-hidden="true" className="size-4 shrink-0" />
+          {emptyLabel}
+        </p>
+      ) : (
+        <>
+          <ol
+            ref={sortableRef}
+            data-slot="column-picker-list"
+            className="flex max-h-72 min-w-0 flex-col gap-2 overflow-y-auto"
+          >
+            {value.map((path, index) => (
+              <li
+                key={path}
+                data-slot="column-picker-column"
+                data-sortable-id={path}
+                data-index={index}
+                data-path={path}
+                className={cn(
+                  'bg-background flex min-w-0 items-center gap-2 rounded-md px-2 py-1.5',
+                  'data-[dragging]:z-10 data-[dragging]:opacity-90 data-[dragging]:shadow-md',
+                  'data-[drop-target]:bg-accent/40',
+                  ROW[size],
+                )}
+              >
+                {!readOnly ? (
+                  <Button
+                    variant="ghost"
+                    size={ACTION[size]}
+                    data-slot="column-picker-grip"
+                    data-sortable-handle="true"
+                    disabled={disabled}
+                    onKeyDown={(event) => onRowKeys(event, index)}
+                    aria-label={`Reorder ${labelOf(path) ?? path}`}
+                    title="Drag to reorder, or press Space and use the arrow keys"
+                    className="cursor-grab touch-none active:cursor-grabbing"
+                  >
+                    <GripVertical aria-hidden="true" />
+                  </Button>
+                ) : null}
+                {labelOf(path) === undefined ? (
+                  <Skeleton className="h-4 w-32" />
+                ) : (
+                  <span className="min-w-0 flex-1 truncate text-sm" title={path}>
+                    {labelOf(path)}
+                  </span>
+                )}
+                {!readOnly ? (
+                  <Button
+                    variant="ghost"
+                    size={ACTION[size]}
+                    data-slot="column-picker-remove"
+                    disabled={disabled}
+                    onKeyDown={(event) => onRowKeys(event, index)}
+                    aria-label={`Remove ${labelOf(path) ?? path}`}
+                    title="Remove (Delete)"
+                    onClick={() => remove(index)}
+                  >
+                    <X aria-hidden="true" />
+                  </Button>
+                ) : null}
+              </li>
+            ))}
+          </ol>
+          <div
+            data-slot="column-picker-live-region"
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+            className="sr-only"
+          >
+            {announcement}
+          </div>
+        </>
+      )}
+      {showCount ? (
+        <p data-slot="column-picker-count" className="text-muted-foreground text-xs">
+          {count}
+        </p>
+      ) : null}
+    </>
+  );
+
+  const picker = (
+    <FieldPicker
+      schema={schema}
+      entityType={entityType}
+      deepLinks={deepLinks}
+      maxDepth={maxDepth}
+      dataTypes={dataTypes}
+      validTypes={validTypes}
+      hidePaths={hidePaths}
+      filterableOnly={filterableOnly}
+      extraFields={extraFields}
+      filter={filter}
+      searchPlaceholder={searchPlaceholder}
+      placeholder={placeholder}
+      disabled={disabled}
+      invalid={invalid}
+      size={size}
+      value={adding}
+      exclude={offered}
+      clearable={false}
+      emptyLabel="No field left to add."
+      onValueChange={append}
+    />
+  );
+
   return (
     <div
+      ref={rootRef}
       data-slot="column-picker"
       data-size={size}
-      data-compact={compact ? 'true' : 'false'}
+      data-layout={layout}
       aria-disabled={disabled ? 'true' : undefined}
       aria-invalid={invalid ? 'true' : undefined}
       data-readonly={readOnly ? 'true' : undefined}
@@ -540,167 +672,45 @@ export function ColumnPicker({
         className,
       )}
     >
-      <div
-        data-slot="column-picker-panes"
-        className={cn('grid min-w-0 gap-3', !compact && !readOnly && '@lg:grid-cols-2')}
-      >
-        {!compact && !readOnly ? (
+      {layout === 'dual' ? (
+        <div
+          data-slot="column-picker-panes"
+          className={cn('grid min-w-0 gap-3', !readOnly && '@lg:grid-cols-2')}
+        >
+          {!readOnly ? (
+            <section
+              data-slot="column-picker-available"
+              className={cn(
+                'border-border flex min-w-0 flex-col gap-3 rounded-md border p-3',
+                invalid && 'border-destructive ring-destructive/20 dark:ring-destructive/40 ring-2',
+              )}
+            >
+              <h3 data-slot="column-picker-heading" className="truncate text-sm font-medium">
+                {availableLabel}
+              </h3>
+              {fieldList}
+            </section>
+          ) : null}
+
           <section
-            data-slot="column-picker-available"
+            data-slot="column-picker-chosen"
             className={cn(
               'border-border flex min-w-0 flex-col gap-3 rounded-md border p-3',
               invalid && 'border-destructive ring-destructive/20 dark:ring-destructive/40 ring-2',
             )}
           >
             <h3 data-slot="column-picker-heading" className="truncate text-sm font-medium">
-              {availableLabel}
+              {chosenLabel}
             </h3>
-            {fieldList}
+            {chosen}
           </section>
-        ) : null}
-
-        <section
-          data-slot="column-picker-chosen"
-          className={cn(
-            'flex min-w-0 flex-col gap-3',
-            !compact && 'border-border rounded-md border p-3',
-            !compact &&
-              invalid &&
-              'border-destructive ring-destructive/20 dark:ring-destructive/40 ring-2',
-          )}
-        >
-          {!compact ? (
-            <h3 data-slot="column-picker-heading" className="truncate text-sm font-medium">
-              {chosenLabel} ({value.length})
-            </h3>
-          ) : null}
-
-          {value.length === 0 ? (
-            <p
-              data-slot="column-picker-empty"
-              className="text-muted-foreground flex items-center justify-center gap-1.5 py-6 text-center text-sm"
-            >
-              <Columns3 aria-hidden="true" className="size-4 shrink-0" />
-              {emptyLabel}
-            </p>
-          ) : (
-            <>
-            <ol
-              ref={sortableRef}
-              data-slot="column-picker-list"
-              className="flex max-h-72 min-w-0 flex-col gap-2 overflow-y-auto"
-            >
-              {value.map((path, index) => (
-                <li
-                  key={path}
-                  data-slot="column-picker-column"
-                  data-sortable-id={path}
-                  data-index={index}
-                  data-path={path}
-                  className={cn(
-                    'bg-background flex min-w-0 items-center gap-2 rounded-md px-2 py-1.5',
-                    'data-[dragging]:z-10 data-[dragging]:opacity-90 data-[dragging]:shadow-md',
-                    'data-[drop-target]:bg-accent/40',
-                    ROW[size],
-                  )}
-                >
-                  {editable ? (
-                    <Button
-                      variant="ghost"
-                      size={ACTION[size]}
-                      data-slot="column-picker-grip"
-                      data-sortable-handle="true"
-                      onKeyDown={(event) => onRowKeys(event, index)}
-                      aria-label={`Reorder ${labelOf(path) ?? path}`}
-                      title="Drag to reorder, or press Space and use the arrow keys"
-                      className="cursor-grab touch-none active:cursor-grabbing"
-                    >
-                      <GripVertical aria-hidden="true" />
-                    </Button>
-                  ) : null}
-                  {labelOf(path) === undefined ? (
-                    <Skeleton className="h-4 w-32" />
-                  ) : (
-                    <span className="min-w-0 flex-1 truncate text-sm" title={path}>
-                      {labelOf(path)}
-                    </span>
-                  )}
-                  {editable ? (
-                    <>
-                      <Button
-                        variant="ghost"
-                        size={ACTION[size]}
-                        data-slot="column-picker-up"
-                        onKeyDown={(event) => onRowKeys(event, index)}
-                        aria-label={`Move ${labelOf(path) ?? path} up`}
-                        title="Move up (Alt with the up arrow)"
-                        disabled={index === 0}
-                        onClick={() => move(index, index - 1)}
-                      >
-                        <ChevronUp aria-hidden="true" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size={ACTION[size]}
-                        data-slot="column-picker-down"
-                        onKeyDown={(event) => onRowKeys(event, index)}
-                        aria-label={`Move ${labelOf(path) ?? path} down`}
-                        title="Move down (Alt with the down arrow)"
-                        disabled={index === value.length - 1}
-                        onClick={() => move(index, index + 1)}
-                      >
-                        <ChevronDown aria-hidden="true" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size={ACTION[size]}
-                        data-slot="column-picker-remove"
-                        onKeyDown={(event) => onRowKeys(event, index)}
-                        aria-label={`Remove ${labelOf(path) ?? path}`}
-                        title="Remove (Delete)"
-                        onClick={() => remove(index)}
-                      >
-                        <X aria-hidden="true" />
-                      </Button>
-                    </>
-                  ) : null}
-                </li>
-              ))}
-            </ol>
-            <div
-              data-slot="column-picker-live-region"
-              role="status"
-              aria-live="polite"
-              aria-atomic="true"
-              className="sr-only"
-            >
-              {announcement}
-            </div>
-            </>
-          )}
-
-          {compact && !readOnly ? (
-            <Popover open={open} onOpenChange={(next) => setOpen(disabled ? false : next)}>
-              <PopoverTrigger
-                data-slot="column-picker-add"
-                disabled={disabled}
-                className="border-border bg-background hover:bg-muted focus-visible:border-ring focus-visible:ring-ring/50 inline-flex h-8 w-full min-w-0 items-center gap-1.5 rounded-lg border px-2.5 text-sm outline-none focus-visible:ring-3 disabled:pointer-events-none disabled:opacity-50"
-              >
-                <Plus aria-hidden="true" className="size-4 shrink-0" />
-                <span className="min-w-0 truncate">{placeholder}</span>
-              </PopoverTrigger>
-              <PopoverContent
-                data-picker="column"
-                initialFocus={inputRef}
-                align="start"
-                className="flex w-96 max-w-[calc(100vw-2rem)] flex-col gap-0 overflow-hidden p-0"
-              >
-                {fieldList}
-              </PopoverContent>
-            </Popover>
-          ) : null}
-        </section>
-      </div>
+        </div>
+      ) : (
+        <>
+          {!readOnly ? picker : null}
+          {chosen}
+        </>
+      )}
     </div>
   );
 }

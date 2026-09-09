@@ -11,15 +11,18 @@ function Pickers() {
   const schema = useMemo(() => createSchemaService(client), [client]);
   const [columns, setColumns] = useState(['code', 'sg_status_list', 'entity.Shot.sg_turnover_date']);
   const [dates, setDates] = useState(['entity.Shot.sg_turnover_date']);
-  const [compact, setCompact] = useState(['code', 'sg_cut_in']);
+  const [dual, setDual] = useState(['code', 'sg_cut_in']);
 
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-2" data-demo="columns">
-        <span className={label}>Columns on Version: check a field, then order the right list</span>
+        <span className={label}>
+          Columns on Version: pick a field, then drag the list into order
+        </span>
         <ColumnPicker
           schema={schema}
           entityType="Version"
+          showCount
           value={columns}
           onValueChange={setColumns}
         />
@@ -39,17 +42,17 @@ function Pickers() {
         />
       </div>
 
-      <div className="flex flex-col gap-2" data-demo="compact">
+      <div className="flex flex-col gap-2" data-demo="dual">
         <span className={label}>
-          Compact: the chosen list, with the fields behind the add button
+          Dual: the fields of the type on the left, the chosen paths on the right
         </span>
         <ColumnPicker
           schema={schema}
           entityType="Shot"
-          compact
+          layout="dual"
           filterableOnly
-          value={compact}
-          onValueChange={setCompact}
+          value={dual}
+          onValueChange={setDual}
         />
       </div>
 

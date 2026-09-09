@@ -186,7 +186,7 @@
       "name": "column-picker",
       "type": "registry:component",
       "title": "Column Picker",
-      "description": "The columns of a grid as a dual list: the type's fields on the left, the chosen paths in order on the right.",
+      "description": "The columns of a grid as a field picker over the ordered list it fills, dragged into place.",
       "dependencies": [
         "@sg-widgets/core",
         "@lucide/svelte"
@@ -195,8 +195,8 @@
         "button",
         "checkbox",
         "command",
-        "popover",
         "skeleton",
+        "local:field-picker",
         "local:sortable"
       ],
       "files": [

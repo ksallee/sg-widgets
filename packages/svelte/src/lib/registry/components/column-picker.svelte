@@ -1,5 +1,6 @@
 <script lang="ts" module>
 	export type ColumnPickerSize = 'sm' | 'md' | 'lg';
+	export type ColumnPickerLayout = 'list' | 'dual';
 
 	/** Rows follow the control ladder of `docs/design-rules.md`. */
 	const ROW: Record<ColumnPickerSize, string> = {
@@ -28,10 +29,8 @@
 	import Braces from '@lucide/svelte/icons/braces';
 	import Calendar from '@lucide/svelte/icons/calendar';
 	import CalendarClock from '@lucide/svelte/icons/calendar-clock';
-	import ChevronDown from '@lucide/svelte/icons/chevron-down';
 	import ChevronLeft from '@lucide/svelte/icons/chevron-left';
 	import ChevronRight from '@lucide/svelte/icons/chevron-right';
-	import ChevronUp from '@lucide/svelte/icons/chevron-up';
 	import CircleDollarSign from '@lucide/svelte/icons/circle-dollar-sign';
 	import CircleDot from '@lucide/svelte/icons/circle-dot';
 	import Columns3 from '@lucide/svelte/icons/columns-3';
@@ -47,7 +46,6 @@
 	import List from '@lucide/svelte/icons/list';
 	import Palette from '@lucide/svelte/icons/palette';
 	import Percent from '@lucide/svelte/icons/percent';
-	import Plus from '@lucide/svelte/icons/plus';
 	import RotateCcw from '@lucide/svelte/icons/rotate-ccw';
 	import Ruler from '@lucide/svelte/icons/ruler';
 	import SearchX from '@lucide/svelte/icons/search-x';
@@ -62,9 +60,9 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
 	import * as Command from '$lib/components/ui/command/index.js';
-	import * as Popover from '$lib/components/ui/popover/index.js';
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
 	import { cn } from '$lib/utils.js';
+	import FieldPicker from '$lib/registry/components/field-picker.svelte';
 	import { createSortable } from '$lib/registry/components/sortable.svelte.js';
 
 	type Props = {
@@ -93,9 +91,11 @@
 		extraFields?: { name: string; displayName?: string }[];
 		/** Caller's own visibility test over the schema and the candidate's full path. */
 		filter?: (field: FieldSchema, path: string) => boolean;
-		/** The chosen list alone, with the field list behind an add button. */
-		compact?: boolean;
-		/** Label of the compact add button. */
+		/** `list` is the field picker over the ordered list; `dual` is the two lists side by side. */
+		layout?: ColumnPickerLayout;
+		/** Show how many columns are chosen under the list. */
+		showCount?: boolean;
+		/** Placeholder of the field picker. */
 		placeholder?: string;
 		searchPlaceholder?: string;
 		emptyLabel?: string;
@@ -122,7 +122,8 @@
 		filterableOnly = false,
 		extraFields,
 		filter,
-		compact = false,
+		layout = 'list',
+		showCount = false,
 		placeholder = 'Add a column',
 		searchPlaceholder = 'Search fields…',
 		emptyLabel = 'No columns yet.',
@@ -161,8 +162,9 @@
 		type: Type
 	};
 
-	let open = $state(false);
-	let inputEl = $state<HTMLInputElement | null>(null);
+	let rootEl = $state<HTMLDivElement | null>(null);
+	/** The field picker's own value, cleared as soon as the path is appended. */
+	let adding = $state('');
 	let search = $state('');
 	let highlighted = $state('');
 	let hops = $state<FieldHop[]>([]);
@@ -246,6 +248,9 @@
 	const values = $derived(choosing ? targets : rows.map((row) => row.path));
 	const cursor = $derived(values.includes(highlighted) ? highlighted : (values[0] ?? ''));
 	const breadcrumb = $derived(hops.length > 0 || choosing !== null);
+	const count = $derived(`${value.length} column${value.length === 1 ? '' : 's'}`);
+	/** A chosen path is off the field picker's list, so the same column is never added twice. */
+	const offered = $derived([...(exclude ?? []), ...value]);
 
 	function labelOf(path: string): string | undefined {
 		return labels[`${entityType}::${path}`];
@@ -268,6 +273,18 @@
 	function remove(index: number): void {
 		if (!editable) return;
 		emit(value.filter((_, i) => i !== index));
+	}
+
+	function append(path: string): void {
+		adding = '';
+		if (!editable || path === '' || value.includes(path)) return;
+		emit([...value, path]);
+		// The trigger takes focus back where the popover left it, with the page still.
+		requestAnimationFrame(() =>
+			rootEl
+				?.querySelector<HTMLElement>('[data-slot="field-picker-trigger"]')
+				?.focus({ preventScroll: true })
+		);
 	}
 
 	function move(from: number, to: number): void {
@@ -358,17 +375,18 @@
 </script>
 
 <!--
-	The columns of a grid, as the two lists a chooser is made of.
+	The columns of a grid, as a field picker over the ordered list it fills.
 
-	Left are the fields of the entity type, checked when the path is already a column;
-	right are the chosen paths in the order they are drawn, moved with the arrow buttons
-	or with Alt and an arrow key. A value is ShotGrid's dotted path: a root field is its
-	own code, and every hop names the field followed and the type it landed on. Only a
-	single `entity` field is descended into - a dotted path through a `multi_entity`
-	field reads back nothing, 200 with the key absent (probe 016). A link declaring
-	several target types asks which one first. `dataTypes` and `validTypes` bind what may
-	be chosen, not what may be walked through, so a picker restricted to dates still
-	reaches a date behind a link.
+	Picking a field appends its path and clears the picker; each row carries a grip, the
+	friendly path and a remove button, and moves by drag or with Alt and an arrow key.
+	`layout="dual"` swaps that for the two lists side by side, the type's fields checked
+	on the left and the chosen paths on the right. A value is ShotGrid's dotted path: a
+	root field is its own code, and every hop names the field followed and the type it
+	landed on. Only a single `entity` field is descended into - a dotted path through a
+	`multi_entity` field reads back nothing, 200 with the key absent (probe 016). A link
+	declaring several target types asks which one first. `dataTypes` and `validTypes` bind
+	what may be chosen, not what may be walked through, so a picker restricted to dates
+	still reaches a date behind a link.
 -->
 
 {#snippet fieldList()}
@@ -423,7 +441,6 @@
 		class="gap-2 bg-transparent p-0"
 	>
 		<Command.Input
-			bind:ref={inputEl}
 			bind:value={search}
 			placeholder={choosing ? 'Which type?' : searchPlaceholder}
 		/>
@@ -514,10 +531,116 @@
 	</Command.Root>
 {/snippet}
 
+{#snippet chosen()}
+	{#if value.length === 0}
+		<p
+			data-slot="column-picker-empty"
+			class="text-muted-foreground flex items-center justify-center gap-1.5 py-6 text-center text-sm"
+		>
+			<Columns3 aria-hidden="true" class="size-4 shrink-0" />
+			{emptyLabel}
+		</p>
+	{:else}
+		<ol
+			data-slot="column-picker-list"
+			class="flex max-h-72 min-w-0 flex-col gap-2 overflow-y-auto"
+			{@attach sortable.attach}
+		>
+			{#each value as path, index (path)}
+				<li
+					data-slot="column-picker-column"
+					data-sortable-id={path}
+					data-index={index}
+					data-path={path}
+					class={cn(
+						'bg-background flex min-w-0 items-center gap-2 rounded-md px-2 py-1.5',
+						'data-[dragging]:z-10 data-[dragging]:opacity-90 data-[dragging]:shadow-md',
+						'data-[drop-target]:bg-accent/40',
+						ROW[size]
+					)}
+				>
+					{#if !readonly}
+						<Button
+							variant="ghost"
+							size={ACTION[size]}
+							data-slot="column-picker-grip"
+							data-sortable-handle="true"
+							{disabled}
+							onkeydown={(event) => onRowKeys(event, index)}
+							aria-label={`Reorder ${labelOf(path) ?? path}`}
+							title="Drag to reorder, or press Space and use the arrow keys"
+							class="cursor-grab touch-none active:cursor-grabbing"
+						>
+							<GripVertical aria-hidden="true" />
+						</Button>
+					{/if}
+					{#if labelOf(path) === undefined}
+						<Skeleton class="h-4 w-32" />
+					{:else}
+						<span class="min-w-0 flex-1 truncate text-sm" title={path}>{labelOf(path)}</span>
+					{/if}
+					{#if !readonly}
+						<Button
+							variant="ghost"
+							size={ACTION[size]}
+							data-slot="column-picker-remove"
+							{disabled}
+							onkeydown={(event) => onRowKeys(event, index)}
+							aria-label={`Remove ${labelOf(path) ?? path}`}
+							title="Remove (Delete)"
+							onclick={() => remove(index)}
+						>
+							<X aria-hidden="true" />
+						</Button>
+					{/if}
+				</li>
+			{/each}
+		</ol>
+		<div
+			data-slot="column-picker-live-region"
+			role="status"
+			aria-live="polite"
+			aria-atomic="true"
+			class="sr-only"
+		>
+			{sortable.announcement}
+		</div>
+	{/if}
+	{#if showCount}
+		<p data-slot="column-picker-count" class="text-muted-foreground text-xs">{count}</p>
+	{/if}
+{/snippet}
+
+{#snippet picker()}
+	<FieldPicker
+		{schema}
+		{entityType}
+		{deepLinks}
+		{maxDepth}
+		{dataTypes}
+		{validTypes}
+		{hidePaths}
+		{filterableOnly}
+		{extraFields}
+		{filter}
+		{searchPlaceholder}
+		{placeholder}
+		{disabled}
+		{invalid}
+		{size}
+		bind:value={adding}
+		exclude={offered}
+		clearable={false}
+		emptyLabel="No field left to add."
+		onValueChange={append}
+	/>
+{/snippet}
+
 <div
+	bind:this={rootEl}
 	data-slot="column-picker"
 	data-size={size}
-	data-compact={compact ? 'true' : 'false'}
+	data-layout={layout}
 	aria-disabled={disabled ? 'true' : undefined}
 	aria-invalid={invalid ? 'true' : undefined}
 	data-readonly={readonly ? 'true' : undefined}
@@ -527,164 +650,43 @@
 		className
 	)}
 >
-	<div
-		data-slot="column-picker-panes"
-		class={cn('grid min-w-0 gap-3', !compact && !readonly && '@lg:grid-cols-2')}
-	>
-		{#if !compact && !readonly}
+	{#if layout === 'dual'}
+		<div
+			data-slot="column-picker-panes"
+			class={cn('grid min-w-0 gap-3', !readonly && '@lg:grid-cols-2')}
+		>
+			{#if !readonly}
+				<section
+					data-slot="column-picker-available"
+					class={cn(
+						'border-border flex min-w-0 flex-col gap-3 rounded-md border p-3',
+						invalid && 'border-destructive ring-destructive/20 dark:ring-destructive/40 ring-2'
+					)}
+				>
+					<h3 data-slot="column-picker-heading" class="truncate text-sm font-medium">
+						{availableLabel}
+					</h3>
+					{@render fieldList()}
+				</section>
+			{/if}
+
 			<section
-				data-slot="column-picker-available"
+				data-slot="column-picker-chosen"
 				class={cn(
 					'border-border flex min-w-0 flex-col gap-3 rounded-md border p-3',
 					invalid && 'border-destructive ring-destructive/20 dark:ring-destructive/40 ring-2'
 				)}
 			>
 				<h3 data-slot="column-picker-heading" class="truncate text-sm font-medium">
-					{availableLabel}
+					{chosenLabel}
 				</h3>
-				{@render fieldList()}
+				{@render chosen()}
 			</section>
+		</div>
+	{:else}
+		{#if !readonly}
+			{@render picker()}
 		{/if}
-
-		<section
-			data-slot="column-picker-chosen"
-			class={cn(
-				'flex min-w-0 flex-col gap-3',
-				!compact && 'border-border rounded-md border p-3',
-				!compact && invalid && 'border-destructive ring-destructive/20 dark:ring-destructive/40 ring-2'
-			)}
-		>
-			{#if !compact}
-				<h3 data-slot="column-picker-heading" class="truncate text-sm font-medium">
-					{chosenLabel} ({value.length})
-				</h3>
-			{/if}
-
-			{#if value.length === 0}
-				<p
-					data-slot="column-picker-empty"
-					class="text-muted-foreground flex items-center justify-center gap-1.5 py-6 text-center text-sm"
-				>
-					<Columns3 aria-hidden="true" class="size-4 shrink-0" />
-					{emptyLabel}
-				</p>
-			{:else}
-				<ol
-					data-slot="column-picker-list"
-					class="flex max-h-72 min-w-0 flex-col gap-2 overflow-y-auto"
-					{@attach sortable.attach}
-				>
-					{#each value as path, index (path)}
-						<li
-							data-slot="column-picker-column"
-							data-sortable-id={path}
-							data-index={index}
-							data-path={path}
-							class={cn(
-								'bg-background flex min-w-0 items-center gap-2 rounded-md px-2 py-1.5',
-								'data-[dragging]:z-10 data-[dragging]:opacity-90 data-[dragging]:shadow-md',
-								'data-[drop-target]:bg-accent/40',
-								ROW[size]
-							)}
-						>
-							{#if editable}
-								<Button
-									variant="ghost"
-									size={ACTION[size]}
-									data-slot="column-picker-grip"
-									data-sortable-handle="true"
-									onkeydown={(event) => onRowKeys(event, index)}
-									aria-label={`Reorder ${labelOf(path) ?? path}`}
-									title="Drag to reorder, or press Space and use the arrow keys"
-									class="cursor-grab touch-none active:cursor-grabbing"
-								>
-									<GripVertical aria-hidden="true" />
-								</Button>
-							{/if}
-							{#if labelOf(path) === undefined}
-								<Skeleton class="h-4 w-32" />
-							{:else}
-								<span class="min-w-0 flex-1 truncate text-sm" title={path}>{labelOf(path)}</span>
-							{/if}
-							{#if editable}
-								<Button
-									variant="ghost"
-									size={ACTION[size]}
-									data-slot="column-picker-up"
-									onkeydown={(event) => onRowKeys(event, index)}
-									aria-label={`Move ${labelOf(path) ?? path} up`}
-									title="Move up (Alt with the up arrow)"
-									disabled={index === 0}
-									onclick={() => move(index, index - 1)}
-								>
-									<ChevronUp aria-hidden="true" />
-								</Button>
-								<Button
-									variant="ghost"
-									size={ACTION[size]}
-									data-slot="column-picker-down"
-									onkeydown={(event) => onRowKeys(event, index)}
-									aria-label={`Move ${labelOf(path) ?? path} down`}
-									title="Move down (Alt with the down arrow)"
-									disabled={index === value.length - 1}
-									onclick={() => move(index, index + 1)}
-								>
-									<ChevronDown aria-hidden="true" />
-								</Button>
-								<Button
-									variant="ghost"
-									size={ACTION[size]}
-									data-slot="column-picker-remove"
-									onkeydown={(event) => onRowKeys(event, index)}
-									aria-label={`Remove ${labelOf(path) ?? path}`}
-									title="Remove (Delete)"
-									onclick={() => remove(index)}
-								>
-									<X aria-hidden="true" />
-								</Button>
-							{/if}
-						</li>
-					{/each}
-				</ol>
-				<div
-					data-slot="column-picker-live-region"
-					role="status"
-					aria-live="polite"
-					aria-atomic="true"
-					class="sr-only"
-				>
-					{sortable.announcement}
-				</div>
-			{/if}
-
-			{#if compact && !readonly}
-				<Popover.Root
-					bind:open={() => open, (next) => (open = disabled ? false : next)}
-				>
-					<!-- Fixed: the Command list scrolls its highlighted row into view on mount, and an absolute
-					     wrapper still at the page origin would drag the page there with it. -->
-					<Popover.Trigger
-						data-slot="column-picker-add"
-						{disabled}
-						class="border-border bg-background hover:bg-muted focus-visible:border-ring focus-visible:ring-ring/50 inline-flex h-8 w-full min-w-0 items-center gap-1.5 rounded-lg border px-2.5 text-sm outline-none focus-visible:ring-3 disabled:pointer-events-none disabled:opacity-50"
-					>
-						<Plus aria-hidden="true" class="size-4 shrink-0" />
-						<span class="min-w-0 truncate">{placeholder}</span>
-					</Popover.Trigger>
-					<Popover.Content
-						strategy="fixed"
-						data-picker="column"
-						onOpenAutoFocus={(e) => {
-							e.preventDefault();
-							inputEl?.focus({ preventScroll: true });
-						}}
-						align="start"
-						class="flex w-96 max-w-[calc(100vw-2rem)] flex-col gap-0 overflow-hidden p-0"
-					>
-						{@render fieldList()}
-					</Popover.Content>
-				</Popover.Root>
-			{/if}
-		</section>
-	</div>
+		{@render chosen()}
+	{/if}
 </div>

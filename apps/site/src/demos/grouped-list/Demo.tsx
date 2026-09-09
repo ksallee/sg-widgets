@@ -59,9 +59,10 @@ export default function GroupedListDemo() {
   if (error) return <p className="text-destructive text-sm">{error}</p>;
   if (!data) return <p className="text-muted-foreground text-sm">Loading the site…</p>;
 
-  const leading = (row: EntityRow) => (
-    <StatusBadge code={String(cellValue(row, 'sg_status_list') ?? '')} variant="icon" size="sm" />
-  );
+  const leading = (row: EntityRow) => {
+    const code = String(cellValue(row, 'sg_status_list') ?? '');
+    return <StatusBadge code={code} status={data.statuses[code] ?? null} variant="icon" size="sm" />;
+  };
 
   return (
     <DemoClientProvider client={context.client}>

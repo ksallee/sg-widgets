@@ -23,6 +23,7 @@
 		pageSize: 50
 	});
 
+	let statusTable = $state<Record<string, StatusRecord>>({});
 	let compact = $state(false);
 	let selected = $state<EntityRef[]>([]);
 
@@ -35,7 +36,8 @@
 			context.statuses.byCode()
 		]);
 		void source.count();
-		return { columns, statuses: Object.fromEntries(table) };
+		statusTable = Object.fromEntries(table);
+		return { columns, statuses: statusTable };
 	}
 
 	const toggle =
@@ -46,7 +48,8 @@
 </script>
 
 {#snippet leading(row: EntityRow)}
-	<StatusBadge code={String(cellValue(row, 'sg_status_list') ?? '')} variant="icon" size="sm" />
+	{@const code = String(cellValue(row, 'sg_status_list') ?? '')}
+	<StatusBadge {code} status={statusTable[code] ?? null} variant="icon" size="sm" />
 {/snippet}
 
 {#await load()}

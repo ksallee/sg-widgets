@@ -131,11 +131,10 @@
       "description": "One entity type of a Flow Production Tracking site, or several, as a searchable combobox.",
       "dependencies": [
         "@sg-widgets/core",
-        "@lucide/svelte"
+        "@lucide/svelte",
+        "bits-ui"
       ],
       "registryDependencies": [
-        "popover",
-        "command",
         "skeleton",
         "checkbox"
       ],
@@ -533,14 +532,12 @@
       "description": "Several Flow Production Tracking statuses, picked from the codes a project offers.",
       "dependencies": [
         "@sg-widgets/core",
-        "@lucide/svelte"
+        "@lucide/svelte",
+        "bits-ui"
       ],
       "registryDependencies": [
         "local:status-badge",
-        "popover",
-        "command",
         "checkbox",
-        "button",
         "skeleton"
       ],
       "files": [
@@ -649,15 +646,14 @@
       "description": "One Flow Production Tracking entity, chosen by server-side search across one or more types.",
       "dependencies": [
         "@sg-widgets/core",
-        "@lucide/svelte"
+        "@lucide/svelte",
+        "bits-ui"
       ],
       "registryDependencies": [
         "local:entity-chip",
         "local:field-value",
         "local:thumbnail",
         "local:user-avatar",
-        "popover",
-        "command",
         "skeleton"
       ],
       "files": [
@@ -674,15 +670,14 @@
       "description": "Several Flow Production Tracking entities, chosen by server-side search, with checkbox rows and removable chips.",
       "dependencies": [
         "@sg-widgets/core",
-        "@lucide/svelte"
+        "@lucide/svelte",
+        "bits-ui"
       ],
       "registryDependencies": [
         "local:entity-chip",
         "local:field-value",
         "local:thumbnail",
         "local:user-avatar",
-        "popover",
-        "command",
         "checkbox",
         "skeleton"
       ],

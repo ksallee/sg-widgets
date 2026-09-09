@@ -14,7 +14,7 @@ pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/entity-picker.json
 pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/entity-picker.json
 ```
 
-<Demo name="entity-picker" title="EntityPicker: secondary column, types, project scope, hydration, paging, errors, sizes, states" />
+<Demo name="entity-picker" title="EntityPicker: secondary column, types, project scope, hydration, paging, errors, row anatomy, sizes, states" />
 
 ## Props
 
@@ -29,8 +29,9 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/entity-picker.
 | `secondary` | `(row) => string` | — | Right-aligned text of your own. Wins over `secondaryField`. |
 | `subLabelField` | `string` | — | Field shown under the label. |
 | `subLabel` | `(row) => string` | the type, when several are searched | Computes the sub-label. |
-| `thumbnailField` | `string \| false` | `'image'` | Field holding the thumbnail URL. `false` hides the leading slot. |
+| `thumbnail` | `string \| false` | `'image'` | Field holding the thumbnail URL. `false` hides the leading slot. |
 | `roundThumbnail` | `boolean` | `false` | Draws the thumbnail as a circle. |
+| `showCode` | `boolean` | `false` | Shows the row's `code` beside the label when the two differ. |
 | `siteUrl` | `string` | — | The site the status sprite is served from, for a secondary that is a status. |
 | `fields` | `string[]` | `[]` | Extra fields to request. |
 | `filters` | `FilterGroup \| WireGroup \| null` | `null` | Pre-filter, merged into every search with `and`. |
@@ -39,7 +40,7 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/entity-picker.
 | `minQueryLength` | `number` | `0` | Under it the query carries no name condition. |
 | `pageSize` | `number` | `20` | Rows a page, with a load more row under them. |
 | `placeholder` | `string` | `'Search for an entity'` | Shown in the control while nothing is chosen. |
-| `searchPlaceholder` | `string` | `'Search…'` | Shown in the search input. |
+| `searchPlaceholder` | `string` | `'Search…'` | Shown in the query input once something is chosen. |
 | `emptyLabel` | `string` | `'No entity matches.'` | Shown when a query matches nothing. |
 | `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Heights 8, 9 and 10. |
 | `disabled` | `boolean` | `false` | |
@@ -72,18 +73,19 @@ The picker is `w-full`; wrap it in a sized container.
 
 ## Slots
 
-None. The row is fixed: leading thumbnail or avatar, label with the matched words in bold,
-sub-label, right-aligned secondary.
+None. The row is fixed: leading thumbnail or avatar, label with the matched words in bold and the
+code beside it, sub-label, right-aligned secondary.
 
 ## Keyboard
 
 | key | does |
 |---|---|
-| `Enter`, `Space` | Opens the popover from the control. |
+| any text | Opens the list and searches the server. |
+| `Enter`, `Space` | On the chevron, opens the list. |
 | `Up`, `Down` | Moves the highlight through the rows. |
 | `Enter` | Chooses the highlighted row, or loads the next page on the load more row. |
-| `Escape` | Closes the popover. |
-| `Tab` | Moves to the clear control, then out. |
+| `Escape` | Closes the list and clears the query. |
+| `Tab` | Moves to the clear control, then the chevron, then out. |
 
 ## API behaviour
 
@@ -118,6 +120,12 @@ A row that cannot be resolved keeps the label `Type id`.
 A thumbnail URL is presigned and re-minted on every read, so the picker holds the row and re-reads
 rather than storing the string (field_types/image).
 
-The popover and the list are the `popover` and `command` items of each registry, unmodified; the
-loading state is `skeleton`. shadcn-svelte ships no `combobox`, so both frameworks are built on
-Popover plus Command and emit the same markup.
+The control is the combobox input with the chosen row's chip inline; the list is the combobox
+popup. The loading state is the `skeleton` item of each registry.
+
+## Reference
+
+The row, chip and checkbox anatomy follows shadcn's Base UI Combobox, read through shadcn 4.21.0.
+The primitive underneath is Base UI Combobox 1.8.0 in React and Bits UI Combobox 2.19.1 in Svelte.
+shadcn-svelte ships no combobox item, so each widget composes the headless primitive of its
+framework and both draw the same rows, the same classes and the same states.

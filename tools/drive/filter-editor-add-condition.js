@@ -60,7 +60,7 @@ async function run(framework) {
   press($('[data-slot="status-multi-picker-trigger"]', rowAt()));
   await until(() => $(`[data-picker="status"] [data-status-code="${CODES[0]}"]`), 'the status list');
   for (const code of CODES) {
-    press($(`[data-picker="status"] [data-status-code="${code}"]`).closest('[data-slot="command-item"]'));
+    press($(`[data-picker="status"] [data-status-code="${code}"]`));
     await wait(80);
   }
   await closePopovers();

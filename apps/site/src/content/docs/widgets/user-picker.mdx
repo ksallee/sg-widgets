@@ -31,7 +31,8 @@ Every prop of [EntityPicker](/widgets/entity-picker/) and
 | `includeApiUsers` | `boolean` | `true` | Search script accounts alongside people. |
 | `includeInactive` | `boolean` | `false` | Offer people whose status is `dis`. |
 
-`placeholder` defaults to `Search for a person`, or `Search for people` on the multi picker.
+`placeholder` defaults to `Search for a person`, or `Search for people` on the multi picker. The
+multi picker takes `summary` and `max` like every other multi picker.
 
 The query is matched against the display-name chain and the email, and against `login` while the
 query holds no whitespace. Both fields are requested so the row can show them. A person's sub-label
@@ -71,3 +72,10 @@ status field: the same name in a filter on a type that lacks it would be a 400
 
 HumanUser is site-wide and has no `project` field; a person's membership is the `projects`
 multi-entity on the row, so `projectId` scopes through that instead (entity_types/HumanUser).
+
+## Reference
+
+The row, chip and checkbox anatomy follows shadcn's Base UI Combobox, read through shadcn 4.21.0.
+The primitive underneath is Base UI Combobox 1.8.0 in React and Bits UI Combobox 2.19.1 in Svelte.
+shadcn-svelte ships no combobox item, so each widget composes the headless primitive of its
+framework and both draw the same rows, the same classes and the same states.

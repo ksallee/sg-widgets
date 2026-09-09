@@ -15,7 +15,7 @@ pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/entity-type-picker.jso
 pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/entity-type-picker.json
 ```
 
-<Demo name="entity-type-picker" title="EntityTypePicker: allow and deny lists, multi mode, sizes and states" />
+<Demo name="entity-type-picker" title="EntityTypePicker: allow and deny lists, multi mode, summary modes, sizes and states" />
 
 ## Props
 
@@ -34,12 +34,16 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/entity-type-pi
 | `readOnly` / `readonly` | `boolean` | `false` | Keeps full contrast and removes the chevron and the clear control. |
 | `disabled` | `boolean` | `false` | |
 | `invalid` | `boolean` | `false` | Applies the invalid ring and `aria-invalid`. |
+| `showCode` | `boolean` | `true` | Shows the code under the display name where the two differ. |
+| `summary` | `'chips' \| 'ellipsis' \| 'count'` | `'chips'` | What the control shows for the selection in multi mode. |
+| `max` | `number` | `0` | Chips drawn before the rest becomes `+n`. `0` draws every chip. |
 | `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | |
 | `className` / `class` | `string` | — | Merged after the widget's own classes. |
 
-Each row shows the display name, with the code beneath it in mono when the two differ. The trigger
-shows the display name of the chosen type, or the joined names in multi mode. In multi mode every row
-carries a checkbox and the list stays open across selections.
+Each row shows the display name, with the code beneath it in mono when the two differ, unless
+`showCode` is off. The control shows the chosen type as a chip, and one chip per type in multi mode,
+capped by `max` and summarised by `summary`. In multi mode every row carries a checkbox and the list
+stays open across selections.
 
 `allow` is applied first and `deny` second, both to the derived list rather than to the read, so a
 caller narrowing the set sees the list change with no second call.
@@ -58,13 +62,21 @@ None.
 
 | key | does |
 |---|---|
-| `Enter`, `Space` | On the closed control, opens it. |
+| any text | Opens the list and narrows the rows. |
+| `Enter`, `Space` | On the chevron, opens the list. |
 | `Down`, `Up` | Move the cursor through the rows. |
 | `Enter` | Choose the highlighted type. In multi mode, toggles it and keeps the list open. |
-| `Escape` | Close, keeping the value. |
+| `Escape` | Close, keeping the value and clearing the query. |
 
 ## API behaviour
 
 `GET /schema` returns every enabled type in about 12KB, custom slots included, and presence in that
 listing is the enablement test: a slot absent from it 404s everywhere else. The display name is the
 type's `name`, and the key is what a URL and a dotted path take (002_schema).
+
+## Reference
+
+The row, chip and checkbox anatomy follows shadcn's Base UI Combobox, read through shadcn 4.21.0.
+The primitive underneath is Base UI Combobox 1.8.0 in React and Bits UI Combobox 2.19.1 in Svelte.
+shadcn-svelte ships no combobox item, so each widget composes the headless primitive of its
+framework and both draw the same rows, the same classes and the same states.

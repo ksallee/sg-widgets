@@ -14,7 +14,7 @@ pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/entity-multi-picker.js
 pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/entity-multi-picker.json
 ```
 
-<Demo name="entity-multi-picker" title="EntityMultiPicker: secondary column, types, hydration, exclusions, paging, errors, sizes, states" />
+<Demo name="entity-multi-picker" title="EntityMultiPicker: secondary column, types, hydration, exclusions, paging, errors, summary modes, sizes, states" />
 
 ## Props
 
@@ -25,6 +25,8 @@ Every prop of [EntityPicker](/widgets/entity-picker/), with the value as an arra
 | `value` | `EntityRef[]` | `[]` | The chosen rows, in the order they were ticked. Two-way in Svelte. |
 | `exclude` | `EntityRef[]` | `[]` | Rows kept out of the results, per type. |
 | `clearable` | `boolean` | `true` | Shows the clear-all control. |
+| `summary` | `'chips' \| 'ellipsis' \| 'count'` | `'chips'` | What the control shows for the selection. |
+| `max` | `number` | `0` | Chips drawn before the rest becomes `+n`. `0` draws every chip. |
 
 The secondary column shows nothing until `secondaryField` or `secondary` asks for something, and
 `secondaryField` is drawn by the field's data type: a status is a badge, a date is formatted.
@@ -32,6 +34,10 @@ The secondary column shows nothing until `secondaryField` or `secondary` asks fo
 Selected rows are appended to the option list after the search results, so a row stays there to be
 unticked whatever the query. Each selection is also a chip in the control, with its own remove
 control.
+
+`chips` draws every chip and wraps the control. `ellipsis` keeps one line: the first chips, then
+`+n`, with the whole list in the control's tooltip. `count` reads `3 selected`. `max` bounds the
+chips in either chip mode; `ellipsis` draws three when `max` is `0`, since it cannot wrap.
 
 ## Events
 
@@ -49,11 +55,12 @@ bold, sub-label, right-aligned secondary.
 
 | key | does |
 |---|---|
-| `Enter`, `Space` | Opens the popover from the control. |
+| any text | Opens the list and searches the server. |
+| `Enter`, `Space` | On the chevron, opens the list. |
 | `Up`, `Down` | Moves the highlight through the rows. |
-| `Enter` | Ticks or unticks the highlighted row. The popover stays open. |
-| `Escape` | Closes the popover. |
-| `Tab` | Moves through the chips' remove controls, then the toggle and the clear control. |
+| `Enter` | Ticks or unticks the highlighted row. The list stays open. |
+| `Escape` | Closes the list and clears the query. |
+| `Tab` | Moves through the chips' remove controls, then the clear control and the chevron. |
 
 ## API behaviour
 
@@ -68,3 +75,10 @@ legacy behaviour of filtering them out after the page cap could empty a dropdown
 Bare `{ type, id }` members are resolved on mount by one `id in` read per type, batched, with the
 page size set to the number of ids. A resolved row is never overwritten by the bare reference it
 came from.
+
+## Reference
+
+The row, chip and checkbox anatomy follows shadcn's Base UI Combobox, read through shadcn 4.21.0.
+The primitive underneath is Base UI Combobox 1.8.0 in React and Bits UI Combobox 2.19.1 in Svelte.
+shadcn-svelte ships no combobox item, so each widget composes the headless primitive of its
+framework and both draw the same rows, the same classes and the same states.

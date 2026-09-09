@@ -31,6 +31,14 @@
 		{ type: 'Asset', id: 1226, name: 'charAda' },
 		{ type: 'Asset', id: 1227, name: 'charBruno' }
 	];
+	/** Five, so `ellipsis` has something to count and `max` something to cut. */
+	const five: EntityRef[] = [
+		...preset,
+		{ type: 'Asset', id: 1228, name: 'propLantern' },
+		{ type: 'Asset', id: 1229, name: 'propCrate' },
+		{ type: 'Asset', id: 1230, name: 'envForest' }
+	];
+	const SUMMARIES = ['chips', 'ellipsis', 'count'] as const;
 
 	const group = 'flex flex-col gap-2';
 	const label = 'text-muted-foreground text-xs font-medium tracking-wide uppercase';
@@ -132,6 +140,26 @@
 				{#if lastError}
 					<span class="text-destructive text-xs">{lastError}</span>
 				{/if}
+			</div>
+		</div>
+	</section>
+
+	<section class={group} data-demo-case="summary">
+		<h4 class={label}>What the control shows for five selected</h4>
+		<div class="flex flex-col gap-2">
+			{#each SUMMARIES as summary (summary)}
+				<div class={field} data-demo-summary={summary}>
+					<EntityMultiPicker
+						{client}
+						entityTypes={['Asset']}
+						value={five}
+						{summary}
+						clearable={false}
+					/>
+				</div>
+			{/each}
+			<div class={field} data-demo-summary="max">
+				<EntityMultiPicker {client} entityTypes={['Asset']} value={five} max={2} clearable={false} />
 			</div>
 		</div>
 	</section>

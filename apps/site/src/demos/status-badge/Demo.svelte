@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { FieldSchema, NativeStatus, StatusRecord } from '@sg-widgets/core';
-	import { NATIVE_STATUSES } from '@sg-widgets/core';
+	import { NATIVE_STATUSES, STOCK_ICON_KEYS } from '@sg-widgets/core';
 	import StatusBadge from '$lib/registry/components/status-badge.svelte';
 	import { setDemoClient } from '../_shared/svelte';
 
@@ -120,8 +120,22 @@
 		</div>
 	</section>
 
+	<section class={group} data-demo="stock">
+		<h4 class={label}>The shipped icons</h4>
+		<div class={row}>
+			{#each STOCK_ICON_KEYS as key (key)}
+				<StatusBadge
+					code={key}
+					status={{ id: 0, code: key, name: key, bgColor: null, icon: { displayType: 'image_map', imageMapKey: key } }}
+					variant="icon"
+					size="sm"
+				/>
+			{/each}
+		</div>
+	</section>
+
 	<section class={group} data-demo="sprite">
-		<h4 class={label}>A stock icon the package does not bundle, without and with a site</h4>
+		<h4 class={label}>A sprite cell outside the status set, without and with a site</h4>
 		<div class={row}>
 			<StatusBadge code={cancelled.code} status={cancelled} />
 			<StatusBadge code={cancelled.code} status={cancelled} siteUrl={DEMO_SITE} />

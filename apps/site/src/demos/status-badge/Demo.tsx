@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { FieldSchema, NativeStatus, StatusRecord } from '@sg-widgets/core';
-import { NATIVE_STATUSES } from '@sg-widgets/core';
+import { NATIVE_STATUSES, STOCK_ICON_KEYS } from '@sg-widgets/core';
 import { StatusBadge } from '@/registry/sg/components/status-badge';
 import { DemoClientProvider, useSgClient } from '../_shared/react';
 
@@ -142,8 +142,23 @@ export default function StatusBadgeDemo() {
           </div>
         </section>
 
+        <section className={group} data-demo="stock">
+          <h4 className={label}>The shipped icons</h4>
+          <div className={row}>
+            {STOCK_ICON_KEYS.map((key) => (
+              <StatusBadge
+                key={key}
+                code={key}
+                status={{ id: 0, code: key, name: key, bgColor: null, icon: { displayType: 'image_map', imageMapKey: key } }}
+                variant="icon"
+                size="sm"
+              />
+            ))}
+          </div>
+        </section>
+
         <section className={group} data-demo="sprite">
-          <h4 className={label}>A stock icon the package does not bundle, without and with a site</h4>
+          <h4 className={label}>A sprite cell outside the status set, without and with a site</h4>
           <div className={row}>
             <StatusBadge code={cancelled.code} status={cancelled} />
             <StatusBadge code={cancelled.code} status={cancelled} siteUrl={DEMO_SITE} />

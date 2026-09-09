@@ -8,8 +8,9 @@
  * src/styles/themes.css, light or dark, at any radius and with motion reduced, without
  * leaving the page and without touching Starlight's theme or their OS settings.
  *
- * A palette swaps token values on the stage and nothing else. No widget reads the
- * palette, and none of these controls changes what a widget renders.
+ * The controls are the site's control bar, one strip under the header; see DemoBar.astro.
+ * A demo carries a title line and the stage, reads the view from `sg-demo:*` and follows
+ * a change to those keys without a reload.
  *
  * A demo is a directory under `src/demos/<name>/` holding `Demo.svelte` and
  * `Demo.tsx`. Both are found by name through a glob -- no registration step -- and
@@ -18,13 +19,13 @@
  *
  * The harness chrome follows docs/design-rules.md as widgets do: shadcn tokens only,
  * the documented spacing scale, gaps owned by the containers (no margins on flex
- * children), h-8 controls, unchanged shadcn focus rings, and motion limited to opacity
- * and transform at duration-150.
+ * children), unchanged shadcn focus rings, and motion limited to opacity and transform
+ * at duration-150.
  */
 interface Props {
   /** Directory name under `src/demos/`. */
   name: string;
-  /** Optional caption shown in the toolbar. */
+  /** Optional caption shown on the title line. */
   title?: string;
 }
 
@@ -45,60 +46,6 @@ if (!svelteDemos[`../demos/${name}/Demo.svelte`] || !reactDemos[`../demos/${name
     `<Demo name="${name}"> needs both src/demos/${name}/Demo.svelte and src/demos/${name}/Demo.tsx. Demos found: ${found || 'none'}.`,
   );
 }
-
-/*
- * The looks offered by the theme select, called the palette everywhere a name could be
- * read as the light/dark theme the Dark toggle switches. `name` is the `data-theme` the
- * stage carries and the key under which src/styles/themes.css holds the values;
- * `default` has no block there and leaves the stage on the nova tokens. `font` is the
- * `family` query a palette's own typeface needs from Google Fonts, fetched the first
- * time that palette is picked -- a palette without one uses its own fallback stack.
- */
-const palettes = [
-  { name: 'default', label: 'Default' },
-  { name: 'stone', label: 'Stone' },
-  { name: 'zinc', label: 'Zinc' },
-  { name: 'mauve', label: 'Mauve' },
-  { name: 'mist', label: 'Mist' },
-  { name: 'vercel', label: 'Vercel', font: 'Geist:wght@100..900' },
-  { name: 'supabase', label: 'Supabase', font: 'Outfit:wght@100..900' },
-  { name: 'claude', label: 'Claude' },
-  { name: 'twitter', label: 'Twitter', font: 'Open+Sans:ital,wght@0,300..800;1,300..800' },
-  { name: 'catppuccin', label: 'Catppuccin', font: 'Montserrat:ital,wght@0,100..900;1,100..900' },
-];
-
-/* `default` keeps whatever `--radius` the palette sets; the rest override it. */
-const radii = [
-  { name: 'default', label: 'Radius: theme' },
-  { name: 'none', label: 'Radius: none' },
-  { name: 'sm', label: 'Radius: sm' },
-  { name: 'md', label: 'Radius: md' },
-  { name: 'lg', label: 'Radius: lg' },
-  { name: 'xl', label: 'Radius: xl' },
-];
-
-const control =
-  'inline-flex h-8 items-center justify-center px-2 text-sm text-muted-foreground select-none ' +
-  'transition-[color,background-color,opacity,transform] duration-150 ease-out ' +
-  'hover:bg-accent hover:text-accent-foreground ' +
-  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ' +
-  'active:scale-[0.98] ' +
-  'aria-pressed:bg-accent aria-pressed:text-accent-foreground aria-pressed:font-medium';
-
-const segmentClass = `${control} border-l border-border first:border-l-0`;
-const toggleClass = `${control} rounded-md border border-border bg-background`;
-
-// The native chevron is not a token, so it is drawn from `currentColor` alongside.
-const inputClass =
-  'h-8 w-72 rounded-md border border-border bg-background px-2 text-sm text-foreground ' +
-  'placeholder:text-muted-foreground ' +
-  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background';
-
-const selectWrapClass = 'group relative inline-flex items-center text-muted-foreground';
-const selectClass = `${toggleClass} appearance-none pr-7`;
-const chevronClass =
-  'pointer-events-none absolute right-2 size-4 transition-colors duration-150 ease-out ' +
-  'group-hover:text-accent-foreground';
 ---
 
 <figure
@@ -109,99 +56,16 @@ const chevronClass =
   data-motion="normal"
   data-source="mock"
 >
-  <div class="flex flex-wrap items-center gap-3 border-b border-border bg-muted px-3 py-2">
-    <div
-      class="inline-flex h-8 items-center overflow-hidden rounded-md border border-border bg-background"
-      role="group"
-      aria-label="Framework"
-    >
-      <button type="button" class={segmentClass} data-framework-pick="svelte" aria-pressed="false">
-        Svelte
-      </button>
-      <button type="button" class={segmentClass} data-framework-pick="react" aria-pressed="false">
-        React
-      </button>
-      <button type="button" class={segmentClass} data-framework-pick="both" aria-pressed="true">
-        Both
-      </button>
-    </div>
-
-    <div
-      class="inline-flex h-8 items-center overflow-hidden rounded-md border border-border bg-background"
-      role="group"
-      aria-label="Data source"
-    >
-      <button type="button" class={segmentClass} data-source-pick="mock" aria-pressed="true">Mock</button>
-      <button type="button" class={segmentClass} data-source-pick="live" aria-pressed="false">Live</button>
-    </div>
-
-    <figcaption class="min-w-0 flex-1 truncate text-xs text-muted-foreground" title={title}>
-      {title}
-    </figcaption>
-
-    <div class="flex items-center gap-2">
-      <span class={selectWrapClass}>
-        <select class={selectClass} data-palette-pick aria-label="Theme">
-          {
-            palettes.map((palette) => (
-              <option value={palette.name} data-font={palette.font}>
-                {palette.label}
-              </option>
-            ))
-          }
-        </select>
-        <svg
-          class={chevronClass}
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          aria-hidden="true"
-        >
-          <path d="m6 9 6 6 6-6"></path>
-        </svg>
-      </span>
-
-      <span class={selectWrapClass}>
-        <select class={selectClass} data-radius-pick aria-label="Radius">
-          {radii.map((radius) => <option value={radius.name}>{radius.label}</option>)}
-        </select>
-        <svg
-          class={chevronClass}
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          aria-hidden="true"
-        >
-          <path d="m6 9 6 6 6-6"></path>
-        </svg>
-      </span>
-
-      <button type="button" class={toggleClass} data-theme-toggle aria-pressed="false">Dark</button>
-      <button type="button" class={toggleClass} data-motion-toggle aria-pressed="false">
-        Reduce motion
-      </button>
-    </div>
-
-    <div class="flex w-full flex-wrap items-center gap-2" data-live-bar data-live-state="anon">
-      <input
-        type="url"
-        class={inputClass}
-        data-live-site
-        aria-label="Site url"
-        placeholder="https://your-studio.shotgrid.autodesk.com"
-      />
-      <button type="button" class={toggleClass} data-live-login>Log in</button>
-      <button type="button" class={toggleClass} data-live-logout>Log out</button>
-      <div class="w-64" data-live-project></div>
-      <span class="min-w-0 flex-1 truncate text-xs text-muted-foreground" data-live-status></span>
-    </div>
-  </div>
+  {
+    title && (
+      <figcaption
+        class="truncate border-b border-border bg-muted px-3 py-2 text-xs text-muted-foreground"
+        title={title}
+      >
+        {title}
+      </figcaption>
+    )
+  }
 
   <div class="sg-demo grid gap-px bg-border" data-stage data-theme="default" data-radius="default">
     <section class="min-w-0 bg-background p-4" data-pane="svelte">
@@ -225,90 +89,12 @@ const chevronClass =
 
 <script>
   /**
-   * Wires every `<Demo>` on the page. Framework, palette, radius, light/dark and reduced
-   * motion are shared across demos and persisted, so paging through the docs keeps the
-   * view a reviewer set. Both islands stay mounted; the control only shows and hides, so
+   * Mounts every `<Demo>` on the page and keeps it wearing the view the control bar
+   * holds. Both islands stay mounted; the framework attribute only shows and hides, so
    * switching frameworks never remounts and never loses a widget's state.
    */
+  import { applyPrefs, watchPrefs } from './demo-prefs';
   import { prepareDemoSource } from '../demos/_shared/live';
-  import { mountLiveToolbar } from './live-toolbar';
-
-  const KEYS = {
-    framework: 'sg-demo:framework',
-    theme: 'sg-demo:theme',
-    motion: 'sg-demo:motion',
-    palette: 'sg-demo:palette',
-    radius: 'sg-demo:radius',
-  } as const;
-
-  const FRAMEWORKS = ['svelte', 'react', 'both'];
-
-  /*
-   * Values are raw strings, the spelling tools/qa.mjs writes for the initial load. Its
-   * `harness.set` quotes them as JSON before a reload, so a quoted value reads as the
-   * string inside.
-   */
-  function stored(key: string): string | null {
-    let raw: string | null;
-    try {
-      raw = localStorage.getItem(key);
-    } catch {
-      return null; // Private mode or blocked storage: fall back, never throw.
-    }
-    if (raw === null) return null;
-    try {
-      const parsed: unknown = JSON.parse(raw);
-      return typeof parsed === 'string' ? parsed : raw;
-    } catch {
-      return raw;
-    }
-  }
-
-  function read(key: string, allowed: string[], fallback: string): string {
-    const value = stored(key);
-    return value !== null && allowed.includes(value) ? value : fallback;
-  }
-
-  function write(key: string, value: string): void {
-    try {
-      localStorage.setItem(key, value);
-    } catch {
-      /* Persisting the view is a convenience, not a requirement. */
-    }
-  }
-
-  /* The two selects are the list of legal palette and radius names. */
-  function names(selector: string): string[] {
-    const select = document.querySelector<HTMLSelectElement>(selector);
-    return select ? [...select.options].map((option) => option.value) : [];
-  }
-
-  const PALETTES = names('[data-palette-pick]');
-  const RADII = names('[data-radius-pick]');
-
-  const state = {
-    framework: read(KEYS.framework, FRAMEWORKS, 'both'),
-    theme: read(KEYS.theme, ['light', 'dark'], 'light'),
-    motion: read(KEYS.motion, ['normal', 'reduced'], 'normal'),
-    palette: read(KEYS.palette, PALETTES, 'default'),
-    radius: read(KEYS.radius, RADII, 'default'),
-  };
-
-  /*
-   * A palette's own typeface, fetched when that palette is first picked and never on
-   * page load. Until the stylesheet arrives the stage renders the rest of the palette's
-   * stack, so nothing waits on the network.
-   */
-  const fetched = new Set<string>();
-
-  function loadFont(family: string | undefined): void {
-    if (!family || fetched.has(family)) return;
-    fetched.add(family);
-    const link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.href = `https://fonts.googleapis.com/css2?family=${family}&display=swap`;
-    document.head.append(link);
-  }
 
   /*
    * Mounting the two demos.
@@ -402,95 +188,8 @@ const chevronClass =
     }
   }
 
-  function apply(): void {
-    for (const root of document.querySelectorAll<HTMLElement>('[data-sg-demo]')) {
-      root.dataset.framework = state.framework;
-      root.dataset.motion = state.motion;
-
-      for (const pick of root.querySelectorAll<HTMLButtonElement>('[data-framework-pick]')) {
-        pick.setAttribute('aria-pressed', String(pick.dataset.frameworkPick === state.framework));
-      }
-
-      // Palette and radius land on the stage, never on the figure: the toolbar and frame
-      // follow the docs page, and Starlight's chrome is outside both. The palette's
-      // attribute is `data-theme` because that is the hook themes.css selects on.
-      const stage = root.querySelector<HTMLElement>('[data-stage]');
-      if (stage) {
-        stage.classList.toggle('dark', state.theme === 'dark');
-        stage.dataset.theme = state.palette;
-        stage.dataset.radius = state.radius;
-      }
-
-      const palettePick = root.querySelector<HTMLSelectElement>('[data-palette-pick]');
-      if (palettePick) {
-        palettePick.value = state.palette;
-        loadFont(palettePick.selectedOptions[0]?.dataset.font);
-      }
-
-      const radiusPick = root.querySelector<HTMLSelectElement>('[data-radius-pick]');
-      if (radiusPick) radiusPick.value = state.radius;
-
-      root
-        .querySelector('[data-theme-toggle]')
-        ?.setAttribute('aria-pressed', String(state.theme === 'dark'));
-      root
-        .querySelector('[data-motion-toggle]')
-        ?.setAttribute('aria-pressed', String(state.motion === 'reduced'));
-    }
-  }
-
-  document.addEventListener('click', (event) => {
-    const target = event.target as HTMLElement | null;
-    if (!target?.closest('[data-sg-demo]')) return;
-
-    const pick = target.closest<HTMLElement>('[data-framework-pick]');
-    if (pick?.dataset.frameworkPick) {
-      state.framework = pick.dataset.frameworkPick;
-      write(KEYS.framework, state.framework);
-    } else if (target.closest('[data-theme-toggle]')) {
-      state.theme = state.theme === 'dark' ? 'light' : 'dark';
-      write(KEYS.theme, state.theme);
-    } else if (target.closest('[data-motion-toggle]')) {
-      state.motion = state.motion === 'reduced' ? 'normal' : 'reduced';
-      write(KEYS.motion, state.motion);
-    } else {
-      return;
-    }
-    apply();
-  });
-
-  document.addEventListener('change', (event) => {
-    const select = (event.target as HTMLElement | null)?.closest<HTMLSelectElement>('select');
-    if (!select?.closest('[data-sg-demo]')) return;
-
-    if (select.matches('[data-palette-pick]')) {
-      state.palette = select.value;
-      write(KEYS.palette, state.palette);
-    } else if (select.matches('[data-radius-pick]')) {
-      state.radius = select.value;
-      write(KEYS.radius, state.radius);
-    } else {
-      return;
-    }
-    apply();
-  });
-
-  /*
-   * The headless driver (tools/qa.mjs) sets these keys and fires `storage` instead of
-   * clicking, so a drive script reaches every control without knowing the markup. The
-   * same listener keeps two open tabs in step.
-   */
-  window.addEventListener('storage', () => {
-    state.framework = read(KEYS.framework, FRAMEWORKS, state.framework);
-    state.theme = read(KEYS.theme, ['light', 'dark'], state.theme);
-    state.motion = read(KEYS.motion, ['normal', 'reduced'], state.motion);
-    state.palette = read(KEYS.palette, PALETTES, state.palette);
-    state.radius = read(KEYS.radius, RADII, state.radius);
-    apply();
-  });
-
-  apply();
-  void mountLiveToolbar();
+  applyPrefs();
+  watchPrefs();
   // The source and its bearer settle before the first island is built, so a demo
   // asks for its client once and gets the site it was meant to read.
   void prepareDemoSource().then(mountAll);
@@ -500,17 +199,6 @@ const chevronClass =
   /* Layout only; every colour, radius and spacing value above comes from a token. */
   [data-stage] {
     grid-template-columns: 1fr 1fr;
-  }
-
-  /* The site, login and project controls belong to live mode alone. */
-  [data-sg-demo]:not([data-source='live']) [data-live-bar] {
-    display: none;
-  }
-
-  [data-live-bar]:not([data-live-state='anon']) [data-live-login],
-  [data-live-bar]:not([data-live-state='in']) [data-live-logout],
-  [data-live-bar][data-live-state='anon'] [data-live-project] {
-    display: none;
   }
 
   [data-sg-demo]:is([data-framework='svelte'], [data-framework='react']) [data-stage] {

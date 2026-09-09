@@ -1,0 +1,189 @@
+/**
+ * The view every demo on the site wears: framework, palette, radius, light/dark and
+ * reduced motion.
+ *
+ * The control bar writes these, the demos read them, and `sg-demo:*` in `localStorage`
+ * carries them from page to page and from tab to tab. A palette swaps token values on
+ * a demo stage and nothing else; none of these controls changes what a widget renders.
+ */
+
+export interface Palette {
+  /** The `data-theme` the stage carries, and the key src/styles/themes.css holds. */
+  name: string;
+  label: string;
+  /** The `family` query the palette's own typeface needs from Google Fonts. */
+  font?: string;
+}
+
+/**
+ * Called the palette everywhere a name could be read as the light/dark theme the Dark
+ * toggle switches. `default` has no block in themes.css and leaves the stage on the
+ * nova tokens.
+ */
+export const palettes: Palette[] = [
+  { name: 'default', label: 'Default' },
+  { name: 'stone', label: 'Stone' },
+  { name: 'zinc', label: 'Zinc' },
+  { name: 'mauve', label: 'Mauve' },
+  { name: 'mist', label: 'Mist' },
+  { name: 'vercel', label: 'Vercel', font: 'Geist:wght@100..900' },
+  { name: 'supabase', label: 'Supabase', font: 'Outfit:wght@100..900' },
+  { name: 'claude', label: 'Claude' },
+  { name: 'twitter', label: 'Twitter', font: 'Open+Sans:ital,wght@0,300..800;1,300..800' },
+  { name: 'catppuccin', label: 'Catppuccin', font: 'Montserrat:ital,wght@0,100..900;1,100..900' },
+];
+
+/* `default` keeps whatever `--radius` the palette sets; the rest override it. */
+export const radii = [
+  { name: 'default', label: 'Radius: theme' },
+  { name: 'none', label: 'Radius: none' },
+  { name: 'sm', label: 'Radius: sm' },
+  { name: 'md', label: 'Radius: md' },
+  { name: 'lg', label: 'Radius: lg' },
+  { name: 'xl', label: 'Radius: xl' },
+];
+
+export const frameworks = ['svelte', 'react', 'both'];
+
+const KEYS = {
+  framework: 'sg-demo:framework',
+  theme: 'sg-demo:theme',
+  motion: 'sg-demo:motion',
+  palette: 'sg-demo:palette',
+  radius: 'sg-demo:radius',
+} as const;
+
+export type Pref = keyof typeof KEYS;
+
+const ALLOWED: Record<Pref, string[]> = {
+  framework: frameworks,
+  theme: ['light', 'dark'],
+  motion: ['normal', 'reduced'],
+  palette: palettes.map((palette) => palette.name),
+  radius: radii.map((radius) => radius.name),
+};
+
+const FALLBACK: Record<Pref, string> = {
+  framework: 'both',
+  theme: 'light',
+  motion: 'normal',
+  palette: 'default',
+  radius: 'default',
+};
+
+/*
+ * Values are raw strings, the spelling tools/qa.mjs writes for the initial load. Its
+ * `harness.set` quotes them as JSON before a reload, so a quoted value reads as the
+ * string inside.
+ */
+function stored(key: string): string | null {
+  let raw: string | null;
+  try {
+    raw = localStorage.getItem(key);
+  } catch {
+    return null; // Private mode, blocked storage or the server build: fall back, never throw.
+  }
+  if (raw === null) return null;
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    return typeof parsed === 'string' ? parsed : raw;
+  } catch {
+    return raw;
+  }
+}
+
+function read(pref: Pref, current: string): string {
+  const value = stored(KEYS[pref]);
+  return value !== null && ALLOWED[pref].includes(value) ? value : current;
+}
+
+/** The view as it stands. Read it; change it through `setPref`. */
+export const prefs: Record<Pref, string> = {
+  framework: read('framework', FALLBACK.framework),
+  theme: read('theme', FALLBACK.theme),
+  motion: read('motion', FALLBACK.motion),
+  palette: read('palette', FALLBACK.palette),
+  radius: read('radius', FALLBACK.radius),
+};
+
+export function setPref(pref: Pref, value: string): void {
+  if (!ALLOWED[pref].includes(value)) return;
+  prefs[pref] = value;
+  try {
+    localStorage.setItem(KEYS[pref], value);
+  } catch {
+    /* Persisting the view is a convenience, not a requirement. */
+  }
+  applyPrefs();
+}
+
+export function togglePref(pref: Pref): void {
+  setPref(pref, prefs[pref] === ALLOWED[pref][1] ? ALLOWED[pref][0]! : ALLOWED[pref][1]!);
+}
+
+/*
+ * A palette's own typeface, fetched when that palette is first picked and never on page
+ * load. Until the stylesheet arrives the stage renders the rest of the palette's stack,
+ * so nothing waits on the network.
+ */
+const fetched = new Set<string>();
+
+function loadFont(family: string | undefined): void {
+  if (!family || fetched.has(family)) return;
+  fetched.add(family);
+  const link = document.createElement('link');
+  link.rel = 'stylesheet';
+  link.href = `https://fonts.googleapis.com/css2?family=${family}&display=swap`;
+  document.head.append(link);
+}
+
+/** Put the current view on every demo on the page, and back on the bar's controls. */
+export function applyPrefs(): void {
+  for (const root of document.querySelectorAll<HTMLElement>('[data-sg-demo]')) {
+    root.dataset.framework = prefs.framework;
+    root.dataset.motion = prefs.motion;
+
+    // Palette and radius land on the stage, never on the figure: the frame follows the
+    // docs page, and Starlight's chrome is outside both. The palette's attribute is
+    // `data-theme` because that is the hook themes.css selects on.
+    const stage = root.querySelector<HTMLElement>('[data-stage]');
+    if (stage) {
+      stage.classList.toggle('dark', prefs.theme === 'dark');
+      stage.dataset.theme = prefs.palette;
+      stage.dataset.radius = prefs.radius;
+    }
+  }
+
+  const bar = document.querySelector<HTMLElement>('[data-sg-bar]');
+  if (!bar) return;
+
+  for (const pick of bar.querySelectorAll<HTMLButtonElement>('[data-framework-pick]')) {
+    pick.setAttribute('aria-pressed', String(pick.dataset.frameworkPick === prefs.framework));
+  }
+
+  const palettePick = bar.querySelector<HTMLSelectElement>('[data-palette-pick]');
+  if (palettePick) palettePick.value = prefs.palette;
+  loadFont(palettes.find((palette) => palette.name === prefs.palette)?.font);
+
+  const radiusPick = bar.querySelector<HTMLSelectElement>('[data-radius-pick]');
+  if (radiusPick) radiusPick.value = prefs.radius;
+
+  bar.querySelector('[data-theme-toggle]')?.setAttribute('aria-pressed', String(prefs.theme === 'dark'));
+  bar.querySelector('[data-motion-toggle]')?.setAttribute('aria-pressed', String(prefs.motion === 'reduced'));
+}
+
+let watching = false;
+
+/**
+ * Follow the keys. The headless driver (tools/qa.mjs) sets them and fires `storage`
+ * instead of clicking, so a drive script reaches every control without knowing the
+ * markup, and the same listener keeps two open tabs in step.
+ */
+export function watchPrefs(): void {
+  if (watching) return;
+  watching = true;
+  window.addEventListener('storage', () => {
+    for (const pref of Object.keys(KEYS) as Pref[]) prefs[pref] = read(pref, prefs[pref]!);
+    applyPrefs();
+  });
+}

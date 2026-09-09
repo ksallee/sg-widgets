@@ -26,6 +26,9 @@ export default defineConfig({
       title: 'sg-widgets',
       description: 'shadcn-compatible widgets for Flow Production Tracking, for React and Svelte.',
       customCss: ['./src/styles/global.css'],
+      // The demo control bar is site chrome, not page content: the frame renders it
+      // once, under the header, on the pages that carry a demo.
+      components: { PageFrame: './src/components/overrides/PageFrame.astro' },
       sidebar: [
         { label: 'Start', items: [{ label: 'Introduction', slug: 'start/introduction' }] },
         { label: 'Widgets', items: [{ autogenerate: { directory: 'widgets' } }] },

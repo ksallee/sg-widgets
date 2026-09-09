@@ -1,1 +1,280 @@
-@import "tailwindcss";
+/*
+ * Site styles: Tailwind for the demo harness, and one copy of the shadcn tokens.
+ *
+ * Why the package CSS is not imported here
+ * ---------------------------------------
+ * `packages/react/src/index.css` and `packages/svelte/src/app.css` each define the
+ * whole nova token set (`--background`, `--primary`, ...) on `:root`, restyle `body`,
+ * and pull in Tailwind's preflight. Importing either would fight Starlight's own reset
+ * and theme; importing both would define every token twice. So the site imports
+ * neither, and the block below is the single copy of those tokens on this site --
+ * scoped to `.sg-demo` so Starlight's chrome is untouched. When the packages change a
+ * token value, mirror it here; nothing else on the site reads these variables.
+ *
+ * The layer order is Starlight's recommended one for Tailwind v4, which deliberately
+ * omits `tailwindcss/preflight.css`: a global preflight would flatten Starlight's
+ * chrome. The demo area gets the preflight rules the shadcn components actually rely
+ * on, scoped to `.sg-demo`, in the `sg-demo-base` layer -- above `starlight` so
+ * Starlight's content styles do not leak into a demo, below `utilities` so Tailwind
+ * classes still win.
+ */
+
+@layer base, starlight, theme, sg-demo-base, components, utilities;
+
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/utilities.css' layer(utilities);
+
+/*
+ * The nova preset: `data-open`/`data-closed`/... custom variants, keyframes and
+ * utilities the registry components are written against. `shadcn/tailwind.css` and
+ * `shadcn-svelte/tailwind.css` are the same file bar whitespace and the accordion
+ * height variable, so only one is loaded; the bits-ui spelling of that variable is
+ * restored just below so Svelte items animate too.
+ */
+@import 'shadcn/tailwind.css';
+@import '@fontsource-variable/geist';
+
+@keyframes accordion-down {
+  from {
+    height: 0;
+  }
+  to {
+    height: var(
+      --radix-accordion-content-height,
+      var(--bits-accordion-content-height, var(--accordion-panel-height, auto))
+    );
+  }
+}
+@keyframes accordion-up {
+  from {
+    height: var(
+      --radix-accordion-content-height,
+      var(--bits-accordion-content-height, var(--accordion-panel-height, auto))
+    );
+  }
+  to {
+    height: 0;
+  }
+}
+
+/* Same spelling as both packages: the demo stage carries `dark`, widgets are inside it. */
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * Classes used by the widgets live outside apps/site, in the workspace packages the
+ * aliases point at. Tailwind only generates what it sees, so scan them. Whole package
+ * roots, so the registry directories are covered the moment issue #2 adds items;
+ * node_modules and dist are gitignored and skipped.
+ */
+@source '../../../../packages/react';
+@source '../../../../packages/svelte';
+@source '../../src';
+
+@theme inline {
+  --font-sans: 'Geist Variable', sans-serif;
+  --font-heading: var(--font-sans);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+/* The one copy of the shadcn tokens, scoped to the demo stage. */
+.sg-demo {
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --radius: 0.625rem;
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+}
+
+/*
+ * Dark tokens, for two independent things:
+ *
+ * - `.sg-demo.dark` -- the demo stage's own dark class, driven by the toggle in the
+ *   demo toolbar. Starlight themes with `:root[data-theme='dark']`, so the two never
+ *   collide and a reviewer can read dark docs while QAing a light widget.
+ * - `.sg-demo-chrome` under a dark Starlight -- the harness furniture (toolbar,
+ *   frame) follows the docs theme, so a demo does not glare on a dark page. The stage
+ *   nested inside redefines the tokens from `.sg-demo` above, so it stays independent.
+ */
+.sg-demo.dark,
+:root[data-theme='dark'] .sg-demo-chrome {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
+}
+
+/* The parts of Tailwind's preflight the shadcn components assume, demo-stage only. */
+@layer sg-demo-base {
+  .sg-demo,
+  .sg-demo *,
+  .sg-demo *::before,
+  .sg-demo *::after {
+    box-sizing: border-box;
+    border: 0 solid;
+  }
+
+  .sg-demo {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    font-size: 1rem;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    outline-color: color-mix(in oklab, var(--ring) 50%, transparent);
+  }
+
+  .sg-demo :is(h1, h2, h3, h4, h5, h6) {
+    font-size: inherit;
+    font-weight: inherit;
+    margin: 0;
+  }
+
+  .sg-demo :is(p, ul, ol, dl, figure, blockquote, pre, hr) {
+    margin: 0;
+  }
+
+  .sg-demo :is(ul, ol) {
+    list-style: none;
+    padding: 0;
+  }
+
+  .sg-demo a {
+    color: inherit;
+    text-decoration: inherit;
+  }
+
+  .sg-demo :is(button, input, optgroup, select, textarea) {
+    font: inherit;
+    color: inherit;
+    letter-spacing: inherit;
+    background-color: transparent;
+    border-radius: 0;
+    margin: 0;
+    padding: 0;
+    opacity: 1;
+  }
+
+  .sg-demo :is(button, [type='button'], [type='reset'], [type='submit']) {
+    appearance: button;
+    background-image: none;
+    cursor: default;
+  }
+
+  .sg-demo :is(button, [role='button']):not(:disabled) {
+    cursor: pointer;
+  }
+
+  .sg-demo :is(img, svg, video, canvas, audio, iframe, embed, object) {
+    display: block;
+    vertical-align: middle;
+  }
+
+  .sg-demo :is(img, video) {
+    max-width: 100%;
+    height: auto;
+  }
+
+  .sg-demo ::placeholder {
+    color: color-mix(in oklab, currentcolor 50%, transparent);
+    opacity: 1;
+  }
+
+  .sg-demo :is(code, kbd, samp, pre) {
+    font-family: var(--font-mono, ui-monospace, monospace);
+    font-size: 1em;
+    background: none;
+    border: 0;
+    padding: 0;
+  }
+}

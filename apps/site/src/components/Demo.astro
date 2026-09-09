@@ -1,0 +1,327 @@
+---
+/**
+ * A live demo of one widget, in both frameworks.
+ *
+ * `<Demo name="hello" />` renders the Svelte and the React implementation of the same
+ * widget side by side, on a stage that carries the shadcn tokens and its own `dark`
+ * class -- so a reviewer can compare the two frameworks, in both themes and with
+ * motion reduced, without leaving the page and without touching Starlight's theme or
+ * their OS settings.
+ *
+ * A demo is a directory under `src/demos/<name>/` holding `Demo.svelte` and
+ * `Demo.tsx`. Both are found by name through a glob -- no registration step -- and
+ * mounted on page load by the script below rather than by `client:load`; see the
+ * comment there for why a name-resolved island cannot use Astro's directive.
+ *
+ * The harness chrome follows docs/design-rules.md as widgets do: shadcn tokens only,
+ * the documented spacing scale, gaps owned by the containers (no margins on flex
+ * children), h-8 controls, unchanged shadcn focus rings, and motion limited to opacity
+ * and transform at duration-150.
+ */
+interface Props {
+  /** Directory name under `src/demos/`. */
+  name: string;
+  /** Optional caption shown in the toolbar. */
+  title?: string;
+}
+
+const { name, title } = Astro.props;
+
+// Existence check at build time, so a typo in `name` fails the build instead of
+// leaving a reviewer with an empty pane. The same globs load the modules in the
+// client script below.
+const svelteDemos = import.meta.glob('../demos/*/Demo.svelte');
+const reactDemos = import.meta.glob('../demos/*/Demo.tsx');
+
+if (!svelteDemos[`../demos/${name}/Demo.svelte`] || !reactDemos[`../demos/${name}/Demo.tsx`]) {
+  const found = [...Object.keys(svelteDemos), ...Object.keys(reactDemos)]
+    .map((path) => path.split('/')[2])
+    .filter((dir, i, all) => all.indexOf(dir) === i)
+    .join(', ');
+  throw new Error(
+    `<Demo name="${name}"> needs both src/demos/${name}/Demo.svelte and src/demos/${name}/Demo.tsx. Demos found: ${found || 'none'}.`,
+  );
+}
+
+const control =
+  'inline-flex h-8 items-center justify-center px-2 text-sm text-muted-foreground select-none ' +
+  'transition-[color,background-color,opacity,transform] duration-150 ease-out ' +
+  'hover:bg-accent hover:text-accent-foreground ' +
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ' +
+  'active:scale-[0.98] ' +
+  'aria-pressed:bg-accent aria-pressed:text-accent-foreground aria-pressed:font-medium';
+
+const segmentClass = `${control} border-l border-border first:border-l-0`;
+const toggleClass = `${control} rounded-md border border-border bg-background`;
+---
+
+<figure
+  class="sg-demo sg-demo-chrome not-content w-full overflow-hidden rounded-lg border border-border"
+  data-sg-demo
+  data-demo-name={name}
+  data-framework="both"
+  data-motion="normal"
+>
+  <div class="flex items-center gap-3 border-b border-border bg-muted px-3 py-2">
+    <div
+      class="inline-flex h-8 items-center overflow-hidden rounded-md border border-border bg-background"
+      role="group"
+      aria-label="Framework"
+    >
+      <button type="button" class={segmentClass} data-framework-pick="svelte" aria-pressed="false">
+        Svelte
+      </button>
+      <button type="button" class={segmentClass} data-framework-pick="react" aria-pressed="false">
+        React
+      </button>
+      <button type="button" class={segmentClass} data-framework-pick="both" aria-pressed="true">
+        Both
+      </button>
+    </div>
+
+    <figcaption class="min-w-0 flex-1 truncate text-xs text-muted-foreground" title={title}>
+      {title}
+    </figcaption>
+
+    <div class="flex items-center gap-2">
+      <button type="button" class={toggleClass} data-theme-toggle aria-pressed="false">Dark</button>
+      <button type="button" class={toggleClass} data-motion-toggle aria-pressed="false">
+        Reduce motion
+      </button>
+    </div>
+  </div>
+
+  <div class="sg-demo grid gap-px bg-border" data-stage>
+    <section class="min-w-0 bg-background p-4" data-pane="svelte">
+      <h3 class="pb-3 text-xs font-medium tracking-wide text-muted-foreground uppercase" data-pane-title>
+        Svelte
+      </h3>
+      <div data-island="svelte">
+        <p class="text-sm text-muted-foreground">Loading the Svelte demo&hellip;</p>
+      </div>
+    </section>
+    <section class="min-w-0 bg-background p-4" data-pane="react">
+      <h3 class="pb-3 text-xs font-medium tracking-wide text-muted-foreground uppercase" data-pane-title>
+        React
+      </h3>
+      <div data-island="react">
+        <p class="text-sm text-muted-foreground">Loading the React demo&hellip;</p>
+      </div>
+    </section>
+  </div>
+</figure>
+
+<script>
+  /**
+   * Wires every `<Demo>` on the page. Framework, demo theme and reduced motion are
+   * shared across demos and persisted, so paging through the docs keeps the view a
+   * reviewer set. Both islands stay mounted; the control only shows and hides, so
+   * switching frameworks never remounts and never loses a widget's state.
+   */
+  const KEYS = {
+    framework: 'sg-demo:framework',
+    theme: 'sg-demo:theme',
+    motion: 'sg-demo:motion',
+  } as const;
+
+  function read(key: string, allowed: string[], fallback: string): string {
+    try {
+      const value = localStorage.getItem(key);
+      return value && allowed.includes(value) ? value : fallback;
+    } catch {
+      return fallback; // Private mode or blocked storage: fall back, never throw.
+    }
+  }
+
+  function write(key: string, value: string): void {
+    try {
+      localStorage.setItem(key, value);
+    } catch {
+      /* Persisting the view is a convenience, not a requirement. */
+    }
+  }
+
+  const state = {
+    framework: read(KEYS.framework, ['svelte', 'react', 'both'], 'both'),
+    theme: read(KEYS.theme, ['light', 'dark'], 'light'),
+    motion: read(KEYS.motion, ['normal', 'reduced'], 'normal'),
+  };
+
+  /*
+   * Mounting the two demos.
+   *
+   * Astro's `client:load` needs a statically imported component: it discovers islands
+   * by reading the template, and only then emits a client chunk for them. A harness
+   * that finds its demos by name cannot give it that, so the pair is mounted here
+   * instead -- same moment as `client:load` (immediately, on page load), same client
+   * bundle (Vite code-splits the glob), no per-demo boilerplate anywhere. The panes are
+   * empty until this runs, which is why each carries a loading line.
+   */
+  const svelteDemos = import.meta.glob<{ default: unknown }>('../demos/*/Demo.svelte');
+  const reactDemos = import.meta.glob<{ default: unknown }>('../demos/*/Demo.tsx');
+
+  /*
+   * Vite's React Fast Refresh preamble.
+   *
+   * `@astrojs/react` injects this in dev, but only as a "before-hydration" script,
+   * which Astro emits only on pages that contain an Astro island. Mounting by hand
+   * means the page has none, and a dev-transformed React module then dies on
+   * "$RefreshSig$ is not defined". So install it here, once, before the first React
+   * import. The specifier is held in a variable so the production build never tries to
+   * resolve this dev-only virtual module.
+   */
+  let reactRefreshReady: Promise<void> | undefined;
+
+  function installReactRefresh(): Promise<void> {
+    if (!import.meta.env.DEV) return Promise.resolve();
+    reactRefreshReady ??= (async () => {
+      const specifier = '/@react-refresh';
+      const runtime = await import(/* @vite-ignore */ specifier);
+      runtime.injectIntoGlobalHook(window);
+      const w = window as unknown as Record<string, unknown>;
+      w.$RefreshReg$ = () => {};
+      w.$RefreshSig$ = () => (type: unknown) => type;
+      w.__vite_plugin_react_preamble_installed__ = true;
+    })();
+    return reactRefreshReady;
+  }
+
+  function host(root: HTMLElement, framework: string): HTMLElement | null {
+    return root.querySelector<HTMLElement>(`[data-island="${framework}"]`);
+  }
+
+  function fail(target: HTMLElement, error: unknown): void {
+    target.replaceChildren();
+    const line = document.createElement('p');
+    line.className = 'text-sm text-destructive';
+    line.textContent = error instanceof Error ? error.message : String(error);
+    target.append(line);
+    console.error('[sg-demo]', error);
+  }
+
+  async function mountAll(): Promise<void> {
+    for (const root of document.querySelectorAll<HTMLElement>('[data-sg-demo]')) {
+      if (root.dataset.mounted) continue;
+      root.dataset.mounted = 'true';
+      const name = root.dataset.demoName;
+      if (!name) continue;
+
+      const svelteHost = host(root, 'svelte');
+      if (svelteHost) {
+        try {
+          const load = svelteDemos[`../demos/${name}/Demo.svelte`];
+          if (!load) throw new Error(`No src/demos/${name}/Demo.svelte`);
+          const [{ mount }, module] = await Promise.all([import('svelte'), load()]);
+          svelteHost.replaceChildren();
+          mount(module.default as never, { target: svelteHost });
+        } catch (error) {
+          fail(svelteHost, error);
+        }
+      }
+
+      const reactHost = host(root, 'react');
+      if (reactHost) {
+        try {
+          const load = reactDemos[`../demos/${name}/Demo.tsx`];
+          if (!load) throw new Error(`No src/demos/${name}/Demo.tsx`);
+          await installReactRefresh();
+          const [{ createElement }, { createRoot }, module] = await Promise.all([
+            import('react'),
+            import('react-dom/client'),
+            load(),
+          ]);
+          reactHost.replaceChildren();
+          createRoot(reactHost).render(createElement(module.default as never));
+        } catch (error) {
+          fail(reactHost, error);
+        }
+      }
+    }
+  }
+
+  function apply(): void {
+    for (const root of document.querySelectorAll<HTMLElement>('[data-sg-demo]')) {
+      root.dataset.framework = state.framework;
+      root.dataset.motion = state.motion;
+
+      for (const pick of root.querySelectorAll<HTMLButtonElement>('[data-framework-pick]')) {
+        pick.setAttribute('aria-pressed', String(pick.dataset.frameworkPick === state.framework));
+      }
+
+      root.querySelector('[data-stage]')?.classList.toggle('dark', state.theme === 'dark');
+      root
+        .querySelector('[data-theme-toggle]')
+        ?.setAttribute('aria-pressed', String(state.theme === 'dark'));
+      root
+        .querySelector('[data-motion-toggle]')
+        ?.setAttribute('aria-pressed', String(state.motion === 'reduced'));
+    }
+  }
+
+  document.addEventListener('click', (event) => {
+    const target = event.target as HTMLElement | null;
+    if (!target?.closest('[data-sg-demo]')) return;
+
+    const pick = target.closest<HTMLElement>('[data-framework-pick]');
+    if (pick?.dataset.frameworkPick) {
+      state.framework = pick.dataset.frameworkPick;
+      write(KEYS.framework, state.framework);
+    } else if (target.closest('[data-theme-toggle]')) {
+      state.theme = state.theme === 'dark' ? 'light' : 'dark';
+      write(KEYS.theme, state.theme);
+    } else if (target.closest('[data-motion-toggle]')) {
+      state.motion = state.motion === 'reduced' ? 'normal' : 'reduced';
+      write(KEYS.motion, state.motion);
+    } else {
+      return;
+    }
+    apply();
+  });
+
+  apply();
+  void mountAll();
+</script>
+
+<style>
+  /* Layout only; every colour, radius and spacing value above comes from a token. */
+  [data-stage] {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  [data-sg-demo]:is([data-framework='svelte'], [data-framework='react']) [data-stage] {
+    grid-template-columns: 1fr;
+  }
+
+  [data-framework='svelte'] [data-pane='react'],
+  [data-framework='react'] [data-pane='svelte'] {
+    display: none;
+  }
+
+  /* One framework on show: the pane label is redundant with the segmented control. */
+  [data-sg-demo]:is([data-framework='svelte'], [data-framework='react']) [data-pane-title] {
+    display: none;
+  }
+
+  @media (max-width: 50rem) {
+    [data-stage] {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /*
+   * The reduced-motion toggle simulates `prefers-reduced-motion: reduce` for the demo
+   * stage: transitions collapse to opacity-only and animations finish at once, which
+   * is what docs/design-rules.md asks a widget to degrade to. It reaches inside the
+   * islands, so it is deliberately global. It cannot change what a widget's
+   * `motion-reduce:` classes do -- those follow the OS -- so it answers "does this
+   * still read correctly without movement", which is the question a reviewer has.
+   */
+  [data-sg-demo][data-motion='reduced'] [data-stage] :global(*),
+  [data-sg-demo][data-motion='reduced'] [data-stage] :global(*::before),
+  [data-sg-demo][data-motion='reduced'] [data-stage] :global(*::after) {
+    transition-property: opacity;
+    animation-duration: 1ms;
+    animation-delay: 0ms;
+    animation-iteration-count: 1;
+  }
+</style>

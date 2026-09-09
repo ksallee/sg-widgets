@@ -52,8 +52,8 @@
 		context?: SgContext;
 		density?: GroupedListDensity;
 		selectable?: boolean;
-		onselectionchange?: (rows: EntityRef[]) => void;
-		onselect?: (row: EntityRow) => void;
+		onSelectionChange?: (rows: EntityRef[]) => void;
+		onSelect?: (row: EntityRow) => void;
 		/** Fixed-size leading slot, when `thumbnail` is not the one wanted: an avatar, a colour swatch. */
 		leading?: Snippet<[EntityRow]>;
 		/** Rows per page offered in the footer. `pages` mode only. */
@@ -77,8 +77,8 @@
 		context,
 		density = 'default',
 		selectable = false,
-		onselectionchange,
-		onselect,
+		onSelectionChange,
+		onSelect,
 		leading,
 		pageSizes = [25, 50, 100],
 		maxHeight = '28rem',
@@ -124,7 +124,7 @@
 	});
 
 	$effect(() => {
-		onselectionchange?.(
+		onSelectionChange?.(
 			rows.filter((row) => selected[rowKey(row)]).map((row) => ({ type: row.type, id: row.id }))
 		);
 	});
@@ -248,7 +248,7 @@
 									{/if}
 									<button
 										type="button"
-										onclick={() => (selectable ? toggle(row) : onselect?.(row))}
+										onclick={() => (selectable ? toggle(row) : onSelect?.(row))}
 										class="focus-visible:ring-ring focus-visible:ring-offset-background flex min-w-0 flex-1 flex-col items-start rounded-sm text-left outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
 									>
 										<span class="flex w-full min-w-0 items-center gap-1.5">

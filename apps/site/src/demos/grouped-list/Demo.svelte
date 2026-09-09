@@ -76,7 +76,7 @@
 			{leading}
 			selectable
 			density={compact ? 'compact' : 'default'}
-			onselectionchange={(rows) => (selected = rows)}
+			onSelectionChange={(rows) => (selected = rows)}
 		/>
 	</div>
 {:catch error}

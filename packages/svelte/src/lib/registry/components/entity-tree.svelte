@@ -47,9 +47,9 @@
 		/** Draws a checkbox per node and reports the checked rows. */
 		checkable?: boolean;
 		selection?: 'none' | 'single' | 'multiple';
-		oncheckedchange?: (rows: EntityRef[]) => void;
-		onselect?: (node: TreeNode) => void;
-		onerror?: (error: Error) => void;
+		onCheckedChange?: (rows: EntityRef[]) => void;
+		onSelect?: (node: TreeNode) => void;
+		onError?: (error: Error) => void;
 		/** Shows an input that searches the project and opens the tree onto the hits. */
 		searchable?: boolean;
 		searchPlaceholder?: string;
@@ -85,9 +85,9 @@
 		seedPath = null,
 		checkable = false,
 		selection = 'single',
-		oncheckedchange,
-		onselect,
-		onerror,
+		onCheckedChange,
+		onSelect,
+		onError,
 		searchable = false,
 		searchPlaceholder = 'Search',
 		expandDepth = 3,
@@ -146,7 +146,7 @@
 	});
 
 	$effect(() => {
-		if (snap.error) onerror?.(snap.error);
+		if (snap.error) onError?.(snap.error);
 	});
 
 	/** The checked set as one string, so the callback fires when it moves and not on every keystroke. */
@@ -154,7 +154,7 @@
 
 	$effect(() => {
 		void checkedKey;
-		oncheckedchange?.(engine.checkedRefs());
+		onCheckedChange?.(engine.checkedRefs());
 	});
 
 	/* what a row draws with -------------------------------------------------- */
@@ -176,7 +176,7 @@
 			plan.status = found.status;
 			plan.secondary = found.secondary;
 			plan.statuses = found.statuses;
-		}, onerror);
+		}, onError);
 		return plan;
 	}
 
@@ -262,7 +262,7 @@
 		if (row.node.hasChildren) void engine.toggle(row.node.path);
 		else {
 			engine.select(row.node.path);
-			onselect?.(row.node);
+			onSelect?.(row.node);
 		}
 	}
 
@@ -272,7 +272,7 @@
 		event.preventDefault();
 		if (event.key !== 'Enter' || path === null) return;
 		const node = engine.node(path);
-		if (node && !node.hasChildren) onselect?.(node);
+		if (node && !node.hasChildren) onSelect?.(node);
 	}
 
 	$effect(() => {

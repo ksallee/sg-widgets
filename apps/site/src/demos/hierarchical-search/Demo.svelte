@@ -20,7 +20,7 @@
 			{client}
 			rootPath={`/Project/${context.projectId}`}
 			entityTypes={['Shot', 'Asset', 'Sequence', 'Task']}
-			onselect={(leaf, path) => (picked = { leaf, path })}
+			onSelect={(leaf, path) => (picked = { leaf, path })}
 		/>
 	</section>
 

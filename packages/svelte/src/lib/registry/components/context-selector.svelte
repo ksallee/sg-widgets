@@ -66,8 +66,8 @@
 		/** Contexts used before, newest first. Held by the caller. */
 		recents?: WorkContext[];
 		recentLimit?: number;
-		onrecents?: (recents: WorkContext[]) => void;
-		oncontextChange?: (context: WorkContext) => void;
+		onRecentsChange?: (recents: WorkContext[]) => void;
+		onContextChange?: (context: WorkContext) => void;
 		open?: boolean;
 		class?: string;
 	};
@@ -78,8 +78,8 @@
 		currentUser = null,
 		recents = [],
 		recentLimit = 5,
-		onrecents,
-		oncontextChange,
+		onRecentsChange,
+		onContextChange,
 		open = $bindable(false),
 		class: className
 	}: Props = $props();
@@ -161,8 +161,8 @@
 	});
 
 	function apply(next: WorkContext): void {
-		onrecents?.([next, ...recents.filter((r) => keyOf(r) !== keyOf(next))].slice(0, recentLimit));
-		oncontextChange?.(next);
+		onRecentsChange?.([next, ...recents.filter((r) => keyOf(r) !== keyOf(next))].slice(0, recentLimit));
+		onContextChange?.(next);
 		open = false;
 	}
 
@@ -272,7 +272,7 @@
 				<HierarchicalSearch
 					{client}
 					{rootPath}
-					onselect={(leaf, path) => apply(contextFromPath(leaf, path))}
+					onSelect={(leaf, path) => apply(contextFromPath(leaf, path))}
 					placeholder="Search for a task or a shot…"
 				/>
 			</section>

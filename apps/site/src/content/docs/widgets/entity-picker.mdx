@@ -66,10 +66,10 @@ The picker is `w-full`; wrap it in a sized container.
 
 ## Events
 
-| event | React | Svelte | payload |
-|---|---|---|---|
-| change | `onValueChange` | `onValueChange` | The new reference and the full row, or `null` on clear. |
-| error | `onError` | `onerror` | The failure. The list shows it inline as well. |
+| event | payload | when |
+|---|---|---|
+| `onValueChange` | `EntityRef \| null`, `PickerRow \| null` | A row was chosen, or the clear control was pressed. |
+| `onError` | `Error` | A read failed. The list shows it inline as well. |
 
 ## Slots
 

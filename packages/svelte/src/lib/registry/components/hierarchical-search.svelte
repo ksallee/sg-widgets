@@ -71,7 +71,7 @@
 		rootPath?: string;
 		/** Types a search may end on. Browsing reaches every level whatever this says. */
 		entityTypes?: HierarchicalSearchTypes;
-		onselect?: (entity: EntityRef, path: EntityRef[]) => void;
+		onSelect?: (entity: EntityRef, path: EntityRef[]) => void;
 		placeholder?: string;
 		class?: string;
 	};
@@ -80,7 +80,7 @@
 		client,
 		rootPath = '/',
 		entityTypes = HIERARCHICAL_SEARCH_TYPES,
-		onselect,
+		onSelect,
 		placeholder = 'Search the hierarchy…',
 		class: className
 	}: Props = $props();
@@ -238,7 +238,7 @@
 
 	function activate(row: HierarchicalSearchRow): void {
 		if (row.selectable && row.ref) {
-			onselect?.(row.ref, row.path);
+			onSelect?.(row.ref, row.path);
 			return;
 		}
 		drill(row);

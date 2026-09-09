@@ -132,7 +132,7 @@
 				client={failing.client}
 				entityTypes={['Shot']}
 				bind:value={failed}
-				onerror={(error) => (lastError = error.message)}
+				onError={(error) => (lastError = error.message)}
 			/>
 			<div class="flex items-center gap-2">
 				<button

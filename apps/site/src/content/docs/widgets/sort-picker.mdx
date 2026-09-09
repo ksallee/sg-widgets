@@ -32,9 +32,9 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/sort-picker.js
 
 ## Events
 
-| event | React | Svelte | payload |
-|---|---|---|---|
-| change | `onChange` | `onChange`, `bind:value` | The keys and the `sort` string, on every edit. |
+| event | payload | when |
+|---|---|---|
+| `onChange` | `SortKey[]`, `string` | The keys and the `sort` string changed, on every edit. Svelte also binds it with `bind:value`. |
 
 ## Slots
 

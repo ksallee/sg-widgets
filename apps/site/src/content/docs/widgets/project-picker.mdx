@@ -36,10 +36,10 @@ The sub-label is the project's status, so an active project can be told from a b
 
 ## Events
 
-| event | React | Svelte | payload |
-|---|---|---|---|
-| change | `onValueChange` | `onValueChange` | The new reference or array, and the full rows. |
-| error | `onError` | `onerror` | The failure. The list shows it inline as well. |
+| event | payload | when |
+|---|---|---|
+| `onValueChange` | `EntityRef`, `PickerRow` | The selection changed. The multi picker sends arrays. |
+| `onError` | `Error` | A read failed. The list shows it inline as well. |
 
 ## Slots
 

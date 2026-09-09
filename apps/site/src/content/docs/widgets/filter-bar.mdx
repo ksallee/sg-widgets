@@ -41,9 +41,9 @@ the dialog; a pill holding one reads its condition as text.
 
 ## Events
 
-| event | React | Svelte | payload |
-|---|---|---|---|
-| change | `onChange` | `onChange`, `bind:value` | The tree, on every tick and on Apply in the dialog. |
+| event | payload | when |
+|---|---|---|
+| `onChange` | `FilterGroup` | The tree changed, on every tick and on Apply in the dialog. Svelte also binds it with `bind:value`. |
 
 ## Slots
 

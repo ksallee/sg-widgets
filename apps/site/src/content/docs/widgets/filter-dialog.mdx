@@ -36,9 +36,9 @@ anything.
 
 ## Events
 
-| event | React | Svelte | payload |
-|---|---|---|---|
-| change | `onChange` | `onChange`, `bind:value` | The applied tree. Fires on Apply, Clear all and the clear control, never while editing. |
+| event | payload | when |
+|---|---|---|
+| `onChange` | `FilterGroup` | The tree was applied, by Apply, Clear all or the clear control, never while editing. Svelte also binds it with `bind:value`. |
 
 ## Slots
 

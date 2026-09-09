@@ -109,7 +109,7 @@
 		invalid?: boolean;
 		clearable?: boolean;
 		debounceMs?: number;
-		onerror?: (error: Error) => void;
+		onError?: (error: Error) => void;
 		class?: string;
 	}
 </script>
@@ -180,7 +180,7 @@
 		clearable = true,
 		debounceMs = 250,
 		onValueChange,
-		onerror,
+		onError,
 		class: className
 	}: Props = $props();
 
@@ -206,7 +206,7 @@
 		minQueryLength,
 		pageSize,
 		debounceMs,
-		onError: (error: Error) => onerror?.(error)
+		onError: (error: Error) => onError?.(error)
 	});
 
 	let snap = $state(search.state);
@@ -237,7 +237,7 @@
 			minQueryLength,
 			pageSize,
 			debounceMs,
-			onError: (error: Error) => onerror?.(error)
+			onError: (error: Error) => onError?.(error)
 		});
 	});
 
@@ -364,7 +364,7 @@
 			if (found.some((field) => field && renderKindFor(field.dataType) === 'status')) {
 				plan.statuses = Object.fromEntries(await statusTable.byCode());
 			}
-		}, onerror);
+		}, onError);
 		return plan;
 	}
 
@@ -540,7 +540,7 @@
 									thumbnail={chip.thumbnail}
 									size={PICKER_CHIP[size]}
 									removable={interactive}
-									onremove={() => remove(chip.ref)}
+									onRemove={() => remove(chip.ref)}
 									data-chip=""
 									hidden={ready && index >= plan.shown.length}
 									class="shrink-0"

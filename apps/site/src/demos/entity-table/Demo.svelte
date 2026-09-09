@@ -92,7 +92,7 @@
 			editable
 			density={compact ? 'compact' : 'default'}
 			groupBy={grouped ? 'sg_status_list' : null}
-			onselectionchange={(rows) => (selected = rows)}
+			onSelectionChange={(rows) => (selected = rows)}
 		>
 			{#snippet toolbarStart()}
 				<div class="flex flex-col gap-2">

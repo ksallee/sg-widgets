@@ -90,7 +90,7 @@
 		/** Draws the tile's selection checkbox and gives the tile a focus ring. */
 		selectable?: boolean;
 		selected?: boolean;
-		onselectedchange?: (selected: boolean) => void;
+		onSelectedChange?: (selected: boolean) => void;
 		/** Controls in the thumbnail's top-right corner, on hover or focus. `tile` only. */
 		actions?: Snippet;
 		/** The web app the row lives on. Defaults to the context's. */
@@ -119,7 +119,7 @@
 		statuses = null,
 		selectable = false,
 		selected = false,
-		onselectedchange,
+		onSelectedChange,
 		actions,
 		siteUrl,
 		hoursPerDay,
@@ -331,7 +331,7 @@
 							<Checkbox
 								aria-label="Select {name}"
 								checked={selected}
-								onCheckedChange={(value) => onselectedchange?.(value === true)}
+								onCheckedChange={(value) => onSelectedChange?.(value === true)}
 								class="bg-background/80 border-transparent shadow-sm"
 							/>
 						</span>

@@ -43,11 +43,11 @@ from the site schema.
 
 ## Events
 
-| event | React | Svelte | payload |
-|---|---|---|---|
-| select | `onSelect` | `onselect` | The row that was picked, as `{type, id, name}`. |
-| recents | `onRecentsChange` | `onrecents` | The new recents list, the pick first. |
-| open | `onOpenChange` | `bind:open` | Whether the dialog is open. |
+| event | payload | when |
+|---|---|---|
+| `onSelect` | `EntityRef` | A row was picked. |
+| `onRecentsChange` | `EntityRef[]` | The recents list changed, the pick first. |
+| `onOpenChange` | `boolean` | The dialog opened or closed. Svelte also binds it with `bind:open`. |
 
 ## Slots
 

@@ -39,9 +39,9 @@ nesting reads as one indent; the foot carries the add-condition and add-group co
 
 ## Events
 
-| event | React | Svelte | payload |
-|---|---|---|---|
-| change | `onChange` | `onChange`, `bind:value` | The whole tree, on every edit. |
+| event | payload | when |
+|---|---|---|
+| `onChange` | `FilterGroup` | The whole tree changed, on every edit. Svelte also binds it with `bind:value`. |
 
 ## Value editors
 

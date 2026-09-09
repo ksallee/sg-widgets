@@ -67,8 +67,8 @@
 		recents?: EntityRef[];
 		/** How many recents to keep when a pick is prepended. */
 		recentLimit?: number;
-		onrecents?: (recents: EntityRef[]) => void;
-		onselect?: (entity: EntityRef) => void;
+		onRecentsChange?: (recents: EntityRef[]) => void;
+		onSelect?: (entity: EntityRef) => void;
 		placeholder?: string;
 		/** Text on the trigger. */
 		label?: string;
@@ -86,8 +86,8 @@
 		open = $bindable(false),
 		recents = [],
 		recentLimit = 5,
-		onrecents,
-		onselect,
+		onRecentsChange,
+		onSelect,
 		placeholder = 'Search…',
 		label = 'Search',
 		class: className,
@@ -199,8 +199,8 @@
 	}
 
 	function choose(entity: EntityRef): void {
-		onrecents?.([entity, ...recents.filter((r) => !same(r, entity))].slice(0, recentLimit));
-		onselect?.(entity);
+		onRecentsChange?.([entity, ...recents.filter((r) => !same(r, entity))].slice(0, recentLimit));
+		onSelect?.(entity);
 		if (!inline) open = false;
 		setQuery('');
 	}

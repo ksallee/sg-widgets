@@ -45,10 +45,10 @@ A press on `+n` opens the list, where the hidden rows are.
 
 ## Events
 
-| event | React | Svelte | payload |
-|---|---|---|---|
-| change | `onValueChange` | `onValueChange` | The new array of references and the full rows. |
-| error | `onError` | `onerror` | The failure. The list shows it inline as well. |
+| event | payload | when |
+|---|---|---|
+| `onValueChange` | `EntityRef[]`, `PickerRow[]` | The selection changed. |
+| `onError` | `Error` | A read failed. The list shows it inline as well. |
 
 ## Slots
 

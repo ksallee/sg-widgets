@@ -41,10 +41,10 @@ instead.
 
 ## Events
 
-| event | React | Svelte | payload |
-|---|---|---|---|
-| change | `onValueChange` | `onValueChange` | The new reference or array, and the full rows. |
-| error | `onError` | `onerror` | The failure. The list shows it inline as well. |
+| event | payload | when |
+|---|---|---|
+| `onValueChange` | `EntityRef`, `PickerRow` | The selection changed. The multi picker sends arrays. |
+| `onError` | `Error` | A read failed. The list shows it inline as well. |
 
 ## Slots
 

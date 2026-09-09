@@ -40,8 +40,8 @@
 			{context}
 			{currentUser}
 			{recents}
-			onrecents={(next) => (recents = next)}
-			oncontextChange={(next) => (context = next)}
+			onRecentsChange={(next) => (recents = next)}
+			onContextChange={(next) => (context = next)}
 		/>
 	</section>
 

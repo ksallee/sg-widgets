@@ -46,8 +46,8 @@
 		statuses?: Record<string, StatusRecord> | null;
 		size?: EntityGridSize;
 		selectable?: boolean;
-		onselectionchange?: (rows: EntityRef[]) => void;
-		onselect?: (row: EntityRow) => void;
+		onSelectionChange?: (rows: EntityRef[]) => void;
+		onSelect?: (row: EntityRow) => void;
 		/** Rows per page offered in the footer. `pages` mode only. */
 		pageSizes?: number[];
 		/** Height of the scrolling body. In `infinite` mode, reaching its end asks for the next page. */
@@ -68,8 +68,8 @@
 		statuses = null,
 		size = 'md',
 		selectable = false,
-		onselectionchange,
-		onselect,
+		onSelectionChange,
+		onSelect,
 		pageSizes = [25, 50, 100],
 		maxHeight = '32rem',
 		emptyLabel = 'No rows',
@@ -93,7 +93,7 @@
 	let selected = $state<Record<string, boolean>>({});
 	let pageDraft = $state('');
 	$effect(() => {
-		onselectionchange?.(
+		onSelectionChange?.(
 			rows.filter((row) => selected[rowKey(row)]).map((row) => ({ type: row.type, id: row.id }))
 		);
 	});
@@ -168,7 +168,7 @@
 				if (selectable && row) toggle(row);
 				break;
 			case 'Enter':
-				if (row) onselect?.(row);
+				if (row) onSelect?.(row);
 				break;
 			default:
 				return;
@@ -179,7 +179,7 @@
 	function onTileClick(event: MouseEvent, row: EntityRow): void {
 		const target = event.target as HTMLElement | null;
 		if (target?.closest('[data-slot="entity-card-selection"],[data-slot="entity-card-actions"]')) return;
-		onselect?.(row);
+		onSelect?.(row);
 	}
 
 	/* infinite scroll ------------------------------------------------------ */
@@ -279,7 +279,7 @@
 						{selectable}
 						{size}
 						selected={selected[key] === true}
-						onselectedchange={() => toggle(row)}
+						onSelectedChange={() => toggle(row)}
 						role="option"
 						aria-selected={selected[key] === true}
 						tabindex={index === active ? 0 : -1}

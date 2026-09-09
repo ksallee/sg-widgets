@@ -35,9 +35,9 @@ is not one of these types opens instead of being picked.
 
 ## Events
 
-| event | React | Svelte | payload |
-|---|---|---|---|
-| select | `onSelect` | `onselect` | The row picked, then every row the path runs through, root first. |
+| event | payload | when |
+|---|---|---|
+| `onSelect` | `EntityRef`, `EntityRef[]` | A row was picked. The second argument is every row its path runs through, root first. |
 
 ## Slots
 

@@ -85,7 +85,7 @@
 		density?: EntityTableDensity;
 		/** Draws a checkbox column and reports the selection. */
 		selectable?: boolean;
-		onselectionchange?: (rows: EntityRef[]) => void;
+		onSelectionChange?: (rows: EntityRef[]) => void;
 		/** Collapse rows under headers of a shared value at this path. */
 		groupBy?: string | null;
 		/** Opens an editor on a double-click or Enter in an editable cell. */
@@ -114,7 +114,7 @@
 		context,
 		density = 'default',
 		selectable = false,
-		onselectionchange,
+		onSelectionChange,
 		groupBy = null,
 		editable = false,
 		editorFor,
@@ -220,7 +220,7 @@
 	const expansion = $derived(table.atoms.expanded.get());
 	$effect(() => {
 		void selection;
-		onselectionchange?.(
+		onSelectionChange?.(
 			table
 				.getSelectedRowModel()
 				.flatRows.filter((row) => !row.getIsGrouped())

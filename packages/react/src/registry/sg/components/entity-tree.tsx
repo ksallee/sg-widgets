@@ -1,56 +1,71 @@
 import type * as React from 'react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { EntityRef, HierarchyNode, HierarchyRef, SgClient } from '@sg-widgets/core';
-import { hierarchyEntity } from '@sg-widgets/core';
-import { ChevronRight, CircleAlert, Inbox, Loader } from 'lucide-react';
-import { Checkbox } from '@/components/ui/checkbox';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import type { EntityRef, SgClient, TreeFieldPlan, TreeNode, TreeRow } from '@sg-widgets/core';
+import {
+  createSchemaService,
+  createStatusService,
+  createTree,
+  hierarchyLoader,
+  isEmptyValue,
+  resolveTreeFields,
+  TREE_STATUS_FIELDS,
+} from '@sg-widgets/core';
+import { Check, ChevronRight, CircleAlert, Inbox, Loader, Minus } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-import { EntityChip } from '@/registry/sg/components/entity-chip';
+import { FieldValue } from '@/registry/sg/components/field-value';
+import { StatusBadge } from '@/registry/sg/components/status-badge';
+import { Thumbnail } from '@/registry/sg/components/thumbnail';
 
-/** One loaded node, plus where it sits and what it knows about its children. */
-export interface TreeNode {
-  path: string;
-  label: string;
-  ref: HierarchyRef;
-  hasChildren: boolean;
-  /** Paths of the level below, once it has been read. */
-  childPaths: string[];
-  level: number;
-}
+type DivProps = Omit<React.HTMLAttributes<HTMLDivElement>, 'children' | 'onSelect' | 'onError'>;
 
-function toNode(raw: HierarchyNode, level: number): TreeNode {
-  return {
-    path: raw.path,
-    label: raw.label,
-    ref: raw.ref,
-    hasChildren: raw.hasChildren,
-    childPaths: raw.children.map((child) => child.path),
-    level,
-  };
-}
-
-export interface EntityTreeProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'children' | 'onSelect'> {
+export interface EntityTreeProps extends DivProps {
   /** Reads one level per call. Wrap it in a query cache so a reopened node costs nothing. */
   client: SgClient;
   /** Where the tree starts, `/Project/<id>`. */
   rootPath: string;
   /** Opens the tree down to this path on mount, one level per call. */
-  seedPath?: string | null;
+  seedPath?: string | string[] | null;
   /** Draws a checkbox per node and reports the checked rows. */
   checkable?: boolean;
+  selection?: 'none' | 'single' | 'multiple';
   onCheckedChange?: (rows: EntityRef[]) => void;
-  /** A node with nothing under it was chosen. */
   onSelect?: (node: TreeNode) => void;
+  onError?: (error: Error) => void;
   /** Shows a filter input that narrows the nodes already loaded. */
   filterable?: boolean;
   filterPlaceholder?: string;
+  /** Field holding the thumbnail URL. `false`, the default here, hides the leading slot. */
+  thumbnail?: string | false;
+  /** Field shown as the row's label. Falls back to the label the tree answers. */
+  labelField?: string;
+  /** Field shown under the label. */
+  subLabelField?: string;
+  /** Muted line under the label, of the caller's own making. Wins over `subLabelField`. */
+  subLabel?: (node: TreeNode) => string;
+  /** Right-aligned field, drawn by its data type through FieldValue. */
+  secondaryField?: string;
+  /** Right-aligned text of the caller's own making. Wins over `secondaryField`. */
+  secondary?: (node: TreeNode) => string;
+  /** Show the schema name beside the label on a node that stands for a type. */
+  showCode?: boolean;
+  /** Extra fields to request, so a caller's own sub-label or secondary can read them. */
+  fields?: string[];
+  /** The site the status sprite is served from. */
+  siteUrl?: string;
+  label?: string;
   maxHeight?: string;
   emptyLabel?: string;
 }
 
 const stateClass = 'text-muted-foreground flex items-center justify-center gap-2 py-10 text-sm';
+const EMPTY_PLAN: TreeFieldPlan = { status: {}, secondary: {}, statuses: null };
+
+/** `aria-checked` as a tree row spells it: `mixed` for a part-checked branch. */
+function checkedAttr(state: TreeRow['checked']): 'true' | 'false' | 'mixed' {
+  return state === 'mixed' ? 'mixed' : state === 'checked' ? 'true' : 'false';
+}
 
 /**
  * A project's navigation tree, one level per call.
@@ -62,6 +77,9 @@ const stateClass = 'text-muted-foreground flex items-center justify-center gap-2
  * the field name `sg_sequence` (post_hierarchy_search) - so `seedPath` is followed by
  * taking whichever child is a prefix of it rather than by parsing the path.
  *
+ * Every row's fields come with its level: one read per type over the ids just returned,
+ * so a sub-label or a status costs nothing per row.
+ *
  * The filter narrows what is already loaded. It never asks the server, so a branch that
  * was never opened is not searched.
  */
@@ -70,204 +88,166 @@ export function EntityTree({
   rootPath,
   seedPath = null,
   checkable = false,
+  selection = 'single',
   onCheckedChange,
   onSelect,
+  onError,
   filterable = false,
   filterPlaceholder = 'Filter loaded nodes',
+  thumbnail = false,
+  labelField,
+  subLabelField,
+  subLabel,
+  secondaryField,
+  secondary,
+  showCode = false,
+  fields,
+  siteUrl,
+  label = 'Project hierarchy',
   maxHeight = '24rem',
   emptyLabel = 'Nothing under this project',
   className,
   ...rest
 }: EntityTreeProps) {
-  const [nodes, setNodes] = useState<Record<string, TreeNode>>({});
-  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
-  const [busy, setBusy] = useState<Record<string, boolean>>({});
-  const [checked, setChecked] = useState<Record<string, boolean>>({});
-  const [cursor, setCursor] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const schema = useMemo(() => createSchemaService(client), [client]);
+  const statusTable = useMemo(() => createStatusService(client), [client]);
+
+  /** What a level is read under: the status names, the thumbnail and whatever the row shows. */
+  const requested = [
+    ...TREE_STATUS_FIELDS,
+    ...(thumbnail === false ? [] : [thumbnail]),
+    ...(labelField ? [labelField] : []),
+    ...(subLabelField ? [subLabelField] : []),
+    ...(secondaryField && secondaryField !== 'id' ? [secondaryField] : []),
+    ...(fields ?? []),
+  ].join(',');
+
+  const engine = useMemo(
+    () =>
+      createTree({
+        rootPath,
+        selection,
+        loader: hierarchyLoader(client, { fields: requested.split(',') }),
+      }),
+    [client, rootPath, selection, requested],
+  );
+
+  const snap = useSyncExternalStore(engine.subscribe, engine.snapshot, engine.snapshot);
   const [filter, setFilter] = useState('');
-  const started = useRef(false);
+  const [plan, setPlan] = useState<TreeFieldPlan>(EMPTY_PLAN);
   const rootRef = useRef<HTMLDivElement | null>(null);
-  const reading = useRef<Record<string, boolean>>({});
-
-  const read = useCallback(
-    async (path: string, level: number): Promise<TreeNode | null> => {
-      if (reading.current[path]) return null;
-      reading.current[path] = true;
-      setBusy((was) => ({ ...was, [path]: true }));
-      try {
-        const answer = await client.hierarchyExpand(path);
-        const own = toNode(answer, level);
-        setNodes((was) => {
-          const next = { ...was, [path]: own };
-          for (const child of answer.children) next[child.path] = toNode(child, level + 1);
-          return next;
-        });
-        setError(null);
-        return own;
-      } catch (e) {
-        setError(e instanceof Error ? e.message : String(e));
-        return null;
-      } finally {
-        reading.current[path] = false;
-        setBusy((was) => ({ ...was, [path]: false }));
-      }
-    },
-    [client],
-  );
-
-  const open = useCallback(
-    async (path: string): Promise<void> => {
-      const node = nodes[path];
-      setExpanded((was) => ({ ...was, [path]: true }));
-      // One level per call, and `children` names the next paths (post_hierarchy_expand),
-      // so a level already read is never read again.
-      if (node && node.childPaths.length === 0 && node.hasChildren) await read(path, node.level);
-    },
-    [nodes, read],
-  );
-
-  const close = useCallback((path: string): void => {
-    setExpanded((was) => ({ ...was, [path]: false }));
-  }, []);
 
   useEffect(() => {
-    if (started.current) return;
-    started.current = true;
-    void (async () => {
-      const root = await read(rootPath, 0);
-      if (!root) return;
-      setCursor(rootPath);
-      setExpanded((was) => ({ ...was, [rootPath]: true }));
-      if (!seedPath || seedPath === rootPath) return;
-      // The path shape is the site's own navigation configuration, not a fixed hierarchy
-      // (post_hierarchy_search), so the walk follows whichever child is a prefix of the seed.
-      let here = root;
-      for (let depth = 0; depth < 12; depth += 1) {
-        const child: string | undefined = here.childPaths.find((p) => seedPath === p || seedPath.startsWith(`${p}/`));
-        if (!child) return;
-        setExpanded((was) => ({ ...was, [child]: true }));
-        setCursor(child);
-        if (child === seedPath) return;
-        const loaded = await read(child, here.level + 1);
-        if (!loaded) return;
-        here = loaded;
-      }
-    })();
-  }, [read, rootPath, seedPath]);
+    void (seedPath ? engine.expandToPath(seedPath) : engine.load());
+  }, [engine, seedPath]);
 
   useEffect(() => {
-    const rows: EntityRef[] = [];
-    for (const [path, on] of Object.entries(checked)) {
-      const entity = on ? hierarchyEntity(nodes[path]?.ref) : null;
-      if (entity) rows.push(entity);
-    }
-    onCheckedChange?.(rows);
-    // The callback is the caller's; the checked set and the nodes are what move.
+    if (snap.error) onError?.(snap.error);
+    // The callback is the caller's; the error is what moves.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [checked, nodes]);
+  }, [snap.error]);
 
-  /* the visible list ------------------------------------------------------ */
+  /** The checked set as one string, so the callback fires when it moves and not on every keystroke. */
+  const checkedKey = snap.checked.join('|');
 
-  const parents = useMemo(() => {
-    const map: Record<string, string> = {};
-    for (const node of Object.values(nodes)) for (const child of node.childPaths) map[child] = node.path;
-    return map;
-  }, [nodes]);
+  useEffect(() => {
+    onCheckedChange?.(engine.checkedRefs());
+    // The callback is the caller's; the checked set is what moves.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [engine, checkedKey]);
 
-  /** Paths kept by the filter: every match, and every ancestor that leads to one. */
-  const kept = useMemo(() => {
-    const needle = filter.trim().toLowerCase();
-    if (!needle) return null;
-    const keep = new Set<string>();
-    for (const node of Object.values(nodes)) {
-      if (!node.label.toLowerCase().includes(needle)) continue;
-      keep.add(node.path);
-      let up = parents[node.path];
-      while (up) {
-        keep.add(up);
-        up = parents[up];
-      }
-    }
-    return keep;
-  }, [filter, nodes, parents]);
+  /* what a row draws with -------------------------------------------------- */
 
-  const visible = useMemo(() => {
-    const out: TreeNode[] = [];
-    const walk = (path: string): void => {
-      const node = nodes[path];
-      if (!node) return;
-      if (kept && !kept.has(path)) return;
-      out.push(node);
-      // While filtering, a branch that leads to a match is open whatever its own state.
-      if (expanded[path] || kept) for (const child of node.childPaths) walk(child);
+  /** The types on show, as one string so the schema read runs when the set changes and not before. */
+  const typeKey = [...new Set(snap.rows.map((row) => row.node.entity?.type).filter((t) => t !== undefined))]
+    .sort()
+    .join(',');
+
+  useEffect(() => {
+    let live = true;
+    const types = typeKey.split(',').filter(Boolean);
+    void resolveTreeFields(schema, statusTable, types, secondaryField).then((found) => {
+      if (live) setPlan(found);
+    }, onError);
+    return () => {
+      live = false;
     };
-    walk(rootPath);
-    return out;
-  }, [nodes, expanded, kept, rootPath]);
+    // The callback is the caller's; the types on show and the secondary field are what move.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [schema, statusTable, typeKey, secondaryField]);
 
-  /* keyboard -------------------------------------------------------------- */
+  const hasSubLabel = Boolean(subLabelField || subLabel);
+  /** An id is a code, and codes are the mono treatment of `docs/design-rules.md`. */
+  const secondaryIsId = secondaryField === 'id';
 
-  function moveTo(index: number): void {
-    const node = visible[Math.max(0, Math.min(index, visible.length - 1))];
-    if (node) setCursor(node.path);
+  function labelOf(node: TreeNode): string {
+    const explicit = labelField ? node.values[labelField] : undefined;
+    return typeof explicit === 'string' && explicit.length > 0 ? explicit : node.label;
   }
 
-  function activate(node: TreeNode): void {
-    if (node.hasChildren) void (expanded[node.path] ? close(node.path) : open(node.path));
-    else onSelect?.(node);
+  /** The schema name a folder stands for, which is the only code a tree row has. */
+  function codeOf(node: TreeNode): string {
+    return showCode && node.ref.kind === 'entity_type' && typeof node.ref.value === 'string' ? node.ref.value : '';
+  }
+
+  function subLabelOf(node: TreeNode): string {
+    if (subLabel) return subLabel(node);
+    if (!subLabelField) return '';
+    const raw = node.values[subLabelField];
+    return raw === null || raw === undefined ? '' : String(raw);
+  }
+
+  function thumbOf(node: TreeNode): string | null {
+    if (thumbnail === false) return null;
+    const raw = node.values[thumbnail];
+    return typeof raw === 'string' ? raw : null;
+  }
+
+  function statusOf(node: TreeNode): string {
+    const field = node.entity ? plan.status[node.entity.type] : null;
+    const code = field ? node.values[field.name] : null;
+    return typeof code === 'string' ? code : '';
+  }
+
+  function secondaryValue(node: TreeNode): unknown {
+    if (!secondaryField) return null;
+    return secondaryField === 'id' ? (node.entity?.id ?? null) : node.values[secondaryField];
+  }
+
+  function secondaryType(node: TreeNode): string {
+    const field = node.entity ? plan.secondary[node.entity.type] : null;
+    return field?.dataType ?? (secondaryIsId ? 'number' : 'text');
+  }
+
+  /* interaction ------------------------------------------------------------ */
+
+  function activate(row: TreeRow): void {
+    engine.focus(row.node.path);
+    if (row.node.hasChildren) void engine.toggle(row.node.path);
+    else {
+      engine.select(row.node.path);
+      onSelect?.(row.node);
+    }
   }
 
   function onKeyDown(event: React.KeyboardEvent): void {
-    const index = visible.findIndex((node) => node.path === cursor);
-    const node = visible[index];
-    if (!node) return;
-    switch (event.key) {
-      case 'ArrowDown':
-        event.preventDefault();
-        moveTo(index + 1);
-        break;
-      case 'ArrowUp':
-        event.preventDefault();
-        moveTo(index - 1);
-        break;
-      case 'ArrowRight':
-        event.preventDefault();
-        if (node.hasChildren && !expanded[node.path]) void open(node.path);
-        else moveTo(index + 1);
-        break;
-      case 'ArrowLeft': {
-        event.preventDefault();
-        if (node.hasChildren && expanded[node.path]) close(node.path);
-        else {
-          const up = parents[node.path];
-          if (up) setCursor(up);
-        }
-        break;
-      }
-      case 'Home':
-        event.preventDefault();
-        moveTo(0);
-        break;
-      case 'End':
-        event.preventDefault();
-        moveTo(visible.length - 1);
-        break;
-      case 'Enter':
-      case ' ':
-        event.preventDefault();
-        activate(node);
-        break;
-    }
+    const path = snap.cursor;
+    if (!engine.keyDown(event)) return;
+    event.preventDefault();
+    if (event.key !== 'Enter' || path === null) return;
+    const node = engine.node(path);
+    if (node && !node.hasChildren) onSelect?.(node);
   }
 
-  useEffect(() => {
-    // The cursor is a roving tabindex, so the focused row follows it.
-    if (!cursor) return;
+  const cursor = snap.cursor;
+  const moveFocus = useCallback(() => {
+    // One tab stop: focus follows the cursor while the tree already holds it.
     const root = rootRef.current;
-    if (!root || !root.contains(document.activeElement)) return;
-    root.querySelector<HTMLElement>(`[data-path="${CSS.escape(cursor)}"]`)?.focus();
-  }, [cursor, visible]);
+    if (!cursor || !root || !root.contains(document.activeElement)) return;
+    root.querySelector<HTMLElement>(`[data-path="${CSS.escape(cursor)}"]`)?.focus({ preventScroll: true });
+  }, [cursor]);
+
+  useEffect(moveFocus, [moveFocus, snap.rows]);
 
   return (
     <div
@@ -280,7 +260,10 @@ export function EntityTree({
         <Input
           type="search"
           value={filter}
-          onChange={(event) => setFilter(event.target.value)}
+          onChange={(event) => {
+            setFilter(event.target.value);
+            engine.setFilter(event.target.value);
+          }}
           placeholder={filterPlaceholder}
           aria-label={filterPlaceholder}
           data-slot="entity-tree-filter"
@@ -292,83 +275,171 @@ export function EntityTree({
         style={{ maxHeight }}
         className="border-border w-full overflow-auto rounded-md border p-1"
       >
-        {error ? (
+        {snap.status === 'error' ? (
           <p className={cn(stateClass, 'text-destructive')}>
             <CircleAlert aria-hidden="true" className="size-4 shrink-0" />
-            {error}
+            {snap.error?.message}
           </p>
-        ) : visible.length === 0 && busy[rootPath] ? (
+        ) : snap.status === 'loading' || snap.status === 'idle' ? (
           <div className="flex flex-col gap-2 p-1">
             {Array.from({ length: 5 }, (_, index) => (
               <Skeleton key={index} className="h-6 w-full" />
             ))}
           </div>
-        ) : visible.length === 0 ? (
+        ) : snap.rows.length === 0 ? (
           <p className={stateClass}>
             <Inbox aria-hidden="true" className="size-4 shrink-0" />
             {emptyLabel}
           </p>
         ) : (
-          <ul role="tree" aria-label="Project hierarchy" onKeyDown={onKeyDown} className="flex flex-col">
-            {visible.map((node) => {
-              const entity = hierarchyEntity(node.ref);
+          <ul
+            role="tree"
+            aria-label={label}
+            aria-multiselectable={selection === 'multiple' ? true : undefined}
+            data-slot="entity-tree-list"
+            style={{ '--tree-indent': '1rem' } as React.CSSProperties}
+            className="flex flex-col"
+            onKeyDown={onKeyDown}
+          >
+            {snap.rows.map((row) => {
+              const node = row.node;
+              const name = labelOf(node);
+              const code = codeOf(node);
+              const sub = subLabelOf(node);
+              const status = statusOf(node);
+              const custom = secondary ? secondary(node) : '';
+              const raw = secondaryValue(node);
               return (
                 <li
                   key={node.path}
                   role="none"
-                  className="flex items-center gap-1.5"
-                  style={{ paddingLeft: `${node.level * 16}px` }}
+                  data-slot="entity-tree-item"
+                  style={{ paddingInlineStart: `calc(var(--tree-indent) * ${node.level})` }}
                 >
-                  {checkable ? (
-                    <Checkbox
-                      aria-label={`Select ${node.label}`}
-                      checked={checked[node.path] === true}
-                      onCheckedChange={() => setChecked((was) => ({ ...was, [node.path]: !was[node.path] }))}
-                      className="shrink-0"
-                    />
-                  ) : null}
+                  {/* The keyboard model lives on the `tree` element, which owns the roving focus. */}
                   <div
                     role="treeitem"
+                    data-slot="entity-tree-item-label"
                     data-path={node.path}
+                    data-level={node.level}
+                    data-state={node.hasChildren ? (row.expanded ? 'open' : 'closed') : undefined}
+                    data-selected={row.selected ? 'true' : undefined}
                     aria-level={node.level + 1}
-                    aria-expanded={node.hasChildren ? expanded[node.path] === true : undefined}
-                    aria-selected={cursor === node.path}
-                    tabIndex={cursor === node.path ? 0 : -1}
-                    onClick={() => {
-                      setCursor(node.path);
-                      activate(node);
-                    }}
+                    aria-expanded={node.hasChildren ? row.expanded : undefined}
+                    aria-selected={row.selected}
+                    aria-checked={checkable ? checkedAttr(row.checked) : undefined}
+                    aria-busy={row.loading ? true : undefined}
+                    tabIndex={row.focused ? 0 : -1}
+                    onClick={() => activate(row)}
                     className={cn(
-                      'focus-visible:ring-ring focus-visible:ring-offset-background flex min-w-0 flex-1 cursor-default items-center gap-1.5 rounded-md px-2 py-1.5 text-sm outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2',
-                      cursor === node.path ? 'bg-accent text-accent-foreground' : 'hover:bg-muted/50',
+                      'focus-visible:ring-ring focus-visible:ring-offset-background flex min-w-0 cursor-default gap-1.5 rounded-md px-2 py-1.5 text-sm outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2',
+                      hasSubLabel ? 'items-start' : 'items-center',
+                      row.selected ? 'bg-accent text-accent-foreground' : 'hover:bg-muted/50',
                     )}
                   >
                     {node.hasChildren ? (
-                      busy[node.path] ? (
+                      row.loading ? (
                         <Loader aria-hidden="true" className="size-4 shrink-0 motion-safe:animate-spin" />
                       ) : (
                         <ChevronRight
                           aria-hidden="true"
                           className={cn(
-                            'size-4 shrink-0 transition-transform duration-150 ease-out',
-                            expanded[node.path] && 'rotate-90',
+                            'text-muted-foreground size-4 shrink-0 transition-transform duration-150 ease-out',
+                            row.expanded && 'rotate-90',
                           )}
                         />
                       )
                     ) : (
                       <span aria-hidden="true" className="size-4 shrink-0" />
                     )}
-                    {entity ? (
-                      <EntityChip
-                        entity={{ ...entity, name: node.label }}
-                        size="sm"
-                        className="border-none bg-transparent px-0"
-                      />
-                    ) : (
-                      <span className="truncate" title={node.label}>
-                        {node.label}
+
+                    {checkable ? (
+                      // The row carries `aria-checked`, so the box itself is chrome and never a second tab stop.
+                      <span
+                        aria-hidden="true"
+                        data-slot="entity-tree-checkbox"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          engine.focus(node.path);
+                          engine.toggleChecked(node.path);
+                        }}
+                        className={cn(
+                          'flex size-4 shrink-0 items-center justify-center rounded-[4px] border transition-colors duration-150 [&>svg]:size-3.5',
+                          row.checked === 'unchecked'
+                            ? 'border-input'
+                            : 'border-primary bg-primary text-primary-foreground',
+                        )}
+                      >
+                        {row.checked === 'checked' ? <Check /> : row.checked === 'mixed' ? <Minus /> : null}
                       </span>
-                    )}
+                    ) : null}
+
+                    {thumbnail !== false ? (
+                      <span className="flex shrink-0 items-center">
+                        <Thumbnail src={thumbOf(node)} aspect="square" size="sm" />
+                      </span>
+                    ) : null}
+
+                    <span className="flex min-w-0 flex-1 flex-col">
+                      <span className="flex min-w-0 items-center gap-1.5">
+                        <span data-slot="entity-tree-label" className="truncate" title={name}>
+                          {name}
+                        </span>
+                        {code ? (
+                          <span
+                            data-slot="entity-tree-code"
+                            className="text-muted-foreground shrink-0 font-mono text-xs"
+                          >
+                            {code}
+                          </span>
+                        ) : null}
+                      </span>
+                      {sub ? (
+                        <span
+                          data-slot="entity-tree-sub-label"
+                          className="text-muted-foreground truncate text-xs"
+                          title={sub}
+                        >
+                          {sub}
+                        </span>
+                      ) : null}
+                    </span>
+
+                    {status ? (
+                      // A tree row is dense, so the status is its icon; the name stays in the badge for a reader.
+                      <StatusBadge
+                        code={status}
+                        status={plan.statuses?.[status] ?? null}
+                        field={node.entity ? (plan.status[node.entity.type] ?? null) : null}
+                        variant="icon"
+                        size="sm"
+                        siteUrl={siteUrl}
+                        className="shrink-0"
+                      />
+                    ) : null}
+
+                    {custom ? (
+                      <span data-slot="entity-tree-secondary" className="text-muted-foreground shrink-0 text-xs">
+                        {custom}
+                      </span>
+                    ) : secondaryField && !isEmptyValue(raw) ? (
+                      <span
+                        data-slot="entity-tree-secondary"
+                        className={cn(
+                          'text-muted-foreground flex shrink-0 items-center text-xs',
+                          secondaryIsId && 'font-mono tabular-nums',
+                        )}
+                      >
+                        <FieldValue
+                          value={raw}
+                          dataType={secondaryType(node)}
+                          field={node.entity ? (plan.secondary[node.entity.type] ?? null) : null}
+                          statuses={plan.statuses}
+                          siteUrl={siteUrl}
+                          className="w-auto justify-end text-xs"
+                        />
+                      </span>
+                    ) : null}
                   </div>
                 </li>
               );

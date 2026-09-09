@@ -623,14 +623,15 @@
       "name": "entity-tree",
       "type": "registry:component",
       "title": "Entity Tree",
-      "description": "A lazy tree over a project's navigation hierarchy, with keyboard navigation, checkboxes and a filter.",
+      "description": "A lazy tree over a project's navigation hierarchy, with a keyboard model, tri-state checkboxes and a filter.",
       "dependencies": [
         "@sg-widgets/core",
         "@lucide/svelte"
       ],
       "registryDependencies": [
-        "local:entity-chip",
-        "checkbox",
+        "local:field-value",
+        "local:status-badge",
+        "local:thumbnail",
         "skeleton",
         "input"
       ],

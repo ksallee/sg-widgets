@@ -18,7 +18,7 @@
 	import type { Snippet } from 'svelte';
 	import type { HTMLAttributes } from 'svelte/elements';
 	import type { FieldSchema } from '@sg-widgets/core';
-	import { COLOR_SENTINEL, parseBgColor, parseColorInput, rgbToCss } from '@sg-widgets/core';
+	import { COLOR_SENTINEL, colorToHex, parseBgColor, parseColorInput, rgbToCss } from '@sg-widgets/core';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
 
@@ -92,6 +92,15 @@
 		commit();
 	}
 
+	// The native picker answers in hex; the store wants the decimal triple.
+	function pick(event: Event): void {
+		const hex = (event.currentTarget as HTMLInputElement).value;
+		const result = parseColorInput(hex);
+		if ('error' in result) return;
+		draft = result.value ?? '';
+		commit();
+	}
+
 	function onkeydown(event: KeyboardEvent): void {
 		if (event.key === 'Enter') commit();
 		if (event.key === 'Escape') {
@@ -118,16 +127,26 @@
 	{...rest}
 >
 	<div class="flex w-full min-w-0 items-center gap-2">
-		<span
-			aria-hidden="true"
+		<label
 			data-slot="color-editor-swatch"
+			title={disabled || readonly ? undefined : 'Pick a colour'}
 			style={rgb ? `background-color:${rgbToCss(rgb)}` : undefined}
 			class={cn(
-				'ring-border shrink-0 rounded-md ring-1',
+				'ring-border focus-within:ring-ring focus-within:ring-offset-background relative shrink-0 overflow-hidden rounded-md ring-1 transition-shadow duration-150 focus-within:ring-2 focus-within:ring-offset-2',
 				SWATCH[size],
-				rgb ? undefined : 'bg-muted'
+				rgb ? undefined : 'bg-muted',
+				disabled || readonly ? 'cursor-default' : 'cursor-pointer'
 			)}
-		></span>
+		>
+			<input
+				type="color"
+				value={colorToHex(rgb ? `${rgb.r},${rgb.g},${rgb.b}` : null) ?? '#808080'}
+				disabled={disabled || readonly}
+				aria-label={field?.displayName ? `${field.displayName} colour` : 'Colour'}
+				class="absolute inset-0 size-full cursor-[inherit] opacity-0"
+				oninput={pick}
+			/>
+		</label>
 		<Input
 			bind:value={draft}
 			type="text"

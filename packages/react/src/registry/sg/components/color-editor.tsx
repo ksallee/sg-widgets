@@ -1,6 +1,6 @@
 import * as React from 'react';
 import type { FieldSchema } from '@sg-widgets/core';
-import { COLOR_SENTINEL, parseBgColor, parseColorInput, rgbToCss } from '@sg-widgets/core';
+import { COLOR_SENTINEL, colorToHex, parseBgColor, parseColorInput, rgbToCss } from '@sg-widgets/core';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 
@@ -85,6 +85,16 @@ export function ColorEditor({
     onValueChange?.(result.value);
   };
 
+  // The native picker answers in hex; the store wants the decimal triple.
+  const pick = (event: React.ChangeEvent<HTMLInputElement>): void => {
+    const result = parseColorInput(event.target.value);
+    if ('error' in result) return;
+    setParseError(null);
+    onErrorChange?.(null);
+    setDraft(result.value ?? '');
+    if (result.value !== value) onValueChange?.(result.value);
+  };
+
   // Losing focus because the control was removed from the page is not a commit.
   const onBlur = (event: React.FocusEvent<HTMLInputElement>): void => {
     if (!event.currentTarget.isConnected) return;
@@ -109,12 +119,26 @@ export function ColorEditor({
       {...rest}
     >
       <div className="flex w-full min-w-0 items-center gap-2">
-        <span
-          aria-hidden="true"
+        <label
           data-slot="color-editor-swatch"
+          title={disabled || readonly ? undefined : 'Pick a colour'}
           style={rgb ? { backgroundColor: rgbToCss(rgb) } : undefined}
-          className={cn('ring-border shrink-0 rounded-md ring-1', SWATCH[size], rgb ? undefined : 'bg-muted')}
-        />
+          className={cn(
+            'ring-border focus-within:ring-ring focus-within:ring-offset-background relative shrink-0 overflow-hidden rounded-md ring-1 transition-shadow duration-150 focus-within:ring-2 focus-within:ring-offset-2',
+            SWATCH[size],
+            rgb ? undefined : 'bg-muted',
+            disabled || readonly ? 'cursor-default' : 'cursor-pointer',
+          )}
+        >
+          <input
+            type="color"
+            value={colorToHex(rgb ? `${rgb.r},${rgb.g},${rgb.b}` : null) ?? '#808080'}
+            disabled={disabled || readonly}
+            aria-label={field?.displayName ? `${field.displayName} colour` : 'Colour'}
+            className="absolute inset-0 size-full cursor-[inherit] opacity-0"
+            onChange={pick}
+          />
+        </label>
         <Input
           value={draft}
           type="text"

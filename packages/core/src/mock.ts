@@ -827,6 +827,14 @@ export class MockClient implements SgClient {
     return out;
   }
 
+  async fieldWithProject(entityType: string, field: string, projectId: number): Promise<FieldSchema> {
+    const all = await this.fields(entityType, projectId);
+    const one = all[field];
+    // The 404 names the type and the field together, the only schema error that says which half is wrong.
+    if (!one) throw new SgApiError(404, null, `Field '${entityType}.${field}' does not exist.`);
+    return one;
+  }
+
   async search(entityType: string, options: SearchOptions): Promise<SearchResult> {
     await this.gate();
     const spec = this.schemaOf(entityType);

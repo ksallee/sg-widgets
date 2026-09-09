@@ -99,6 +99,9 @@ export function createQueryCache(client: SgClient, options: QueryCacheOptions = 
       // `project_id` changes only `hidden_values` (probe 009), but it is still a different answer.
       return run('fields', [entityType, projectId ?? null], () => client.fields(entityType, projectId));
     },
+    fieldWithProject(entityType: string, field: string, projectId: number): Promise<FieldSchema> {
+      return run('fieldWithProject', [entityType, field, projectId], () => client.fieldWithProject(entityType, field, projectId));
+    },
     search(entityType: string, searchOptions: SearchOptions): Promise<SearchResult> {
       return run('search', [entityType, searchOptions], () => client.search(entityType, searchOptions));
     },

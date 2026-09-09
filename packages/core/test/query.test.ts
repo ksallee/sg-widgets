@@ -19,6 +19,10 @@ function counting(inner: SgClient): { client: SgClient; calls: string[] } {
       calls.push(`fields ${entityType} ${projectId ?? '-'}`);
       return inner.fields(entityType, projectId);
     },
+    fieldWithProject(entityType: string, field: string, projectId: number): Promise<FieldSchema> {
+      calls.push(`fieldWithProject ${entityType}.${field} ${projectId}`);
+      return inner.fieldWithProject(entityType, field, projectId);
+    },
     search(entityType: string, options: SearchOptions): Promise<SearchResult> {
       calls.push(`search ${entityType}`);
       return inner.search(entityType, options);

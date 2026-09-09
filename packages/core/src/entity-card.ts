@@ -34,6 +34,8 @@ export interface EntityCardColumn {
 
 export interface EntityCardModel {
   entity: EntityRef;
+  /** The row the model was built from, for a caller's own label or sub-label. */
+  row: EntityRow;
   name: string;
   /** The type's display name, from the site's enabled types. */
   typeLabel: string;
@@ -88,6 +90,7 @@ export async function describeEntityCard(
   const thumbnail = row.attributes[image];
   return {
     entity: { type: row.type, id: row.id, name: displayNameOf(row.attributes) },
+    row,
     name: displayNameOf(row.attributes, `${row.type} #${row.id}`),
     typeLabel: types.find((t) => t.name === row.type)?.displayName ?? row.type,
     thumbnail: typeof thumbnail === 'string' ? thumbnail : null,

@@ -2,6 +2,8 @@
 	import type { ThumbnailSize } from '$lib/registry/components/thumbnail.svelte';
 
 	export type EntityCardSize = 'sm' | 'md' | 'lg';
+	/** `card` is the stacked surface; `tile` is the thumbnail-first cell a grid lays out. */
+	export type EntityCardVariant = 'card' | 'tile';
 
 	/** Cards and detail panes take the top of the thumbnail ladder (`docs/design-rules.md`). */
 	const THUMB: Record<EntityCardSize, ThumbnailSize> = { sm: 'xl', md: 'xl', lg: '2xl' };
@@ -9,11 +11,20 @@
 	const STACK: Record<EntityCardSize, string> = { sm: 'gap-2', md: 'gap-3', lg: 'gap-4' };
 	const NAME: Record<EntityCardSize, string> = { sm: 'text-sm', md: 'text-sm', lg: 'text-base' };
 	const ROWS: Record<EntityCardSize, string> = { sm: 'gap-y-1.5', md: 'gap-y-2', lg: 'gap-y-2' };
+	const BODY: Record<EntityCardSize, string> = { sm: 'p-2', md: 'p-2', lg: 'p-3' };
+
+	/** The path of a row-anatomy prop, whether it came as a path or as a resolved column. */
+	function pathOf(spec: string | { path: string } | null | undefined): string {
+		if (spec === null || spec === undefined) return '';
+		return typeof spec === 'string' ? spec : spec.path;
+	}
 </script>
 
 <script lang="ts">
+	import type { Snippet } from 'svelte';
 	import type { HTMLAttributes } from 'svelte/elements';
 	import type {
+		CollectionColumn,
 		EntityCardColumn,
 		EntityCardModel,
 		EntityRef,
@@ -22,9 +33,11 @@
 		StatusRecord
 	} from '@sg-widgets/core';
 	import {
+		cellValue,
 		describeEntityCard,
 		entityDetailUrl,
 		fieldText,
+		imageState,
 		isEmptyValue,
 		loadEntityCard,
 		renderKindFor,
@@ -41,6 +54,7 @@
 	import Tag from '@lucide/svelte/icons/tag';
 	import User from '@lucide/svelte/icons/user';
 	import Video from '@lucide/svelte/icons/video';
+	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
 	import StatusBadge from '$lib/registry/components/status-badge.svelte';
@@ -53,11 +67,32 @@
 		row?: EntityRow | null;
 		/** The row to read, when no `row` is given. */
 		entity?: EntityRef | null;
-		/** Dotted field paths for the grid, in order. */
+		/** Dotted field paths for the grid, in order. `card` only. */
 		fields?: string[];
+		variant?: EntityCardVariant;
 		size?: EntityCardSize;
 		/** The `image` field the thumbnail comes from. */
 		imagePath?: string;
+		/** Field shown as the name. Defaults to the type's own display name. `tile` only. */
+		labelField?: string | null;
+		/** The left of the tile's metadata line: a path, or a resolved column so it renders by type. */
+		subLabelField?: string | CollectionColumn | null;
+		/** The caller's own sub-label. Wins over `subLabelField`. */
+		subLabel?: (row: EntityRow) => string;
+		/** The right of the tile's metadata line: a path, or a resolved column so it renders by type. */
+		secondaryField?: string | CollectionColumn | null;
+		/** The caller's own text on the right of the metadata line. Wins over `secondaryField`. */
+		secondary?: (row: EntityRow) => string;
+		/** Show the row's `code` beside the name when the two differ. `tile` only. */
+		showCode?: boolean;
+		/** `Status` rows by code (probe 010). Read through the context when not given. */
+		statuses?: Record<string, StatusRecord> | null;
+		/** Draws the tile's selection checkbox and gives the tile a focus ring. */
+		selectable?: boolean;
+		selected?: boolean;
+		onselectedchange?: (selected: boolean) => void;
+		/** Controls in the thumbnail's top-right corner, on hover or focus. `tile` only. */
+		actions?: Snippet;
 		/** The web app the row lives on. Defaults to the context's. */
 		siteUrl?: string;
 		/** The site's `hours_per_day` from `GET /preferences`; durations then render in days. */
@@ -72,8 +107,20 @@
 		row = null,
 		entity = null,
 		fields = [],
+		variant = 'card',
 		size = 'md',
 		imagePath = 'image',
+		labelField = null,
+		subLabelField = null,
+		subLabel,
+		secondaryField = null,
+		secondary,
+		showCode = false,
+		statuses = null,
+		selectable = false,
+		selected = false,
+		onselectedchange,
+		actions,
 		siteUrl,
 		hoursPerDay,
 		locale,
@@ -106,25 +153,38 @@
 
 	async function build(
 		source: { row: EntityRow | null; entity: EntityRef | null },
-		paths: string[]
+		wanted: string[],
+		table: Record<string, StatusRecord> | null
 	): Promise<Loaded> {
-		const options = { fields: paths, imagePath };
+		const options = { fields: wanted, imagePath };
 		const card = source.row
 			? await describeEntityCard(context, source.row, options)
 			: source.entity
 				? await loadEntityCard(context, source.entity, options)
 				: null;
 		if (!card) throw new Error('An entity card needs a row or a reference.');
-		return { card, statuses: Object.fromEntries(await context.statuses.byCode()) };
+		return { card, statuses: table ?? Object.fromEntries(await context.statuses.byCode()) };
 	}
+
+	const subPath = $derived(pathOf(subLabelField));
+	const secondaryPath = $derived(pathOf(secondaryField));
+	// A tile draws one metadata line, so the paths it resolves are the row anatomy's,
+	// not the caller's field grid.
+	const paths = $derived(
+		variant === 'tile' ? [...new Set([subPath, secondaryPath].filter((p) => p.length > 0))] : fields
+	);
 
 	// The read hangs off the props through a derived, so a new row or a new path
 	// list is a new promise and no effect has to guard against the last one.
-	const loaded = $derived(build({ row, entity }, fields));
+	const loaded = $derived(build({ row, entity }, paths, statuses));
 	const site = $derived(siteUrl ?? context.siteUrl);
 	const stateClass = 'text-muted-foreground flex items-center justify-center gap-2 py-6 text-sm';
 	const linkClass =
 		'focus-visible:ring-ring focus-visible:ring-offset-background truncate underline-offset-2 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-offset-2';
+	/** Chrome over the thumbnail: absent until it is wanted, then a fade and a small rise. */
+	const revealClass = 'transition-[opacity,transform] duration-150 ease-out motion-reduce:transition-opacity';
+	const hiddenClass =
+		'opacity-0 group-hover/tile:opacity-100 group-focus-within/tile:opacity-100 motion-safe:-translate-y-0.5 motion-safe:group-hover/tile:translate-y-0 motion-safe:group-focus-within/tile:translate-y-0';
 
 	/** An entity value and a multi_entity value are the same shape, one boxed (field_types/multi_entity). */
 	function refsOf(value: unknown): EntityRef[] {
@@ -138,10 +198,29 @@
 			...(column.field?.displayValues === undefined ? {} : { displayValues: column.field.displayValues })
 		});
 	}
+
+	/** The column behind a metadata slot, when it resolved to something worth a line. */
+	function slotColumn(card: EntityCardModel, path: string): EntityCardColumn | null {
+		if (path.length === 0) return null;
+		const column = card.columns.find((c) => c.path === path) ?? null;
+		return column && !isEmptyValue(column.value) ? column : null;
+	}
+
+	function nameOf(card: EntityCardModel): string {
+		if (!labelField) return card.name;
+		return String(cellValue(card.row, labelField) ?? '');
+	}
+
+	/** The programmatic name, when it says something the label does not. */
+	function codeOf(card: EntityCardModel): string {
+		if (!showCode) return '';
+		const raw = cellValue(card.row, 'code');
+		return typeof raw === 'string' && raw.length > 0 && raw !== nameOf(card) ? raw : '';
+	}
 </script>
 
 <!--
-	One row as a card: thumbnail, name, type, status and a grid of field values.
+	One row as a card, or as a tile.
 
 	Given a reference the card reads the row itself: one search asking for the
 	type's identity chain, its thumbnail, its status field and the caller's paths
@@ -155,15 +234,22 @@
 	depend on each other and neither registry CLI can install a cycle. A card is a
 	compact surface, so a linked row is a link and the rest is one line of text
 	through core's `fieldText`.
+
+	A tile is the same row read picture first: the thumbnail fills the top, the
+	status sits on it as an icon, and the row-anatomy props draw one metadata line
+	under the name. A Version with media carries the play overlay the desktop
+	tk-framework-qtwidgets label uses. Selection and activation belong to whoever
+	lays the tiles out, so the tile takes its selected state and spreads the
+	listbox attributes and handlers a collection puts on it.
 -->
-{#snippet cell(column: EntityCardColumn, statuses: Record<string, StatusRecord>)}
+{#snippet cell(column: EntityCardColumn, table: Record<string, StatusRecord>)}
 	{@const kind = renderKindFor(column.dataType)}
 	{#if kind === 'empty' || isEmptyValue(column.value)}
 		<span class="text-muted-foreground text-xs italic select-none">{emptyLabel}</span>
 	{:else if kind === 'status'}
 		<StatusBadge
 			code={String(column.value)}
-			status={statuses[String(column.value)] ?? null}
+			status={table[String(column.value)] ?? null}
 			field={column.field}
 			size="sm"
 			siteUrl={site}
@@ -198,75 +284,187 @@
 	{/if}
 {/snippet}
 
-<div
-	bind:this={ref}
-	data-slot="entity-card"
-	data-size={size}
-	class={cn('flex w-full min-w-0 flex-col', STACK[size], className)}
-	{...rest}
->
-	{#await loaded}
-		<div class={cn('flex min-w-0 items-start', HEADER[size])}>
-			<Skeleton class={cn('aspect-video shrink-0', size === 'lg' ? 'h-24' : 'h-16')} />
-			<div class="flex min-w-0 flex-1 flex-col gap-2">
+{#if variant === 'tile'}
+	<div
+		bind:this={ref}
+		data-slot="entity-card"
+		data-variant="tile"
+		data-size={size}
+		data-state={selected ? 'selected' : undefined}
+		class={cn(
+			'group/tile border-border bg-card focus-visible:ring-ring focus-visible:ring-offset-background relative flex w-full min-w-0 flex-col overflow-hidden rounded-md border text-left outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2',
+			selected && 'bg-accent text-accent-foreground',
+			className
+		)}
+		{...rest}
+	>
+		{#await loaded}
+			<Skeleton class="aspect-video w-full rounded-none" />
+			<div class={cn('flex min-w-0 flex-col gap-1.5', BODY[size])}>
 				<Skeleton class="h-4 w-3/4" />
 				<Skeleton class="h-3 w-1/2" />
 			</div>
-		</div>
-		<div class={cn('grid min-w-0 grid-cols-[minmax(0,auto)_minmax(0,1fr)] gap-x-3', ROWS[size])}>
-			{#each fields as path (path)}
-				<Skeleton class="h-3 w-16" />
-				<Skeleton class="h-3 w-full" />
-			{/each}
-		</div>
-	{:then { card, statuses }}
-		{@const Glyph = GLYPHS[card.entity.type] ?? Tag}
-		{@const url = entityDetailUrl(site, card.entity)}
-		<div class={cn('flex min-w-0 items-start', HEADER[size])}>
-			<Thumbnail src={card.thumbnail} size={THUMB[size]} alt="" />
-			<div class="flex min-w-0 flex-1 flex-col gap-1.5">
-				{#if url}
-					<a
-						href={url}
-						target="_blank"
-						rel="noreferrer"
-						title={card.name}
-						class={cn(linkClass, 'font-medium', NAME[size])}>{card.name}</a
-					>
-				{:else}
-					<span title={card.name} class={cn('truncate font-medium', NAME[size])}>{card.name}</span>
-				{/if}
-				<div class="flex min-w-0 flex-wrap items-center gap-2">
-					<span class="text-muted-foreground inline-flex min-w-0 items-center gap-1.5 text-xs">
-						<Glyph aria-hidden="true" class="size-4 shrink-0 opacity-70" />
-						<span class="truncate">{card.typeLabel}</span>
-					</span>
+		{:then { card, statuses: table }}
+			{@const name = nameOf(card)}
+			{@const code = codeOf(card)}
+			{@const sub = subLabel ? subLabel(card.row) : ''}
+			{@const right = secondary ? secondary(card.row) : ''}
+			{@const subColumn = slotColumn(card, subPath)}
+			{@const secondaryColumn = slotColumn(card, secondaryPath)}
+			<div data-slot="entity-card-media" class="relative w-full">
+				<Thumbnail
+					src={card.thumbnail}
+					size={THUMB[size]}
+					alt=""
+					playable={card.entity.type === 'Version' && imageState(card.thumbnail) === 'ready'}
+					class="h-auto w-full rounded-none border-0"
+				/>
+				<span
+					data-slot="entity-card-overlay"
+					class="absolute top-2 left-2 flex max-w-[calc(100%-1rem)] items-center gap-1.5"
+				>
+					{#if selectable}
+						<span
+							data-slot="entity-card-selection"
+							class={cn('flex items-center', revealClass, selected ? 'opacity-100' : hiddenClass)}
+						>
+							<Checkbox
+								aria-label="Select {name}"
+								checked={selected}
+								onCheckedChange={(value) => onselectedchange?.(value === true)}
+								class="bg-background/80 border-transparent shadow-sm"
+							/>
+						</span>
+					{/if}
 					{#if card.status}
 						<StatusBadge
 							code={card.status.code}
-							status={statuses[card.status.code] ?? null}
+							status={table[card.status.code] ?? null}
 							field={card.status.field}
+							variant="icon"
 							size="sm"
 							siteUrl={site}
+							class="bg-background/80 border-transparent shadow-sm"
 						/>
 					{/if}
+				</span>
+				{#if actions}
+					<span
+						data-slot="entity-card-actions"
+						class={cn('absolute top-2 right-2 flex items-center gap-1.5', revealClass, hiddenClass)}
+					>
+						{@render actions()}
+					</span>
+				{/if}
+			</div>
+			<div data-slot="entity-card-body" class={cn('flex min-w-0 flex-col gap-1.5', BODY[size])}>
+				<span data-slot="entity-card-name" class="flex min-w-0 items-center gap-1.5">
+					<span title={name} class={cn('min-w-0 truncate font-medium', NAME[size])}>{name}</span>
+					{#if code}
+						<span class="text-muted-foreground shrink-0 font-mono text-xs">{code}</span>
+					{/if}
+				</span>
+				{#if sub || subColumn || right || secondaryColumn}
+					<span
+						data-slot="entity-card-meta"
+						class="text-muted-foreground flex min-w-0 items-center gap-1.5 text-xs"
+					>
+						<span data-slot="entity-card-sub" class="flex min-w-0 flex-1 items-center truncate">
+							{#if sub}
+								<span title={sub} class="truncate">{sub}</span>
+							{:else if subColumn}
+								{@render cell(subColumn, table)}
+							{/if}
+						</span>
+						<span data-slot="entity-card-secondary" class="flex shrink-0 items-center justify-end">
+							{#if right}
+								<span title={right} class="truncate">{right}</span>
+							{:else if secondaryColumn}
+								{@render cell(secondaryColumn, table)}
+							{/if}
+						</span>
+					</span>
+				{/if}
+			</div>
+		{:catch error}
+			<p class={cn(stateClass, 'text-destructive')}>
+				<CircleAlert aria-hidden="true" class="size-4 shrink-0" />
+				{error.message}
+			</p>
+		{/await}
+	</div>
+{:else}
+	<div
+		bind:this={ref}
+		data-slot="entity-card"
+		data-variant="card"
+		data-size={size}
+		class={cn('flex w-full min-w-0 flex-col', STACK[size], className)}
+		{...rest}
+	>
+		{#await loaded}
+			<div class={cn('flex min-w-0 items-start', HEADER[size])}>
+				<Skeleton class={cn('aspect-video shrink-0', size === 'lg' ? 'h-24' : 'h-16')} />
+				<div class="flex min-w-0 flex-1 flex-col gap-2">
+					<Skeleton class="h-4 w-3/4" />
+					<Skeleton class="h-3 w-1/2" />
 				</div>
 			</div>
-		</div>
-		{#if card.columns.length > 0}
-			<dl class={cn('grid min-w-0 grid-cols-[minmax(0,auto)_minmax(0,1fr)] gap-x-3', ROWS[size])}>
-				{#each card.columns as column (column.path)}
-					<dt class="text-muted-foreground truncate text-xs" title={column.label}>{column.label}</dt>
-					<dd data-data-type={column.dataType} class="flex min-w-0 items-center text-sm">
-						{@render cell(column, statuses)}
-					</dd>
+			<div class={cn('grid min-w-0 grid-cols-[minmax(0,auto)_minmax(0,1fr)] gap-x-3', ROWS[size])}>
+				{#each fields as path (path)}
+					<Skeleton class="h-3 w-16" />
+					<Skeleton class="h-3 w-full" />
 				{/each}
-			</dl>
-		{/if}
-	{:catch error}
-		<p class={cn(stateClass, 'text-destructive')}>
-			<CircleAlert aria-hidden="true" class="size-4 shrink-0" />
-			{error.message}
-		</p>
-	{/await}
-</div>
+			</div>
+		{:then { card, statuses: table }}
+			{@const Glyph = GLYPHS[card.entity.type] ?? Tag}
+			{@const url = entityDetailUrl(site, card.entity)}
+			<div class={cn('flex min-w-0 items-start', HEADER[size])}>
+				<Thumbnail src={card.thumbnail} size={THUMB[size]} alt="" />
+				<div class="flex min-w-0 flex-1 flex-col gap-1.5">
+					{#if url}
+						<a
+							href={url}
+							target="_blank"
+							rel="noreferrer"
+							title={card.name}
+							class={cn(linkClass, 'font-medium', NAME[size])}>{card.name}</a
+						>
+					{:else}
+						<span title={card.name} class={cn('truncate font-medium', NAME[size])}>{card.name}</span>
+					{/if}
+					<div class="flex min-w-0 flex-wrap items-center gap-2">
+						<span class="text-muted-foreground inline-flex min-w-0 items-center gap-1.5 text-xs">
+							<Glyph aria-hidden="true" class="size-4 shrink-0 opacity-70" />
+							<span class="truncate">{card.typeLabel}</span>
+						</span>
+						{#if card.status}
+							<StatusBadge
+								code={card.status.code}
+								status={table[card.status.code] ?? null}
+								field={card.status.field}
+								size="sm"
+								siteUrl={site}
+							/>
+						{/if}
+					</div>
+				</div>
+			</div>
+			{#if card.columns.length > 0}
+				<dl class={cn('grid min-w-0 grid-cols-[minmax(0,auto)_minmax(0,1fr)] gap-x-3', ROWS[size])}>
+					{#each card.columns as column (column.path)}
+						<dt class="text-muted-foreground truncate text-xs" title={column.label}>{column.label}</dt>
+						<dd data-data-type={column.dataType} class="flex min-w-0 items-center text-sm">
+							{@render cell(column, table)}
+						</dd>
+					{/each}
+				</dl>
+			{/if}
+		{:catch error}
+			<p class={cn(stateClass, 'text-destructive')}>
+				<CircleAlert aria-hidden="true" class="size-4 shrink-0" />
+				{error.message}
+			</p>
+		{/await}
+	</div>
+{/if}

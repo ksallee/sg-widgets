@@ -51,7 +51,7 @@
       "name": "entity-card",
       "type": "registry:component",
       "title": "Entity Card",
-      "description": "One Flow Production Tracking row as a card: thumbnail, name, type, status and a grid of field values.",
+      "description": "One Flow Production Tracking row as a card, or as a thumbnail-first tile: thumbnail, name, status and its field values.",
       "dependencies": [
         "@sg-widgets/core",
         "@lucide/svelte"
@@ -59,6 +59,7 @@
       "registryDependencies": [
         "local:status-badge",
         "local:thumbnail",
+        "checkbox",
         "skeleton"
       ],
       "files": [
@@ -582,16 +583,13 @@
       "name": "entity-grid",
       "type": "registry:component",
       "title": "Entity Grid",
-      "description": "Flow Production Tracking rows as thumbnail cards, with a status badge, two secondary fields, selection and infinite scroll.",
+      "description": "Flow Production Tracking rows as EntityCard tiles, with selection, keyboard navigation and infinite scroll.",
       "dependencies": [
         "@sg-widgets/core",
         "@lucide/svelte"
       ],
       "registryDependencies": [
-        "local:field-value",
-        "local:status-badge",
-        "local:thumbnail",
-        "checkbox",
+        "local:entity-card",
         "skeleton",
         "input",
         "button",

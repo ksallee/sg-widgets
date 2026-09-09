@@ -56,6 +56,14 @@ describe('loadEntityCard', () => {
     expect(card.columns[1]?.dataType).toBe('status_list');
   });
 
+  it('carries the row it described, for a label the caller derives', async () => {
+    const sg = context();
+    const first = (await sg.client.search('Shot', { fields: ['code'], page: { size: 1 } })).data[0];
+    const card = await loadEntityCard(sg, { type: 'Shot', id: first?.id ?? 0 });
+    expect(card.row.id).toBe(first?.id);
+    expect(card.row.type).toBe('Shot');
+  });
+
   it('names the type by its display name', async () => {
     const sg = context();
     const first = (await sg.client.search('HumanUser', { fields: ['name'], page: { size: 1 } })).data[0];

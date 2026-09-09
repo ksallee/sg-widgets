@@ -1,50 +1,46 @@
 import type * as React from 'react';
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import type { CollectionColumn, EntityRef, EntityRow, EntitySource, SgContext, StatusRecord } from '@sg-widgets/core';
-import { cellValue, describePaging, displayNameOf, rowKey, toColumn } from '@sg-widgets/core';
+import { describePaging, rowKey } from '@sg-widgets/core';
 import { ChevronLeft, ChevronRight, CircleAlert, Inbox } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-import { FieldValue } from '@/registry/sg/components/field-value';
-import { StatusBadge } from '@/registry/sg/components/status-badge';
-import { Thumbnail } from '@/registry/sg/components/thumbnail';
+import { EntityCard } from '@/registry/sg/components/entity-card';
 
 export type EntityGridSize = 'sm' | 'md' | 'lg';
 
-/** Card widths, which set the grid's own columns through `auto-fill`. */
-const CARD: Record<EntityGridSize, number> = { sm: 160, md: 224, lg: 288 };
+/**
+ * Tile widths, which set the grid's own columns through `auto-fill`. The size is
+ * the tile's own as well, so a wider column gets the taller picture.
+ */
+const TILE: Record<EntityGridSize, number> = { sm: 160, md: 224, lg: 288 };
+
+const TILE_SELECTOR = '[data-slot="entity-card"][data-variant="tile"]';
 
 export interface EntityGridProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'children' | 'onSelect'> {
   /** The rows and the paging behind them. Created with core's `createEntitySource`. */
   source: EntitySource;
-  /** Field holding the thumbnail URL. `false` draws a card with no picture. */
+  /** The widget context. Every tile reads its schema and its links through it. */
+  context: SgContext;
+  /** Field holding the thumbnail URL. `false` leaves every tile on the placeholder. */
   thumbnail?: string | false;
-  /** Field shown as the card's label. Defaults to the type's own display name. */
+  /** Field shown as the tile's name. Defaults to the type's own display name. */
   labelField?: string | null;
-  /** The muted line under the label: a path, or a resolved column so it renders by type. */
+  /** The left of the tile's metadata line: a path, or a resolved column so it renders by type. */
   subLabelField?: string | CollectionColumn | null;
   /** The caller's own sub-label. Wins over `subLabelField`. */
   subLabel?: (row: EntityRow) => string;
-  /** The value shown beside the label: a path, or a resolved column so it renders by type. */
+  /** The right of the tile's metadata line: a path, or a resolved column so it renders by type. */
   secondaryField?: string | CollectionColumn | null;
-  /** The caller's own text beside the label. Wins over `secondaryField`. */
+  /** The caller's own text on the right of the metadata line. Wins over `secondaryField`. */
   secondary?: (row: EntityRow) => string;
-  /** Show the row's `code` beside the label when the two differ. */
+  /** Show the row's `code` beside the name when the two differ. */
   showCode?: boolean;
-  /** Extra fields drawn on the card. The source must already read them. */
-  fields?: CollectionColumn[];
-  /** Path of the status field. Every type but Project uses `sg_status_list`. */
-  statusPath?: string;
-  /** The status field's schema, for a label out of `display_values`. */
-  statusField?: CollectionColumn['field'];
-  /** `Status` rows by code, for the badge (probe 010). */
+  /** `Status` rows by code, for the badge (probe 010). Read through the context when not given. */
   statuses?: Record<string, StatusRecord> | null;
-  /** The widget context. An entity value links to the row's page when this carries a site. */
-  context?: SgContext;
   size?: EntityGridSize;
   selectable?: boolean;
   onSelectionChange?: (rows: EntityRef[]) => void;
@@ -59,13 +55,17 @@ export interface EntityGridProps extends Omit<React.HTMLAttributes<HTMLDivElemen
 const stateClass = 'text-muted-foreground flex items-center justify-center gap-2 py-10 text-sm';
 
 /**
- * Rows as thumbnail cards.
+ * Rows as EntityCard tiles.
  *
- * The value of an `image` field is the only state marker there is, so a row with no
- * picture, one still transcoding and one ready all render (field_types/image); a
- * Version card carries the play overlay the desktop tk-framework-qtwidgets label uses
- * for playable media. The name is `cached_display_name` when the row has one and the
- * type's own identity field otherwise, which is core's `displayNameOf`.
+ * The tile is the card's own `tile` variant, so a grid cell and a card show the
+ * same row the same way: thumbnail, the status over it, the name, and one
+ * metadata line from the row-anatomy props. A Version with media carries the play
+ * overlay, and a row with no picture, one still transcoding and one ready all
+ * render, the value of an `image` field being the only state marker there is
+ * (field_types/image).
+ *
+ * The grid owns the layout and the cursor: one tab stop moves into the tiles, the
+ * arrows walk them, and Space selects where Enter opens.
  *
  * In `infinite` mode scrolling to the end asks the source for the next page, and
  * paging stops on a short page, never on a missing `links.next`, which the API emits
@@ -75,6 +75,7 @@ const stateClass = 'text-muted-foreground flex items-center justify-center gap-2
  */
 export function EntityGrid({
   source,
+  context,
   thumbnail = 'image',
   labelField = null,
   subLabelField = null,
@@ -82,11 +83,7 @@ export function EntityGrid({
   secondaryField = null,
   secondary,
   showCode = false,
-  fields = [],
-  statusPath = 'sg_status_list',
-  statusField = null,
   statuses = null,
-  context,
   size = 'md',
   selectable = false,
   onSelectionChange,
@@ -108,8 +105,8 @@ export function EntityGrid({
 
   const rows = snapshot.rows;
   const paging = describePaging(snapshot);
-  const subColumn = subLabelField ? toColumn(subLabelField) : null;
-  const secondaryColumn = secondaryField ? toColumn(secondaryField) : null;
+  // `false` still draws the media block; a path no row carries is the placeholder.
+  const imagePath = thumbnail === false ? '' : thumbnail;
 
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [pageDraft, setPageDraft] = useState('');
@@ -124,23 +121,84 @@ export function EntityGrid({
     setSelected((was) => ({ ...was, [key]: !was[key] }));
   }
 
-  function labelOf(row: EntityRow): string {
-    if (labelField) return String(cellValue(row, labelField) ?? '');
-    return displayNameOf(row.attributes, `${row.type} #${row.id}`);
-  }
-
-  /** The programmatic name, when it says something the label does not. */
-  function codeOf(row: EntityRow): string {
-    if (!showCode) return '';
-    const raw = cellValue(row, 'code');
-    return typeof raw === 'string' && raw.length > 0 && raw !== labelOf(row) ? raw : '';
-  }
-
   function goToPage(value: string): void {
     const wanted = Number(value);
     setPageDraft('');
     if (!Number.isFinite(wanted) || wanted < 1) return;
     void source.setPage(paging.pageCount === null ? wanted : Math.min(wanted, paging.pageCount));
+  }
+
+  /* keyboard ------------------------------------------------------------- */
+
+  const listRef = useRef<HTMLDivElement | null>(null);
+  const [cursor, setCursor] = useState(0);
+  const active = Math.min(cursor, Math.max(rows.length - 1, 0));
+
+  function tiles(): HTMLElement[] {
+    const list = listRef.current;
+    return list ? [...list.querySelectorAll<HTMLElement>(TILE_SELECTOR)] : [];
+  }
+
+  /** How many tiles a row holds, read off the track list `auto-fill` resolved to. */
+  function columnCount(): number {
+    const list = listRef.current;
+    if (!list) return 1;
+    const tracks = getComputedStyle(list).gridTemplateColumns.split(' ').filter((t) => t.length > 0);
+    return Math.max(1, tracks.length);
+  }
+
+  function focusTile(index: number): void {
+    const all = tiles();
+    const next = Math.max(0, Math.min(index, all.length - 1));
+    const el = all[next];
+    if (!el) return;
+    setCursor(next);
+    el.focus({ preventScroll: true });
+    el.scrollIntoView({ block: 'nearest' });
+  }
+
+  function onKeyDown(event: React.KeyboardEvent<HTMLDivElement>): void {
+    const target = event.target as HTMLElement | null;
+    // Chrome inside a tile, the checkbox, keeps its own keys.
+    if (!target || target !== target.closest(TILE_SELECTOR)) return;
+    const index = tiles().indexOf(target);
+    if (index < 0) return;
+    const row = rows[index];
+    switch (event.key) {
+      case 'ArrowRight':
+        focusTile(index + 1);
+        break;
+      case 'ArrowLeft':
+        focusTile(index - 1);
+        break;
+      case 'ArrowDown':
+        focusTile(index + columnCount());
+        break;
+      case 'ArrowUp':
+        focusTile(index - columnCount());
+        break;
+      case 'Home':
+        focusTile(0);
+        break;
+      case 'End':
+        focusTile(tiles().length - 1);
+        break;
+      case ' ':
+        if (selectable && row) toggle(row);
+        break;
+      case 'Enter':
+        if (row) onSelect?.(row);
+        break;
+      default:
+        return;
+    }
+    event.preventDefault();
+  }
+
+  function onTileClick(event: React.MouseEvent<HTMLDivElement>, row: EntityRow): void {
+    const target = event.target as HTMLElement | null;
+    if (target?.closest('[data-slot="entity-card-selection"],[data-slot="entity-card-actions"]')) return;
+    onSelect?.(row);
   }
 
   /* infinite scroll ------------------------------------------------------ */
@@ -164,7 +222,7 @@ export function EntityGrid({
     return () => observer.disconnect();
   }, [source, mode, rows.length]);
 
-  const columns = { gridTemplateColumns: `repeat(auto-fill,minmax(${CARD[size]}px,1fr))` };
+  const columns = { gridTemplateColumns: `repeat(auto-fill,minmax(${TILE[size]}px,1fr))` };
 
   return (
     <div data-slot="entity-grid" className={cn('flex w-full min-w-0 flex-col gap-2', className)} {...rest}>
@@ -197,114 +255,42 @@ export function EntityGrid({
         ) : (
           <>
             <div
+              ref={listRef}
               role="listbox"
               aria-multiselectable={selectable ? true : undefined}
               aria-label="Rows"
+              tabIndex={-1}
               className="grid gap-3"
               style={columns}
+              onKeyDown={onKeyDown}
             >
-              {rows.map((row) => {
+              {rows.map((row, index) => {
                 const key = rowKey(row);
-                const name = labelOf(row);
-                const code = codeOf(row);
-                const status = String(cellValue(row, statusPath) ?? '');
-                const sub = subLabel ? subLabel(row) : '';
-                const right = secondary ? secondary(row) : '';
                 return (
-                  <div
+                  <EntityCard
                     key={key}
-                    data-slot="entity-grid-card"
+                    variant="tile"
+                    context={context}
+                    row={row}
+                    imagePath={imagePath}
+                    labelField={labelField}
+                    subLabelField={subLabelField}
+                    subLabel={subLabel}
+                    secondaryField={secondaryField}
+                    secondary={secondary}
+                    showCode={showCode}
+                    statuses={statuses}
+                    selectable={selectable}
+                    size={size}
+                    selected={selected[key] === true}
+                    onSelectedChange={() => toggle(row)}
+                    role="option"
+                    aria-selected={selected[key] === true}
+                    tabIndex={index === active ? 0 : -1}
                     data-row-key={key}
-                    data-state={selected[key] ? 'selected' : undefined}
-                    className={cn(
-                      'border-border bg-card relative rounded-md border transition-colors duration-150',
-                      selected[key] && 'bg-accent text-accent-foreground',
-                    )}
-                  >
-                    <button
-                      type="button"
-                      role="option"
-                      aria-selected={selected[key] === true}
-                      onClick={() => (selectable ? toggle(row) : onSelect?.(row))}
-                      className="focus-visible:ring-ring focus-visible:ring-offset-background flex w-full min-w-0 flex-col items-start gap-2 rounded-md p-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
-                    >
-                      {thumbnail ? (
-                        <Thumbnail
-                          src={cellValue(row, thumbnail) as string | null}
-                          alt=""
-                          playable={row.type === 'Version'}
-                          className="h-auto w-full"
-                        />
-                      ) : null}
-                      <span className="flex w-full min-w-0 items-center gap-1.5">
-                        <span className="min-w-0 truncate text-sm font-medium" title={name}>
-                          {name}
-                        </span>
-                        {code ? (
-                          <span className="text-muted-foreground shrink-0 font-mono text-xs">{code}</span>
-                        ) : null}
-                        {right ? (
-                          <span className="text-muted-foreground ml-auto shrink-0 text-xs">{right}</span>
-                        ) : secondaryColumn ? (
-                          <span className="ml-auto flex shrink-0 justify-end text-xs">
-                            <FieldValue
-                              value={cellValue(row, secondaryColumn.path)}
-                              dataType={secondaryColumn.dataType}
-                              field={secondaryColumn.field}
-                              statuses={statuses}
-                              context={context}
-                              className="text-muted-foreground w-auto text-xs"
-                            />
-                          </span>
-                        ) : null}
-                      </span>
-                      {sub ? (
-                        <span className="text-muted-foreground w-full min-w-0 truncate text-xs" title={sub}>
-                          {sub}
-                        </span>
-                      ) : subColumn ? (
-                        <span className="w-full min-w-0 truncate text-xs">
-                          <FieldValue
-                            value={cellValue(row, subColumn.path)}
-                            dataType={subColumn.dataType}
-                            field={subColumn.field}
-                            statuses={statuses}
-                            context={context}
-                            className="text-muted-foreground text-xs"
-                          />
-                        </span>
-                      ) : null}
-                      {status ? (
-                        <StatusBadge code={status} status={statuses?.[status] ?? null} field={statusField} size="sm" />
-                      ) : null}
-                      {fields.map((column) => (
-                        <span
-                          key={column.path}
-                          className="text-muted-foreground flex w-full min-w-0 items-center gap-1.5 text-xs"
-                        >
-                          <span className="shrink-0">{column.header}</span>
-                          <FieldValue
-                            value={cellValue(row, column.path)}
-                            dataType={column.dataType}
-                            field={column.field}
-                            statuses={statuses}
-                            context={context}
-                            className="min-w-0 text-xs"
-                          />
-                        </span>
-                      ))}
-                    </button>
-                    {selectable ? (
-                      <span className="absolute top-3 left-3 z-10">
-                        <Checkbox
-                          aria-label={`Select ${name}`}
-                          checked={selected[key] === true}
-                          onCheckedChange={() => toggle(row)}
-                          className="bg-background/80"
-                        />
-                      </span>
-                    ) : null}
-                  </div>
+                    onFocus={() => setCursor(index)}
+                    onClick={(event) => onTileClick(event, row)}
+                  />
                 );
               })}
             </div>

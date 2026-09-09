@@ -1,55 +1,49 @@
 <script lang="ts" module>
 	export type EntityGridSize = 'sm' | 'md' | 'lg';
 
-	/** Card widths, which set the grid's own columns through `auto-fill`. */
-	const CARD: Record<EntityGridSize, number> = { sm: 160, md: 224, lg: 288 };
+	/**
+	 * Tile widths, which set the grid's own columns through `auto-fill`. The size is
+	 * the tile's own as well, so a wider column gets the taller picture.
+	 */
+	const TILE: Record<EntityGridSize, number> = { sm: 160, md: 224, lg: 288 };
 </script>
 
 <script lang="ts">
 	import type { HTMLAttributes } from 'svelte/elements';
 	import type { CollectionColumn, EntityRef, EntityRow, EntitySource, SgContext, StatusRecord } from '@sg-widgets/core';
-	import { cellValue, describePaging, displayNameOf, rowKey, toColumn } from '@sg-widgets/core';
+	import { describePaging, rowKey } from '@sg-widgets/core';
 	import ChevronLeft from '@lucide/svelte/icons/chevron-left';
 	import ChevronRight from '@lucide/svelte/icons/chevron-right';
 	import CircleAlert from '@lucide/svelte/icons/circle-alert';
 	import Inbox from '@lucide/svelte/icons/inbox';
 	import { Button } from '$lib/components/ui/button/index.js';
-	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import * as Select from '$lib/components/ui/select/index.js';
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
-	import FieldValue from '$lib/registry/components/field-value.svelte';
-	import StatusBadge from '$lib/registry/components/status-badge.svelte';
-	import Thumbnail from '$lib/registry/components/thumbnail.svelte';
+	import EntityCard from '$lib/registry/components/entity-card.svelte';
 
 	type Props = WithElementRef<Omit<HTMLAttributes<HTMLDivElement>, 'children'>, HTMLDivElement> & {
 		/** The rows and the paging behind them. Created with core's `createEntitySource`. */
 		source: EntitySource;
-		/** Field holding the thumbnail URL. `false` draws a card with no picture. */
+		/** The widget context. Every tile reads its schema and its links through it. */
+		context: SgContext;
+		/** Field holding the thumbnail URL. `false` leaves every tile on the placeholder. */
 		thumbnail?: string | false;
-		/** Field shown as the card's label. Defaults to the type's own display name. */
+		/** Field shown as the tile's name. Defaults to the type's own display name. */
 		labelField?: string | null;
-		/** The muted line under the label: a path, or a resolved column so it renders by type. */
+		/** The left of the tile's metadata line: a path, or a resolved column so it renders by type. */
 		subLabelField?: string | CollectionColumn | null;
 		/** The caller's own sub-label. Wins over `subLabelField`. */
 		subLabel?: (row: EntityRow) => string;
-		/** The value shown beside the label: a path, or a resolved column so it renders by type. */
+		/** The right of the tile's metadata line: a path, or a resolved column so it renders by type. */
 		secondaryField?: string | CollectionColumn | null;
-		/** The caller's own text beside the label. Wins over `secondaryField`. */
+		/** The caller's own text on the right of the metadata line. Wins over `secondaryField`. */
 		secondary?: (row: EntityRow) => string;
-		/** Show the row's `code` beside the label when the two differ. */
+		/** Show the row's `code` beside the name when the two differ. */
 		showCode?: boolean;
-		/** Extra fields drawn on the card. The source must already read them. */
-		fields?: CollectionColumn[];
-		/** Path of the status field. Every type but Project uses `sg_status_list`. */
-		statusPath?: string;
-		/** The status field's schema, for a label out of `display_values`. */
-		statusField?: CollectionColumn['field'];
-		/** `Status` rows by code, for the badge (probe 010). */
+		/** `Status` rows by code, for the badge (probe 010). Read through the context when not given. */
 		statuses?: Record<string, StatusRecord> | null;
-		/** The widget context. An entity value links to the row's page when this carries a site. */
-		context?: SgContext;
 		size?: EntityGridSize;
 		selectable?: boolean;
 		onselectionchange?: (rows: EntityRef[]) => void;
@@ -63,6 +57,7 @@
 
 	let {
 		source,
+		context,
 		thumbnail = 'image',
 		labelField = null,
 		subLabelField = null,
@@ -70,11 +65,7 @@
 		secondaryField = null,
 		secondary,
 		showCode = false,
-		fields = [],
-		statusPath = 'sg_status_list',
-		statusField = null,
 		statuses = null,
-		context,
 		size = 'md',
 		selectable = false,
 		onselectionchange,
@@ -96,8 +87,8 @@
 
 	const rows = $derived(snapshot.rows);
 	const paging = $derived(describePaging(snapshot));
-	const subColumn = $derived(subLabelField ? toColumn(subLabelField) : null);
-	const secondaryColumn = $derived(secondaryField ? toColumn(secondaryField) : null);
+	// `false` still draws the media block; a path no row carries is the placeholder.
+	const imagePath = $derived(thumbnail === false ? '' : thumbnail);
 
 	let selected = $state<Record<string, boolean>>({});
 	let pageDraft = $state('');
@@ -112,23 +103,83 @@
 		selected = { ...selected, [key]: !selected[key] };
 	}
 
-	function labelOf(row: EntityRow): string {
-		if (labelField) return String(cellValue(row, labelField) ?? '');
-		return displayNameOf(row.attributes, `${row.type} #${row.id}`);
-	}
-
-	/** The programmatic name, when it says something the label does not. */
-	function codeOf(row: EntityRow): string {
-		if (!showCode) return '';
-		const raw = cellValue(row, 'code');
-		return typeof raw === 'string' && raw.length > 0 && raw !== labelOf(row) ? raw : '';
-	}
-
 	function goToPage(value: string): void {
 		const wanted = Number(value);
 		pageDraft = '';
 		if (!Number.isFinite(wanted) || wanted < 1) return;
 		void source.setPage(paging.pageCount === null ? wanted : Math.min(wanted, paging.pageCount));
+	}
+
+	/* keyboard ------------------------------------------------------------- */
+
+	let listEl = $state<HTMLDivElement | null>(null);
+	let cursor = $state(0);
+	const active = $derived(Math.min(cursor, Math.max(rows.length - 1, 0)));
+
+	function tiles(): HTMLElement[] {
+		if (!listEl) return [];
+		return [...listEl.querySelectorAll<HTMLElement>('[data-slot="entity-card"][data-variant="tile"]')];
+	}
+
+	/** How many tiles a row holds, read off the track list `auto-fill` resolved to. */
+	function columnCount(): number {
+		if (!listEl) return 1;
+		const tracks = getComputedStyle(listEl).gridTemplateColumns.split(' ').filter((t) => t.length > 0);
+		return Math.max(1, tracks.length);
+	}
+
+	function focusTile(index: number): void {
+		const all = tiles();
+		const next = Math.max(0, Math.min(index, all.length - 1));
+		const el = all[next];
+		if (!el) return;
+		cursor = next;
+		el.focus({ preventScroll: true });
+		el.scrollIntoView({ block: 'nearest' });
+	}
+
+	function onKeydown(event: KeyboardEvent): void {
+		const target = event.target as HTMLElement | null;
+		// Chrome inside a tile, the checkbox, keeps its own keys.
+		if (!target || target !== target.closest('[data-slot="entity-card"][data-variant="tile"]')) return;
+		const index = tiles().indexOf(target);
+		if (index < 0) return;
+		const row = rows[index];
+		switch (event.key) {
+			case 'ArrowRight':
+				focusTile(index + 1);
+				break;
+			case 'ArrowLeft':
+				focusTile(index - 1);
+				break;
+			case 'ArrowDown':
+				focusTile(index + columnCount());
+				break;
+			case 'ArrowUp':
+				focusTile(index - columnCount());
+				break;
+			case 'Home':
+				focusTile(0);
+				break;
+			case 'End':
+				focusTile(tiles().length - 1);
+				break;
+			case ' ':
+				if (selectable && row) toggle(row);
+				break;
+			case 'Enter':
+				if (row) onselect?.(row);
+				break;
+			default:
+				return;
+		}
+		event.preventDefault();
+	}
+
+	function onTileClick(event: MouseEvent, row: EntityRow): void {
+		const target = event.target as HTMLElement | null;
+		if (target?.closest('[data-slot="entity-card-selection"],[data-slot="entity-card-actions"]')) return;
+		onselect?.(row);
 	}
 
 	/* infinite scroll ------------------------------------------------------ */
@@ -155,13 +206,17 @@
 </script>
 
 <!--
-	Rows as thumbnail cards.
+	Rows as EntityCard tiles.
 
-	The value of an `image` field is the only state marker there is, so a row with no
-	picture, one still transcoding and one ready all render (field_types/image); a
-	Version card carries the play overlay the desktop tk-framework-qtwidgets label uses
-	for playable media. The name is `cached_display_name` when the row has one and the
-	type's own identity field otherwise, which is core's `displayNameOf`.
+	The tile is the card's own `tile` variant, so a grid cell and a card show the
+	same row the same way: thumbnail, the status over it, the name, and one
+	metadata line from the row-anatomy props. A Version with media carries the play
+	overlay, and a row with no picture, one still transcoding and one ready all
+	render, the value of an `image` field being the only state marker there is
+	(field_types/image).
+
+	The grid owns the layout and the cursor: one tab stop moves into the tiles, the
+	arrows walk them, and Space selects where Enter opens.
 
 	In `infinite` mode scrolling to the end asks the source for the next page, and
 	paging stops on a short page, never on a missing `links.next`, which the API emits
@@ -182,7 +237,7 @@
 				{snapshot.error?.message}
 			</p>
 		{:else if snapshot.status === 'loading'}
-			<div class="grid gap-3" style="grid-template-columns:repeat(auto-fill,minmax({CARD[size]}px,1fr))">
+			<div class="grid gap-3" style="grid-template-columns:repeat(auto-fill,minmax({TILE[size]}px,1fr))">
 				{#each { length: 8 } as _, index (index)}
 					<div class="flex flex-col gap-2">
 						<Skeleton class="aspect-video w-full" />
@@ -198,105 +253,40 @@
 			</p>
 		{:else}
 			<div
+				bind:this={listEl}
 				role="listbox"
 				aria-multiselectable={selectable ? 'true' : undefined}
 				aria-label="Rows"
+				tabindex={-1}
 				class="grid gap-3"
-				style="grid-template-columns:repeat(auto-fill,minmax({CARD[size]}px,1fr))"
+				style="grid-template-columns:repeat(auto-fill,minmax({TILE[size]}px,1fr))"
+				onkeydown={onKeydown}
 			>
-				{#each rows as row (rowKey(row))}
+				{#each rows as row, index (rowKey(row))}
 					{@const key = rowKey(row)}
-					{@const name = labelOf(row)}
-					{@const code = codeOf(row)}
-					{@const status = String(cellValue(row, statusPath) ?? '')}
-					{@const sub = subLabel ? subLabel(row) : ''}
-					{@const right = secondary ? secondary(row) : ''}
-					<div
-						data-slot="entity-grid-card"
+					<EntityCard
+						variant="tile"
+						{context}
+						{row}
+						{imagePath}
+						{labelField}
+						{subLabelField}
+						{subLabel}
+						{secondaryField}
+						{secondary}
+						{showCode}
+						{statuses}
+						{selectable}
+						{size}
+						selected={selected[key] === true}
+						onselectedchange={() => toggle(row)}
+						role="option"
+						aria-selected={selected[key] === true}
+						tabindex={index === active ? 0 : -1}
 						data-row-key={key}
-						data-state={selected[key] ? 'selected' : undefined}
-						class={cn(
-							'border-border bg-card relative rounded-md border transition-colors duration-150',
-							selected[key] && 'bg-accent text-accent-foreground'
-						)}
-					>
-						<button
-							type="button"
-							role="option"
-							aria-selected={selected[key] === true}
-							onclick={() => (selectable ? toggle(row) : onselect?.(row))}
-							class="focus-visible:ring-ring focus-visible:ring-offset-background flex w-full min-w-0 flex-col items-start gap-2 rounded-md p-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
-						>
-							{#if thumbnail}
-								<Thumbnail
-									src={cellValue(row, thumbnail) as string | null}
-									alt=""
-									playable={row.type === 'Version'}
-									class="h-auto w-full"
-								/>
-							{/if}
-							<span class="flex w-full min-w-0 items-center gap-1.5">
-								<span class="min-w-0 truncate text-sm font-medium" title={name}>{name}</span>
-								{#if code}
-									<span class="text-muted-foreground shrink-0 font-mono text-xs">{code}</span>
-								{/if}
-								{#if right}
-									<span class="text-muted-foreground ml-auto shrink-0 text-xs">{right}</span>
-								{:else if secondaryColumn}
-									<span class="ml-auto flex shrink-0 justify-end text-xs">
-										<FieldValue
-											value={cellValue(row, secondaryColumn.path)}
-											dataType={secondaryColumn.dataType}
-											field={secondaryColumn.field}
-											{statuses}
-											{context}
-											class="text-muted-foreground w-auto text-xs"
-										/>
-									</span>
-								{/if}
-							</span>
-							{#if sub}
-								<span class="text-muted-foreground w-full min-w-0 truncate text-xs" title={sub}>{sub}</span>
-							{:else if subColumn}
-								<span class="w-full min-w-0 truncate text-xs">
-									<FieldValue
-										value={cellValue(row, subColumn.path)}
-										dataType={subColumn.dataType}
-										field={subColumn.field}
-										{statuses}
-										{context}
-										class="text-muted-foreground text-xs"
-									/>
-								</span>
-							{/if}
-							{#if status}
-								<StatusBadge code={status} status={statuses?.[status] ?? null} field={statusField} size="sm" />
-							{/if}
-							{#each fields as column (column.path)}
-								<span class="text-muted-foreground flex w-full min-w-0 items-center gap-1.5 text-xs">
-									<span class="shrink-0">{column.header}</span>
-									<FieldValue
-										value={cellValue(row, column.path)}
-										dataType={column.dataType}
-										field={column.field}
-										{statuses}
-										{context}
-										class="min-w-0 text-xs"
-									/>
-								</span>
-							{/each}
-						</button>
-						{#if selectable}
-							<span class="absolute top-3 left-3 z-10">
-								<Checkbox
-									aria-label="Select {name}"
-									checked={selected[key] === true}
-									onCheckedChange={() => toggle(row)}
-									class="bg-background/80"
-								/>
-							</span>
-						{/if}
-					</div>
+						onfocusin={() => (cursor = index)}
+						onclick={(event) => onTileClick(event, row)}
+					/>
 				{/each}
 			</div>
 			{#if paging.mode === 'infinite'}

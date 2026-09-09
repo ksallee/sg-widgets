@@ -408,10 +408,13 @@
 										event.preventDefault();
 										onDrop(column.path);
 									}}
-									onclick={() => toggleSort(column.path)}
+									onclick={() => column.sortable && toggleSort(column.path)}
+									aria-disabled={column.sortable ? undefined : 'true'}
+									data-sortable={column.sortable ? 'true' : 'false'}
+									title={column.sortable ? undefined : `${column.header} cannot be sorted`}
 									class={cn(
 										'focus-visible:ring-ring focus-visible:ring-offset-background flex h-10 w-full min-w-0 items-center gap-1.5 px-3 text-sm font-medium outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2',
-										'hover:bg-accent hover:text-accent-foreground',
+										column.sortable ? 'hover:bg-accent hover:text-accent-foreground' : 'cursor-default',
 										column.align === 'right' && 'justify-end',
 										dropTarget === column.path && 'border-ring border-l-2',
 										dragging === column.path && 'opacity-50'

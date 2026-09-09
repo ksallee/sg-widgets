@@ -14,6 +14,7 @@
  * sort path against the schema before offering it (026_result_order).
  */
 import type { EntityRow, SearchResult, SgClient } from './client.js';
+import { isSortable } from './filter-ux.js';
 import { isNumericType } from './field-types.js';
 import type { EntityRef, FilterNode, WireGroup } from './filter.js';
 import { toApi3Hash } from './filter.js';
@@ -289,6 +290,8 @@ export interface ColumnSpec {
   editable?: boolean;
   align?: 'left' | 'right';
   field?: FieldSchema | null;
+  /** Override the sortability the data type implies. */
+  sortable?: boolean;
 }
 
 /** A column with every question answered, which is what a collection widget takes. */
@@ -300,6 +303,8 @@ export interface CollectionColumn {
   /** True when a cell may open an editor. A projection is never writable. */
   editable: boolean;
   align: 'left' | 'right';
+  /** False for a type the server sorts as a silent no-op or a 400 (026_result_order). */
+  sortable: boolean;
   /** The schema of the field the path lands on, for a status label out of `display_values`. */
   field: FieldSchema | null;
 }
@@ -329,6 +334,7 @@ export async function resolveColumns(
         dataType,
         editable: spec.editable ?? (segments.length === 1 && (field?.editable ?? false)),
         align: spec.align ?? (isNumericType(dataType) ? 'right' : 'left'),
+        sortable: spec.sortable ?? isSortable(dataType),
         field,
       };
       if (spec.width !== undefined) column.width = spec.width;

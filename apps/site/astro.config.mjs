@@ -12,8 +12,8 @@ export default defineConfig({
       description: 'shadcn-compatible widgets for Flow Production Tracking, for React and Svelte.',
       sidebar: [
         { label: 'Start', items: [{ label: 'Introduction', slug: 'start/introduction' }] },
-        { label: 'Widgets', autogenerate: { directory: 'widgets' } },
-        { label: 'Core', autogenerate: { directory: 'core' } },
+        { label: 'Widgets', items: [{ autogenerate: { directory: 'widgets' } }] },
+        { label: 'Core', items: [{ autogenerate: { directory: 'core' } }] },
       ],
     }),
     react(),

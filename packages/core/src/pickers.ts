@@ -232,3 +232,21 @@ export function searchFieldOptions(options: readonly FieldOption[], query: strin
   if (!query.trim()) return [...options];
   return options.filter((option) => matchesTokens(query, option.displayName, option.name, option.dataType));
 }
+
+/* -------------------------------------------------------------------------- */
+/* chosen columns                                                             */
+/* -------------------------------------------------------------------------- */
+
+/** The list with `path` appended, or dropped when it is already there. */
+export function toggleFieldPath(paths: readonly string[], path: string): string[] {
+  return paths.includes(path) ? paths.filter((entry) => entry !== path) : [...paths, path];
+}
+
+/** The list with the entry at `from` moved to `to`. An index off either end leaves the order alone. */
+export function moveFieldPath(paths: readonly string[], from: number, to: number): string[] {
+  const next = [...paths];
+  if (from < 0 || from >= next.length || to < 0 || to >= next.length || from === to) return next;
+  const [moved] = next.splice(from, 1);
+  next.splice(to, 0, moved as string);
+  return next;
+}

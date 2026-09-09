@@ -1,23 +1,21 @@
 ---
 title: ColumnPicker
-description: An ordered list of field paths, built with the field picker and reordered by drag or keyboard.
+description: The columns of a grid as a dual list, the type's fields on the left and the chosen paths in order on the right.
 ---
 
 import Demo from '../../../components/Demo.astro';
 
-Builds an ordered list of field paths with the field picker, and lets you reorder it by drag or by
-keyboard.
+Chooses the columns of a grid. The left list holds the fields of an entity type, checked when the
+path is already a column; the right list holds the chosen paths in the order they will be drawn.
 
 ## Install
-
-Installing this pulls FieldPicker with it.
 
 ```sh
 pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/column-picker.json
 pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/column-picker.json
 ```
 
-<Demo name="column-picker" title="ColumnPicker: ordered chips with drag and keyboard reordering, and the compact mode" />
+<Demo name="column-picker" title="ColumnPicker: the dual list, a picker restricted to dates, the compact variant, disabled and read-only" />
 
 ## Props
 
@@ -31,34 +29,39 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/column-picker.
 | `maxDepth` | `number` | `2` | How many hops a path may take. |
 | `dataTypes` | `string \| string[]` | — | Data types a field must have to be selected. |
 | `validTypes` | `string[]` | — | A field is selectable only if it links one of these. |
-| `exclude` | `string[]` | — | Full dotted paths to drop, on top of the ones already chosen. |
+| `exclude` | `string[]` | — | Full dotted paths to drop. |
 | `hidePaths` | `string[]` | — | Dotted prefixes to drop, along with everything beneath them. |
 | `filterableOnly` | `boolean` | `false` | Drop the data types the API refuses in a filter. |
 | `extraFields` | `{ name, displayName? }[]` | — | Synthetic entries offered at the root only. |
 | `filter` | `(field, path) => boolean` | — | Your own visibility test over the schema and the candidate's full path. |
-| `compact` | `boolean` | `false` | Small inline chips, no ordering controls. |
-| `placeholder` | `string` | `'Add a column'` | Shown on the picker. |
-| `emptyLabel` | `string` | `'No columns yet.'` | Shown while the list is empty. |
-| `readOnly` / `readonly` | `boolean` | `false` | Hides the picker and the remove controls. |
+| `compact` | `boolean` | `false` | The chosen list alone, with the field list behind an add button. |
+| `placeholder` | `string` | `'Add a column'` | Label of the compact add button. |
+| `searchPlaceholder` | `string` | `'Search fields…'` | Shown in the search box. |
+| `emptyLabel` | `string` | `'No columns yet.'` | Shown while nothing is chosen. |
+| `availableLabel` | `string` | `'Available'` | Heading of the left list. |
+| `chosenLabel` | `string` | `'Columns'` | Heading of the right list, followed by the count. |
+| `readOnly` / `readonly` | `boolean` | `false` | Shows the chosen list alone, with no controls. |
 | `disabled` | `boolean` | `false` | |
-| `invalid` | `boolean` | `false` | Applies the invalid ring to the picker. |
-| `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | |
+| `invalid` | `boolean` | `false` | Puts the invalid ring on both lists. |
+| `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Row height. |
 | `className` / `class` | `string` | — | Merged after the widget's own classes. |
 
-Order is the column order and is preserved. Every restriction is passed to the field picker
-underneath, and the paths already chosen are added to its exclusions, so a column cannot be added
-twice.
+Checking a row on the left appends its path; unchecking removes it. The two lists sit side by side
+from a width of 32rem and stack under it, measured on the widget rather than on the window, so a
+column picker in a narrow panel stacks on a wide page.
 
-A pick appends and clears the picker's search without closing it, so several columns can be added in
-a row from the keyboard alone.
+A link field carries a chevron that descends into the type it points at, and the breadcrumb above
+the search box goes back one level or all the way to the root. A link declaring several target
+types asks which one first. `dataTypes` and `validTypes` bind what may be chosen, not what may be
+walked through, so a picker restricted to dates still reaches a date behind a link.
 
-Each chip shows the friendly path, with the raw path in its tooltip.
+Each row of the right list shows the friendly path, with the raw path in its tooltip.
 
 ## Events
 
 | event | payload | when |
 |---|---|---|
-| `onValueChange` | `string[]` | A column is added, removed or moved. Dragging fires on every crossing, not only on drop. |
+| `onValueChange` | `string[]` | A column is checked, unchecked, removed or moved. |
 
 ## Slots
 
@@ -68,17 +71,24 @@ None.
 
 | key | does |
 |---|---|
-| `Tab` | Moves to the picker, then to each chip's grip and remove control. |
-| `Alt` + `Up` | Move the focused chip one place earlier. |
-| `Alt` + `Down` | Move the focused chip one place later. |
-| `Enter`, `Space` | On a remove control, drops that column. |
-
-The picker's own keys are on the FieldPicker page. Compact mode has no grip and no reordering.
+| `Up`, `Down` | Walk the left list. |
+| `Enter` | Check or uncheck the row under the cursor. A link that cannot be chosen descends instead. |
+| `Right` | Descend into the link under the cursor. |
+| `Left` | Back one level. |
+| `Tab` | Moves through the search box, then the controls of each chosen row. |
+| `Alt` + `Up` | Move the chosen row holding focus one place earlier. |
+| `Alt` + `Down` | Move it one place later. |
+| `Delete`, `Backspace` | Remove it. |
 
 ## API behaviour
 
+`GET /schema/<Type>/fields` is 48KB and about 330ms per type, so the schema service caches it: a hop
+back to a type already visited costs nothing, and a list of ten paths over three types costs three
+reads (002_schema).
+
+Only single entity fields are descended into. A dotted path through a multi-entity field reads back
+nothing, 200 with the key absent from `attributes` (probe 016). A type already on the path is never
+offered again, so a path cannot loop.
+
 Every path is resolved for display through the schema of each type it travels, and a path the schema
 no longer holds stays readable as itself rather than disappearing.
-
-`GET /schema/<Type>/fields` is 48KB and about 330ms per type, so the schema service caches it and a
-list of ten paths over three types costs three reads (002_schema).

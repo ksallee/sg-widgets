@@ -107,6 +107,14 @@
 				<StatusBadge code="zz_retired" />
 			</div>
 		</section>
+		<section class={group} data-demo="site">
+			<h4 class={label}>This site's statuses, custom ones included</h4>
+			<div class={row}>
+				{#each Object.values(statuses).sort((a, b) => a.name.localeCompare(b.name)) as status (status.code)}
+					<StatusBadge code={status.code} {status} size="sm" />
+				{/each}
+			</div>
+		</section>
 	{:catch error}
 		<p class="text-destructive text-sm">{error.message}</p>
 	{/await}

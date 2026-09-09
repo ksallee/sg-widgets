@@ -123,6 +123,16 @@ function StatusBadges() {
           <StatusBadge code="zz_retired" />
         </div>
       </section>
+      <section className={group} data-demo="site">
+        <h4 className={label}>This site's statuses, custom ones included</h4>
+        <div className={row}>
+          {Object.values(data.statuses)
+            .sort((a, b) => a.name.localeCompare(b.name))
+            .map((status) => (
+              <StatusBadge key={status.code} code={status.code} status={status} size="sm" />
+            ))}
+        </div>
+      </section>
     </>
   );
 }

@@ -32,6 +32,10 @@
  * restored just below so Svelte items animate too.
  */
 @import 'shadcn/tailwind.css';
+
+/* One stylesheet serves both frameworks. cmdk marks the Command cursor `data-selected="true"`,
+   Bits UI marks it with an empty value; the variant must match both. */
+@custom-variant data-selected (&:where([data-selected=''], [data-selected='true']));
 @import '@fontsource-variable/geist';
 
 /*

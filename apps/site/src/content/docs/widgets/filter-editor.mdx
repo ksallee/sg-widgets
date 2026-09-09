@@ -6,7 +6,9 @@ description: A Flow Production Tracking filter tree, edited as rows and nested g
 import Demo from '../../../components/Demo.astro';
 
 Edits a filter tree. A row is a field, an operator and a value; groups nest under All or Any. The
-value is a `FilterGroup`, which `toApi3Hash` serialises to the body `_search` takes.
+field is chosen with FieldPicker, so a row may filter through a link on a dotted path, and the value
+control comes from the field's data type. The value is a `FilterGroup`, which `toApi3Hash` serialises
+to the body `_search` takes.
 
 ## Install
 
@@ -26,6 +28,7 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/filter-editor.
 | `schema` | `SchemaService` | one built from `client` | Pass a shared service so two widgets asking for the same type cost one request. |
 | `value` | `FilterGroup` | `emptyFilter()` | The tree. Two-way in Svelte through `bind:value`. |
 | `hidePaths` | `string[]` | `[]` | Paths kept out of the field list. A pattern hides itself and everything under it. |
+| `projectId` | `number` | — | Scopes the status pickers to the codes one project allows. |
 | `disabled` | `boolean` | `false` | Dims the editor and blocks every control. |
 | `class` / `className` | `string` | — | Merged after the widget's own classes. |
 
@@ -35,17 +38,39 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/filter-editor.
 |---|---|---|---|
 | change | `onChange` | `onChange`, `bind:value` | The whole tree, on every edit. |
 
+## Value editors
+
+The operator picks the arity and the field's data type picks the control inside it.
+
+| data type | editor |
+|---|---|
+| `number`, `float`, `percent`, `duration`, `timecode`, `currency` | NumberEditor |
+| `date` | DateEditor |
+| `date_time` | DateTimeEditor |
+| `list` | ListSelect on one value, a checkbox list on is any of and is none of |
+| `status_list` | StatusPicker on one value, StatusMultiPicker on is any of and is none of |
+| `checkbox` | CheckboxEditor |
+| `text`, and any field under name is, name contains, type is | TextEditor |
+| `entity`, `multi_entity` | EntityPicker on one value, EntityMultiPicker on is any of and is none of |
+
+Arity comes first. An operator that carries its own value — is empty, is not empty, today, this week,
+last month — draws no editor. In the last and in the next draw a count and a unit. Between draws two
+of the data type's editor. Is any of and is none of on a date, a number or a text field draw one
+comma-separated line.
+
+A duration is typed as `1h 30m`, `1:30` or `90` and stored as the 90 minutes all three mean.
+
 ## Slots
 
 | slot | React | Svelte | gets |
 |---|---|---|---|
 | field chooser | `fieldChooser` | `fieldChooser` snippet | `entityType`, the current `path`, `hidePaths`, `filterableOnly`, `disabled`, `onSelect(path)`. |
 | value editor | `valueEditor` | `valueEditor` snippet | `field`, `dataType`, `operator`, `value`, `arity`, `disabled`, `onChange(value)`. |
+| entity value | `entityEditor` | `entityEditor` snippet | The same arguments as the value editor. |
 
-Both fall back to plain shadcn controls when unset: a flat command list of the type's filterable
-fields, and inputs, selects and comboboxes by data type. FieldPicker plugs into the first slot — its
-value is the dotted path `onSelect` wants — and the per-type value editors into the second. Each slot
-has one integration point in the source.
+The field chooser is FieldPicker unless the slot replaces it. The value editor slot replaces every
+control in the table above; the entity slot replaces only the two entity pickers, for a caller that
+wants its own row or its own search.
 
 ## Keyboard
 
@@ -54,6 +79,8 @@ has one integration point in the source.
 | `Tab` | Moves between field, operator, value and the remove control of each row. |
 | `Enter`, `Space` | Opens the field chooser, the operator menu or a value popover. |
 | `Arrow` keys | Move the cursor in an open menu or list; move between All and Any. |
+| `Right arrow` | Descends into the highlighted link in the field chooser. |
+| `Left arrow` | Goes back one level in the field chooser. |
 | `Enter` | Chooses the highlighted field, operator or value. |
 | `Escape` | Closes the open menu or popover. |
 
@@ -116,3 +143,8 @@ as an unfilled row, so it offers no empty entry there (field_types/uuid).
 
 Dates are `YYYY-MM-DD` and date-times `YYYY-MM-DDTHH:MM:SSZ`, always UTC; an epoch integer and a
 slashed date are both 400s (field_types/date, field_types/date_time).
+
+A dotted path filters through a link, and the middle segment names the type it travels through:
+`entity.Shot.sg_sequence` reads Shot from Version's Link field. Only a single `entity` field is
+descended into; a path through a `multi_entity` field reads back nothing, 200 with the key absent
+(probe 016).

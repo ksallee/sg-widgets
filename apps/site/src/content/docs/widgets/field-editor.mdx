@@ -1,0 +1,91 @@
+---
+title: FieldEditor
+description: One field, displayed or edited, with the editor chosen by the data type.
+---
+
+import Demo from '../../../components/Demo.astro';
+
+Shows a field value and turns it into the right editor for its data type.
+
+## Install
+
+Installing this pulls FieldValue and all eight editors with it.
+
+```sh
+pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/field-editor.json
+pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/field-editor.json
+```
+
+<Demo name="field-editor" title="FieldEditor: every data type, with a display and edit toggle" />
+
+## Editors
+
+| data type | editor |
+|---|---|
+| `text`, `entity_type`, `uuid` | TextEditor |
+| `number`, `float`, `percent`, `currency`, `duration`, `timecode` | NumberEditor |
+| `checkbox` | CheckboxEditor |
+| `date` | DateEditor |
+| `date_time` | DateTimeEditor |
+| `list` | ListEditor |
+| `url` | UrlEditor |
+| `color` | ColorEditor |
+| `status_list`, `entity`, `multi_entity` | none; the picker widgets own these |
+| `image`, `calculated`, `summary`, `pivot_column`, everything else | none; display only |
+
+A field whose type has no editor stays on the display half whatever the mode says.
+
+## Props
+
+| prop | type | default | meaning |
+|---|---|---|---|
+| `value` | `unknown` | `null` | The raw attribute value, as the API returned it. Two-way in Svelte. |
+| `onValueChange` | `(value: unknown) => void` | — | Called when the editor commits. |
+| `dataType` | `string` | the schema's, then `'text'` | Picks the editor. |
+| `field` | `FieldSchema \| null` | `null` | The field schema. |
+| `mode` | `'display' \| 'edit'` | `'display'` | Which half is showing. Two-way in Svelte, controlled in React. |
+| `onModeChange` | `(mode) => void` | — | Called when the toggle moves. |
+| `editable` | `boolean` | `false` | Turns the display half into a control that opens the editor. |
+| `statuses` | `Record<string, StatusRecord> \| null` | `null` | Status rows by code, for the display half. |
+| `hoursPerDay` | `number` | — | The site's working day, for durations. |
+| `frameRate` | `number` | — | Frames per second, for timecodes. |
+| `precision` | `number` | — | Decimals on a float. |
+| `symbol` | `string` | `'$'` | Shown before a currency value. |
+| `projectId` | `number` | — | Removes a list field's hidden values. |
+| `timeZone` | `string` | the runtime's | Zone a typed wall-clock time is read in. |
+| `locale` | `string` | the runtime's | Passed to the display half. |
+| `multiline` | `boolean` | `false` | A textarea on a text field. |
+| `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Control height. |
+| `disabled` | `boolean` | `false` | |
+| `readonly` | `boolean` | `false` | |
+| `invalid` | `boolean` | `false` | Forced invalid state. |
+| `error` | `string \| null` | `null` | A message from the caller. |
+| `onErrorChange` | `(error: string \| null) => void` | — | Called when the parse error appears or clears. |
+| `placeholder` | `string` | — | |
+| `emptyLabel` | `string` | `'empty'` | Marker the display half shows for an unset value. |
+| `class` / `className` | `string` | — | Merged after the widget's own classes. |
+
+## Events
+
+`onValueChange` fires when the editor commits. `onModeChange` fires on every toggle.
+
+## Slots
+
+`errorMessage` receives the message and renders it, in whichever editor is showing.
+
+## Keyboard
+
+| key | does |
+|---|---|
+| `Enter` | Opens the editor from the display half; commits and closes it from the edit half. |
+| `Space` | Opens the editor from the display half. |
+| `Escape` | Cancels the edit and returns to the display half. |
+| `Tab` | Commits and returns to the display half, unless focus stays inside a popover the editor opened. |
+
+Enter keeps the textarea of a multi-line text field open; leave it with `Tab`.
+
+## API behaviour
+
+The write shapes each editor emits are the ones its own page documents. The dispatch itself follows
+the data types the corpus names, and the types with no editor here are the ones a picker owns or the
+ones REST cannot write (field_types/status_list, entity, calculated, summary, pivot_column).

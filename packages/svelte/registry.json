@@ -163,6 +163,194 @@
           "type": "registry:component"
         }
       ]
+    },
+    {
+      "name": "text-editor",
+      "type": "registry:component",
+      "title": "Text Editor",
+      "description": "A text field as an input, or a textarea when the field is multi-line.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte"
+      ],
+      "registryDependencies": [
+        "input",
+        "textarea"
+      ],
+      "files": [
+        {
+          "path": "src/lib/registry/components/text-editor.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "number-editor",
+      "type": "registry:component",
+      "title": "Number Editor",
+      "description": "The numeric family as one input: number, float, percent, currency, duration and timecode.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte"
+      ],
+      "registryDependencies": [
+        "input"
+      ],
+      "files": [
+        {
+          "path": "src/lib/registry/components/number-editor.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "checkbox-editor",
+      "type": "registry:component",
+      "title": "Checkbox Editor",
+      "description": "A checkbox field as an editable switch.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte"
+      ],
+      "registryDependencies": [
+        "switch"
+      ],
+      "files": [
+        {
+          "path": "src/lib/registry/components/checkbox-editor.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "date-editor",
+      "type": "registry:component",
+      "title": "Date Editor",
+      "description": "A date field as a typed input with a calendar.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte",
+        "@internationalized/date"
+      ],
+      "registryDependencies": [
+        "input",
+        "button",
+        "calendar",
+        "popover"
+      ],
+      "files": [
+        {
+          "path": "src/lib/registry/components/date-editor.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "date-time-editor",
+      "type": "registry:component",
+      "title": "Date Time Editor",
+      "description": "A date_time field as a date and a time input, shown local and stored UTC.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte",
+        "@internationalized/date"
+      ],
+      "registryDependencies": [
+        "input",
+        "button",
+        "calendar",
+        "popover"
+      ],
+      "files": [
+        {
+          "path": "src/lib/registry/components/date-time-editor.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "list-editor",
+      "type": "registry:component",
+      "title": "List Editor",
+      "description": "A list field as a select over its valid values.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte"
+      ],
+      "registryDependencies": [
+        "select"
+      ],
+      "files": [
+        {
+          "path": "src/lib/registry/components/list-editor.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "url-editor",
+      "type": "registry:component",
+      "title": "Url Editor",
+      "description": "A url field as a web link: address and name.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte"
+      ],
+      "registryDependencies": [
+        "input"
+      ],
+      "files": [
+        {
+          "path": "src/lib/registry/components/url-editor.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "color-editor",
+      "type": "registry:component",
+      "title": "Color Editor",
+      "description": "A color field as a swatch and a text input.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte"
+      ],
+      "registryDependencies": [
+        "input"
+      ],
+      "files": [
+        {
+          "path": "src/lib/registry/components/color-editor.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "field-editor",
+      "type": "registry:component",
+      "title": "Field Editor",
+      "description": "One field, displayed or edited: the data type picks the editor and a toggle switches between the two.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte"
+      ],
+      "registryDependencies": [
+        "local:field-value",
+        "local:text-editor",
+        "local:number-editor",
+        "local:checkbox-editor",
+        "local:date-editor",
+        "local:date-time-editor",
+        "local:list-editor",
+        "local:url-editor",
+        "local:color-editor"
+      ],
+      "files": [
+        {
+          "path": "src/lib/registry/components/field-editor.svelte",
+          "type": "registry:component"
+        }
+      ]
     }
   ]
 }

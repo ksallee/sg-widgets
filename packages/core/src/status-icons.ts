@@ -8,9 +8,9 @@
  * The offsets below are those rules, read once; the data URLs are the sprite cells of
  * the statuses a fresh site ships with, so a badge renders them with no site access.
  *
- * A fresh site ships 19 statuses: the rows with no `created_by`, plus the ones
- * `system` locks (act, dis, ip, na, cfrm, pndng). No single schema flag marks the set
- * (probe 053).
+ * A shipped status is a row with no `created_by`. `system` marks a subset of them
+ * (act, dis, ip, na, cfrm, pndng) and no schema flag marks the set; a site may
+ * have retired some of the shipped rows (probe 061).
  */
 
 export interface SpriteCell {
@@ -32,7 +32,7 @@ export interface NativeStatus {
   system: boolean;
 }
 
-/** Statuses a fresh site ships with, in id order. */
+/** Shipped statuses the probed site keeps live, in id order (probe 061). */
 export const NATIVE_STATUSES: readonly NativeStatus[] = [
   { code: 'act', name: 'Active', imageMapKey: null, system: true },
   { code: 'apr', name: 'Approved', imageMapKey: 'icon_apr', system: false },

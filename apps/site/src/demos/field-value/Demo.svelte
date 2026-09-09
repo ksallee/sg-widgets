@@ -10,6 +10,7 @@
 		dataType: string;
 		value: unknown;
 		hoursPerDay?: number;
+		precision?: number;
 	}
 
 	async function load() {
@@ -37,6 +38,7 @@
 			{ label: 'list', dataType: 'list', value: 'Type A' },
 			{ label: 'number', dataType: 'number', value: 1001 },
 			{ label: 'float', dataType: 'float', value: '1.777778' },
+			{ label: 'float, precision 2', dataType: 'float', value: '1.777778', precision: 2 },
 			{ label: 'percent', dataType: 'percent', value: 50 },
 			{ label: 'duration', dataType: 'duration', value: 480 },
 			{ label: 'duration, in days', dataType: 'duration', value: 480, hoursPerDay: 8 },
@@ -104,6 +106,7 @@
 							{field}
 							{statuses}
 							hoursPerDay={sample.hoursPerDay}
+							precision={sample.precision}
 						/>
 					</td>
 				</tr>

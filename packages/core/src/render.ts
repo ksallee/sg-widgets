@@ -143,8 +143,10 @@ export function formatTimecode(ms: number | null | undefined): string {
 }
 
 export interface FloatOptions {
-  /** Decimals to keep at most. The store itself rounds to 6 (field_types/float). */
+  /** Decimals to keep at most; trailing zeros are dropped. The store itself rounds to 6 (field_types/float). */
   maxDecimals?: number;
+  /** Exactly this many decimals, zeros kept. Wins over `maxDecimals`. */
+  decimals?: number;
 }
 
 /**
@@ -155,6 +157,10 @@ export interface FloatOptions {
 export function formatFloat(value: number | string | null | undefined, options: FloatOptions = {}): string {
   if (isEmptyValue(value)) return '';
   const raw = typeof value === 'number' ? String(value) : String(value).trim();
+  if (options.decimals !== undefined) {
+    const n = Number(raw);
+    return Number.isFinite(n) ? n.toFixed(options.decimals) : raw;
+  }
   const max = options.maxDecimals;
   if (/^-?\d+(\.\d+)?$/.test(raw)) {
     return trimDecimals(max === undefined ? raw : fixed(raw, max));

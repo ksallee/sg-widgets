@@ -28,6 +28,7 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/field-value.js
 | `field` | `FieldSchema \| null` | `null` | Supplies a status label through its display values. |
 | `statuses` | `Record<string, StatusRecord> \| null` | `null` | Status rows by code, for status colour and icon. |
 | `hoursPerDay` | `number` | — | The site's working day. Durations then render in days. |
+| `precision` | `number` | — | Decimals shown on a float, zeros kept. Without it, the value as the API sent it, trailing zeros dropped. |
 | `locale` | `string` | the runtime's | Passed through for dates. |
 | `emptyLabel` | `string` | `'empty'` | The marker shown for an unset value. |
 | `class` / `className` | `string` | — | Merged after the widget's own classes. |

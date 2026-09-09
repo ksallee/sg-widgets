@@ -11,6 +11,7 @@ interface Sample {
   dataType: string;
   value: unknown;
   hoursPerDay?: number;
+  precision?: number;
 }
 
 interface Loaded {
@@ -25,6 +26,7 @@ function samplesFor(shot: { type: string; id: number; name: string }, image: str
     { label: 'list', dataType: 'list', value: 'Type A' },
     { label: 'number', dataType: 'number', value: 1001 },
     { label: 'float', dataType: 'float', value: '1.777778' },
+    { label: 'float, precision 2', dataType: 'float', value: '1.777778', precision: 2 },
     { label: 'percent', dataType: 'percent', value: 50 },
     { label: 'duration', dataType: 'duration', value: 480 },
     { label: 'duration, in days', dataType: 'duration', value: 480, hoursPerDay: 8 },
@@ -122,6 +124,7 @@ function Values() {
                 field={data.field}
                 statuses={data.statuses}
                 hoursPerDay={sample.hoursPerDay}
+                precision={sample.precision}
               />
             </td>
           </tr>

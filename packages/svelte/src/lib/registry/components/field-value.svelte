@@ -7,7 +7,7 @@
 	} from '@sg-widgets/core';
 
 	/** The numeric family shares one render kind; the exact format comes from the data type. */
-	function formatNumber(value: unknown, dataType: string, hoursPerDay: number | undefined): string {
+	function formatNumber(value: unknown, dataType: string, hoursPerDay: number | undefined, precision: number | undefined): string {
 		switch (dataType) {
 			case 'duration':
 				return formatDuration(Number(value), hoursPerDay === undefined ? {} : { hoursPerDay });
@@ -16,7 +16,7 @@
 			case 'timecode':
 				return formatTimecode(Number(value));
 			case 'float':
-				return formatFloat(value as string);
+				return formatFloat(value as string, precision === undefined ? {} : { decimals: precision });
 			default:
 				return String(value);
 		}
@@ -54,6 +54,8 @@
 		/** The site's `hours_per_day` from `GET /preferences`; durations then render in days (field_types/duration). */
 		hoursPerDay?: number;
 		locale?: string;
+		/** Decimals shown on a float, zeros kept. Default shows what the API sent, trailing zeros dropped. */
+		precision?: number;
 		/** Rewrites the href of a local file link. Default opens `file:`, which browsers refuse from an http page. */
 		localHref?: (link: UrlLinkInfo) => string | null;
 		/** What to show when the value is empty. Never a dash: a dash reads like a value. */
@@ -67,6 +69,7 @@
 		statuses = null,
 		hoursPerDay,
 		locale,
+		precision,
 		localHref,
 		emptyLabel = 'empty',
 		class: className,
@@ -85,7 +88,7 @@
 	const rgb = $derived(kind === 'color' ? parseBgColor(String(value)) : null);
 	const text = $derived(
 		kind === 'number'
-			? formatNumber(value, dataType, hoursPerDay)
+			? formatNumber(value, dataType, hoursPerDay, precision)
 			: kind === 'date'
 				? formatDate(String(value), dateOptions)
 				: kind === 'datetime'

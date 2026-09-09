@@ -255,3 +255,11 @@ describe('local file links', () => {
     expect(fileHref('/a/b c')).toBe('file:///a/b%20c');
   });
 });
+
+describe('formatFloat decimals', () => {
+  it('fixes the precision and keeps zeros', () => {
+    expect(formatFloat('1.777778', { decimals: 2 })).toBe('1.78');
+    expect(formatFloat('25.0', { decimals: 3 })).toBe('25.000');
+    expect(formatFloat('25.0')).toBe('25');
+  });
+});

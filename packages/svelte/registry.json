@@ -99,6 +99,70 @@
           "type": "registry:component"
         }
       ]
+    },
+    {
+      "name": "entity-type-picker",
+      "type": "registry:component",
+      "title": "Entity Type Picker",
+      "description": "One entity type of a Flow Production Tracking site, or several, as a searchable combobox.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte"
+      ],
+      "registryDependencies": [
+        "popover",
+        "command",
+        "skeleton",
+        "checkbox"
+      ],
+      "files": [
+        {
+          "path": "src/lib/registry/components/entity-type-picker.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "field-picker",
+      "type": "registry:component",
+      "title": "Field Picker",
+      "description": "One field of an entity type as a searchable combobox, descending through linked types into a dotted path.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte"
+      ],
+      "registryDependencies": [
+        "popover",
+        "command",
+        "skeleton"
+      ],
+      "files": [
+        {
+          "path": "src/lib/registry/components/field-picker.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "column-picker",
+      "type": "registry:component",
+      "title": "Column Picker",
+      "description": "An ordered list of field paths, built with the field picker, reordered by drag or keyboard.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte"
+      ],
+      "registryDependencies": [
+        "local:field-picker",
+        "badge",
+        "skeleton"
+      ],
+      "files": [
+        {
+          "path": "src/lib/registry/components/column-picker.svelte",
+          "type": "registry:component"
+        }
+      ]
     }
   ]
 }

@@ -117,6 +117,85 @@
           "type": "registry:component"
         }
       ]
+    },
+    {
+      "name": "entity-type-picker",
+      "type": "registry:component",
+      "title": "Entity Type Picker",
+      "description": "One entity type of a Flow Production Tracking site, or several, as a searchable combobox.",
+      "categories": [
+        "flow-production-tracking",
+        "picker"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "popover",
+        "command",
+        "skeleton",
+        "checkbox"
+      ],
+      "docs": "Takes a SchemaService. `allow` and `deny` narrow the derived options, so changing them re-filters with no second call.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/entity-type-picker.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "field-picker",
+      "type": "registry:component",
+      "title": "Field Picker",
+      "description": "One field of an entity type as a searchable combobox, descending through linked types into a dotted path.",
+      "categories": [
+        "flow-production-tracking",
+        "picker"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "popover",
+        "command",
+        "skeleton"
+      ],
+      "docs": "Emits ShotGrid's dotted path. Only single entity fields are descended into; a path through a multi-entity field reads back nothing.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/field-picker.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "column-picker",
+      "type": "registry:component",
+      "title": "Column Picker",
+      "description": "An ordered list of field paths, built with the field picker, reordered by drag or keyboard.",
+      "categories": [
+        "flow-production-tracking",
+        "picker"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "https://sg-widgets.dev/r/react/field-picker.json",
+        "badge",
+        "skeleton"
+      ],
+      "docs": "Installs FieldPicker alongside it. Paths already chosen are fed back as exclusions, so a column cannot be added twice.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/column-picker.tsx",
+          "type": "registry:component"
+        }
+      ]
     }
   ]
 }

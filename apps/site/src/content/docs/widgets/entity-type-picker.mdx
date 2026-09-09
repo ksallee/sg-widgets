@@ -1,0 +1,70 @@
+---
+title: EntityTypePicker
+description: One entity type of a site, or several, chosen from a searchable list.
+---
+
+import Demo from '../../../components/Demo.astro';
+
+Picks one entity type of a site, or several, from a searchable list of everything the site has
+enabled.
+
+## Install
+
+```sh
+pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/entity-type-picker.json
+pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/entity-type-picker.json
+```
+
+<Demo name="entity-type-picker" title="EntityTypePicker: allow and deny lists, multi mode, sizes and states" />
+
+## Props
+
+| prop | type | default | meaning |
+|---|---|---|---|
+| `schema` | `SchemaService` | required | Reads the site's enabled types. Build it once per app with `createSchemaService`. |
+| `value` | `string \| string[] \| null` | `null` | A type code, or an array of them in multi mode. |
+| `multiple` | `boolean` | `false` | Keep the list open and take several types. |
+| `onValueChange` | `(value) => void` | — | Receives the code, `null` on clear, or the new array in multi mode. |
+| `allow` | `string[]` | — | Codes on offer. Empty or absent means every enabled type. |
+| `deny` | `string[]` | — | Codes withheld, applied after `allow`. |
+| `placeholder` | `string` | `'Select an entity type'` | Shown while nothing is chosen. |
+| `searchPlaceholder` | `string` | `'Search types…'` | Shown in the search box. |
+| `emptyLabel` | `string` | `'No entity type matches.'` | Shown when nothing matches. |
+| `clearable` | `boolean` | `true` | Show the clear control once something is chosen. |
+| `readOnly` / `readonly` | `boolean` | `false` | Keeps full contrast and removes the chevron and the clear control. |
+| `disabled` | `boolean` | `false` | |
+| `invalid` | `boolean` | `false` | Applies the invalid ring and `aria-invalid`. |
+| `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | |
+| `className` / `class` | `string` | — | Merged after the widget's own classes. |
+
+Each row shows the display name, with the code beneath it in mono when the two differ. The trigger
+shows the display name of the chosen type, or the joined names in multi mode. In multi mode every row
+carries a checkbox and the list stays open across selections.
+
+`allow` is applied first and `deny` second, both to the derived list rather than to the read, so a
+caller narrowing the set sees the list change with no second call.
+
+## Events
+
+| event | payload | when |
+|---|---|---|
+| `onValueChange` | `string \| string[] \| null` | A type is chosen or unchosen, or the clear control is pressed. |
+
+## Slots
+
+None.
+
+## Keyboard
+
+| key | does |
+|---|---|
+| `Enter`, `Space` | On the closed control, opens it. |
+| `Down`, `Up` | Move the cursor through the rows. |
+| `Enter` | Choose the highlighted type. In multi mode, toggles it and keeps the list open. |
+| `Escape` | Close, keeping the value. |
+
+## API behaviour
+
+`GET /schema` returns every enabled type in about 12KB, custom slots included, and presence in that
+listing is the enablement test: a slot absent from it 404s everywhere else. The display name is the
+type's `name`, and the key is what a URL and a dotted path take (002_schema).

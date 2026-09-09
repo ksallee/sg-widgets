@@ -1,0 +1,84 @@
+---
+title: ColumnPicker
+description: An ordered list of field paths, built with the field picker and reordered by drag or keyboard.
+---
+
+import Demo from '../../../components/Demo.astro';
+
+Builds an ordered list of field paths with the field picker, and lets you reorder it by drag or by
+keyboard.
+
+## Install
+
+Installing this pulls FieldPicker with it.
+
+```sh
+pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/column-picker.json
+pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/column-picker.json
+```
+
+<Demo name="column-picker" title="ColumnPicker: ordered chips with drag and keyboard reordering, and the compact mode" />
+
+## Props
+
+| prop | type | default | meaning |
+|---|---|---|---|
+| `schema` | `SchemaService` | required | Reads the schema. Build it once per app with `createSchemaService`. |
+| `entityType` | `string` | required | The type every path starts on. |
+| `value` | `string[]` | `[]` | The chosen dotted paths, in the order they are shown. |
+| `onValueChange` | `(value: string[]) => void` | — | Receives the new array on every add, remove and move. |
+| `deepLinks` | `boolean` | `true` | Allow descending through entity fields. |
+| `maxDepth` | `number` | `2` | How many hops a path may take. |
+| `dataTypes` | `string \| string[]` | — | Data types a field must have to be selected. |
+| `validTypes` | `string[]` | — | A field is selectable only if it links one of these. |
+| `exclude` | `string[]` | — | Full dotted paths to drop, on top of the ones already chosen. |
+| `hidePaths` | `string[]` | — | Dotted prefixes to drop, along with everything beneath them. |
+| `filterableOnly` | `boolean` | `false` | Drop the data types the API refuses in a filter. |
+| `extraFields` | `{ name, displayName? }[]` | — | Synthetic entries offered at the root only. |
+| `filter` | `(field, path) => boolean` | — | Your own visibility test over the schema and the candidate's full path. |
+| `compact` | `boolean` | `false` | Small inline chips, no ordering controls. |
+| `placeholder` | `string` | `'Add a column'` | Shown on the picker. |
+| `emptyLabel` | `string` | `'No columns yet.'` | Shown while the list is empty. |
+| `readOnly` / `readonly` | `boolean` | `false` | Hides the picker and the remove controls. |
+| `disabled` | `boolean` | `false` | |
+| `invalid` | `boolean` | `false` | Applies the invalid ring to the picker. |
+| `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | |
+| `className` / `class` | `string` | — | Merged after the widget's own classes. |
+
+Order is the column order and is preserved. Every restriction is passed to the field picker
+underneath, and the paths already chosen are added to its exclusions, so a column cannot be added
+twice.
+
+A pick appends and clears the picker's search without closing it, so several columns can be added in
+a row from the keyboard alone.
+
+Each chip shows the friendly path, with the raw path in its tooltip.
+
+## Events
+
+| event | payload | when |
+|---|---|---|
+| `onValueChange` | `string[]` | A column is added, removed or moved. Dragging fires on every crossing, not only on drop. |
+
+## Slots
+
+None.
+
+## Keyboard
+
+| key | does |
+|---|---|
+| `Tab` | Moves to the picker, then to each chip's grip and remove control. |
+| `Alt` + `Up` | Move the focused chip one place earlier. |
+| `Alt` + `Down` | Move the focused chip one place later. |
+| `Enter`, `Space` | On a remove control, drops that column. |
+
+The picker's own keys are on the FieldPicker page. Compact mode has no grip and no reordering.
+
+## API behaviour
+
+Every path is resolved for display through the schema of each type it travels, and a path the schema
+no longer holds stays readable as itself rather than disappearing.
+
+`GET /schema/<Type>/fields` is 48KB and about 330ms per type, so the schema service caches it and a
+list of ten paths over three types costs three reads (002_schema).

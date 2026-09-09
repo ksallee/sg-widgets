@@ -39,6 +39,7 @@ const PAGE_SIZE = 25;
 
 const PEOPLE = ['HumanUser', 'ApiUser', 'ClientUser'];
 
+
 /** The modifier the hotkey shows, from the platform the page is on. */
 const META =
   typeof navigator !== 'undefined' && /Mac|iPhone|iPad/i.test(navigator.platform || navigator.userAgent)
@@ -328,7 +329,11 @@ export function GlobalSearch({
               </CommandGroup>
             ))}
             {hasMore ? (
-              <CommandItem value="load-more" data-slot="search-load-more" onSelect={() => void run(query, page + 1)}>
+              <CommandItem
+                value="load-more"
+                data-slot="search-load-more"
+                onSelect={() => void run(query, page + 1)}
+              >
                 <span className="text-muted-foreground flex-1 text-center text-sm">
                   {loading ? 'Loading…' : 'Load more'}
                 </span>

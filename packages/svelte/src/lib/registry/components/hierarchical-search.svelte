@@ -40,7 +40,15 @@
 
 <script lang="ts">
 	import type { SgClient } from '@sg-widgets/core';
-	import { breadcrumb, createSchemaService, hydrate, matchRuns, pathRefs, scopeToProject } from '@sg-widgets/core';
+	import {
+		breadcrumb,
+		createSchemaService,
+		hierarchyEntity,
+		hydrate,
+		matchRuns,
+		pathRefs,
+		scopeToProject
+	} from '@sg-widgets/core';
 	import Box from '@lucide/svelte/icons/box';
 	import ChevronRight from '@lucide/svelte/icons/chevron-right';
 	import Clapperboard from '@lucide/svelte/icons/clapperboard';
@@ -91,6 +99,16 @@
 	let timer: ReturnType<typeof setTimeout> | undefined;
 
 	const searching = $derived(query.trim().length > 0);
+	/**
+	 * The row the cursor sits on. cmdk moves it to the first row whenever the list
+	 * changes and bits-ui leaves it where it was, so it is set here and the two
+	 * frameworks answer Down, Right and Enter the same way.
+	 */
+	let cursor = $state('');
+	const firstRow = $derived(!searching && trail.length > 0 ? 'up' : (rows[0]?.nodePath ?? ''));
+	$effect(() => {
+		cursor = firstRow;
+	});
 	const empty = $derived(!loading && failure === null && rows.length === 0);
 
 	const GLYPHS: Record<string, typeof Tag> = {
@@ -109,7 +127,7 @@
 	}
 
 	function browseRow(node: HierarchyNode, crumbs: string[]): HierarchicalSearchRow {
-		const ref = node.ref?.kind === 'entity' ? node.ref.value : null;
+		const ref = hierarchyEntity(node.ref);
 		const allowed = Object.keys(typeMap(entityTypes));
 		return {
 			label: node.label,
@@ -266,7 +284,7 @@
 -->
 <div data-slot="hierarchical-search" class={cn('w-full', className)}>
 	<!-- Server-side matching only, so the list never filters what came back. -->
-	<Command.Root shouldFilter={false} class="border-border rounded-md border" onkeydown={onKeydown}>
+	<Command.Root shouldFilter={false} bind:value={cursor} class="border-border rounded-md border" onkeydown={onKeydown}>
 		<Command.Input value={query} {placeholder} oninput={(e) => setQuery(e.currentTarget.value)} />
 		<Command.List data-sg-search-list>
 			{#if failure !== null}

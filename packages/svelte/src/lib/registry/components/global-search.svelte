@@ -21,6 +21,7 @@
 
 	const PEOPLE = ['HumanUser', 'ApiUser', 'ClientUser'];
 
+
 	/** The modifier the hotkey shows, from the platform the page is on. */
 	const META =
 		typeof navigator !== 'undefined' && /Mac|iPhone|iPad/i.test(navigator.platform || navigator.userAgent)
@@ -137,6 +138,24 @@
 	});
 
 	const showRecents = $derived(query.trim().length === 0 && recents.length > 0);
+	/**
+	 * The row the cursor sits on. cmdk moves it to the first row whenever the list
+	 * changes and bits-ui leaves it where it was, so it is set here and the two
+	 * frameworks answer Down and Enter the same way.
+	 */
+	let cursor = $state('');
+	const firstRow = $derived(
+		showRecents
+			? recents[0]
+				? `recent:${recents[0].type}:${recents[0].id}`
+				: ''
+			: hits[0]
+				? `${hits[0].ref.type}:${hits[0].ref.id}`
+				: ''
+	);
+	$effect(() => {
+		cursor = firstRow;
+	});
 	const empty = $derived(!loading && failure === null && groups.length === 0 && query.trim().length > 0);
 
 	async function run(text: string, nextPage: number): Promise<void> {
@@ -263,7 +282,10 @@
 		{:else if showRecents}
 			<Command.Group heading="Recent">
 				{#each recents as entity (`${entity.type}:${entity.id}`)}
-					<Command.Item value={`recent:${entity.type}:${entity.id}`} onSelect={() => choose(entity)}>
+					<Command.Item
+						value={`recent:${entity.type}:${entity.id}`}
+						onSelect={() => choose(entity)}
+					>
 						<EntityChip {entity} size="sm" />
 						<span class="text-muted-foreground truncate text-xs">
 							{displayNames[entity.type] ?? entity.type}
@@ -304,7 +326,7 @@
 {#if inline}
 	<div data-slot="global-search" data-variant="inline" class={cn('w-full', className)}>
 		<!-- Server-side matching only, so the list never filters what came back. -->
-		<Command.Root shouldFilter={false} class="border-border rounded-md border">
+		<Command.Root shouldFilter={false} bind:value={cursor} class="border-border rounded-md border">
 			{@render body()}
 		</Command.Root>
 	</div>
@@ -327,7 +349,8 @@
 			</Button>
 		{/if}
 		<Command.Dialog
-			bind:open
+			bind:open={() => open, (next) => (open = next)}
+			bind:value={cursor}
 			shouldFilter={false}
 			title="Search"
 			description="Search across the site by name."

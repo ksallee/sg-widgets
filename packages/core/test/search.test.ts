@@ -10,11 +10,11 @@ describe('searchWords', () => {
 
 describe('matchRuns', () => {
   it('marks every occurrence of every word, case-insensitively', () => {
-    expect(matchRuns('Published Kevin', 'pub ke')).toEqual([
+    expect(matchRuns('Published Ada', 'pub ad')).toEqual([
       { text: 'Pub', match: true },
       { text: 'lished ', match: false },
-      { text: 'Ke', match: true },
-      { text: 'vin', match: false },
+      { text: 'Ad', match: true },
+      { text: 'a', match: false },
     ]);
   });
 
@@ -45,9 +45,9 @@ describe('matchRuns', () => {
 
 describe('matchesEveryWord', () => {
   it('requires every word, in any order and any position', () => {
-    expect(matchesEveryWord('Published Kevin', 'pub ke')).toBe(true);
-    expect(matchesEveryWord('Published Kevin', 'ke pub')).toBe(true);
-    expect(matchesEveryWord('Published Kevin', 'pub zzz')).toBe(false);
-    expect(matchesEveryWord('Published Kevin', '')).toBe(true);
+    expect(matchesEveryWord('Published Ada', 'pub ad')).toBe(true);
+    expect(matchesEveryWord('Published Ada', 'ad pub')).toBe(true);
+    expect(matchesEveryWord('Published Ada', 'pub zzz')).toBe(false);
+    expect(matchesEveryWord('Published Ada', '')).toBe(true);
   });
 });

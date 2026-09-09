@@ -1,7 +1,15 @@
 import type * as React from 'react';
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { EntityRef, HierarchyNode, SgClient, WireCondition } from '@sg-widgets/core';
-import { breadcrumb, createSchemaService, hydrate, matchRuns, pathRefs, scopeToProject } from '@sg-widgets/core';
+import {
+  breadcrumb,
+  createSchemaService,
+  hierarchyEntity,
+  hydrate,
+  matchRuns,
+  pathRefs,
+  scopeToProject,
+} from '@sg-widgets/core';
 import {
   Box,
   ChevronRight,
@@ -119,7 +127,7 @@ export function HierarchicalSearch({
 
   const browseRow = useCallback(
     (node: HierarchyNode, crumbs: string[]): HierarchicalSearchRow => {
-      const ref = node.ref?.kind === 'entity' ? node.ref.value : null;
+      const ref = hierarchyEntity(node.ref);
       const allowed = Object.keys(typeMap(entityTypes));
       return {
         label: node.label,

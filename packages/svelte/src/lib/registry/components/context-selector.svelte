@@ -87,7 +87,8 @@
 	const schema = $derived(createSchemaService(client));
 
 	let tasks = $state<MyTask[]>([]);
-	let loading = $state(false);
+	/** True until the first read of the assigned tasks lands. */
+	let loading = $state(true);
 	let failure = $state<string | null>(null);
 	let statuses = $state<Record<string, StatusRecord>>({});
 	let statusField = $state<FieldSchema | null>(null);
@@ -99,7 +100,7 @@
 	/** Tasks under their project, in the order the projects first appear. */
 	const byProject = $derived.by(() => {
 		const groups = new Map<string, { project: EntityRef | null; tasks: MyTask[] }>();
-		for (const row of tasks) {
+		for (const row of currentUser ? tasks : []) {
 			const key = row.project ? `${row.project.type}:${row.project.id}` : '-';
 			const group = groups.get(key);
 			if (group) group.tasks.push(row);
@@ -126,13 +127,8 @@
 
 	$effect(() => {
 		const user = currentUser;
-		if (!user) {
-			tasks = [];
-			return;
-		}
+		if (!user) return;
 		let live = true;
-		loading = true;
-		failure = null;
 		void client
 			.search('Task', {
 				// `task_assignees` is a multi_entity of Group and HumanUser (entity_types/Task).
@@ -183,7 +179,7 @@
 	one `_search` on Task filtered by `task_assignees`, grouped under their project.
 -->
 <div data-slot="context-selector" class={cn('w-full', className)}>
-	<Popover.Root bind:open>
+	<Popover.Root bind:open={() => open, (next) => (open = next)}>
 		<Popover.Trigger
 			data-slot="context-selector-trigger"
 			class="border-border bg-background hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring focus-visible:ring-offset-background flex w-full min-w-0 items-center gap-2 rounded-md border px-2 py-1.5 text-left outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2"
@@ -201,7 +197,13 @@
 			<ChevronDown aria-hidden="true" class="text-muted-foreground size-4 shrink-0" />
 		</Popover.Trigger>
 
-		<Popover.Content class="flex w-96 max-w-[calc(100vw-2rem)] flex-col gap-3 p-3" align="start">
+		<!-- Fixed: the Command list inside scrolls its cursor into view on mount, and an absolute
+		     wrapper still at the page origin would drag the page there with it. -->
+		<Popover.Content
+			strategy="fixed"
+			align="start"
+			class="flex w-96 max-w-[calc(100vw-2rem)] flex-col gap-3 p-3"
+		>
 			<section data-slot="context-recents" class="flex max-h-28 flex-col overflow-y-auto">
 				<h4 class={heading}>Recent</h4>
 				{#if recents.length === 0}
@@ -226,7 +228,7 @@
 						<TriangleAlert aria-hidden="true" class="size-4" />
 						<span class="truncate">{failure}</span>
 					</p>
-				{:else if loading}
+				{:else if loading && currentUser}
 					<div class="flex flex-col gap-2 p-1" aria-busy="true">
 						{#each [0, 1] as line (line)}
 							<div class="flex items-center gap-2 px-2 py-1.5">
@@ -238,7 +240,7 @@
 							</div>
 						{/each}
 					</div>
-				{:else if tasks.length === 0}
+				{:else if byProject.length === 0}
 					<p class="text-muted-foreground px-2 py-1.5 text-sm">No tasks assigned.</p>
 				{:else}
 					{#each byProject as group (group.project ? `${group.project.type}:${group.project.id}` : '-')}

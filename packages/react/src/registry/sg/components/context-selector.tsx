@@ -100,7 +100,8 @@ export function ContextSelector({
   };
 
   const [tasks, setTasks] = useState<MyTask[]>([]);
-  const [loading, setLoading] = useState(false);
+  /** True until the first read of the assigned tasks lands. */
+  const [loading, setLoading] = useState(true);
   const [failure, setFailure] = useState<string | null>(null);
   const [statuses, setStatuses] = useState<Record<string, StatusRecord>>({});
   const [statusField, setStatusField] = useState<FieldSchema | null>(null);
@@ -111,14 +112,14 @@ export function ContextSelector({
   /** Tasks under their project, in the order the projects first appear. */
   const byProject = useMemo(() => {
     const groups = new Map<string, { project: EntityRef | null; tasks: MyTask[] }>();
-    for (const row of tasks) {
+    for (const row of currentUser ? tasks : []) {
       const key = row.project ? `${row.project.type}:${row.project.id}` : '-';
       const group = groups.get(key);
       if (group) group.tasks.push(row);
       else groups.set(key, { project: row.project, tasks: [row] });
     }
     return [...groups.values()];
-  }, [tasks]);
+  }, [currentUser, tasks]);
 
   useEffect(() => {
     let live = true;
@@ -137,13 +138,8 @@ export function ContextSelector({
   }, [client, schema]);
 
   useEffect(() => {
-    if (!currentUser) {
-      setTasks([]);
-      return;
-    }
+    if (!currentUser) return;
     let live = true;
-    setLoading(true);
-    setFailure(null);
     void client
       .search('Task', {
         // `task_assignees` is a multi_entity of Group and HumanUser (entity_types/Task).
@@ -231,7 +227,7 @@ export function ContextSelector({
                 <TriangleAlert aria-hidden="true" className="size-4" />
                 <span className="truncate">{failure}</span>
               </p>
-            ) : loading ? (
+            ) : loading && currentUser ? (
               <div className="flex flex-col gap-2 p-1" aria-busy="true">
                 {[0, 1].map((line) => (
                   <div key={line} className="flex items-center gap-2 px-2 py-1.5">
@@ -243,7 +239,7 @@ export function ContextSelector({
                   </div>
                 ))}
               </div>
-            ) : tasks.length === 0 ? (
+            ) : byProject.length === 0 ? (
               <p className="text-muted-foreground px-2 py-1.5 text-sm">No tasks assigned.</p>
             ) : (
               byProject.map((group) => (

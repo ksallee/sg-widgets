@@ -2,7 +2,7 @@
  * The search model both search widgets share.
  *
  * `POST /entity/_text_search` matches a row when *every* whitespace-separated
- * word of the query appears in it, so "pub ke" finds "Published Kevin"
+ * word of the query appears in it, so "pub ad" finds "Published Ada"
  * (053_text_search_matching). The same rule drives what a result row bolds.
  *
  * The endpoint answers a thin row - name, the linked row's type and name, and a

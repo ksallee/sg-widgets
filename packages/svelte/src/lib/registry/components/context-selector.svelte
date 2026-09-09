@@ -1,6 +1,18 @@
 <script lang="ts" module>
 	import type { EntityRef } from '@sg-widgets/core';
 
+	export type ContextSelectorSize = 'sm' | 'md' | 'lg';
+
+	/** The trigger follows the input ladder of `docs/design-rules.md`. */
+	const BOX: Record<ContextSelectorSize, string> = {
+		sm: 'min-h-8 px-2 py-1',
+		md: 'min-h-9 px-2 py-1.5',
+		lg: 'min-h-10 px-3 py-1.5'
+	};
+	const GLYPH: Record<ContextSelectorSize, string> = { sm: 'size-4', md: 'size-4', lg: 'size-5' };
+	/** A chip inside a control sits one step down the leaf ladder. */
+	const CHIP: Record<ContextSelectorSize, 'sm' | 'md'> = { sm: 'sm', md: 'sm', lg: 'md' };
+
 	/** What a widget or a publish needs to know about where the user is working. */
 	export interface WorkContext {
 		project: EntityRef | null;
@@ -68,6 +80,7 @@
 		recentLimit?: number;
 		onRecentsChange?: (recents: WorkContext[]) => void;
 		onContextChange?: (context: WorkContext) => void;
+		size?: ContextSelectorSize;
 		/** Whether the popover is showing, two-way. */
 		open?: boolean;
 		onOpenChange?: (open: boolean) => void;
@@ -82,6 +95,7 @@
 		recentLimit = 5,
 		onRecentsChange,
 		onContextChange,
+		size = 'md',
 		open = $bindable(false),
 		onOpenChange,
 		class: className
@@ -191,7 +205,11 @@
 	<Popover.Root bind:open={() => open, setOpen}>
 		<Popover.Trigger
 			data-slot="context-selector-trigger"
-			class="border-border bg-background hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring focus-visible:ring-offset-background flex w-full min-w-0 items-center gap-2 rounded-md border px-2 py-1.5 text-left outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2"
+			data-size={size}
+			class={cn(
+				'border-border bg-background hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring focus-visible:ring-offset-background flex w-full min-w-0 items-center gap-2 rounded-md border text-left outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2',
+				BOX[size]
+			)}
 			aria-label={`Context: ${label(context)}`}
 		>
 			<span class="flex min-w-0 flex-1 flex-wrap items-center gap-2">
@@ -199,11 +217,11 @@
 					<span class="text-muted-foreground text-sm">No context</span>
 				{:else}
 					{#each chips as chip (`${chip.type}:${chip.id}`)}
-						<EntityChip entity={chip} size="sm" />
+						<EntityChip entity={chip} size={CHIP[size]} />
 					{/each}
 				{/if}
 			</span>
-			<ChevronDown aria-hidden="true" class="text-muted-foreground size-4 shrink-0" />
+			<ChevronDown aria-hidden="true" class={cn('text-muted-foreground shrink-0', GLYPH[size])} />
 		</Popover.Trigger>
 
 		<!-- Fixed: the Command list inside scrolls its cursor into view on mount, and an absolute
@@ -222,7 +240,7 @@
 						<button type="button" class={rowClass} onclick={() => apply(recent)}>
 							<span class="flex min-w-0 flex-1 flex-wrap items-center gap-2">
 								{#each [recent.project, recent.entity, recent.task].filter((r) => r !== null) as chip (`${chip.type}:${chip.id}`)}
-									<EntityChip entity={chip} size="sm" />
+									<EntityChip entity={chip} size={CHIP[size]} />
 								{/each}
 							</span>
 						</button>
@@ -269,7 +287,12 @@
 										{[row.entity?.name, row.step].filter(Boolean).join(' · ')}
 									</span>
 								</span>
-								<StatusBadge code={row.status} status={statuses[row.status]} field={statusField} size="sm" />
+								<StatusBadge
+									code={row.status}
+									status={statuses[row.status]}
+									field={statusField}
+									size={CHIP[size]}
+								/>
 							</button>
 						{/each}
 					{/each}
@@ -281,6 +304,7 @@
 				<HierarchicalSearch
 					{client}
 					{rootPath}
+					{size}
 					onSelect={(leaf, path) => apply(contextFromPath(leaf, path))}
 					placeholder="Search for a task or a shot…"
 				/>

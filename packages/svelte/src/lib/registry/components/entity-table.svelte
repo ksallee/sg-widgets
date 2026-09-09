@@ -3,6 +3,7 @@
 	import type { CollectionColumn, FieldSchema } from '@sg-widgets/core';
 
 	export type EntityTableDensity = 'compact' | 'default';
+	export type EntityTableSize = 'sm' | 'md' | 'lg';
 
 	/** What an editor is handed when a cell opens one. */
 	export interface CellEditorProps {
@@ -25,6 +26,9 @@
 	/** Row heights per density, so a virtualised list can be measured before it is drawn. */
 	const ROW_HEIGHT: Record<EntityTableDensity, number> = { compact: 33, default: 41 };
 	const CELL: Record<EntityTableDensity, string> = { compact: 'px-3 py-1', default: 'px-3 py-2' };
+	/** A row's text and the head it sits under, on the ladder of `docs/design-rules.md`. */
+	const TEXT: Record<EntityTableSize, string> = { sm: 'text-xs', md: 'text-sm', lg: 'text-base' };
+	const HEAD: Record<EntityTableSize, string> = { sm: 'h-9', md: 'h-10', lg: 'h-11' };
 
 	/** The select column's id, which is never a field path. */
 	const SELECT = '__select';
@@ -83,6 +87,7 @@
 		/** The widget context. An entity cell links to the row's page when this carries a site. */
 		context?: SgContext;
 		density?: EntityTableDensity;
+		size?: EntityTableSize;
 		/** Draws a checkbox column and reports the selection. */
 		selectable?: boolean;
 		onSelectionChange?: (rows: EntityRef[]) => void;
@@ -113,6 +118,7 @@
 		statuses = null,
 		context,
 		density = 'default',
+		size = 'md',
 		selectable = false,
 		onSelectionChange,
 		groupBy = null,
@@ -151,7 +157,7 @@
 	const sort = $derived(snapshot.sort);
 	const paging = $derived(describePaging(snapshot));
 	const rowHeight = $derived(ROW_HEIGHT[density]);
-	const cellClass = $derived(CELL[density]);
+	const cellClass = $derived(cn(CELL[density], TEXT[size]));
 	const byPath = $derived(new Map(columns.map((column) => [column.path, column])));
 
 	let editing = $state<{ key: string; path: string } | null>(null);
@@ -521,7 +527,7 @@
 							class={cn('bg-background relative border-b p-0', column?.align === 'right' && 'text-right')}
 						>
 							{#if entry.id === SELECT}
-								<span class="flex h-10 items-center justify-center">
+								<span class={cn('flex items-center justify-center', HEAD[size])}>
 									<Checkbox
 										aria-label="Select all loaded rows"
 										checked={allSelected.all}
@@ -530,7 +536,10 @@
 									/>
 								</span>
 							{:else if column}
-								<div data-slot="entity-table-head" class="flex h-10 w-full min-w-0 items-center">
+								<div
+									data-slot="entity-table-head"
+									class={cn('flex w-full min-w-0 items-center', HEAD[size])}
+								>
 									<button
 										type="button"
 										draggable="true"
@@ -550,7 +559,9 @@
 										data-sortable={column.sortable ? 'true' : 'false'}
 										title={column.sortable ? undefined : `${column.header} cannot be sorted`}
 										class={cn(
-											'focus-visible:ring-ring focus-visible:ring-offset-background flex h-10 min-w-0 flex-1 items-center gap-1.5 px-3 text-sm font-medium outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2',
+											'focus-visible:ring-ring focus-visible:ring-offset-background flex min-w-0 flex-1 items-center gap-1.5 px-3 font-medium outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2',
+											HEAD[size],
+											TEXT[size],
 											column.sortable ? 'hover:bg-accent hover:text-accent-foreground' : 'cursor-default',
 											column.align === 'right' && 'justify-end'
 										)}
@@ -677,7 +688,10 @@
 										type="button"
 										aria-expanded={item.expanded}
 										onclick={() => item.row.toggleExpanded()}
-										class="focus-visible:ring-ring focus-visible:ring-offset-background flex w-full items-center gap-1.5 px-3 py-1.5 text-left text-sm font-medium outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+										class={cn(
+											'focus-visible:ring-ring focus-visible:ring-offset-background flex w-full items-center gap-1.5 px-3 py-1.5 text-left font-medium outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
+											TEXT[size]
+										)}
 									>
 										<ChevronRight
 											aria-hidden="true"

@@ -1,6 +1,18 @@
 <script lang="ts" module>
 	import type { TreeCheckState } from '@sg-widgets/core';
 
+	export type EntityTreeSize = 'sm' | 'md' | 'lg';
+	export type EntityTreeDensity = 'compact' | 'default';
+
+	/** The list-row padding of `docs/design-rules.md`; compact halves the vertical half. */
+	const ROW: Record<EntityTreeDensity, string> = { compact: 'px-2 py-1', default: 'px-2 py-1.5' };
+	/** A row's text, leading slot and glyphs, on the leaf ladder of `docs/design-rules.md`. */
+	const TEXT: Record<EntityTreeSize, string> = { sm: 'text-xs', md: 'text-sm', lg: 'text-base' };
+	const LEAD: Record<EntityTreeSize, string> = { sm: 'size-5', md: 'size-6', lg: 'size-8' };
+	const GLYPH: Record<EntityTreeSize, string> = { sm: 'size-3.5', md: 'size-4', lg: 'size-5' };
+	/** A leaf inside a row sits one step down the ladder. */
+	const LEAF: Record<EntityTreeSize, 'sm' | 'md'> = { sm: 'sm', md: 'sm', lg: 'md' };
+
 	/** `aria-checked` as a tree row spells it: `mixed` for a part-checked branch. */
 	function checkedAttr(state: TreeCheckState): 'true' | 'false' | 'mixed' {
 		return state === 'mixed' ? 'mixed' : state === 'checked' ? 'true' : 'false';
@@ -77,6 +89,8 @@
 		maxHeight?: string;
 		emptyLabel?: string;
 		noMatchLabel?: string;
+		size?: EntityTreeSize;
+		density?: EntityTreeDensity;
 	};
 
 	let {
@@ -104,6 +118,8 @@
 		maxHeight = '24rem',
 		emptyLabel = 'Nothing under this project',
 		noMatchLabel = 'Nothing matches every word',
+		size = 'md',
+		density = 'default',
 		class: className,
 		ref = $bindable(null),
 		...rest
@@ -393,7 +409,9 @@
 							tabindex={row.focused ? 0 : -1}
 							onclick={() => activate(row)}
 							class={cn(
-								'focus-visible:ring-ring focus-visible:ring-offset-background flex min-w-0 cursor-default gap-1.5 rounded-md px-2 py-1.5 text-sm outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2',
+								'focus-visible:ring-ring focus-visible:ring-offset-background flex min-w-0 cursor-default gap-1.5 rounded-md outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2',
+								ROW[density],
+								TEXT[size],
 								hasSubLabel ? 'items-start' : 'items-center',
 								dimming && !row.match && 'text-muted-foreground',
 								row.selected ? 'bg-accent text-accent-foreground' : 'hover:bg-muted/50'
@@ -405,22 +423,26 @@
 									aria-hidden="true"
 									data-slot="entity-tree-chevron"
 									onclick={(event) => openBranch(event, row)}
-									class="flex size-4 shrink-0 items-center justify-center"
+									class={cn('flex shrink-0 items-center justify-center', GLYPH[size])}
 								>
 									{#if row.loading}
-										<Loader aria-hidden="true" class="size-4 shrink-0 motion-safe:animate-spin" />
+										<Loader
+											aria-hidden="true"
+											class={cn('shrink-0 motion-safe:animate-spin', GLYPH[size])}
+										/>
 									{:else}
 										<ChevronRight
 											aria-hidden="true"
 											class={cn(
-												'text-muted-foreground size-4 shrink-0 transition-transform duration-150 ease-out',
+												'text-muted-foreground shrink-0 transition-transform duration-150 ease-out',
+												GLYPH[size],
 												row.expanded && 'rotate-90'
 											)}
 										/>
 									{/if}
 								</span>
 							{:else}
-								<span aria-hidden="true" class="size-4 shrink-0"></span>
+								<span aria-hidden="true" class={cn('shrink-0', GLYPH[size])}></span>
 							{/if}
 
 							{#if checkable}
@@ -435,7 +457,8 @@
 										engine.toggleChecked(node.path);
 									}}
 									class={cn(
-										'flex size-4 shrink-0 items-center justify-center rounded-[4px] border transition-colors duration-150 [&>svg]:size-3.5',
+										'flex shrink-0 items-center justify-center rounded-[4px] border transition-colors duration-150 [&>svg]:size-3.5',
+										GLYPH[size],
 										row.checked === 'unchecked'
 											? 'border-input'
 											: 'border-primary bg-primary text-primary-foreground'
@@ -450,9 +473,9 @@
 							{/if}
 
 							{#if thumbnail !== false}
-								<span class="flex size-6 shrink-0 items-center">
+								<span class={cn('flex shrink-0 items-center', LEAD[size])}>
 									{#if thumbOf(node)}
-										<Thumbnail src={thumbOf(node)} aspect="square" size="sm" />
+										<Thumbnail src={thumbOf(node)} aspect="square" size={LEAF[size]} />
 									{/if}
 								</span>
 							{/if}
@@ -484,7 +507,7 @@
 									status={plan.statuses?.[status] ?? null}
 									field={node.entity ? (plan.status[node.entity.type] ?? null) : null}
 									variant="icon"
-									size="sm"
+									size={LEAF[size]}
 									{siteUrl}
 									class="shrink-0"
 								/>

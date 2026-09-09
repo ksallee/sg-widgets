@@ -17,6 +17,12 @@ import { cn } from '@/lib/utils';
 import { FieldPicker } from '@/registry/sg/components/field-picker';
 import { useSortable } from '@/registry/sg/components/sortable';
 
+export type SortPickerSize = 'sm' | 'md' | 'lg';
+
+/** Controls follow the input ladder of `docs/design-rules.md`. */
+const BOX: Record<SortPickerSize, string> = { sm: 'h-8 px-2', md: 'h-9 px-3', lg: 'h-10 px-3' };
+const GLYPH: Record<SortPickerSize, string> = { sm: 'size-4', md: 'size-4', lg: 'size-5' };
+
 export interface SortPickerProps {
   entityType: string;
   client: SgClient;
@@ -24,6 +30,7 @@ export interface SortPickerProps {
   value: SortKey[];
   /** Paths to keep out of the field list, each hiding itself and everything under it. */
   hidePaths?: string[];
+  size?: SortPickerSize;
   disabled?: boolean;
   /** Both the keys and the `sort` string they serialise to. */
   onChange?: (value: SortKey[], sort: string) => void;
@@ -52,6 +59,7 @@ export function SortPicker({
   schema,
   value = [],
   hidePaths = [],
+  size = 'md',
   disabled = false,
   onChange,
   open: openProp,
@@ -132,9 +140,13 @@ export function SortPicker({
         <PopoverTrigger
           disabled={disabled}
           data-slot="sort-trigger"
-          className="border-border bg-background hover:bg-muted focus-visible:border-ring focus-visible:ring-ring/50 inline-flex h-8 min-w-0 items-center gap-1.5 rounded-lg border px-2.5 text-sm font-medium outline-none focus-visible:ring-3 disabled:pointer-events-none disabled:opacity-50"
+          data-size={size}
+          className={cn(
+            'border-border bg-background hover:bg-muted focus-visible:border-ring focus-visible:ring-ring/50 inline-flex min-w-0 items-center gap-1.5 rounded-lg border text-sm font-medium outline-none focus-visible:ring-3 disabled:pointer-events-none disabled:opacity-50',
+            BOX[size],
+          )}
         >
-          <ArrowUpDownIcon className="size-4 shrink-0" />
+          <ArrowUpDownIcon className={cn('shrink-0', GLYPH[size])} />
           <span className="min-w-0 truncate" title={label}>
             {label}
           </span>
@@ -224,6 +236,7 @@ export function SortPicker({
             entityType={entityType}
             hidePaths={hidePaths}
             disabled={disabled}
+            size={size}
             value=""
             deepLinks
             clearable={false}

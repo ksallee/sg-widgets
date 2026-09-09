@@ -1,6 +1,14 @@
 <script lang="ts" module>
 	import type { EntityRef, SearchHit, WireCondition } from '@sg-widgets/core';
 
+	export type GlobalSearchSize = 'sm' | 'md' | 'lg';
+
+	/** The trigger follows the input ladder of `docs/design-rules.md`. */
+	const BOX: Record<GlobalSearchSize, string> = { sm: 'h-8', md: 'h-9', lg: 'h-10' };
+	const GLYPH: Record<GlobalSearchSize, string> = { sm: 'size-4', md: 'size-4', lg: 'size-5' };
+	/** A row's leading slot sits one step down the leaf ladder. */
+	const LEAD: Record<GlobalSearchSize, 'sm' | 'md'> = { sm: 'sm', md: 'sm', lg: 'md' };
+
 	/** Types to search, either bare names or names with a filter each. */
 	export type GlobalSearchTypes = string[] | Record<string, WireCondition[] | null>;
 
@@ -20,7 +28,6 @@
 	const PAGE_SIZE = 25;
 
 	const PEOPLE = ['HumanUser', 'ApiUser', 'ClientUser'];
-
 
 	/** The modifier the hotkey shows, from the platform the page is on. */
 	const META =
@@ -62,6 +69,7 @@
 		hotkey?: boolean;
 		/** Render as a combobox in the page instead of a dialog behind a trigger. */
 		inline?: boolean;
+		size?: GlobalSearchSize;
 		/** Whether the dialog is showing, two-way. */
 		open?: boolean;
 		onOpenChange?: (open: boolean) => void;
@@ -85,6 +93,7 @@
 		projectId = null,
 		hotkey = false,
 		inline = false,
+		size = 'md',
 		open = $bindable(false),
 		onOpenChange,
 		recents = [],
@@ -243,9 +252,9 @@
 	{@const name = hit.ref.name ?? `${hit.ref.type} #${hit.ref.id}`}
 	{@const sub = subLabel(hit)}
 	{#if PEOPLE.includes(hit.ref.type)}
-		<UserAvatar name={name} image={hit.image} size="sm" color="auto" apiUser={hit.ref.type === 'ApiUser'} />
+		<UserAvatar name={name} image={hit.image} size={LEAD[size]} color="auto" apiUser={hit.ref.type === 'ApiUser'} />
 	{:else}
-		<Thumbnail src={hit.image} size="sm" />
+		<Thumbnail src={hit.image} size={LEAD[size]} />
 	{/if}
 	<span class="flex min-w-0 flex-1 flex-col">
 		<span class="truncate" title={name}>
@@ -295,7 +304,7 @@
 						value={`recent:${entity.type}:${entity.id}`}
 						onSelect={() => choose(entity)}
 					>
-						<EntityChip {entity} size="sm" />
+						<EntityChip {entity} size={LEAD[size]} />
 						<span class="text-muted-foreground truncate text-xs">
 							{displayNames[entity.type] ?? entity.type}
 						</span>
@@ -347,11 +356,12 @@
 			<Button
 				variant="outline"
 				data-slot="global-search-trigger"
-				class="h-9 w-full justify-between"
+				data-size={size}
+				class={cn('w-full justify-between', BOX[size])}
 				onclick={() => setOpen(true)}
 			>
 				<span class="flex min-w-0 items-center gap-1.5">
-					<Search aria-hidden="true" class="size-4 opacity-70" />
+					<Search aria-hidden="true" class={cn('opacity-70', GLYPH[size])} />
 					<span class="truncate">{label}</span>
 				</span>
 				{#if hotkey}<Kbd>{META}K</Kbd>{/if}

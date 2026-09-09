@@ -1,3 +1,11 @@
+<script lang="ts" module>
+	export type SortPickerSize = 'sm' | 'md' | 'lg';
+
+	/** Controls follow the input ladder of `docs/design-rules.md`. */
+	const BOX: Record<SortPickerSize, string> = { sm: 'h-8 px-2', md: 'h-9 px-3', lg: 'h-10 px-3' };
+	const GLYPH: Record<SortPickerSize, string> = { sm: 'size-4', md: 'size-4', lg: 'size-5' };
+</script>
+
 <script lang="ts">
 	import ArrowDownIcon from '@lucide/svelte/icons/arrow-down';
 	import ArrowUpIcon from '@lucide/svelte/icons/arrow-up';
@@ -22,6 +30,7 @@
 		value: SortKey[];
 		/** Paths to keep out of the field list, each hiding itself and everything under it. */
 		hidePaths?: string[];
+		size?: SortPickerSize;
 		disabled?: boolean;
 		/** Both the keys and the `sort` string they serialise to. */
 		onChange?: (value: SortKey[], sort: string) => void;
@@ -37,6 +46,7 @@
 		schema,
 		value = $bindable([]),
 		hidePaths = [],
+		size = 'md',
 		disabled = false,
 		onChange,
 		open = $bindable(false),
@@ -141,9 +151,13 @@
 		<Popover.Trigger
 			{disabled}
 			data-slot="sort-trigger"
-			class="border-border bg-background hover:bg-muted focus-visible:border-ring focus-visible:ring-ring/50 inline-flex h-8 min-w-0 items-center gap-1.5 rounded-lg border px-2.5 text-sm font-medium outline-none focus-visible:ring-3 disabled:pointer-events-none disabled:opacity-50"
+			data-size={size}
+			class={cn(
+				'border-border bg-background hover:bg-muted focus-visible:border-ring focus-visible:ring-ring/50 inline-flex min-w-0 items-center gap-1.5 rounded-lg border text-sm font-medium outline-none focus-visible:ring-3 disabled:pointer-events-none disabled:opacity-50',
+				BOX[size]
+			)}
 		>
-			<ArrowUpDownIcon class="size-4 shrink-0" />
+			<ArrowUpDownIcon class={cn('shrink-0', GLYPH[size])} />
 			<span class="min-w-0 truncate" title={label}>{label}</span>
 			{#if value.length > 1}
 				<Badge variant="secondary" class="shrink-0" data-slot="sort-count">{value.length}</Badge>
@@ -226,6 +240,7 @@
 				{entityType}
 				{hidePaths}
 				{disabled}
+				{size}
 				bind:value={adding}
 				deepLinks
 				clearable={false}

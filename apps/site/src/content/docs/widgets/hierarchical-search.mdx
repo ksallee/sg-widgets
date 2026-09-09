@@ -25,6 +25,7 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/hierarchical-s
 | `rootPath` | `string` | `'/'` | Where the tree starts. `/Project/70` scopes it to that project. |
 | `entityTypes` | `string[] \| Record<string, WireCondition[] \| null>` | Shot, Asset, Sequence, Task | Types a search may end on. |
 | `placeholder` | `string` | `'Search the hierarchy…'` | Text in the search input. |
+| `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Row text, leading slot and glyphs. |
 | `class` / `className` | `string` | — | Merged after the widget's own classes. |
 
 With no query the list is one level of the tree. With a query it is the rows that match, each shown

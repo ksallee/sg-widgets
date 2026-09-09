@@ -57,6 +57,7 @@ import { FieldEditor } from '@/registry/sg/components/field-editor';
 import { FieldValue } from '@/registry/sg/components/field-value';
 
 export type EntityTableDensity = 'compact' | 'default';
+export type EntityTableSize = 'sm' | 'md' | 'lg';
 
 /** What an editor is handed when a cell opens one. */
 export interface CellEditorProps {
@@ -79,6 +80,9 @@ export type EditorFor = (dataType: string) => React.ComponentType<CellEditorProp
 /** Row heights per density, so a virtualised list can be measured before it is drawn. */
 const ROW_HEIGHT: Record<EntityTableDensity, number> = { compact: 33, default: 41 };
 const CELL: Record<EntityTableDensity, string> = { compact: 'px-3 py-1', default: 'px-3 py-2' };
+/** A row's text and the head it sits under, on the ladder of `docs/design-rules.md`. */
+const TEXT: Record<EntityTableSize, string> = { sm: 'text-xs', md: 'text-sm', lg: 'text-base' };
+const HEAD: Record<EntityTableSize, string> = { sm: 'h-9', md: 'h-10', lg: 'h-11' };
 
 /** The select column's id, which is never a field path. */
 const SELECT = '__select';
@@ -94,6 +98,7 @@ export interface EntityTableProps extends Omit<React.HTMLAttributes<HTMLDivEleme
   /** The widget context. An entity cell links to the row's page when this carries a site. */
   context?: SgContext;
   density?: EntityTableDensity;
+  size?: EntityTableSize;
   /** Draws a checkbox column and reports the selection. */
   selectable?: boolean;
   onSelectionChange?: (rows: EntityRef[]) => void;
@@ -161,6 +166,7 @@ export function EntityTable({
   statuses = null,
   context,
   density = 'default',
+  size = 'md',
   selectable = false,
   onSelectionChange,
   groupBy = null,
@@ -198,7 +204,7 @@ export function EntityTable({
   const sort = snapshot.sort;
   const paging = describePaging(snapshot);
   const rowHeight = ROW_HEIGHT[density];
-  const cellClass = CELL[density];
+  const cellClass = cn(CELL[density], TEXT[size]);
   const byPath = useMemo(() => new Map(columns.map((column) => [column.path, column])), [columns]);
 
   const [editing, setEditing] = useState<{ key: string; path: string } | null>(null);
@@ -443,7 +449,7 @@ export function EntityTable({
                     className={cn('bg-background relative border-b p-0', column?.align === 'right' && 'text-right')}
                   >
                     {leaf.id === SELECT ? (
-                      <span className="flex h-10 items-center justify-center">
+                      <span className={cn('flex items-center justify-center', HEAD[size])}>
                         <Checkbox
                           aria-label="Select all loaded rows"
                           checked={table.getIsAllRowsSelected()}
@@ -453,7 +459,10 @@ export function EntityTable({
                       </span>
                     ) : column ? (
                       <>
-                        <div data-slot="entity-table-head" className="flex h-10 w-full min-w-0 items-center">
+                        <div
+                          data-slot="entity-table-head"
+                          className={cn('flex w-full min-w-0 items-center', HEAD[size])}
+                        >
                           <button
                             type="button"
                             draggable
@@ -473,7 +482,9 @@ export function EntityTable({
                             data-sortable={column.sortable ? 'true' : 'false'}
                             title={column.sortable ? undefined : `${column.header} cannot be sorted`}
                             className={cn(
-                              'focus-visible:ring-ring focus-visible:ring-offset-background flex h-10 min-w-0 flex-1 items-center gap-1.5 px-3 text-sm font-medium outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2',
+                              'focus-visible:ring-ring focus-visible:ring-offset-background flex min-w-0 flex-1 items-center gap-1.5 px-3 font-medium outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2',
+                              HEAD[size],
+                              TEXT[size],
                               column.sortable ? 'hover:bg-accent hover:text-accent-foreground' : 'cursor-default',
                               column.align === 'right' && 'justify-end',
                             )}
@@ -611,7 +622,10 @@ export function EntityTable({
                             type="button"
                             aria-expanded={modelRow.getIsExpanded()}
                             onClick={() => modelRow.toggleExpanded()}
-                            className="focus-visible:ring-ring focus-visible:ring-offset-background flex w-full items-center gap-1.5 px-3 py-1.5 text-left text-sm font-medium outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+                            className={cn(
+                              'focus-visible:ring-ring focus-visible:ring-offset-background flex w-full items-center gap-1.5 px-3 py-1.5 text-left font-medium outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
+                              TEXT[size],
+                            )}
                           >
                             <ChevronRight
                               aria-hidden="true"

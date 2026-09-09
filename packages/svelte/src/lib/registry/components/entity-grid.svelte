@@ -6,6 +6,11 @@
 	 * the tile's own as well, so a wider column gets the taller picture.
 	 */
 	const TILE: Record<EntityGridSize, number> = { sm: 160, md: 224, lg: 288 };
+
+	export type EntityGridDensity = 'compact' | 'default';
+
+	/** The gap between tiles; compact halves it, as it halves a row's padding elsewhere. */
+	const GAP: Record<EntityGridDensity, string> = { compact: 'gap-1.5', default: 'gap-3' };
 </script>
 
 <script lang="ts">
@@ -45,6 +50,7 @@
 		/** `Status` rows by code, for the badge (probe 010). Read through the context when not given. */
 		statuses?: Record<string, StatusRecord> | null;
 		size?: EntityGridSize;
+		density?: EntityGridDensity;
 		selectable?: boolean;
 		onSelectionChange?: (rows: EntityRef[]) => void;
 		onSelect?: (row: EntityRow) => void;
@@ -67,6 +73,7 @@
 		showCode = false,
 		statuses = null,
 		size = 'md',
+		density = 'default',
 		selectable = false,
 		onSelectionChange,
 		onSelect,
@@ -237,7 +244,10 @@
 				{snapshot.error?.message}
 			</p>
 		{:else if snapshot.status === 'loading'}
-			<div class="grid gap-3" style="grid-template-columns:repeat(auto-fill,minmax({TILE[size]}px,1fr))">
+			<div
+				class={cn('grid', GAP[density])}
+				style="grid-template-columns:repeat(auto-fill,minmax({TILE[size]}px,1fr))"
+			>
 				{#each { length: 8 } as _, index (index)}
 					<div class="flex flex-col gap-2">
 						<Skeleton class="aspect-video w-full" />
@@ -258,7 +268,7 @@
 				aria-multiselectable={selectable ? 'true' : undefined}
 				aria-label="Rows"
 				tabindex={-1}
-				class="grid gap-3"
+				class={cn('grid', GAP[density])}
 				style="grid-template-columns:repeat(auto-fill,minmax({TILE[size]}px,1fr))"
 				onkeydown={onKeydown}
 			>

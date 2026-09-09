@@ -20,12 +20,25 @@ import {
   type ValueEditorArgs,
 } from '@/registry/sg/components/filter-editor';
 
+export type FilterDialogSize = 'sm' | 'md' | 'lg';
+
+/** Controls follow the input ladder of `docs/design-rules.md`. */
+const BOX: Record<FilterDialogSize, string> = { sm: 'h-8 px-2', md: 'h-9 px-3', lg: 'h-10 px-3' };
+const GLYPH: Record<FilterDialogSize, string> = { sm: 'size-4', md: 'size-4', lg: 'size-5' };
+/** The icon-button step beside a control of each height. */
+const ICON: Record<FilterDialogSize, 'icon-sm' | 'icon' | 'icon-lg'> = {
+  sm: 'icon-sm',
+  md: 'icon',
+  lg: 'icon-lg',
+};
+
 export interface FilterDialogProps {
   entityType: string;
   client: SgClient;
   schema?: SchemaService;
   value: FilterGroup;
   hidePaths?: string[];
+  size?: FilterDialogSize;
   disabled?: boolean;
   /** Replaces both button labels. Otherwise Add filters, then Edit filters. */
   label?: string;
@@ -54,6 +67,7 @@ export function FilterDialog({
   schema,
   value = emptyFilter(),
   hidePaths = [],
+  size = 'md',
   disabled = false,
   label,
   title = 'Filters',
@@ -98,11 +112,15 @@ export function FilterDialog({
         <DialogTrigger
           disabled={disabled}
           data-slot="filter-launch"
-          className="border-border bg-background hover:bg-muted focus-visible:border-ring focus-visible:ring-ring/50 inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg border px-2.5 text-sm font-medium outline-none focus-visible:ring-3 disabled:pointer-events-none disabled:opacity-50"
+          data-size={size}
+          className={cn(
+            'border-border bg-background hover:bg-muted focus-visible:border-ring focus-visible:ring-ring/50 inline-flex shrink-0 items-center gap-1.5 rounded-lg border text-sm font-medium outline-none focus-visible:ring-3 disabled:pointer-events-none disabled:opacity-50',
+            BOX[size],
+          )}
         >
           {active > 0 ? (
             <>
-              <PencilIcon className="size-4" />
+              <PencilIcon className={GLYPH[size]} />
               {label ?? 'Edit filters'}
               <Badge variant="secondary" data-slot="filter-count">
                 {active}
@@ -110,7 +128,7 @@ export function FilterDialog({
             </>
           ) : (
             <>
-              <ListFilterIcon className="size-4" />
+              <ListFilterIcon className={GLYPH[size]} />
               {label ?? 'Add filters'}
             </>
           )}
@@ -128,6 +146,7 @@ export function FilterDialog({
             client={client}
             schema={schema}
             hidePaths={hidePaths}
+            size={size}
             value={draft}
             onChange={setDraft}
             fieldChooser={fieldChooser}
@@ -153,7 +172,7 @@ export function FilterDialog({
       {active > 0 ? (
         <Button
           variant="ghost"
-          size="icon"
+          size={ICON[size]}
           disabled={disabled}
           aria-label="Clear filters"
           data-slot="filter-clear"

@@ -220,6 +220,8 @@
 				dataType={type as 'number'}
 				field={field ?? null}
 				{precision}
+			currencySymbol={symbol ?? '$'}
+				currencySymbol={symbol ?? '$'}
 				{hoursPerDay}
 				{frameRate}
 				symbol={symbol ?? '$'}

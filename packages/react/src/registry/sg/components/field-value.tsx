@@ -5,6 +5,7 @@ import {
   formatDate,
   formatDateTime,
   formatDuration,
+  formatCurrency,
   formatFloat,
   formatPercent,
   formatTimecode,
@@ -34,6 +35,8 @@ export interface FieldValueProps extends Omit<React.HTMLAttributes<HTMLSpanEleme
   locale?: string;
   /** Decimals shown on a float, zeros kept. Default shows what the API sent, trailing zeros dropped. */
   precision?: number;
+  /** Shown before a currency value. */
+  currencySymbol?: string;
   /** Rewrites the href of a local file link. Default opens `file:`, which browsers refuse from an http page. */
   localHref?: (link: UrlLinkInfo) => string | null;
   /** What to show when the value is empty. Never a dash: a dash reads like a value. */
@@ -57,6 +60,7 @@ export function FieldValue({
   hoursPerDay,
   locale,
   precision,
+  currencySymbol,
     localHref,
   emptyLabel = 'empty',
   className,
@@ -73,7 +77,7 @@ export function FieldValue({
   const rgb = kind === 'color' ? parseBgColor(String(value)) : null;
   const text =
     kind === 'number'
-      ? formatNumber(value, dataType, hoursPerDay, precision)
+      ? formatNumber(value, dataType, hoursPerDay, precision, currencySymbol, locale)
       : kind === 'date'
         ? formatDate(String(value), dateOptions)
         : kind === 'datetime'
@@ -166,7 +170,7 @@ export function FieldValue({
 }
 
 /** The numeric family shares one render kind; the exact format comes from the data type. */
-function formatNumber(value: unknown, dataType: string, hoursPerDay: number | undefined, precision: number | undefined): string {
+function formatNumber(value: unknown, dataType: string, hoursPerDay: number | undefined, precision: number | undefined, symbol: string | undefined, locale: string | undefined): string {
   switch (dataType) {
     case 'duration':
       return formatDuration(Number(value), hoursPerDay === undefined ? {} : { hoursPerDay });
@@ -174,6 +178,8 @@ function formatNumber(value: unknown, dataType: string, hoursPerDay: number | un
       return formatPercent(value as number);
     case 'timecode':
       return formatTimecode(Number(value));
+    case 'currency':
+      return formatCurrency(value as string, { ...(symbol === undefined ? {} : { symbol }), ...(precision === undefined ? {} : { decimals: precision }), ...(locale === undefined ? {} : { locale }) });
     case 'float':
       return formatFloat(value as string, precision === undefined ? {} : { decimals: precision });
     default:

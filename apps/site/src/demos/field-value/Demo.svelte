@@ -11,6 +11,7 @@
 		value: unknown;
 		hoursPerDay?: number;
 		precision?: number;
+		currencySymbol?: string;
 	}
 
 	async function load() {
@@ -39,6 +40,8 @@
 			{ label: 'number', dataType: 'number', value: 1001 },
 			{ label: 'float', dataType: 'float', value: '1.777778' },
 			{ label: 'float, precision 2', dataType: 'float', value: '1.777778', precision: 2 },
+			{ label: 'currency', dataType: 'currency', value: 12500 },
+			{ label: 'currency, euro', dataType: 'currency', value: 12500, currencySymbol: '€' },
 			{ label: 'percent', dataType: 'percent', value: 50 },
 			{ label: 'duration', dataType: 'duration', value: 480 },
 			{ label: 'duration, in days', dataType: 'duration', value: 480, hoursPerDay: 8 },
@@ -107,6 +110,7 @@
 							{statuses}
 							hoursPerDay={sample.hoursPerDay}
 							precision={sample.precision}
+							currencySymbol={sample.currencySymbol}
 						/>
 					</td>
 				</tr>

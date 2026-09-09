@@ -278,6 +278,7 @@ export function FieldEditor({
             hoursPerDay={hoursPerDay}
             locale={locale}
             precision={precision}
+            currencySymbol={symbol ?? '$'}
             emptyLabel={emptyLabel}
           />
         </span>
@@ -290,6 +291,7 @@ export function FieldEditor({
           hoursPerDay={hoursPerDay}
           locale={locale}
           precision={precision}
+          currencySymbol={symbol ?? '$'}
           emptyLabel={emptyLabel}
         />
       )}

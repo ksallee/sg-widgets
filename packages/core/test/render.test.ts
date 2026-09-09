@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fileHref, nameColorIndex, nameHue, NAME_HUES } from '../src/render.js';
+import { fileHref, formatCurrency, nameColorIndex, nameHue, NAME_HUES } from '../src/render.js';
 import {
   COLOR_SENTINEL,
   fileNameFromUrl,
@@ -273,5 +273,14 @@ describe('nameColorIndex', () => {
     expect(nameColorIndex('')).toBe(0);
     expect(NAME_HUES).toContain(nameHue('Ada Lovelace'));
     expect(nameHue('Ada Lovelace')).toBe(nameHue('Ada Lovelace'));
+  });
+});
+
+describe('formatCurrency', () => {
+  it('prefixes the symbol and fixes two decimals', () => {
+    expect(formatCurrency(12500)).toBe('$12,500.00');
+    expect(formatCurrency('42.5', { symbol: '€' })).toBe('€42.50');
+    expect(formatCurrency(-3, { symbol: '£', decimals: 0 })).toBe('-£3');
+    expect(formatCurrency(null)).toBe('');
   });
 });

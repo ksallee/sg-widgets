@@ -154,6 +154,20 @@ export interface FloatOptions {
  * JSON number, so it is formatted from the string to avoid a needless round trip
  * through binary (field_types/float).
  */
+/**
+ * A currency amount with its symbol. There is no corpus card for `currency`; the
+ * read shape is treated as a decimal number and the symbol is the caller's.
+ */
+export function formatCurrency(value: number | string | null | undefined, options: { symbol?: string; decimals?: number; locale?: string } = {}): string {
+  if (isEmptyValue(value)) return '';
+  const n = Number(value);
+  if (!Number.isFinite(n)) return String(value);
+  const decimals = options.decimals ?? 2;
+  const amount = n.toLocaleString(options.locale ?? 'en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+  const symbol = options.symbol ?? '$';
+  return n < 0 ? `-${symbol}${amount.slice(1)}` : `${symbol}${amount}`;
+}
+
 export function formatFloat(value: number | string | null | undefined, options: FloatOptions = {}): string {
   if (isEmptyValue(value)) return '';
   const raw = typeof value === 'number' ? String(value) : String(value).trim();

@@ -54,7 +54,7 @@
       "name": "entity-card",
       "type": "registry:component",
       "title": "Entity Card",
-      "description": "One Flow Production Tracking row as a card: thumbnail, name, type, status and a grid of field values.",
+      "description": "One Flow Production Tracking row as a card, or as a thumbnail-first tile: thumbnail, name, status and its field values.",
       "categories": [
         "flow-production-tracking",
         "widget"
@@ -66,9 +66,10 @@
       "registryDependencies": [
         "https://sg-widgets.dev/r/react/status-badge.json",
         "https://sg-widgets.dev/r/react/thumbnail.json",
+        "checkbox",
         "skeleton"
       ],
-      "docs": "Reads the row through an SgContext when given a reference, labels every dotted path through the schema, and draws values itself so nothing depends on it in return.",
+      "docs": "Reads the row through an SgContext when given a reference, labels every dotted path through the schema, and draws values itself so nothing depends on it in return. The tile variant is what EntityGrid lays out.",
       "files": [
         {
           "path": "src/registry/sg/components/entity-card.tsx",
@@ -703,7 +704,7 @@
       "name": "entity-grid",
       "type": "registry:component",
       "title": "Entity Grid",
-      "description": "Flow Production Tracking rows as thumbnail cards, with a status badge, two secondary fields, selection and infinite scroll.",
+      "description": "Flow Production Tracking rows as EntityCard tiles, with selection, keyboard navigation and infinite scroll.",
       "categories": [
         "flow-production-tracking",
         "collection"
@@ -713,16 +714,13 @@
         "lucide-react"
       ],
       "registryDependencies": [
-        "https://sg-widgets.dev/r/react/field-value.json",
-        "https://sg-widgets.dev/r/react/status-badge.json",
-        "https://sg-widgets.dev/r/react/thumbnail.json",
-        "checkbox",
+        "https://sg-widgets.dev/r/react/entity-card.json",
         "skeleton",
         "input",
         "button",
         "select"
       ],
-      "docs": "Takes an entity source. A Version card carries a play overlay; scrolling to the end asks the source for the next page.",
+      "docs": "Takes an entity source and draws every row as an EntityCard tile; the arrows walk the grid and scrolling to the end asks the source for the next page.",
       "files": [
         {
           "path": "src/registry/sg/components/entity-grid.tsx",

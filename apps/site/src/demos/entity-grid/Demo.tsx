@@ -1,13 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { CollectionColumn, EntityRef, FieldSchema, StatusRecord } from '@sg-widgets/core';
+import type { CollectionColumn, EntityRef, EntityRow } from '@sg-widgets/core';
 import { condition, createEntitySource, resolveColumns } from '@sg-widgets/core';
 import { EntityGrid } from '@/registry/sg/components/entity-grid';
 import { createDemoContext } from '../_shared/client';
-import { DemoClientProvider } from '../_shared/react';
 
-const SUB = 'user';
-const EXTRA = ['created_at'];
-const FIELDS = ['code', 'image', 'sg_status_list', SUB, ...EXTRA];
+const ARTIST = 'user';
+const FIELDS = ['code', 'image', 'sg_status_list', ARTIST];
 const SIZES = ['sm', 'md', 'lg'] as const;
 
 const toggle =
@@ -15,63 +13,46 @@ const toggle =
   'text-muted-foreground outline-none transition-colors duration-150 hover:bg-accent hover:text-accent-foreground ' +
   'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ' +
   'aria-pressed:bg-accent aria-pressed:text-accent-foreground aria-pressed:font-medium';
-
-interface Loaded {
-  subLabel: CollectionColumn;
-  fields: CollectionColumn[];
-  statusField: FieldSchema | null;
-  statuses: Record<string, StatusRecord>;
-}
+const group = 'flex flex-col gap-2';
+const label = 'text-muted-foreground text-xs font-medium tracking-wide uppercase';
 
 export default function EntityGridDemo() {
   const context = useMemo(() => createDemoContext(), []);
-  const source = useMemo(
-    () =>
-      createEntitySource({
-        client: context.client,
-        entityType: 'Version',
-        fields: FIELDS,
-        // The mock's rows are one project's already; a real site's are not.
-        filters: context.live ? condition('project', 'is', { type: 'Project', id: context.projectId }) : null,
-        pageSize: 12,
-      }),
-    [context],
-  );
+  const sources = useMemo(() => {
+    // The mock's rows are one project's already; a real site's are not.
+    const filters = context.live ? condition('project', 'is', { type: 'Project', id: context.projectId }) : null;
+    const of = (pageSize: number) =>
+      createEntitySource({ client: context.client, entityType: 'Version', fields: FIELDS, filters, pageSize });
+    return { source: of(12), short: of(6) };
+  }, [context]);
 
-  const [data, setData] = useState<Loaded | null>(null);
+  const [artist, setArtist] = useState<CollectionColumn | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [size, setSize] = useState<(typeof SIZES)[number]>('md');
   const [selected, setSelected] = useState<EntityRef[]>([]);
+  const [opened, setOpened] = useState<EntityRow | null>(null);
 
   useEffect(() => {
     let live = true;
-    Promise.all([
-      resolveColumns(context.schema, 'Version', [SUB, ...EXTRA]),
-      context.schema.fields('Version'),
-      context.statuses.byCode(),
-    ])
-      .then(([resolved, schema, table]) => {
+    resolveColumns(context.schema, 'Version', [ARTIST])
+      .then(([resolved]) => {
         if (!live) return;
-        void source.count();
-        setData({
-          subLabel: resolved[0]!,
-          fields: resolved.slice(1),
-          statusField: schema['sg_status_list'] ?? null,
-          statuses: Object.fromEntries(table),
-        });
+        void sources.source.count();
+        setArtist(resolved!);
       })
       .catch((e: unknown) => live && setError(e instanceof Error ? e.message : String(e)));
     return () => {
       live = false;
     };
-  }, [context, source]);
+  }, [context, sources]);
 
   if (error) return <p className="text-destructive text-sm">{error}</p>;
-  if (!data) return <p className="text-muted-foreground text-sm">Loading the site…</p>;
+  if (!artist) return <p className="text-muted-foreground text-sm">Loading the site…</p>;
 
   return (
-    <DemoClientProvider client={context.client}>
-      <div className="flex w-full min-w-0 flex-col gap-3">
+    <div className="flex w-full min-w-0 flex-col gap-4">
+      <section className={group} data-testid="grid-sizes">
+        <h4 className={label}>Three sizes</h4>
         <div className="flex flex-wrap items-center gap-2">
           {SIZES.map((option) => (
             <button
@@ -84,24 +65,47 @@ export default function EntityGridDemo() {
               {option}
             </button>
           ))}
-          <span className="text-muted-foreground text-xs tabular-nums" data-testid="selection-count">
-            {selected.length} selected
+          <span className="text-muted-foreground text-xs" data-testid="opened">
+            {opened ? `opened ${opened.type} ${opened.id}` : 'Enter opens a tile'}
           </span>
         </div>
         <EntityGrid
-          source={source}
+          source={sources.source}
           context={context}
-          subLabelField={data.subLabel}
-          secondaryField="id"
-          fields={data.fields}
-          statusField={data.statusField}
-          statuses={data.statuses}
+          secondaryField={artist}
           size={size}
-          selectable
           maxHeight="26rem"
+          onSelect={setOpened}
+        />
+      </section>
+
+      <section className={group} data-testid="grid-selectable">
+        <h4 className={label}>Selectable</h4>
+        <span className="text-muted-foreground text-xs tabular-nums" data-testid="selection-count">
+          {selected.length} selected
+        </span>
+        <EntityGrid
+          source={sources.short}
+          context={context}
+          secondaryField={artist}
+          size="sm"
+          selectable
+          maxHeight="18rem"
           onSelectionChange={setSelected}
         />
-      </div>
-    </DemoClientProvider>
+      </section>
+
+      <section className={group} data-testid="grid-no-image">
+        <h4 className={label}>No image</h4>
+        <EntityGrid
+          source={sources.short}
+          context={context}
+          thumbnail={false}
+          secondaryField={artist}
+          size="sm"
+          maxHeight="18rem"
+        />
+      </section>
+    </div>
   );
 }

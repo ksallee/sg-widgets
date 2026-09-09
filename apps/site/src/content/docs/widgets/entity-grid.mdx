@@ -1,63 +1,67 @@
 ---
 title: Entity Grid
-description: Flow Production Tracking rows as thumbnail cards, with selection and either paging or infinite scroll.
+description: Flow Production Tracking rows as EntityCard tiles, with selection and either paging or infinite scroll.
 ---
 
 import Demo from '../../../components/Demo.astro';
 
-Renders rows from an entity source as cards: a thumbnail, the row's label, a sub-label, a status badge
-and any extra fields. A source in `infinite` mode loads the next page at the end of the scroll; one in
-`pages` mode draws a pagination footer.
+Renders rows from an entity source as EntityCard tiles: the thumbnail fills the top of each tile, the
+status sits on it, and one metadata line runs under the name. A source in `infinite` mode loads the
+next page at the end of the scroll; one in `pages` mode draws a pagination footer.
 
 ## Install
+
+Installing this pulls EntityCard, and StatusBadge and Thumbnail with it.
 
 ```sh
 pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/entity-grid.json
 pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/entity-grid.json
 ```
 
-<Demo name="entity-grid" title="Entity Grid: Versions with a play overlay, three card sizes, selection and infinite scroll" />
+<Demo name="entity-grid" title="Entity Grid: Versions at three tile sizes, a selectable grid and one with no picture" />
 
 ```ts
 const source = createEntitySource({
   client: context.client,
   entityType: 'Version',
-  fields: ['code', 'image', 'sg_status_list', 'user', 'created_at'],
+  fields: ['code', 'image', 'sg_status_list', 'user'],
   pageSize: 12,
 });
-const [subLabel, ...fields] = await resolveColumns(context.schema, 'Version', ['user', 'created_at']);
+const [artist] = await resolveColumns(context.schema, 'Version', ['user']);
 ```
+
+The source reads the fields the tiles draw. The status badge needs the type's status field in that
+list; the metadata line needs whatever `subLabelField` and `secondaryField` name.
 
 ## Props
 
 | prop | type | default | meaning |
 |---|---|---|---|
 | `source` | `EntitySource` | — | The rows and the paging behind them. |
-| `thumbnail` | `string \| false` | `'image'` | Field holding the thumbnail URL. |
-| `labelField` | `string \| null` | `null` | Field shown as the card's label. Defaults to the type's display name. |
-| `subLabelField` | `string \| CollectionColumn \| null` | `null` | The muted line under the label. A resolved column renders it by type. |
+| `context` | `SgContext` | required | Every tile reads its schema, its statuses and its links through it. |
+| `thumbnail` | `string \| false` | `'image'` | Field holding the thumbnail URL. `false` leaves every tile on the placeholder. |
+| `labelField` | `string \| null` | `null` | Field shown as the tile's name. Defaults to the type's display name. |
+| `subLabelField` | `string \| CollectionColumn \| null` | `null` | The left of the metadata line. A resolved column renders it by type. |
 | `subLabel` | `(row) => string` | — | The caller's own sub-label. Wins over `subLabelField`. |
-| `secondaryField` | `string \| CollectionColumn \| null` | `null` | The value shown beside the label. |
-| `secondary` | `(row) => string` | — | The caller's own text beside the label. Wins over `secondaryField`. |
-| `showCode` | `boolean` | `false` | Show the row's `code` beside the label when the two differ. |
-| `fields` | `CollectionColumn[]` | `[]` | Extra fields drawn on the card. The source must already read them. |
-| `statusPath` | `string` | `'sg_status_list'` | Path of the status field. Project's is `sg_status`. |
-| `statusField` | `FieldSchema \| null` | `null` | The status field's schema, for its labels. |
-| `statuses` | `Record<string, StatusRecord> \| null` | `null` | Status rows by code. |
-| `context` | `SgContext` | — | An entity value links to the row's page when this carries a site. |
-| `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Card width: 160, 224 or 288 pixels. |
-| `selectable` | `boolean` | `false` | Draws a checkbox on each card. |
+| `secondaryField` | `string \| CollectionColumn \| null` | `null` | The right of the metadata line. |
+| `secondary` | `(row) => string` | — | The caller's own text on the right. Wins over `secondaryField`. |
+| `showCode` | `boolean` | `false` | Show the row's `code` beside the name when the two differ. |
+| `statuses` | `Record<string, StatusRecord> \| null` | `null` | Status rows by code. Read through the context when not given. |
+| `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Tile size and column minimum: 160, 224 or 288 pixels. |
+| `selectable` | `boolean` | `false` | Draws a checkbox on each tile. |
 | `pageSizes` | `number[]` | `[25, 50, 100]` | Rows per page offered in the footer. |
 | `maxHeight` | `string` | `'32rem'` | Height of the scrolling body. |
 | `emptyLabel` | `string` | `'No rows'` | Shown when the read returned nothing. |
 | `class` / `className` | `string` | — | Merged after the widget's own classes. |
+
+Nothing is on the metadata line by default, and the row's id is never on it.
 
 ## Events
 
 | event | payload | when |
 |---|---|---|
 | `onselectionchange` / `onSelectionChange` | `EntityRef[]` | The selection changed. |
-| `onselect` / `onSelect` | `EntityRow` | A card was activated, when `selectable` is off. |
+| `onselect` / `onSelect` | `EntityRow` | A tile was activated, by click or by Enter. |
 
 ## Slots
 
@@ -65,18 +69,29 @@ None.
 
 ## Keyboard
 
+The grid is one tab stop: Tab moves into the tile the cursor is on, and the arrows walk from there.
+
 | key | does |
 |---|---|
-| Tab | Moves to the next card, or to its checkbox, then to the footer. |
-| Enter, Space on a card | Selects it, or emits the select event. |
-| Space on a checkbox | Toggles the card. |
+| Tab | Moves into the grid, then out of it. |
+| Left, Right | Moves the cursor one tile. |
+| Up, Down | Moves the cursor one row of tiles. |
+| Home, End | Moves to the first or the last tile. |
+| Space | Selects the tile, when the grid is selectable. |
+| Enter | Emits the select event. |
 | Enter in the page number | Goes to that page. |
+
+## Anatomy
+
+The tile follows the thumbnail view of the Flow PT web app and the asset grid of Frame.io: the
+picture first and at one aspect, the state on the picture rather than under it, one line of name and
+one of metadata, and the controls only while the pointer or the focus is on the tile.
 
 ## API behaviour
 
 The value of an image field is a presigned URL re-signed on every read, and it is the only state
 marker there is: null means the row never had a thumbnail, and a URL under the transient status path
-means one is still transcoding. All three states render (field_types/image). A Version card carries a
+means one is still transcoding. All three states render (field_types/image). A Version tile carries a
 play overlay.
 
 Paging stops on a short page: `links.next` is emitted on every page forever, including empty ones, and

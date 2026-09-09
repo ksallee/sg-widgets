@@ -1,11 +1,13 @@
 ---
 title: EntityCard
-description: One Flow Production Tracking row as a card, with a grid of chosen fields.
+description: One Flow Production Tracking row as a card, or as a thumbnail-first tile.
 ---
 
 import Demo from '../../../components/Demo.astro';
 
 Renders one row as a card: its thumbnail, name, type, status and a grid of the field paths you name.
+Give the card a row you hold, or a reference and it reads the row itself. The tile variant reads the
+same row picture first, and is what EntityGrid lays out.
 
 ## Install
 
@@ -16,7 +18,7 @@ pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/entity-card.json
 pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/entity-card.json
 ```
 
-<Demo name="entity-card" title="EntityCard: three sizes, from a row and from a bare reference" />
+<Demo name="entity-card" title="EntityCard: three sizes from a row, one card reading a picked reference, and the tile variant" />
 
 ## Props
 
@@ -25,7 +27,8 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/entity-card.js
 | `context` | `SgContext` | required | The cached client, the schema service and the site url the card reads through. |
 | `row` | `EntityRow \| null` | `null` | A row you already read. Given, the card reads nothing. |
 | `entity` | `EntityRef \| null` | `null` | The row to read, when no row is given. |
-| `fields` | `string[]` | `[]` | Field paths for the grid, in order. Dotted paths allowed. |
+| `fields` | `string[]` | `[]` | Field paths for the grid, in order. Dotted paths allowed. Card only. |
+| `variant` | `'card' \| 'tile'` | `'card'` | The stacked surface, or the thumbnail-first tile. |
 | `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Thumbnail 16, 16 and 24, with the gaps and name scale to match. |
 | `imagePath` | `string` | `'image'` | The image field the thumbnail comes from. |
 | `siteUrl` | `string` | the context's | The site the name and every linked row point at. |
@@ -33,6 +36,25 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/entity-card.js
 | `locale` | `string` | the runtime's | Passed through for dates. |
 | `emptyLabel` | `string` | `'empty'` | What a field with no value shows. |
 | `class` / `className` | `string` | — | Merged after the widget's own classes. |
+
+These shape the tile and are ignored by the card:
+
+| prop | type | default | meaning |
+|---|---|---|---|
+| `labelField` | `string \| null` | `null` | Field shown as the name. Defaults to the type's display name. |
+| `subLabelField` | `string \| CollectionColumn \| null` | `null` | The left of the metadata line. A resolved column renders it by type. |
+| `subLabel` | `(row) => string` | — | Your own sub-label. Wins over `subLabelField`. |
+| `secondaryField` | `string \| CollectionColumn \| null` | `null` | The right of the metadata line. |
+| `secondary` | `(row) => string` | — | Your own text on the right. Wins over `secondaryField`. |
+| `showCode` | `boolean` | `false` | Show the row's `code` beside the name when the two differ. |
+| `statuses` | `Record<string, StatusRecord> \| null` | `null` | Status rows by code. Read through the context when not given. |
+| `selectable` | `boolean` | `false` | Draws the selection checkbox on the thumbnail. |
+| `selected` | `boolean` | `false` | Paints the tile as selected. |
+| `actions` | snippet / node | — | Controls in the thumbnail's top-right corner. |
+
+Nothing is on the metadata line by default, and the row's id is never on it. The tile takes its
+selected state rather than holding one, and it spreads whatever attributes and handlers it is given
+onto its root, so a collection can make it an option of a listbox and drive it.
 
 Given a reference, the card reads the row itself: one search asking for the type's identity chain,
 its thumbnail, its status field and your paths at once. The read goes through the context's cache,
@@ -62,20 +84,32 @@ The root fills its container and carries the size as a data attribute.
 
 ## Events
 
-None.
+| event | payload | when |
+|---|---|---|
+| `onselectedchange` / `onSelectedChange` | `boolean` | The tile's checkbox was toggled. |
 
 ## Slots
 
-None.
+| slot | where |
+|---|---|
+| `actions` | The thumbnail's top-right corner, on hover or focus. Tile only. |
 
 ## Keyboard
 
 | key | does |
 |---|---|
-| `Tab` | Moves to the name, when a site url is known, then to any link inside a field value. |
+| `Tab` | On a card, moves to the name, when a site url is known, then to any link inside a field value. On a tile, moves to the checkbox and to the actions. |
 | `Enter` | Opens the row's page on the site, in a new tab. |
+| `Space` | Toggles the checkbox it is on. |
 
-Nothing else in the card takes focus.
+Nothing else in the card takes focus. A tile is focusable only once whoever lays it out gives it a
+tab index; EntityGrid does, and owns the arrow keys.
+
+## Anatomy
+
+The tile follows the thumbnail view of the Flow PT web app and the asset grid of Frame.io: the
+picture first and at one aspect, the state on the picture rather than under it, one line of name and
+one of metadata, and the controls only while the pointer or the focus is on the tile.
 
 ## API behaviour
 

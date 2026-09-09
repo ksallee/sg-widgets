@@ -244,6 +244,55 @@ export function withSelectedPinned(
 }
 
 /* -------------------------------------------------------------------------- */
+/* the closed control's summary                                               */
+/* -------------------------------------------------------------------------- */
+
+/** What a multi picker's control shows for the selection. */
+export type PickerSummary = 'chips' | 'ellipsis' | 'count';
+
+/** Chips `ellipsis` draws before the rest becomes `+n`, when `max` names no number. */
+export const ELLIPSIS_CHIPS = 3;
+
+export interface SelectionSummary<T> {
+  /** The items drawn as chips, in order. Empty under `count`. */
+  shown: T[];
+  /** Items past `shown`. Drawn as `+n` beside the chips. */
+  overflow: number;
+  /** Every label, comma-joined, for the control's `title`. */
+  title: string;
+  /** `3 selected`, which is the whole control under `count`. */
+  countLabel: string;
+  /** True while the chips must stay on one line rather than wrap. */
+  oneLine: boolean;
+}
+
+/**
+ * What a multi picker draws for its selection.
+ *
+ * `chips` draws every chip and wraps. `ellipsis` keeps one line: the first `max`
+ * chips, then `+n`, with the whole list in the title. `count` draws neither and
+ * reads `3 selected`. `max` bounds the chips in either chip mode; `0` means every
+ * chip, which `ellipsis` reads as three because it cannot wrap.
+ */
+export function summariseSelection<T>(
+  items: readonly T[],
+  labelOf: (item: T) => string,
+  options: { summary?: PickerSummary | undefined; max?: number | undefined } = {},
+): SelectionSummary<T> {
+  const summary = options.summary ?? 'chips';
+  const asked = options.max ?? 0;
+  const max = asked > 0 ? asked : summary === 'ellipsis' ? ELLIPSIS_CHIPS : 0;
+  const shown = summary === 'count' ? [] : max > 0 ? items.slice(0, max) : [...items];
+  return {
+    shown,
+    overflow: items.length - shown.length,
+    title: items.map(labelOf).join(', '),
+    countLabel: `${items.length} selected`,
+    oneLine: summary === 'ellipsis',
+  };
+}
+
+/* -------------------------------------------------------------------------- */
 /* the controller                                                             */
 /* -------------------------------------------------------------------------- */
 
@@ -266,7 +315,7 @@ export interface EntitySearchOptions {
   /** Field shown under the label. Defaults to the entity type when several are searched. */
   subLabelField?: string | undefined;
   /** Field holding the thumbnail URL. `false` hides thumbnails. */
-  thumbnailField?: string | false | undefined;
+  thumbnail?: string | false | undefined;
   /** Extra fields to request, so a caller's own sub-label or secondary can be read. */
   fields?: string[] | undefined;
   /** Caller pre-filter, merged into every request with `and`. */
@@ -405,7 +454,7 @@ export function createEntitySearch(options: EntitySearchOptions): EntitySearch {
     if (opts.labelField) wanted.push(opts.labelField);
     if (opts.secondaryField) wanted.push(opts.secondaryField);
     if (opts.subLabelField) wanted.push(opts.subLabelField);
-    if (opts.thumbnailField !== false) wanted.push(opts.thumbnailField ?? 'image');
+    if (opts.thumbnail !== false) wanted.push(opts.thumbnail ?? 'image');
     wanted.push(...(opts.fields ?? []));
     return [...new Set(wanted)];
   }

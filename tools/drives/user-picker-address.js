@@ -21,26 +21,33 @@ async function until(read, timeoutMs = 6000) {
   }
 }
 
+/** A press, the way a mouse makes one: the field opens on pointerdown. */
+function press(el) {
+  for (const type of ['pointerdown', 'mousedown', 'pointerup', 'mouseup']) {
+    el.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, button: 0, pointerType: 'mouse' }));
+  }
+  el.click();
+}
+
 const popover = () => $('[data-picker="entity"]');
 const rows = () => $$('[data-picker="entity"] [data-slot="entity-picker-option"]');
 const label = (row) => $('[data-slot="entity-picker-label"]', row)?.textContent.trim();
 const sub = (row) => $('[data-slot="entity-picker-sub-label"]', row)?.textContent.trim();
 
 async function search(pane, demoCase, query) {
-  const trigger = $(`[data-demo-case="${demoCase}"] [data-slot="entity-picker-trigger"]`, pane);
-  if (!trigger) return { error: `no trigger in ${demoCase}` };
-  trigger.click();
+  const input = $(`[data-demo-case="${demoCase}"] [data-slot="entity-picker-input"]`, pane);
+  if (!input) return { error: `no query input in ${demoCase}` };
+  press(input);
   const box = await until(popover);
   if (!box) return { error: `${demoCase} did not open` };
-  const input = await until(() => $('input', box));
   typeInto(input, query);
   await wait(700);
   const found = await until(() => (rows().length > 0 ? rows() : null), 3000);
-  return { box, rows: found ?? [] };
+  return { box, input, rows: found ?? [] };
 }
 
-async function close(box) {
-  box.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+async function close(input) {
+  input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
   await until(() => !popover());
   await wait(200);
 }
@@ -62,7 +69,7 @@ for (const framework of ['svelte', 'react']) {
   if (!subLabels.every((text) => (text ?? '').includes('@'))) {
     failures.push(`${framework}: the sub-label is not an address: ${JSON.stringify(subLabels)}`);
   }
-  await close(narrow.box);
+  await close(narrow.input);
 
   // An address query matches the whole address, and the matched run is bold in the sub-label.
   const wide = await search(pane, 'by-address', 'ada.lovelace@');
@@ -78,7 +85,7 @@ for (const framework of ['svelte', 'react']) {
   if (bold[0] !== 'ada.lovelace@') {
     failures.push(`${framework}: the matched run in the sub-label is ${JSON.stringify(bold)}`);
   }
-  await close(wide.box);
+  await close(wide.input);
 
   seen[framework] = { le: names, subLabels, address: wide.rows.map(label), bold };
 }
@@ -86,13 +93,12 @@ for (const framework of ['svelte', 'react']) {
 if (Object.keys(seen).length === 0) failures.push('no framework pane was on show');
 
 const stage = $$('[data-pane]').find((p) => p.offsetParent !== null) ?? document;
-const shot = $('[data-demo-case="by-address"] [data-slot="entity-picker-trigger"]', stage);
+const shot = $('[data-demo-case="by-address"] [data-slot="entity-picker-input"]', stage);
 if (shot) window.scrollTo({ top: shot.getBoundingClientRect().top + window.scrollY - 120 });
 await wait(400);
-shot?.click();
-const box = await until(popover);
-const input = await until(() => $('input', box ?? document));
-if (input) typeInto(input, 'ada');
+if (shot) press(shot);
+await until(popover);
+if (shot) typeInto(shot, 'ada');
 await until(() => rows().length > 0);
 await wait(300);
 

@@ -25,6 +25,8 @@ export default function EntityPickerDemo() {
   const [inProject, setInProject] = useState<EntityRef | null>(null);
   // A bare reference: type and id, no name. Resolved on mount by one id-in read.
   const [bare, setBare] = useState<EntityRef | null>({ type: 'Shot', id: 866 });
+  const [plain, setPlain] = useState<EntityRef | null>(null);
+  const [anatomy, setAnatomy] = useState<EntityRef | null>(null);
   const [paged, setPaged] = useState<EntityRef | null>(null);
   const [failed, setFailed] = useState<EntityRef | null>(null);
   const [lastError, setLastError] = useState<string | null>(null);
@@ -141,6 +143,34 @@ export default function EntityPickerDemo() {
               Arm the next call to fail
             </button>
             {lastError ? <span className="text-destructive text-xs">{lastError}</span> : null}
+          </div>
+        </div>
+      </section>
+
+      <section className={group} data-demo-case="anatomy">
+        <h4 className={label}>Row anatomy: no thumbnail, a sub-label, the code beside the name</h4>
+        <div className="flex flex-col gap-2">
+          <div className={field}>
+            <EntityPicker
+              client={client}
+              entityTypes={['Shot']}
+              thumbnail={false}
+              value={plain}
+              onValueChange={setPlain}
+              clearable
+            />
+          </div>
+          <div className={field}>
+            <EntityPicker
+              client={client}
+              entityTypes={['Version']}
+              subLabelField="sg_status_list"
+              secondaryField="id"
+              showCode
+              value={anatomy}
+              onValueChange={setAnatomy}
+              clearable
+            />
           </div>
         </div>
       </section>

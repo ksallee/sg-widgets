@@ -78,7 +78,7 @@ async function run(framework) {
 
   press($('[data-slot="status-multi-picker-trigger"]', rowAt()));
   await until(() => $(`[data-picker="status"] [data-status-code="${CODE}"]`), 'the status list');
-  press($(`[data-picker="status"] [data-status-code="${CODE}"]`).closest('[data-slot="command-item"]'));
+  press($(`[data-picker="status"] [data-status-code="${CODE}"]`));
   await closePopovers();
 
   const after = await until(() => {

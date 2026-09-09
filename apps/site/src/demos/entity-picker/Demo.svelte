@@ -16,6 +16,8 @@
 	let inProject = $state<EntityRef | null>(null);
 	// A bare reference: type and id, no name. Resolved on mount by one id-in read.
 	let bare = $state<EntityRef | null>({ type: 'Shot', id: 866 });
+	let plain = $state<EntityRef | null>(null);
+	let anatomy = $state<EntityRef | null>(null);
 	let paged = $state<EntityRef | null>(null);
 	let failed = $state<EntityRef | null>(null);
 	let lastError = $state<string | null>(null);
@@ -128,6 +130,26 @@
 				{#if lastError}
 					<span class="text-destructive text-xs">{lastError}</span>
 				{/if}
+			</div>
+		</div>
+	</section>
+
+	<section class={group} data-demo-case="anatomy">
+		<h4 class={label}>Row anatomy: no thumbnail, a sub-label, the code beside the name</h4>
+		<div class="flex flex-col gap-2">
+			<div class={field}>
+				<EntityPicker {client} entityTypes={['Shot']} thumbnail={false} bind:value={plain} clearable />
+			</div>
+			<div class={field}>
+				<EntityPicker
+					{client}
+					entityTypes={['Version']}
+					subLabelField="sg_status_list"
+					secondaryField="id"
+					showCode
+					bind:value={anatomy}
+					clearable
+				/>
 			</div>
 		</div>
 	</section>

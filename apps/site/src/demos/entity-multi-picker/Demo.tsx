@@ -18,6 +18,14 @@ const preset: EntityRef[] = [
   { type: 'Asset', id: 1226, name: 'charAda' },
   { type: 'Asset', id: 1227, name: 'charBruno' },
 ];
+/** Five, so `ellipsis` has something to count and `max` something to cut. */
+const five: EntityRef[] = [
+  ...preset,
+  { type: 'Asset', id: 1228, name: 'propLantern' },
+  { type: 'Asset', id: 1229, name: 'propCrate' },
+  { type: 'Asset', id: 1230, name: 'envForest' },
+];
+const SUMMARIES = ['chips', 'ellipsis', 'count'] as const;
 const SIZES = ['sm', 'md', 'lg'] as const;
 
 export default function EntityMultiPickerDemo() {
@@ -156,6 +164,26 @@ export default function EntityMultiPickerDemo() {
               Arm the next call to fail
             </button>
             {lastError ? <span className="text-destructive text-xs">{lastError}</span> : null}
+          </div>
+        </div>
+      </section>
+
+      <section className={group} data-demo-case="summary">
+        <h4 className={label}>What the control shows for five selected</h4>
+        <div className="flex flex-col gap-2">
+          {SUMMARIES.map((summary) => (
+            <div className={field} data-demo-summary={summary} key={summary}>
+              <EntityMultiPicker
+                client={client}
+                entityTypes={['Asset']}
+                value={five}
+                summary={summary}
+                clearable={false}
+              />
+            </div>
+          ))}
+          <div className={field} data-demo-summary="max">
+            <EntityMultiPicker client={client} entityTypes={['Asset']} value={five} max={2} clearable={false} />
           </div>
         </div>
       </section>

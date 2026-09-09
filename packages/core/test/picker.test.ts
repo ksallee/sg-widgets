@@ -16,6 +16,7 @@ import {
   placeholderName,
   pruneFilterToFields,
   queryTokens,
+  summariseSelection,
   userSearchFields,
   withSelectedPinned,
 } from '../src/picker.js';
@@ -258,6 +259,53 @@ describe('withSelectedPinned', () => {
   it('falls back to Type id for a selection nothing has resolved', () => {
     const out = withSelectedPinned([], [{ type: 'Shot', id: 9 }], new Map());
     expect(out[0]?.name).toBe('Shot 9');
+  });
+});
+
+describe('summariseSelection', () => {
+  const codes = ['ip', 'apr', 'fin', 'hld', 'omt'];
+
+  it('draws every chip and wraps by default', () => {
+    const plan = summariseSelection(codes, (c) => c);
+    expect(plan.shown).toEqual(codes);
+    expect(plan.overflow).toBe(0);
+    expect(plan.oneLine).toBe(false);
+  });
+
+  it('caps the chips at max and counts the rest', () => {
+    const plan = summariseSelection(codes, (c) => c, { max: 2 });
+    expect(plan.shown).toEqual(['ip', 'apr']);
+    expect(plan.overflow).toBe(3);
+  });
+
+  it('keeps ellipsis on one line, three chips wide unless max says otherwise', () => {
+    const plan = summariseSelection(codes, (c) => c, { summary: 'ellipsis' });
+    expect(plan.shown).toEqual(['ip', 'apr', 'fin']);
+    expect(plan.overflow).toBe(2);
+    expect(plan.oneLine).toBe(true);
+    expect(summariseSelection(codes, (c) => c, { summary: 'ellipsis', max: 1 }).overflow).toBe(4);
+  });
+
+  it('draws no chip under count and reads the number selected', () => {
+    const plan = summariseSelection(codes, (c) => c, { summary: 'count' });
+    expect(plan.shown).toEqual([]);
+    expect(plan.countLabel).toBe('5 selected');
+  });
+
+  it('puts every label in the title, whatever the mode', () => {
+    for (const summary of ['chips', 'ellipsis', 'count'] as const) {
+      expect(summariseSelection(codes, (c) => c.toUpperCase(), { summary, max: 1 }).title).toBe(
+        'IP, APR, FIN, HLD, OMT',
+      );
+    }
+  });
+
+  it('is empty for an empty selection', () => {
+    const plan = summariseSelection([], (c: string) => c, { summary: 'ellipsis' });
+    expect(plan.shown).toEqual([]);
+    expect(plan.overflow).toBe(0);
+    expect(plan.title).toBe('');
+    expect(plan.countLabel).toBe('0 selected');
   });
 });
 

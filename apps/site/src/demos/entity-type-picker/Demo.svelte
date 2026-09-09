@@ -9,6 +9,7 @@
 	let many = $state<string[]>(['Version']);
 
 	const PRODUCTION = ['Project', 'Sequence', 'Shot', 'Asset', 'Version', 'Task'];
+	const SUMMARIES = ['chips', 'ellipsis', 'count'] as const;
 	const label = 'text-muted-foreground text-xs';
 </script>
 
@@ -35,6 +36,21 @@
 			placeholder="Select entity types"
 		/>
 		<span class="text-muted-foreground font-mono text-xs">[{many.join(', ')}]</span>
+	</div>
+
+	<div class="flex flex-col gap-2" data-demo="summary">
+		<span class={label}>What the control shows for six selected</span>
+		{#each SUMMARIES as summary (summary)}
+			<div data-demo-summary={summary}>
+				<EntityTypePicker {schema} multiple value={PRODUCTION} {summary} allow={PRODUCTION} clearable={false} />
+			</div>
+		{/each}
+	</div>
+
+	<div class="flex flex-col gap-2" data-demo="codes">
+		<span class={label}>The code under the display name, and without it</span>
+		<EntityTypePicker {schema} value="Version" allow={PRODUCTION} />
+		<EntityTypePicker {schema} value="Version" allow={PRODUCTION} showCode={false} />
 	</div>
 
 	<div class="flex flex-col gap-2">

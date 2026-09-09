@@ -35,16 +35,17 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/status-multi-p
 | `disabled` | `boolean` | `false` | Greys the control and takes it out of the tab order. |
 | `invalid` | `boolean` | `false` | Sets `aria-invalid` and the destructive ring. |
 | `showCode` | `boolean` | `false` | Shows the raw code instead of the label. The other one stays in the tooltip. |
-| `summary` | `'icons' \| 'names' \| 'both' \| 'count'` | `'both'` | What the closed trigger shows for the selection. |
-| `max` | `number` | `3` | Above this many selected, the trigger reads as a count. `icons` collapses at twice this. |
+| `summary` | `'chips' \| 'ellipsis' \| 'count' \| 'icons' \| 'names'` | `'chips'` | What the control shows for the selection. `both` is the old spelling of `chips`. |
+| `max` | `number` | `3` | Badges drawn before the rest becomes `+n`. `icons` draws twice as many. |
 | `siteUrl` | `string` | — | Passed to every badge, for a sprite cell outside the status icon set. |
 | `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Heights 8, 9 and 10. |
 | `class` / `className` | `string` | — | Merged after the widget's own classes. |
 
-The closed trigger shows the selection as badges, as icon-only badges, as the names joined by commas
-or as a count, and reads as a count above `max` selected, or above twice `max` in `icons`. Without a
-project the options are the site vocabulary, which hides nothing. `projectIds` offers the intersection
-of what each project allows, in the first project's order.
+The control shows the selection as removable badges that wrap, as one clipped line of them under
+`ellipsis`, as icon-only badges, as the names joined by commas, or as `3 selected`. Past `max` the
+rest becomes `+n`, and `icons` fits twice as many. Without a project the options are the site
+vocabulary, which hides nothing. `projectIds` offers the intersection of what each project allows,
+in the first project's order.
 
 The root carries the size and, while the options load, `data-loading`.
 
@@ -61,12 +62,12 @@ None. The rows and the closed state are status badges.
 
 | key | does |
 |---|---|
-| <kbd>Space</kbd>, <kbd>Enter</kbd> | Opens the list, with the search box focused |
-| any text | Filters the rows |
+| <kbd>Space</kbd>, <kbd>Enter</kbd> | On the chevron, opens the list |
+| any text | Opens the list and narrows the rows |
 | <kbd>↑</kbd> <kbd>↓</kbd> | Moves the highlight |
 | <kbd>Home</kbd> <kbd>End</kbd> | First and last row |
 | <kbd>Enter</kbd> | Toggles the highlighted status; the list stays open |
-| <kbd>Esc</kbd> | Closes and keeps the selection |
+| <kbd>Esc</kbd> | Closes, keeps the selection and clears the query |
 | <kbd>Tab</kbd> | Leaves the control, or reaches the clear control when there is one |
 
 ## API behaviour
@@ -80,10 +81,17 @@ right for offering a choice and wrong for testing a row, so a selected code outs
 keeps a row of its own here, labelled with the code (field_types/status_list).
 
 A status list has no substring operator, so there is no server-side type-ahead over it. The
-vocabulary is read once and the search box filters it in the browser (field_types/status_list).
+vocabulary is read once and the query input narrows it in the browser (field_types/status_list).
 
 Labels come from `display_values`, and a missing key falls back to the raw code rather than dropping
 the option (probe 009).
 
 Project's status field is `sg_status`, a plain `list` rather than a `status_list`. There is no Status
 row behind a `list`, so those options carry no icon and no colour (entity_types/Project).
+
+## Reference
+
+The row, chip and checkbox anatomy follows shadcn's Base UI Combobox, read through shadcn 4.21.0.
+The primitive underneath is Base UI Combobox 1.8.0 in React and Bits UI Combobox 2.19.1 in Svelte.
+shadcn-svelte ships no combobox item, so each widget composes the headless primitive of its
+framework and both draw the same rows, the same classes and the same states.

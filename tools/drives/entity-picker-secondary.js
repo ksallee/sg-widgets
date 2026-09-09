@@ -6,6 +6,14 @@
 const failures = [];
 const seen = {};
 
+/** A press, the way a mouse makes one: the field opens on pointerdown. */
+function press(el) {
+  for (const type of ['pointerdown', 'mousedown', 'pointerup', 'mouseup']) {
+    el.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, button: 0, pointerType: 'mouse' }));
+  }
+  el.click();
+}
+
 function typeInto(input, text) {
   Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, text);
   input.dispatchEvent(new Event('input', { bubbles: true }));
@@ -26,13 +34,11 @@ const rows = () => $$('[data-picker="entity-multi"] [data-slot="entity-picker-op
 
 /** Open one demo's picker, type, and wait for the rows the query answers. */
 async function search(pane, demoCase, query) {
-  const trigger = $(`[data-demo-case="${demoCase}"] [data-slot="entity-picker-trigger"]`, pane);
-  if (!trigger) return { error: `no trigger in ${demoCase}` };
-  trigger.click();
+  const input = $(`[data-demo-case="${demoCase}"] [data-slot="entity-picker-input"]`, pane);
+  if (!input) return { error: `no query input in ${demoCase}` };
+  press(input);
   const box = await until(popover);
   if (!box) return { error: `${demoCase} did not open` };
-  const input = await until(() => $('input', box));
-  if (!input) return { error: `${demoCase} has no search input` };
   if (query) typeInto(input, query);
   // Past the 250ms debounce and the mock's latency, then the rows for this query.
   const matched = await until(() => {
@@ -42,8 +48,8 @@ async function search(pane, demoCase, query) {
   return { box, input, rows: matched ?? [] };
 }
 
-async function close(box) {
-  box.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+async function close(input) {
+  input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
   await until(() => !popover());
   await wait(200);
 }
@@ -63,7 +69,7 @@ for (const framework of ['svelte', 'react']) {
   const hashes = first.rows.filter((row) => row.textContent.includes('#')).length;
   if (idle !== 0) failures.push(`${framework}: ${idle} rows show a secondary by default`);
   if (hashes !== 0) failures.push(`${framework}: ${hashes} rows still show an id`);
-  await close(first.box);
+  await close(first.input);
 
   const status = await search(pane, 'status-secondary', 'sh0');
   if (status.error) {
@@ -78,7 +84,7 @@ for (const framework of ['svelte', 'react']) {
   if (badges !== status.rows.length) {
     failures.push(`${framework}: ${badges} of ${status.rows.length} rows carry a status badge`);
   }
-  await close(status.box);
+  await close(status.input);
 
   const plain = await search(pane, 'multi', 'sh0');
   if (plain.error) {
@@ -87,7 +93,7 @@ for (const framework of ['svelte', 'react']) {
   }
   const secondaries = plain.rows.filter((row) => row.querySelector('[data-slot="entity-picker-secondary"]')).length;
   if (secondaries !== 0) failures.push(`${framework}: ${secondaries} searched rows show a secondary`);
-  await close(plain.box);
+  await close(plain.input);
 
   seen[framework] = { idle: first.rows.length, matched: status.rows.length, badges, codes, secondaries, hashes };
 }
@@ -96,9 +102,9 @@ if (Object.keys(seen).length === 0) failures.push('no framework pane was on show
 
 // Leave the status demo open, so the screenshot shows the column that changed.
 const stage = $$('[data-pane]').find((p) => p.offsetParent !== null) ?? document;
-const shot = $('[data-demo-case="status-secondary"] [data-slot="entity-picker-trigger"]', stage);
+const shot = $('[data-demo-case="status-secondary"] [data-slot="entity-picker-input"]', stage);
 shot?.scrollIntoView({ block: 'center' });
-shot?.click();
+if (shot) press(shot);
 await until(() => rows().length > 0);
 await wait(300);
 

@@ -4,6 +4,7 @@ import { EntityTypePicker } from '@/registry/sg/components/entity-type-picker';
 import { DemoClientProvider, useSgClient } from '../_shared/react';
 
 const PRODUCTION = ['Project', 'Sequence', 'Shot', 'Asset', 'Version', 'Task'];
+const SUMMARIES = ['chips', 'ellipsis', 'count'] as const;
 const label = 'text-muted-foreground text-xs';
 
 function Pickers() {
@@ -36,6 +37,28 @@ function Pickers() {
           placeholder="Select entity types"
         />
         <span className="text-muted-foreground font-mono text-xs">[{many.join(', ')}]</span>
+      </div>
+
+      <div className="flex flex-col gap-2" data-demo="summary">
+        <span className={label}>What the control shows for six selected</span>
+        {SUMMARIES.map((summary) => (
+          <div data-demo-summary={summary} key={summary}>
+            <EntityTypePicker
+              schema={schema}
+              multiple
+              value={PRODUCTION}
+              summary={summary}
+              allow={PRODUCTION}
+              clearable={false}
+            />
+          </div>
+        ))}
+      </div>
+
+      <div className="flex flex-col gap-2" data-demo="codes">
+        <span className={label}>The code under the display name, and without it</span>
+        <EntityTypePicker schema={schema} value="Version" allow={PRODUCTION} />
+        <EntityTypePicker schema={schema} value="Version" allow={PRODUCTION} showCode={false} />
       </div>
 
       <div className="flex flex-col gap-2">

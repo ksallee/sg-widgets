@@ -15,7 +15,7 @@
 	let project = $state<string[]>(['Active', 'Bidding']);
 	let unknown = $state<string[]>(['zz_retired', 'rev']);
 
-	const MODES = ['icons', 'names', 'both', 'count'] as const;
+	const MODES = ['icons', 'names', 'chips', 'ellipsis', 'count'] as const;
 	const TWO = ['ip', 'apr'];
 	const FIVE = ['ip', 'apr', 'rev', 'fin', 'vwd'];
 
@@ -118,7 +118,7 @@
 	</section>
 
 	<section class={group}>
-		<h4 class={label}>Two selected, collapsing above one</h4>
+		<h4 class={label}>Two selected, one chip and a "+1"</h4>
 		<div class={row}>
 			<div class={box} data-demo="max-one">
 				<StatusMultiPicker

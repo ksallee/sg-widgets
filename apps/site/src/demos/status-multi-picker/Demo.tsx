@@ -8,7 +8,7 @@ const row = 'flex flex-wrap items-start gap-3';
 const box = 'w-64';
 const readout = 'text-muted-foreground font-mono text-xs tabular-nums';
 
-const MODES = ['icons', 'names', 'both', 'count'] as const;
+const MODES = ['icons', 'names', 'chips', 'ellipsis', 'count'] as const;
 const TWO = ['ip', 'apr'];
 const FIVE = ['ip', 'apr', 'rev', 'fin', 'vwd'];
 
@@ -141,7 +141,7 @@ export default function StatusMultiPickerDemo() {
       </section>
 
       <section className={group}>
-        <h4 className={label}>Two selected, collapsing above one</h4>
+        <h4 className={label}>Two selected, one chip and a &quot;+1&quot;</h4>
         <div className={row}>
           <div className={box} data-demo="max-one">
             <StatusMultiPicker

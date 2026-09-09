@@ -28,12 +28,12 @@
  * };
  * ```
  */
-import type { SearchOptions, SgClient } from './client.js';
+import type { SearchOptions, SgClient, SummarizeOptions } from './client.js';
 import { SgApiError } from './client.js';
 import type { WireGroup } from './filter.js';
 
 /** The methods the protocol carries, one POST each. */
-export const PROXY_METHODS = ['entityTypes', 'fields', 'fieldWithProject', 'search', 'textSearch', 'statuses', 'update', 'hierarchyExpand'] as const;
+export const PROXY_METHODS = ['entityTypes', 'fields', 'fieldWithProject', 'search', 'textSearch', 'statuses', 'update', 'hierarchyExpand', 'summarize'] as const;
 
 export type ProxyMethod = (typeof PROXY_METHODS)[number];
 
@@ -135,5 +135,7 @@ function call(client: SgClient, method: ProxyMethod, p: Params): Promise<unknown
       return client.update(str(p.entityType, 'entityType'), num(p.id, 'id'), obj(p.patch, 'patch'));
     case 'hierarchyExpand':
       return client.hierarchyExpand(str(p.path, 'path'));
+    case 'summarize':
+      return client.summarize(str(p.entityType, 'entityType'), (p.options ?? {}) as SummarizeOptions);
   }
 }

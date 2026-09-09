@@ -71,6 +71,47 @@ export function hierarchyEntity(ref: HierarchyRef | null | undefined): EntityRef
   return ref.value;
 }
 
+/**
+ * The aggregates `_summarize` offers. The endpoint prints the whole set in the 400 it
+ * answers a bogus one (020_summarize).
+ */
+export type SummaryType =
+  | 'record_count' | 'count' | 'sum' | 'maximum' | 'minimum' | 'average' | 'earliest' | 'latest'
+  | 'percentage' | 'status_percentage' | 'status_percentage_as_float' | 'status_list' | 'checked' | 'unchecked';
+
+export interface SummaryField {
+  field: string;
+  type: SummaryType;
+}
+
+export interface SummaryGrouping {
+  field: string;
+  /** Default `exact`, one group per distinct value. */
+  type?: string;
+  direction?: 'asc' | 'desc';
+}
+
+export interface SummarizeOptions {
+  filters?: WireGroup | null;
+  /** Default `[{field: 'id', type: 'count'}]`. One type per field per call: the last entry wins (020_summarize). */
+  summaryFields?: SummaryField[];
+  grouping?: SummaryGrouping[];
+}
+
+export interface SummaryGroup {
+  /** The server's render of the value, for display. Not unique. */
+  groupName: string;
+  /** What the grouping was computed on. Key on this (020_summarize). */
+  groupValue: unknown;
+  summaries: Record<string, number>;
+}
+
+export interface SummarizeResult {
+  /** Keyed by field name. A field that cannot be summarized answers 200 with the key absent. */
+  summaries: Record<string, number>;
+  groups: SummaryGroup[];
+}
+
 export interface EntityTypeInfo {
   name: string;
   displayName: string;
@@ -104,6 +145,11 @@ export interface SgClient {
    * and a child's own `path` below it (post_hierarchy_expand).
    */
   hierarchyExpand(path: string): Promise<HierarchyNode>;
+  /**
+   * Aggregate rows without paging them. One `grouping` returns a field's distinct
+   * values and their counts (020_summarize).
+   */
+  summarize(entityType: string, options?: SummarizeOptions): Promise<SummarizeResult>;
 }
 
 /** The node shape `/hierarchy/_expand` answers, before normalising. */
@@ -259,6 +305,19 @@ export class RestClient implements SgClient {
     return res.data;
   }
 
+  async summarize(entityType: string, options: SummarizeOptions = {}): Promise<SummarizeResult> {
+    const body: Record<string, unknown> = {
+      filters: options.filters ?? { logical_operator: 'and', conditions: [] },
+      summary_fields: options.summaryFields ?? [{ field: 'id', type: 'count' }],
+    };
+    if (options.grouping) {
+      body['grouping'] = options.grouping.map((g) => ({ field: g.field, type: g.type ?? 'exact', direction: g.direction ?? 'asc' }));
+    }
+    // The same vendor content type `_search` requires; `application/json` is 415 (020_summarize).
+    const res = await this.request<SummarizeEnvelope>('POST', `/entity/${pluralPath(entityType)}/_summarize`, body);
+    return normalizeSummarize(res);
+  }
+
   async hierarchyExpand(path: string): Promise<HierarchyNode> {
     // `/hierarchy/*` is the one POST family that refuses the vendor content types and
     // demands plain JSON. `seed_entity_field` is documented and ignored, so it is not
@@ -298,6 +357,26 @@ export class RestClient implements SgClient {
       };
     });
   }
+}
+
+interface RawSummary {
+  summaries?: Record<string, number>;
+  groups?: Array<{ group_name?: unknown; group_value?: unknown; summaries?: Record<string, number> }>;
+}
+
+type SummarizeEnvelope = RawSummary & { data?: RawSummary };
+
+/** A grouped call wraps the answer in `data`; an ungrouped one does not (020_summarize). */
+function normalizeSummarize(res: SummarizeEnvelope): SummarizeResult {
+  const raw = res.data ?? res;
+  return {
+    summaries: raw.summaries ?? {},
+    groups: (raw.groups ?? []).map((g) => ({
+      groupName: String(g.group_name ?? ''),
+      groupValue: g.group_value ?? null,
+      summaries: g.summaries ?? {},
+    })),
+  };
 }
 
 function toStatusIcon(a: Record<string, unknown>): StatusRecord['icon'] {

@@ -37,6 +37,7 @@ describe('round trip', () => {
     const written = await client.update('Shot', 862, { description: 'through the proxy' });
     expect(written.attributes['description']).toBe('through the proxy');
     expect(await client.hierarchyExpand('/Project/70')).toEqual(await direct.hierarchyExpand('/Project/70'));
+    expect(await client.summarize('Version')).toEqual(await direct.summarize('Version'));
   });
 
   it('carries search options and paging', async () => {

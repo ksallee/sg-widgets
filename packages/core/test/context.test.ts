@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { MockClient } from '../src/mock.js';
 import { createSgContext } from '../src/context.js';
-import type { EntityRow, EntityTypeInfo, HierarchyNode, SearchOptions, SearchResult, SgClient, TextSearchRow } from '../src/client.js';
+import type { EntityRow, EntityTypeInfo, HierarchyNode, SummarizeOptions, SummarizeResult, SearchOptions, SearchResult, SgClient, TextSearchRow } from '../src/client.js';
 import type { WireGroup } from '../src/filter.js';
 import type { FieldSchema } from '../src/schema.js';
 import type { StatusRecord } from '../src/status.js';
@@ -40,6 +40,10 @@ function counting(inner: SgClient): { client: SgClient; calls: string[] } {
     hierarchyExpand(path: string): Promise<HierarchyNode> {
       calls.push(`hierarchyExpand ${path}`);
       return inner.hierarchyExpand(path);
+    },
+    summarize(entityType: string, summarizeOptions?: SummarizeOptions): Promise<SummarizeResult> {
+      calls.push(`summarize ${entityType}`);
+      return inner.summarize(entityType, summarizeOptions);
     },
   };
   return { client, calls };

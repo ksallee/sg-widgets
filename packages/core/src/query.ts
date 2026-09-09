@@ -14,7 +14,17 @@
  * is a write, so it is never cached and it drops every cached row read of the
  * type it touched before it returns.
  */
-import type { EntityRow, EntityTypeInfo, HierarchyNode, SearchOptions, SearchResult, SgClient, TextSearchRow } from './client.js';
+import type {
+  EntityRow,
+  EntityTypeInfo,
+  HierarchyNode,
+  SearchOptions,
+  SearchResult,
+  SgClient,
+  SummarizeOptions,
+  SummarizeResult,
+  TextSearchRow,
+} from './client.js';
 import type { WireGroup } from './filter.js';
 import type { FieldSchema } from './schema.js';
 import type { StatusRecord } from './status.js';
@@ -98,6 +108,8 @@ export function createQueryCache(client: SgClient, options: QueryCacheOptions = 
     for (const key of [...entries.keys()]) if (key.startsWith(prefix)) entries.delete(key);
     for (const key of [...inFlight.keys()]) if (key.startsWith(prefix)) inFlight.delete(key);
     for (const key of [...entries.keys()]) if (key.startsWith('textSearch')) entries.delete(key);
+    const counted = `summarize:[${JSON.stringify(entityType)}`;
+    for (const key of [...entries.keys()]) if (key.startsWith(counted)) entries.delete(key);
   }
 
   return {
@@ -123,6 +135,9 @@ export function createQueryCache(client: SgClient, options: QueryCacheOptions = 
     },
     statuses(): Promise<StatusRecord[]> {
       return run('statuses', [], () => client.statuses());
+    },
+    summarize(entityType: string, summarizeOptions?: SummarizeOptions): Promise<SummarizeResult> {
+      return run('summarize', [entityType, summarizeOptions ?? null], () => client.summarize(entityType, summarizeOptions));
     },
     hierarchyExpand(path: string): Promise<HierarchyNode> {
       // One level per call, so a tree that walks a project is one cached entry per node

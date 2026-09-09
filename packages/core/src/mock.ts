@@ -10,7 +10,18 @@
  * Fixtures are generated from a seed, so two runs produce identical ids, codes,
  * statuses and dates.
  */
-import type { EntityRow, EntityTypeInfo, HierarchyNode, SearchOptions, SearchResult, SgClient, TextSearchRow } from './client.js';
+import type {
+  EntityRow,
+  EntityTypeInfo,
+  HierarchyNode,
+  SearchOptions,
+  SearchResult,
+  SgClient,
+  SummarizeOptions,
+  SummarizeResult,
+  SummaryGroup,
+  TextSearchRow,
+} from './client.js';
 import { SgApiError } from './client.js';
 import type { EntityRef, WireCondition, WireGroup } from './filter.js';
 import type { Operator } from './field-types.js';
@@ -922,6 +933,74 @@ export class MockClient implements SgClient {
   }
 
   /**
+   * Counts without paging rows.
+   *
+   * `count` and the numeric aggregates are modelled; the rest of the vocabulary the
+   * endpoint prints is not. A grouping returns one group per distinct value with the
+   * empties under a `''` group, `group_value` is what the grouping was computed on and
+   * `group_name` the server's render of it, and one type per field per call wins
+   * (020_summarize).
+   */
+  async summarize(entityType: string, options: SummarizeOptions = {}): Promise<SummarizeResult> {
+    await this.gate();
+    this.schemaOf(entityType);
+    const all = this.fixtures.rows.get(entityType) ?? [];
+    const matched = all.filter((row) => this.matchGroup(row, entityType, options.filters ?? null));
+    const fields = options.summaryFields ?? [{ field: 'id' as string, type: 'count' as const }];
+
+    const summarize = (rows: Row[]): Record<string, number> => {
+      const out: Record<string, number> = {};
+      for (const f of fields) {
+        const values = rows.map((r) => this.walk(r, f.field, false)[0] ?? null).filter((v) => v !== null);
+        const numbers = values.map(Number).filter((n) => !Number.isNaN(n));
+        switch (f.type) {
+          case 'count':
+          case 'record_count':
+            out[f.field] = f.field === 'id' || f.type === 'record_count' ? rows.length : values.length;
+            break;
+          case 'sum':
+            out[f.field] = numbers.reduce((a, b) => a + b, 0);
+            break;
+          case 'maximum':
+            out[f.field] = numbers.length > 0 ? Math.max(...numbers) : 0;
+            break;
+          case 'minimum':
+            out[f.field] = numbers.length > 0 ? Math.min(...numbers) : 0;
+            break;
+          case 'average':
+            out[f.field] = numbers.length > 0 ? numbers.reduce((a, b) => a + b, 0) / numbers.length : 0;
+            break;
+          default:
+            // An unmodelled type is left out, the way an unsummarizable field answers 200
+            // with the key absent (020_summarize).
+            break;
+        }
+      }
+      return out;
+    };
+
+    const grouping = options.grouping?.[0];
+    if (!grouping) return { summaries: summarize(matched), groups: [] };
+
+    const buckets = new Map<string, { value: unknown; rows: Row[] }>();
+    for (const row of matched) {
+      const value = this.walk(row, grouping.field, false)[0] ?? null;
+      const key = value === null || value === undefined ? '' : JSON.stringify(value);
+      const bucket = buckets.get(key);
+      if (bucket) bucket.rows.push(row);
+      else buckets.set(key, { value, rows: [row] });
+    }
+    const groups: SummaryGroup[] = [...buckets.entries()].map(([, bucket]) => ({
+      groupName: bucket.value === null ? '' : groupLabel(bucket.value),
+      groupValue: bucket.value,
+      summaries: summarize(bucket.rows),
+    }));
+    groups.sort((a, b) => (a.groupName < b.groupName ? -1 : a.groupName > b.groupName ? 1 : 0));
+    if (grouping.direction === 'desc') groups.reverse();
+    return { summaries: summarize(matched), groups };
+  }
+
+  /**
    * One level of the navigation tree.
    *
    * The shape is post_hierarchy_expand's: a node with `label`, `ref`, `path` and one
@@ -1356,6 +1435,15 @@ function evaluate(dataType: string, operator: Operator, actual: unknown, expecte
 function asList(value: unknown): unknown[] {
   // `in` and `not_in` take a list, but a bare scalar also works on a date (field_types/date).
   return Array.isArray(value) ? value : [value];
+}
+
+/** On an entity grouping the label is the target's display name, not the whole hash (020_summarize). */
+function groupLabel(value: unknown): string {
+  if (value !== null && typeof value === 'object' && 'type' in (value as EntityRef)) {
+    const ref = value as EntityRef;
+    return ref.name ?? `${ref.type} #${ref.id}`;
+  }
+  return String(value);
 }
 
 function toStatusIcon(values: Record<string, unknown>): StatusIcon | null {

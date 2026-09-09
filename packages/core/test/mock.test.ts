@@ -547,3 +547,30 @@ describe('the navigation tree', () => {
     await expect(c.hierarchyExpand('/Project/999999999')).rejects.toMatchObject({ status: 400 });
   });
 });
+
+describe('summarize', () => {
+  it('counts without paging rows', async () => {
+    const c = client();
+    const all = await c.search('Version', { fields: ['id'], page: { size: 500 } });
+    const summary = await c.summarize('Version');
+    expect(summary.summaries['id']).toBe(all.data.length);
+    expect(summary.groups).toEqual([]);
+  });
+
+  it('counts the rows a filter matches', async () => {
+    const c = client();
+    const filters: WireGroup = { logical_operator: 'and', conditions: [['sg_status_list', 'is', 'ip']] };
+    const rows = await c.search('Version', { filters, fields: ['id'], page: { size: 500 } });
+    const summary = await c.summarize('Version', { filters });
+    expect(summary.summaries['id']).toBe(rows.data.length);
+  });
+
+  it('returns one group per distinct value, keyed on group_value', async () => {
+    const c = client();
+    const summary = await c.summarize('Version', { grouping: [{ field: 'sg_status_list' }] });
+    expect(summary.groups.length).toBeGreaterThan(1);
+    const total = summary.groups.reduce((n, g) => n + (g.summaries['id'] ?? 0), 0);
+    expect(total).toBe(summary.summaries['id']);
+    for (const group of summary.groups) expect(typeof group.groupValue).toBe('string');
+  });
+});

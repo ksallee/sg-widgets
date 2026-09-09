@@ -18,6 +18,8 @@ import type {
   EntityRow,
   EntityTypeInfo,
   HierarchyNode,
+  SummarizeOptions,
+  SummarizeResult,
   SearchOptions,
   SearchResult,
   SgClient,
@@ -109,5 +111,9 @@ export class ProxyClient implements SgClient {
 
   hierarchyExpand(path: string): Promise<HierarchyNode> {
     return this.post('hierarchyExpand', { path });
+  }
+
+  summarize(entityType: string, options: SummarizeOptions = {}): Promise<SummarizeResult> {
+    return this.post('summarize', { entityType, options });
   }
 }

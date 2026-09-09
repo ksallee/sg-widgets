@@ -2,5 +2,102 @@
   "$schema": "https://shadcn-svelte.com/schema/registry.json",
   "name": "sg-widgets",
   "homepage": "https://sg-widgets.dev",
-  "items": []
+  "aliases": {
+    "components": "$lib/registry/components",
+    "ui": "$lib/registry/ui",
+    "hooks": "$lib/registry/hooks",
+    "lib": "$lib/registry/lib",
+    "utils": "$lib/utils"
+  },
+  "items": [
+    {
+      "name": "status-badge",
+      "type": "registry:component",
+      "title": "Status Badge",
+      "description": "One Flow Production Tracking status as a coloured badge, using the site's own bg_color and icon.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte"
+      ],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "src/lib/registry/components/status-badge.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "entity-chip",
+      "type": "registry:component",
+      "title": "Entity Chip",
+      "description": "A linked Flow Production Tracking row as a chip, with a per-type glyph, optional thumbnail and a remove control.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte"
+      ],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "src/lib/registry/components/entity-chip.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "thumbnail",
+      "type": "registry:component",
+      "title": "Thumbnail",
+      "description": "A row's thumbnail, with aspect ratio, an explicit no-image placeholder and a play overlay.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte"
+      ],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "src/lib/registry/components/thumbnail.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "user-avatar",
+      "type": "registry:component",
+      "title": "User Avatar",
+      "description": "A person as a round avatar, with an initials fallback, inactive styling and an API-user badge.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte"
+      ],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "src/lib/registry/components/user-avatar.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "field-value",
+      "type": "registry:component",
+      "title": "Field Value",
+      "description": "Any Flow Production Tracking attribute value, rendered for display by its data type.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte"
+      ],
+      "registryDependencies": [
+        "local:entity-chip",
+        "local:status-badge",
+        "local:thumbnail"
+      ],
+      "files": [
+        {
+          "path": "src/lib/registry/components/field-value.svelte",
+          "type": "registry:component"
+        }
+      ]
+    }
+  ]
 }

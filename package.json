@@ -9,7 +9,7 @@
     "build": "pnpm -r --filter './packages/**' build",
     "test": "pnpm -r test",
     "lint": "pnpm -r lint",
-    "check": "pnpm -r check",
+    "check": "pnpm --filter @sg-widgets/core build && pnpm -r check",
     "registry:build": "pnpm -r registry:build",
     "dev:site": "pnpm --filter site dev",
     "qa": "node tools/qa.mjs"

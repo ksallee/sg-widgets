@@ -12,3 +12,4 @@ export * from './proxy-client.js';
 export * from './proxy-handler.js';
 export * from './session-auth.js';
 export * from './context.js';
+export * from './status-icons.js';

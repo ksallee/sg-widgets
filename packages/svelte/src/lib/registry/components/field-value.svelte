@@ -49,7 +49,7 @@
 		dataType: string;
 		/** The field schema, for a status label out of `display_values` (probe 009). */
 		field?: Pick<FieldSchema, 'displayValues'> | null;
-		/** `Status` rows by code, for status colour and icon (probe 010). */
+		/** `Status` rows by code, for the status name and icon (probe 010). */
 		statuses?: Record<string, StatusRecord> | null;
 		/** The site's `hours_per_day` from `GET /preferences`; durations then render in days (field_types/duration). */
 		hoursPerDay?: number;

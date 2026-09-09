@@ -1,11 +1,20 @@
 import type * as React from 'react';
 import type { FieldSchema, StatusIcon, StatusRecord } from '@sg-widgets/core';
-import { foregroundFor, parseBgColor, rgbToCss, statusLabel } from '@sg-widgets/core';
+import {
+  foregroundFor,
+  parseBgColor,
+  rgbToCss,
+  spriteStyle,
+  statusLabel,
+  stockIconSource,
+} from '@sg-widgets/core';
 import { cn } from '@/lib/utils';
 
 /** How much of the status to show. */
 export type StatusBadgeVariant = 'both' | 'icon' | 'text';
 export type StatusBadgeSize = 'sm' | 'md' | 'lg';
+/** Which of the two names the badge puts on show; the other one goes in the tooltip. */
+export type StatusBadgeLabel = 'name' | 'code';
 
 /**
  * Leaf atoms follow the thumbnail/avatar ladder of `docs/design-rules.md`
@@ -22,7 +31,7 @@ const GLYPH: Record<StatusBadgeSize, string> = {
   lg: 'size-5',
 };
 
-export interface StatusBadgeProps extends Omit<React.HTMLAttributes<HTMLSpanElement>, 'children'> {
+export interface StatusBadgeProps extends Omit<React.HTMLAttributes<HTMLSpanElement>, 'children' | 'color'> {
   /** The stored code, e.g. `ip`. A row may hold a code outside the usable set; that is legal (probe 009). */
   code: string;
   /** The resolved `Status` row, when the app has read `GET /entity/statuses` (probe 010). */
@@ -31,17 +40,24 @@ export interface StatusBadgeProps extends Omit<React.HTMLAttributes<HTMLSpanElem
   field?: Pick<FieldSchema, 'displayValues'> | null;
   variant?: StatusBadgeVariant;
   size?: StatusBadgeSize;
+  /** Paint the badge in the status colour instead of the neutral surface. */
+  color?: boolean;
+  label?: StatusBadgeLabel;
+  /** The site the stock sprite is served from, for icons the package does not bundle. */
+  siteUrl?: string;
 }
 
 /**
- * One status, as a coloured badge.
+ * One status, as a badge.
  *
  * The label comes from the `Status` row's `name`, else from the field's
  * `display_values`, else it is the raw code: a status_list value is a bare code with
  * no entity behind it, so a dotted read gives nothing (field_types/status_list). An
- * unknown code is therefore never blank - it renders as itself in the muted token
- * pair. The colour comes from `bg_color`, comma-separated decimal RGB and never hex
- * (probe 010), and is the one raw colour the design rules allow.
+ * unknown code is therefore never blank - it renders as itself. Whichever of the name
+ * and the code is not on show is the tooltip, so a code is always one hover away from
+ * its name. The badge is neutral by default; `color` paints it in `bg_color`,
+ * comma-separated decimal RGB and never hex (probe 010), the one raw colour the design
+ * rules allow.
  */
 export function StatusBadge({
   code,
@@ -49,14 +65,19 @@ export function StatusBadge({
   field = null,
   variant = 'both',
   size = 'md',
+  color = false,
+  label = 'name',
+  siteUrl,
   className,
   ...rest
 }: StatusBadgeProps) {
   if (!code) return null;
 
   const known = Boolean(status) || field?.displayValues?.[code] !== undefined;
-  const label = status?.name || (field ? statusLabel(field, code) : code) || code;
-  const rgb = parseBgColor(status?.bgColor);
+  const name = status?.name || (field ? statusLabel(field, code) : code) || code;
+  const text = label === 'code' ? code : name;
+  const other = label === 'code' ? name : code;
+  const rgb = color ? parseBgColor(status?.bgColor) : null;
   const style = rgb
     ? { backgroundColor: rgbToCss(rgb), color: foregroundFor(rgb) === 'black' ? '#000' : '#fff' }
     : undefined;
@@ -64,7 +85,7 @@ export function StatusBadge({
   // preceding it, and such a status has no image to show in icon-only mode
   // (010_status_icons).
   const icon = status?.icon ?? null;
-  const textIcon = icon?.displayType === 'html' ? icon.html || label : null;
+  const textIcon = icon?.displayType === 'html' ? icon.html || text : null;
   const showGlyph = variant !== 'text' && icon !== null && textIcon === null;
   const showText = variant !== 'icon' || textIcon !== null;
 
@@ -73,37 +94,33 @@ export function StatusBadge({
       data-slot="status-badge"
       data-status-code={code}
       data-status-known={known ? 'true' : 'false'}
-      title={label}
+      title={other}
       style={style}
       className={cn(
-        'inline-flex max-w-full min-w-0 items-center gap-1.5 rounded-md border border-transparent px-2 align-middle font-medium ring-1 ring-current/10 ring-inset',
+        'border-border bg-background inline-flex max-w-full min-w-0 items-center gap-1.5 rounded-md border px-1.5 align-middle text-xs font-medium',
         BOX[size],
         variant === 'icon' && 'justify-center',
-        !rgb && 'bg-muted text-muted-foreground',
+        rgb && 'border-transparent ring-1 ring-current/10 ring-inset',
+        color && !rgb && 'bg-muted text-muted-foreground border-transparent',
         className,
       )}
       {...rest}
     >
-      {showGlyph ? <StatusGlyph icon={icon} size={size} /> : null}
-      <span className={cn('truncate', !showText && 'sr-only')}>{textIcon ?? label}</span>
+      {showGlyph ? <StatusGlyph icon={icon} size={size} siteUrl={siteUrl} /> : null}
+      <span className={cn('truncate', !showText && 'sr-only')}>{textIcon ?? text}</span>
     </span>
   );
 }
 
 /**
- * The picture for an `image` or `image_map` icon (010_status_icons). An `image` icon
- * is a self-contained data URI. An `image_map` icon names a sprite that lives in the
- * customer site's own stylesheet and is not in the API, so the key is emitted as
- * `data-status-icon` and a block in the badge's own foreground stands in until a rule
- * attaches the picture:
- *
- * ```css
- * [data-status-icon='icon_apr'] {
- *   background: url('/images/sg_icon_image_map.png') -89px -11px no-repeat;
- * }
- * ```
+ * The picture for an `image` or `image_map` icon (010_status_icons). An `image` icon is
+ * a self-contained data URI. An `image_map` icon names a cell of the stock sprite:
+ * cells of the shipped statuses are bundled in core and draw with no site access, any
+ * other stock icon draws from the site's own copy of the sprite and so needs `siteUrl`,
+ * and a key with neither resolves to a neutral dot. The key stays on the element as
+ * `data-status-icon`.
  */
-function StatusGlyph({ icon, size }: { icon: StatusIcon; size: StatusBadgeSize }) {
+function StatusGlyph({ icon, size, siteUrl }: { icon: StatusIcon; size: StatusBadgeSize; siteUrl?: string }) {
   if (icon.displayType === 'image') {
     return (
       <img
@@ -115,11 +132,34 @@ function StatusGlyph({ icon, size }: { icon: StatusIcon; size: StatusBadgeSize }
     );
   }
   if (icon.displayType === 'html') return null;
+  const stock = stockIconSource(icon.imageMapKey, siteUrl);
+  if (stock.kind === 'data') {
+    return (
+      <img
+        src={stock.src}
+        alt=""
+        aria-hidden="true"
+        data-status-icon={icon.imageMapKey}
+        style={{ width: `${stock.cell.w}px`, height: `${stock.cell.h}px` }}
+        className="shrink-0 [image-rendering:crisp-edges]"
+      />
+    );
+  }
+  if (stock.kind === 'sprite') {
+    return (
+      <span
+        aria-hidden="true"
+        data-status-icon={icon.imageMapKey}
+        style={spriteStyle(stock)}
+        className="shrink-0"
+      />
+    );
+  }
   return (
     <span
-      data-status-icon={icon.imageMapKey}
       aria-hidden="true"
-      className={cn('shrink-0 rounded-sm bg-current bg-center bg-no-repeat opacity-70', GLYPH[size])}
+      data-status-icon={icon.imageMapKey}
+      className="bg-muted-foreground/40 size-2 shrink-0 rounded-full"
     />
   );
 }

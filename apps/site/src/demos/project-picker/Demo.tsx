@@ -1,23 +1,27 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { EntityRef } from '@sg-widgets/core';
 import { ProjectMultiPicker, ProjectPicker } from '@/registry/sg/components/project-picker';
-import { getDemoClient } from '../_shared/client';
+import { createDemoContext } from '../_shared/client';
 
 const group = 'flex flex-col gap-2';
 const label = 'text-muted-foreground text-xs font-medium tracking-wide uppercase';
 const field = 'flex max-w-sm flex-col gap-2';
 
-const preset: EntityRef = { type: 'Project', id: 70, name: 'Blue Moon Rising' };
 const SIZES = ['sm', 'md', 'lg'] as const;
 
 export default function ProjectPickerDemo() {
-  const client = getDemoClient();
+  const context = useMemo(() => createDemoContext(), []);
+  const client = context.client;
+  // The name is the mock's. A live project arrives bare and the picker resolves it.
+  const preset: EntityRef = context.live
+    ? { type: 'Project', id: context.projectId }
+    : { type: 'Project', id: context.projectId, name: 'Blue Moon Rising' };
 
   const [one, setOne] = useState<EntityRef | null>(null);
   const [several, setSeveral] = useState<EntityRef[]>([]);
   const [archived, setArchived] = useState<EntityRef | null>(null);
   // A bare reference: type and id, no name. Resolved on mount.
-  const [bare, setBare] = useState<EntityRef | null>({ type: 'Project', id: 71 });
+  const [bare, setBare] = useState<EntityRef | null>({ type: 'Project', id: context.projectFor(71) });
 
   return (
     <div className="flex flex-col gap-4">

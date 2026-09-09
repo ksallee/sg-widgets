@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { CollectionColumn, EntityRef, EntityRow, StatusRecord } from '@sg-widgets/core';
-	import { cellValue, createEntitySource, resolveColumns } from '@sg-widgets/core';
+	import { cellValue, condition, createEntitySource, resolveColumns } from '@sg-widgets/core';
 	import GroupedList from '$lib/registry/components/grouped-list.svelte';
 	import StatusBadge from '$lib/registry/components/status-badge.svelte';
 	import { createDemoContext } from '../_shared/client';
@@ -18,6 +18,8 @@
 		client: context.client,
 		entityType: 'Task',
 		fields: FIELDS,
+		// The mock's rows are one project's already; a real site's are not.
+		filters: context.live ? condition('project', 'is', { type: 'Project', id: context.projectId }) : null,
 		pageSize: 50
 	});
 

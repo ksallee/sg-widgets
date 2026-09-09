@@ -10,9 +10,13 @@
 // The drive file is the body of an async function receiving ({wait, $, $$, harness}). `harness.set`
 // writes the demo toolbar's localStorage keys (framework: svelte|react|both, theme: light|dark,
 // motion: normal|reduced, palette: default|stone|..., radius: default|none|sm|md|lg|xl) and the
-// toolbar re-reads them at once; the flags below set them for the initial load. Whatever the body returns is
-// printed as JSON under `result`, next to `console` (errors and warnings only) and `shot`/`video`
-// paths. Exit code is 1 when the page threw, a console error was logged, or the result carries
+// toolbar re-reads them at once; the flags below set them for the initial load. Whatever the body
+// returns is printed as JSON under `result`, next to `console` (errors and warnings only) and
+// `shot`/`video` paths.
+//
+// --live runs the demos against the site named by the repo's .env.local instead of the mock, through
+// the dev-only /live/dev-token endpoint, so it needs a dev server (--start, or --url on one).
+// --project <id> scopes the project-aware demos to one project of that site. Exit code is 1 when the page threw, a console error was logged, or the result carries
 // `verdict` starting with FAIL.
 import { spawn } from 'node:child_process';
 import { mkdirSync, readFileSync } from 'node:fs';
@@ -42,6 +46,8 @@ function args(argv) {
       case '--dark': a.dark = true; break;
       case '--reduced-motion': a.reducedMotion = true; break;
       case '--framework': a.framework = next(); break;
+      case '--live': a.live = true; break;
+      case '--project': a.project = next(); break;
       case '--keep': a.keep = true; break;
       case '--headed': a.headed = true; break;
       default: throw new Error(`unknown flag ${k}`);
@@ -126,6 +132,9 @@ async function main() {
   // Demo.astro stores raw strings under these keys; keep them in sync with its KEYS table.
   const prefs = {};
   if (a.framework) prefs.framework = a.framework;
+  // Live mode reads the site through /live/dev-token, which only `astro dev` answers.
+  if (a.live) prefs.source = 'live';
+  if (a.project) prefs.project = JSON.stringify({ id: Number(a.project) });
   if (a.dark) prefs.theme = 'dark';
   if (a.reducedMotion) prefs.motion = 'reduced';
   if (Object.keys(prefs).length) {

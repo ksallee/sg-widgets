@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { EntityRef } from '@sg-widgets/core';
 import { EntityPicker } from '@/registry/sg/components/entity-picker';
-import { createDemoClient, getDemoClient } from '../_shared/client';
+import { createDemoClient, createDemoContext } from '../_shared/client';
 
 const group = 'flex flex-col gap-2';
 const label = 'text-muted-foreground text-xs font-medium tracking-wide uppercase';
@@ -13,7 +13,8 @@ const preset: EntityRef = { type: 'Asset', id: 1226, name: 'charAda' };
 const SIZES = ['sm', 'md', 'lg'] as const;
 
 export default function EntityPickerDemo() {
-  const client = getDemoClient();
+  const context = useMemo(() => createDemoContext(), []);
+  const client = context.client;
   // Its own client, so arming a failure cannot land in another demo on the page.
   const [failing] = useState(() => createDemoClient());
 
@@ -85,10 +86,10 @@ export default function EntityPickerDemo() {
           <EntityPicker
             client={client}
             entityTypes={['Shot']}
-            projectId={71}
+            projectId={context.projectFor(71)}
             value={inProject}
             onValueChange={setInProject}
-            placeholder="Shots on Harbour Lights…"
+            placeholder="Shots on one project…"
           />
         </div>
       </section>

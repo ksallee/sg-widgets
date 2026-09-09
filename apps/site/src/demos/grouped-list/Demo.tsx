@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { CollectionColumn, EntityRef, EntityRow, StatusRecord } from '@sg-widgets/core';
-import { cellValue, createEntitySource, resolveColumns } from '@sg-widgets/core';
+import { cellValue, condition, createEntitySource, resolveColumns } from '@sg-widgets/core';
 import { GroupedList } from '@/registry/sg/components/grouped-list';
 import { StatusBadge } from '@/registry/sg/components/status-badge';
 import { createDemoContext } from '../_shared/client';
@@ -25,7 +25,15 @@ interface Loaded {
 export default function GroupedListDemo() {
   const context = useMemo(() => createDemoContext(), []);
   const source = useMemo(
-    () => createEntitySource({ client: context.client, entityType: 'Task', fields: FIELDS, pageSize: 50 }),
+    () =>
+      createEntitySource({
+        client: context.client,
+        entityType: 'Task',
+        fields: FIELDS,
+        // The mock's rows are one project's already; a real site's are not.
+        filters: context.live ? condition('project', 'is', { type: 'Project', id: context.projectId }) : null,
+        pageSize: 50,
+      }),
     [context],
   );
 

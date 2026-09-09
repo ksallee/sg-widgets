@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { useEffect, useMemo } from 'react';
 import type { CollectionColumn, EntityRef, StatusRecord } from '@sg-widgets/core';
-import { createEntitySource, isEditableType, resolveColumns } from '@sg-widgets/core';
+import { condition, createEntitySource, isEditableType, resolveColumns } from '@sg-widgets/core';
 import { EntityTable, type CellEditorProps } from '@/registry/sg/components/entity-table';
 import { FieldEditor } from '@/registry/sg/components/field-editor';
 import { createDemoContext } from '../_shared/client';
@@ -75,6 +75,8 @@ export default function EntityTableDemo() {
         client: context.client,
         entityType: 'Version',
         fields: COLUMNS.map((c) => c.path),
+        // The mock's rows are one project's already; a real site's are not.
+        filters: context.live ? condition('project', 'is', { type: 'Project', id: context.projectId }) : null,
         pageSize: 150,
       }),
     [context],

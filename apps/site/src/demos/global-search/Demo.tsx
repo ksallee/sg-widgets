@@ -1,15 +1,16 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { EntityRef } from '@sg-widgets/core';
 import { GlobalSearch } from '@/registry/sg/components/global-search';
-import { DemoClientProvider, useSgClient } from '../_shared/react';
+import { createDemoContext } from '../_shared/client';
 
 const TYPES = ['Shot', 'Asset', 'Sequence', 'Task', 'Version', 'HumanUser', 'Project'];
 
 const group = 'flex flex-col gap-2';
 const label = 'text-muted-foreground text-xs font-medium tracking-wide uppercase';
 
-function Searches() {
-  const client = useSgClient();
+export default function Demo() {
+  const context = useMemo(() => createDemoContext(), []);
+  const client = context.client;
   /* Prefilled so the palette has something to show before a word is typed. */
   const [recents, setRecents] = useState<EntityRef[]>([
     { type: 'Shot', id: 862, name: 'sh010_0010' },
@@ -38,10 +39,10 @@ function Searches() {
         <GlobalSearch
           client={client}
           entityTypes={TYPES}
-          projectId={70}
+          projectId={context.projectId}
           inline
           onSelect={setPicked}
-          placeholder="Search Blue Moon Rising…"
+          placeholder="Search one project…"
         />
       </section>
 
@@ -59,13 +60,5 @@ function Searches() {
         )}
       </p>
     </div>
-  );
-}
-
-export default function Demo() {
-  return (
-    <DemoClientProvider>
-      <Searches />
-    </DemoClientProvider>
   );
 }

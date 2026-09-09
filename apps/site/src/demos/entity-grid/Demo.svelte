@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { CollectionColumn, EntityRef, FieldSchema, StatusRecord } from '@sg-widgets/core';
-	import { createEntitySource, resolveColumns } from '@sg-widgets/core';
+	import { condition, createEntitySource, resolveColumns } from '@sg-widgets/core';
 	import EntityGrid from '$lib/registry/components/entity-grid.svelte';
 	import { createDemoContext } from '../_shared/client';
 	import { setDemoClient } from '../_shared/svelte';
@@ -15,6 +15,8 @@
 		client: context.client,
 		entityType: 'Version',
 		fields: FIELDS,
+		// The mock's rows are one project's already; a real site's are not.
+		filters: context.live ? condition('project', 'is', { type: 'Project', id: context.projectId }) : null,
 		pageSize: 12
 	});
 

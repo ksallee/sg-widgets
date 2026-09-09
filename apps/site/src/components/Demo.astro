@@ -89,6 +89,11 @@ const segmentClass = `${control} border-l border-border first:border-l-0`;
 const toggleClass = `${control} rounded-md border border-border bg-background`;
 
 // The native chevron is not a token, so it is drawn from `currentColor` alongside.
+const inputClass =
+  'h-8 w-72 rounded-md border border-border bg-background px-2 text-sm text-foreground ' +
+  'placeholder:text-muted-foreground ' +
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background';
+
 const selectWrapClass = 'group relative inline-flex items-center text-muted-foreground';
 const selectClass = `${toggleClass} appearance-none pr-7`;
 const chevronClass =
@@ -102,6 +107,7 @@ const chevronClass =
   data-demo-name={name}
   data-framework="both"
   data-motion="normal"
+  data-source="mock"
 >
   <div class="flex flex-wrap items-center gap-3 border-b border-border bg-muted px-3 py-2">
     <div
@@ -118,6 +124,15 @@ const chevronClass =
       <button type="button" class={segmentClass} data-framework-pick="both" aria-pressed="true">
         Both
       </button>
+    </div>
+
+    <div
+      class="inline-flex h-8 items-center overflow-hidden rounded-md border border-border bg-background"
+      role="group"
+      aria-label="Data source"
+    >
+      <button type="button" class={segmentClass} data-source-pick="mock" aria-pressed="true">Mock</button>
+      <button type="button" class={segmentClass} data-source-pick="live" aria-pressed="false">Live</button>
     </div>
 
     <figcaption class="min-w-0 flex-1 truncate text-xs text-muted-foreground" title={title}>
@@ -172,6 +187,20 @@ const chevronClass =
         Reduce motion
       </button>
     </div>
+
+    <div class="flex w-full flex-wrap items-center gap-2" data-live-bar data-live-state="anon">
+      <input
+        type="url"
+        class={inputClass}
+        data-live-site
+        aria-label="Site url"
+        placeholder="https://your-studio.shotgrid.autodesk.com"
+      />
+      <button type="button" class={toggleClass} data-live-login>Log in</button>
+      <button type="button" class={toggleClass} data-live-logout>Log out</button>
+      <div class="w-64" data-live-project></div>
+      <span class="min-w-0 flex-1 truncate text-xs text-muted-foreground" data-live-status></span>
+    </div>
   </div>
 
   <div class="sg-demo grid gap-px bg-border" data-stage data-theme="default" data-radius="default">
@@ -201,6 +230,9 @@ const chevronClass =
    * view a reviewer set. Both islands stay mounted; the control only shows and hides, so
    * switching frameworks never remounts and never loses a widget's state.
    */
+  import { prepareDemoSource } from '../demos/_shared/live';
+  import { mountLiveToolbar } from './live-toolbar';
+
   const KEYS = {
     framework: 'sg-demo:framework',
     theme: 'sg-demo:theme',
@@ -458,13 +490,27 @@ const chevronClass =
   });
 
   apply();
-  void mountAll();
+  void mountLiveToolbar();
+  // The source and its bearer settle before the first island is built, so a demo
+  // asks for its client once and gets the site it was meant to read.
+  void prepareDemoSource().then(mountAll);
 </script>
 
 <style>
   /* Layout only; every colour, radius and spacing value above comes from a token. */
   [data-stage] {
     grid-template-columns: 1fr 1fr;
+  }
+
+  /* The site, login and project controls belong to live mode alone. */
+  [data-sg-demo]:not([data-source='live']) [data-live-bar] {
+    display: none;
+  }
+
+  [data-live-bar]:not([data-live-state='anon']) [data-live-login],
+  [data-live-bar]:not([data-live-state='in']) [data-live-logout],
+  [data-live-bar][data-live-state='anon'] [data-live-project] {
+    display: none;
   }
 
   [data-sg-demo]:is([data-framework='svelte'], [data-framework='react']) [data-stage] {

@@ -1,11 +1,16 @@
 <script lang="ts">
 	import StatusMultiPicker from '$lib/registry/components/status-multi-picker.svelte';
+	import { createDemoContext } from '../_shared/client';
 	import { setDemoClient } from '../_shared/svelte';
 
-	const client = setDemoClient();
+	// Live mode has one project, the toolbar's; the mock has 70 and 71.
+	const context = createDemoContext();
+	const client = setDemoClient(context.client);
+	const projectId = context.projectId;
+	const otherProjectId = context.projectFor(71);
 
-	let inProject70 = $state<string[]>(['ip', 'apr']);
-	let inProject71 = $state<string[]>(['pndad']);
+	let inProjectA = $state<string[]>(['ip', 'apr']);
+	let inProjectB = $state<string[]>(['pndad']);
 	let shared = $state<string[]>([]);
 	let project = $state<string[]>(['Active', 'Bidding']);
 	let unknown = $state<string[]>(['zz_retired', 'rev']);
@@ -23,13 +28,17 @@
 
 <div class="flex flex-col gap-4">
 	<section class={group}>
-		<h4 class={label}>Version, in project 70 and in project 71</h4>
+		<h4 class={label}>
+			{projectId === otherProjectId
+				? `Version, in project ${projectId}`
+				: `Version, in project ${projectId} and in project ${otherProjectId}`}
+		</h4>
 		<div class={row}>
 			<div class={box} data-demo="p70">
-				<StatusMultiPicker {client} entityType="Version" projectId={70} bind:value={inProject70} />
+				<StatusMultiPicker {client} entityType="Version" {projectId} bind:value={inProjectA} />
 			</div>
 			<div class={box} data-demo="p71">
-				<StatusMultiPicker {client} entityType="Version" projectId={71} bind:value={inProject71} />
+				<StatusMultiPicker {client} entityType="Version" projectId={otherProjectId} bind:value={inProjectB} />
 			</div>
 		</div>
 	</section>
@@ -41,7 +50,7 @@
 				<StatusMultiPicker
 					{client}
 					entityType="Version"
-					projectIds={[70, 71]}
+					projectIds={[projectId, otherProjectId]}
 					bind:value={shared}
 				/>
 			</div>
@@ -62,13 +71,13 @@
 		<h4 class={label}>A code the field does not carry, and the code instead of the label</h4>
 		<div class={row}>
 			<div class={box} data-demo="unknown">
-				<StatusMultiPicker {client} entityType="Version" projectId={70} bind:value={unknown} />
+				<StatusMultiPicker {client} entityType="Version" {projectId} bind:value={unknown} />
 			</div>
 			<div class={box}>
 				<StatusMultiPicker
 					{client}
 					entityType="Version"
-					projectId={70}
+					{projectId}
 					value={['ip', 'fin']}
 					showCode
 					clearable={false}
@@ -87,7 +96,7 @@
 						<StatusMultiPicker
 							{client}
 							entityType="Version"
-							projectId={70}
+							{projectId}
 							value={TWO}
 							summary={mode}
 							clearable={false}
@@ -97,7 +106,7 @@
 						<StatusMultiPicker
 							{client}
 							entityType="Version"
-							projectId={70}
+							{projectId}
 							value={FIVE}
 							summary={mode}
 							clearable={false}
@@ -115,7 +124,7 @@
 				<StatusMultiPicker
 					{client}
 					entityType="Version"
-					projectId={70}
+					{projectId}
 					value={TWO}
 					max={1}
 					clearable={false}
@@ -131,19 +140,19 @@
 				<StatusMultiPicker
 					{client}
 					entityType="Version"
-					projectId={70}
+					{projectId}
 					value={['apr', 'fin']}
 					disabled
 				/>
 			</div>
 			<div class={box}>
-				<StatusMultiPicker {client} entityType="Version" projectId={70} value={['apr']} readonly />
+				<StatusMultiPicker {client} entityType="Version" {projectId} value={['apr']} readonly />
 			</div>
 			<div class={box}>
 				<StatusMultiPicker
 					{client}
 					entityType="Version"
-					projectId={70}
+					{projectId}
 					value={['apr', 'fin']}
 					invalid
 				/>
@@ -155,13 +164,13 @@
 		<h4 class={label}>Sizes</h4>
 		<div class={row}>
 			<div class={box}>
-				<StatusMultiPicker {client} entityType="Version" projectId={70} value={['rev']} size="sm" />
+				<StatusMultiPicker {client} entityType="Version" {projectId} value={['rev']} size="sm" />
 			</div>
 			<div class={box}>
-				<StatusMultiPicker {client} entityType="Version" projectId={70} value={['rev']} size="md" />
+				<StatusMultiPicker {client} entityType="Version" {projectId} value={['rev']} size="md" />
 			</div>
 			<div class={box}>
-				<StatusMultiPicker {client} entityType="Version" projectId={70} value={['rev']} size="lg" />
+				<StatusMultiPicker {client} entityType="Version" {projectId} value={['rev']} size="lg" />
 			</div>
 		</div>
 	</section>

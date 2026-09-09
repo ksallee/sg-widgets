@@ -1,22 +1,23 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { EntityRef } from '@sg-widgets/core';
 import { HierarchicalSearch } from '@/registry/sg/components/hierarchical-search';
 import { EntityChip } from '@/registry/sg/components/entity-chip';
-import { DemoClientProvider, useSgClient } from '../_shared/react';
+import { createDemoContext } from '../_shared/client';
 
-function Tree() {
-  const client = useSgClient();
+export default function Demo() {
+  const context = useMemo(() => createDemoContext(), []);
+  const client = context.client;
   const [picked, setPicked] = useState<{ leaf: EntityRef; path: EntityRef[] } | null>(null);
 
   return (
     <div className="flex flex-col gap-4">
       <section className="flex flex-col gap-2">
         <h4 className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
-          Scoped to Blue Moon Rising
+          Scoped to one project
         </h4>
         <HierarchicalSearch
           client={client}
-          rootPath="/Project/70"
+          rootPath={`/Project/${context.projectId}`}
           entityTypes={['Shot', 'Asset', 'Sequence', 'Task']}
           onSelect={(leaf, path) => setPicked({ leaf, path })}
         />
@@ -37,13 +38,5 @@ function Tree() {
         )}
       </div>
     </div>
-  );
-}
-
-export default function Demo() {
-  return (
-    <DemoClientProvider>
-      <Tree />
-    </DemoClientProvider>
   );
 }

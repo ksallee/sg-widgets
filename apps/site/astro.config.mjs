@@ -4,16 +4,23 @@ import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
 import react from '@astrojs/react';
 import svelte from '@astrojs/svelte';
+import node from '@astrojs/node';
 import tailwindcss from '@tailwindcss/vite';
 
 const packages = new URL('../../packages/', import.meta.url);
 const reactSrc = fileURLToPath(new URL('react/src', packages));
 const svelteLib = fileURLToPath(new URL('svelte/src/lib', packages));
 const coreSrc = fileURLToPath(new URL('core/src/index.ts', packages));
+const repoRoot = fileURLToPath(new URL('../../', import.meta.url));
 
 export default defineConfig({
   // Set so the sitemap Starlight emits has absolute URLs (and to silence its warning).
   site: 'https://sg-widgets.dev',
+  // Every page is prerendered. The adapter is here for the three endpoints under
+  // src/pages/live/, which opt out with `export const prerender = false`: the two
+  // App Session Launcher calls the browser cannot make itself, and the dev-only
+  // token endpoint.
+  adapter: node({ mode: 'standalone' }),
   integrations: [
     starlight({
       title: 'sg-widgets',
@@ -30,6 +37,9 @@ export default defineConfig({
   ],
   vite: {
     plugins: [tailwindcss()],
+    // The monorepo keeps one `.env.local` at its root. The dev-token endpoint reads the
+    // script key from it, and `PUBLIC_FPT_SITE_URL` fills the toolbar's site field.
+    envDir: repoRoot,
     // Every demo is discovered at startup, so the optimizer bundles all dependencies once
     // instead of re-bundling on first visit and answering the in-flight requests with 504.
     optimizeDeps: {

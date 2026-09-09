@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { StatusMultiPicker } from '@/registry/sg/components/status-multi-picker';
-import { DemoClientProvider, useSgClient } from '../_shared/react';
+import { createDemoContext } from '../_shared/client';
 
 const group = 'flex flex-col gap-2';
 const label = 'text-muted-foreground text-xs font-medium tracking-wide uppercase';
@@ -12,10 +12,14 @@ const MODES = ['icons', 'names', 'both', 'count'] as const;
 const TWO = ['ip', 'apr'];
 const FIVE = ['ip', 'apr', 'rev', 'fin', 'vwd'];
 
-function Pickers() {
-  const client = useSgClient();
-  const [inProject70, setInProject70] = useState<string[]>(['ip', 'apr']);
-  const [inProject71, setInProject71] = useState<string[]>(['pndad']);
+export default function StatusMultiPickerDemo() {
+  // Live mode has one project, the toolbar's; the mock has 70 and 71.
+  const context = useMemo(() => createDemoContext(), []);
+  const client = context.client;
+  const projectId = context.projectId;
+  const otherProjectId = context.projectFor(71);
+  const [inProjectA, setInProjectA] = useState<string[]>(['ip', 'apr']);
+  const [inProjectB, setInProjectB] = useState<string[]>(['pndad']);
   const [shared, setShared] = useState<string[]>([]);
   const [project, setProject] = useState<string[]>(['Active', 'Bidding']);
   const [unknown, setUnknown] = useState<string[]>(['zz_retired', 'rev']);
@@ -23,24 +27,28 @@ function Pickers() {
   return (
     <div className="flex flex-col gap-4">
       <section className={group}>
-        <h4 className={label}>Version, in project 70 and in project 71</h4>
+        <h4 className={label}>
+          {projectId === otherProjectId
+            ? `Version, in project ${projectId}`
+            : `Version, in project ${projectId} and in project ${otherProjectId}`}
+        </h4>
         <div className={row}>
           <div className={box} data-demo="p70">
             <StatusMultiPicker
               client={client}
               entityType="Version"
-              projectId={70}
-              value={inProject70}
-              onValueChange={setInProject70}
+              projectId={projectId}
+              value={inProjectA}
+              onValueChange={setInProjectA}
             />
           </div>
           <div className={box} data-demo="p71">
             <StatusMultiPicker
               client={client}
               entityType="Version"
-              projectId={71}
-              value={inProject71}
-              onValueChange={setInProject71}
+              projectId={otherProjectId}
+              value={inProjectB}
+              onValueChange={setInProjectB}
             />
           </div>
         </div>
@@ -53,7 +61,7 @@ function Pickers() {
             <StatusMultiPicker
               client={client}
               entityType="Version"
-              projectIds={[70, 71]}
+              projectIds={[projectId, otherProjectId]}
               value={shared}
               onValueChange={setShared}
             />
@@ -83,7 +91,7 @@ function Pickers() {
             <StatusMultiPicker
               client={client}
               entityType="Version"
-              projectId={70}
+              projectId={projectId}
               value={unknown}
               onValueChange={setUnknown}
             />
@@ -92,7 +100,7 @@ function Pickers() {
             <StatusMultiPicker
               client={client}
               entityType="Version"
-              projectId={70}
+              projectId={projectId}
               value={['ip', 'fin']}
               showCode
               clearable={false}
@@ -111,7 +119,7 @@ function Pickers() {
                 <StatusMultiPicker
                   client={client}
                   entityType="Version"
-                  projectId={70}
+                  projectId={projectId}
                   value={TWO}
                   summary={mode}
                   clearable={false}
@@ -121,7 +129,7 @@ function Pickers() {
                 <StatusMultiPicker
                   client={client}
                   entityType="Version"
-                  projectId={70}
+                  projectId={projectId}
                   value={FIVE}
                   summary={mode}
                   clearable={false}
@@ -139,7 +147,7 @@ function Pickers() {
             <StatusMultiPicker
               client={client}
               entityType="Version"
-              projectId={70}
+              projectId={projectId}
               value={TWO}
               max={1}
               clearable={false}
@@ -155,7 +163,7 @@ function Pickers() {
             <StatusMultiPicker
               client={client}
               entityType="Version"
-              projectId={70}
+              projectId={projectId}
               value={['apr', 'fin']}
               disabled
             />
@@ -164,7 +172,7 @@ function Pickers() {
             <StatusMultiPicker
               client={client}
               entityType="Version"
-              projectId={70}
+              projectId={projectId}
               value={['apr']}
               readOnly
             />
@@ -173,7 +181,7 @@ function Pickers() {
             <StatusMultiPicker
               client={client}
               entityType="Version"
-              projectId={70}
+              projectId={projectId}
               value={['apr', 'fin']}
               invalid
             />
@@ -188,7 +196,7 @@ function Pickers() {
             <StatusMultiPicker
               client={client}
               entityType="Version"
-              projectId={70}
+              projectId={projectId}
               value={['rev']}
               size="sm"
             />
@@ -197,7 +205,7 @@ function Pickers() {
             <StatusMultiPicker
               client={client}
               entityType="Version"
-              projectId={70}
+              projectId={projectId}
               value={['rev']}
               size="md"
             />
@@ -206,7 +214,7 @@ function Pickers() {
             <StatusMultiPicker
               client={client}
               entityType="Version"
-              projectId={70}
+              projectId={projectId}
               value={['rev']}
               size="lg"
             />
@@ -214,13 +222,5 @@ function Pickers() {
         </div>
       </section>
     </div>
-  );
-}
-
-export default function StatusMultiPickerDemo() {
-  return (
-    <DemoClientProvider>
-      <Pickers />
-    </DemoClientProvider>
   );
 }

@@ -1,9 +1,11 @@
 <script lang="ts">
 	import type { EntityRef } from '@sg-widgets/core';
 	import GlobalSearch from '$lib/registry/components/global-search.svelte';
+	import { createDemoContext } from '../_shared/client';
 	import { setDemoClient } from '../_shared/svelte';
 
-	const client = setDemoClient();
+	const context = createDemoContext();
+	const client = setDemoClient(context.client);
 
 	const TYPES = ['Shot', 'Asset', 'Sequence', 'Task', 'Version', 'HumanUser', 'Project'];
 
@@ -38,10 +40,10 @@
 		<GlobalSearch
 			{client}
 			entityTypes={TYPES}
-			projectId={70}
+			projectId={context.projectId}
 			inline
 			onselect={(entity) => (picked = entity)}
-			placeholder="Search Blue Moon Rising…"
+			placeholder="Search one project…"
 		/>
 	</section>
 

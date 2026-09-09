@@ -22,6 +22,8 @@ Monorepo: `packages/core` (headless TS, npm), `packages/react` (shadcn registry,
   Do not use the Playwright MCP tools for this repo. Every UI PR includes one screenshot per
   framework taken with it, in light and dark.
 - Drive scripts that assert return `{ verdict: "PASS ..." | "FAIL ..." }`; the exit code follows.
+- A widget that reads data runs its final `pnpm qa` pass once with `--live` as well as against the
+  mock, and the PR says what the live site showed.
 - Use the browser sparingly. Typecheck, unit tests and builds catch most problems; run `pnpm qa`
   once at the end to confirm the final state (one light and one dark shot per widget, one drive
   with assertions), not as a loop while developing. Each run costs a dev server start and tokens.

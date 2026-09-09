@@ -105,3 +105,56 @@ describe('the hierarchy endpoints on the wire', () => {
     expect(node.children[0]?.hasChildren).toBe(true);
   });
 });
+
+
+/** A fetch that answers a canned body per path fragment. */
+function stubFetch(answers: Record<string, unknown>): typeof fetch {
+  return (async (input: RequestInfo | URL) => {
+    const url = String(input);
+    const key = Object.keys(answers).find((k) => url.includes(k));
+    return new Response(JSON.stringify(key ? answers[key] : { data: [] }), {
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+    });
+  }) as typeof fetch;
+}
+
+function statusRow(id: number, code: string, iconId: number) {
+  return {
+    type: 'Status',
+    id,
+    attributes: { code, name: code.toUpperCase(), bg_color: '25,118,27' },
+    relationships: { icon: { data: { type: 'Icon', id: iconId } } },
+  };
+}
+
+/** A client whose statuses carry the given icon rows, in order from id 3. */
+function withIcons(icons: Array<Record<string, unknown>>, rows = [statusRow(1, 'custom', 3)]): RestClient {
+  return new RestClient({
+    siteUrl: 'https://studio.example.com',
+    token: () => 'bearer',
+    fetch: stubFetch({
+      '/entity/statuses': { data: rows },
+      '/entity/icons/_search': {
+        data: icons.map((attributes, i) => ({ type: 'Icon', id: 3 + i, attributes, relationships: {} })),
+      },
+    }),
+  });
+}
+
+describe('status icons on the wire', () => {
+  it('drops an image icon the site holds with an empty url', async () => {
+    const client = withIcons(
+      [{ display_type: 'image', url: '' }, { display_type: 'image_map', image_map_key: 'icon_apr' }],
+      [statusRow(1, 'custom', 3), statusRow(2, 'apr', 4)],
+    );
+    const [custom, approved] = await client.statuses();
+    expect(custom?.icon).toBeNull();
+    expect(approved?.icon).toEqual({ displayType: 'image_map', imageMapKey: 'icon_apr' });
+  });
+
+  it('strips the newlines an image icon carries in its data url', async () => {
+    const client = withIcons([{ display_type: 'image', url: 'data:image/png;base64,AA\nBB' }]);
+    expect((await client.statuses())[0]?.icon).toEqual({ displayType: 'image', dataUrl: 'data:image/png;base64,AABB' });
+  });
+});

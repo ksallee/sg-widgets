@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { CollectionColumn, EntityRef, FieldSchema, StatusRecord } from '@sg-widgets/core';
-import { createEntitySource, resolveColumns } from '@sg-widgets/core';
+import { condition, createEntitySource, resolveColumns } from '@sg-widgets/core';
 import { EntityGrid } from '@/registry/sg/components/entity-grid';
 import { createDemoContext } from '../_shared/client';
 import { DemoClientProvider } from '../_shared/react';
@@ -24,7 +24,15 @@ interface Loaded {
 export default function EntityGridDemo() {
   const context = useMemo(() => createDemoContext(), []);
   const source = useMemo(
-    () => createEntitySource({ client: context.client, entityType: 'Version', fields: FIELDS, pageSize: 12 }),
+    () =>
+      createEntitySource({
+        client: context.client,
+        entityType: 'Version',
+        fields: FIELDS,
+        // The mock's rows are one project's already; a real site's are not.
+        filters: context.live ? condition('project', 'is', { type: 'Project', id: context.projectId }) : null,
+        pageSize: 12,
+      }),
     [context],
   );
 

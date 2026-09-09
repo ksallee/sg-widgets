@@ -3,13 +3,16 @@ import { MockClient } from '../src/mock.js';
 import { createSchemaService } from '../src/schema-service.js';
 import { createStatusService } from '../src/status-service.js';
 import type { TreeEngine } from '../src/tree.js';
-import { createTree, hierarchyLoader, resolveTreeFields } from '../src/tree.js';
+import { createTree, hierarchyLoader, hierarchySearcher, resolveTreeFields } from '../src/tree.js';
 
 const ROOT = '/Project/70';
 const ASSETS = '/Project/70/Asset';
 const SHOTS = '/Project/70/Shot';
 const SEQUENCE = '/Project/70/Shot/sg_sequence/Sequence/100';
 const SHOT = '/Project/70/Shot/sg_sequence/Sequence/100/id/862';
+/** The project whose Shots are grouped by a field no row of it fills (064). */
+const LOOSE_ROOT = '/Project/72';
+const LOOSE_SHOTS = '/Project/72/Shot';
 
 /** A tree over the mock hierarchy, and the calls it made. */
 function tree(options: { now?: () => number } = {}): { engine: TreeEngine; calls: string[] } {
@@ -23,6 +26,22 @@ function tree(options: { now?: () => number } = {}): { engine: TreeEngine; calls
       return load(path);
     },
     ...options,
+  });
+  return { engine, calls };
+}
+
+/** The same tree, with the two endpoints a search chains behind it. */
+function searchTree(): { engine: TreeEngine; calls: string[] } {
+  const client = new MockClient();
+  const calls: string[] = [];
+  const load = hierarchyLoader(client);
+  const engine = createTree({
+    rootPath: ROOT,
+    loader: (path) => {
+      calls.push(path);
+      return load(path);
+    },
+    searcher: hierarchySearcher(client, ROOT, { schema: createSchemaService(client) }),
   });
   return { engine, calls };
 }
@@ -346,34 +365,148 @@ describe('type-ahead', () => {
   });
 });
 
-describe('the filter', () => {
-  it('keeps the matches and the ancestors that lead to them', async () => {
-    const { engine } = tree();
+describe('searching', () => {
+  it('opens the tree onto every hit and marks it', async () => {
+    const { engine } = searchTree();
     await engine.load();
-    await engine.expand(ASSETS);
-    engine.setFilter('lantern');
-    expect(labels(engine)).toEqual(['Blue Moon Rising', 'Assets', 'propLantern']);
+    await engine.search('sh010_0010');
+    const snap = engine.snapshot();
+    expect(paths(engine)).toContain(SHOT);
+    expect(snap.matches).toContain(SHOT);
+    expect(snap.cursor).toBe(SHOT);
+    // The rest of the tree stays on show, so a hit keeps its context.
+    expect(labels(engine)).toContain('Assets');
+    expect(snap.rows.find((row) => row.node.path === ASSETS)?.match).toBe(false);
   });
 
-  it('opens a shut branch that leads to a match, and closes again when cleared', async () => {
-    const { engine } = tree();
-    await engine.load();
-    await engine.expand(ASSETS);
-    engine.collapse(ASSETS);
-    expect(labels(engine)).toEqual(['Blue Moon Rising', 'Assets', 'Shots']);
-    engine.setFilter('charAda');
-    expect(labels(engine)).toEqual(['Blue Moon Rising', 'Assets', 'charAda']);
-    engine.setFilter('');
-    expect(labels(engine)).toEqual(['Blue Moon Rising', 'Assets', 'Shots']);
-  });
-
-  it('never asks the server for a branch that was never opened', async () => {
-    const { engine, calls } = tree();
+  it('opens a branch two hits share once', async () => {
+    const { engine, calls } = searchTree();
     await engine.load();
     calls.length = 0;
-    engine.setFilter('sh010_0010');
-    expect(calls).toEqual([]);
-    expect(labels(engine)).toEqual([]);
+    await engine.search('sh010');
+    expect(calls.filter((path) => path === SHOTS)).toHaveLength(1);
+    expect(engine.snapshot().matches.length).toBeGreaterThan(1);
+  });
+
+  it('restores the expansion it opened onto when the text is cleared', async () => {
+    const { engine } = searchTree();
+    await engine.load();
+    await engine.expand(ASSETS);
+    await engine.search('sh010_0010');
+    expect(paths(engine)).toContain(SHOT);
+    await engine.search('');
+    expect(paths(engine)).toContain(ASSETS);
+    expect(paths(engine)).not.toContain(SHOT);
+    expect(engine.snapshot().matches).toEqual([]);
+  });
+
+  it('marks nothing when the words match no row', async () => {
+    const { engine } = searchTree();
+    await engine.load();
+    await engine.search('nothing matches this');
+    expect(engine.snapshot().matches).toEqual([]);
+    expect(engine.snapshot().searching).toBe(false);
+  });
+
+  it('marks the labels already loaded when there is no searcher', async () => {
+    const { engine } = tree();
+    await engine.load();
+    await engine.expand(ASSETS);
+    await engine.search('lantern');
+    expect(engine.snapshot().matches.map((path) => engine.node(path)?.label)).toEqual(['propLantern']);
+  });
+
+  it('searches the types the levels already read stand for', async () => {
+    const seen: string[][] = [];
+    const client = new MockClient();
+    const engine = createTree({
+      rootPath: ROOT,
+      loader: hierarchyLoader(client),
+      searcher: (text, types) => {
+        seen.push([...types].sort());
+        return hierarchySearcher(client, ROOT, { schema: createSchemaService(client) })(text, types);
+      },
+    });
+    await engine.load();
+    await engine.search('sh010_0010');
+    expect(seen[0]).toEqual(['Asset', 'Shot']);
+  });
+});
+
+describe('expanding a branch', () => {
+  it('opens every level under a node down to the depth asked for', async () => {
+    const { engine } = tree();
+    await engine.load();
+    await engine.expandAll(SHOTS, 2);
+    // Every sequence of the project, and every shot under each of them.
+    expect(paths(engine)).toContain(SHOT);
+    const shots = paths(engine).filter((path) => /\/Sequence\/\d+\/id\/\d+$/.test(path));
+    expect(shots).toHaveLength(22);
+  });
+
+  it('stops at the depth asked for', async () => {
+    const { engine } = tree();
+    await engine.load();
+    await engine.expandAll(SHOTS, 1);
+    expect(paths(engine)).toContain(SEQUENCE);
+    expect(paths(engine)).not.toContain(SHOT);
+  });
+
+  it('carries the loading flag on the node until every level is read', async () => {
+    const { engine } = tree();
+    await engine.load();
+    const busy: boolean[] = [];
+    const stop = engine.subscribe(() => {
+      busy.push(engine.snapshot().rows.find((row) => row.node.path === SHOTS)?.loading ?? false);
+    });
+    await engine.expandAll(SHOTS, 2);
+    stop();
+    expect(busy[0]).toBe(true);
+    expect(busy[busy.length - 1]).toBe(false);
+  });
+
+  it('opens every branch at the focus level on the asterisk', async () => {
+    const { engine } = tree();
+    await engine.load();
+    await engine.expand(SHOTS);
+    engine.focus(SEQUENCE);
+    expect(engine.keyDown({ key: '*' })).toBe(true);
+    await Promise.resolve();
+    for (let i = 0; i < 20 && !paths(engine).includes(SHOT); i += 1) await new Promise((r) => setTimeout(r, 5));
+    const opened = engine.snapshot().rows.filter((row) => row.node.path.includes('/Sequence/') && row.expanded);
+    expect(opened.length).toBeGreaterThan(1);
+  });
+});
+
+describe('a level whose grouping field has no rows', () => {
+  it('answers the ungrouped rows in place of the empty child', async () => {
+    const client = new MockClient();
+    const engine = createTree({ rootPath: LOOSE_ROOT, loader: hierarchyLoader(client) });
+    await engine.load();
+    await engine.expand(LOOSE_SHOTS);
+    expect(labels(engine)).toEqual(['Night Ferry', 'Assets', 'Shots', 'nf_0010', 'nf_0020', 'nf_0030']);
+  });
+
+  it('follows a seed path spelling the bucket the way the search endpoint does', async () => {
+    const client = new MockClient();
+    const engine = createTree({ rootPath: LOOSE_ROOT, loader: hierarchyLoader(client) });
+    const [found] = await client.hierarchySearch(LOOSE_ROOT, { type: 'Shot', id: 892 });
+    expect(found?.incrementalPath[2]).toBe(`${LOOSE_SHOTS}/sg_sequence/__none__`);
+    await engine.expandToPath(found?.incrementalPath ?? []);
+    expect(engine.node(engine.snapshot().cursor ?? '')?.entity).toEqual({ type: 'Shot', id: 892 });
+  });
+
+  it('places a hit under it when the tree is searched', async () => {
+    const client = new MockClient();
+    const engine = createTree({
+      rootPath: LOOSE_ROOT,
+      loader: hierarchyLoader(client),
+      searcher: hierarchySearcher(client, LOOSE_ROOT, { schema: createSchemaService(client) }),
+    });
+    await engine.load();
+    await engine.search('nf_0020');
+    const marked = engine.snapshot().matches.map((path) => engine.node(path)?.label);
+    expect(marked).toEqual(['nf_0020']);
   });
 });
 

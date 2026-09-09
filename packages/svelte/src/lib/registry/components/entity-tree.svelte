@@ -5,6 +5,8 @@
 	function checkedAttr(state: TreeCheckState): 'true' | 'false' | 'mixed' {
 		return state === 'mixed' ? 'mixed' : state === 'checked' ? 'true' : 'false';
 	}
+
+	const DEBOUNCE_MS = 250;
 </script>
 
 <script lang="ts">
@@ -15,7 +17,9 @@
 		createStatusService,
 		createTree,
 		hierarchyLoader,
+		hierarchySearcher,
 		isEmptyValue,
+		matchRuns,
 		resolveTreeFields,
 		TREE_STATUS_FIELDS
 	} from '@sg-widgets/core';
@@ -25,6 +29,7 @@
 	import Inbox from '@lucide/svelte/icons/inbox';
 	import Loader from '@lucide/svelte/icons/loader';
 	import Minus from '@lucide/svelte/icons/minus';
+	import Search from '@lucide/svelte/icons/search';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
@@ -45,9 +50,11 @@
 		oncheckedchange?: (rows: EntityRef[]) => void;
 		onselect?: (node: TreeNode) => void;
 		onerror?: (error: Error) => void;
-		/** Shows a filter input that narrows the nodes already loaded. */
-		filterable?: boolean;
-		filterPlaceholder?: string;
+		/** Shows an input that searches the project and opens the tree onto the hits. */
+		searchable?: boolean;
+		searchPlaceholder?: string;
+		/** How many levels a whole-branch expansion opens. */
+		expandDepth?: number;
 		/** Field holding the thumbnail URL. `false`, the default here, hides the leading slot. */
 		thumbnail?: string | false;
 		/** Field shown as the row's label. Falls back to the label the tree answers. */
@@ -69,6 +76,7 @@
 		label?: string;
 		maxHeight?: string;
 		emptyLabel?: string;
+		noMatchLabel?: string;
 	};
 
 	let {
@@ -80,8 +88,9 @@
 		oncheckedchange,
 		onselect,
 		onerror,
-		filterable = false,
-		filterPlaceholder = 'Filter loaded nodes',
+		searchable = false,
+		searchPlaceholder = 'Search',
+		expandDepth = 3,
 		thumbnail = false,
 		labelField,
 		subLabelField,
@@ -94,6 +103,7 @@
 		label = 'Project hierarchy',
 		maxHeight = '24rem',
 		emptyLabel = 'Nothing under this project',
+		noMatchLabel = 'Nothing matches every word',
 		class: className,
 		ref = $bindable(null),
 		...rest
@@ -116,13 +126,16 @@
 		createTree({
 			rootPath,
 			selection,
-			loader: hierarchyLoader(client, { fields: requested })
+			expandDepth,
+			loader: hierarchyLoader(client, { fields: requested }),
+			searcher: hierarchySearcher(client, rootPath, { schema })
 		})
 	);
 
 	// svelte-ignore state_referenced_locally
 	let snap = $state(engine.snapshot());
-	let filter = $state('');
+	let query = $state('');
+	let timer: ReturnType<typeof setTimeout> | undefined;
 
 	$effect(() => {
 		const tree = engine;
@@ -211,7 +224,38 @@
 		return field?.dataType ?? (secondaryIsId ? 'number' : 'text');
 	}
 
+	/* searching --------------------------------------------------------------- */
+
+	const searchText = $derived(snap.search.trim());
+	const noMatch = $derived(searchText.length > 0 && !snap.searching && snap.matches.length === 0);
+	const dimming = $derived(searchText.length > 0 && snap.matches.length > 0);
+
+	function setQuery(text: string): void {
+		query = text;
+		clearTimeout(timer);
+		if (text.trim().length === 0) {
+			void engine.search('');
+			return;
+		}
+		timer = setTimeout(() => void engine.search(text), DEBOUNCE_MS);
+	}
+
+	function onSearchKeydown(event: KeyboardEvent): void {
+		if (event.key !== 'Escape' || query.length === 0) return;
+		event.preventDefault();
+		event.stopPropagation();
+		setQuery('');
+	}
+
 	/* interaction ------------------------------------------------------------ */
+
+	/** Alt or Cmd/Ctrl on the chevron opens the whole branch rather than one level. */
+	function openBranch(event: MouseEvent, row: TreeRow): void {
+		event.stopPropagation();
+		engine.focus(row.node.path);
+		if (event.altKey || event.metaKey || event.ctrlKey) void engine.expandAll(row.node.path, expandDepth);
+		else void engine.toggle(row.node.path);
+	}
 
 	function activate(row: TreeRow): void {
 		engine.focus(row.node.path);
@@ -255,22 +299,31 @@
 	Every row's fields come with its level: one read per type over the ids just returned,
 	so a sub-label or a status costs nothing per row.
 
-	The filter narrows what is already loaded. It never asks the server, so a branch that
-	was never opened is not searched.
+	Searching is two calls a query: `_text_search` matches the words and `hierarchy/_search`
+	says where each hit sits, so the tree opens along every answered path, marks the rows
+	the words found and dims the rest (post_entity_text_search, post_hierarchy_search).
 -->
 <div bind:this={ref} data-slot="entity-tree" class={cn('flex w-full min-w-0 flex-col gap-2', className)} {...rest}>
-	{#if filterable}
-		<Input
-			type="search"
-			value={filter}
-			oninput={(event) => {
-				filter = event.currentTarget.value;
-				engine.setFilter(filter);
-			}}
-			placeholder={filterPlaceholder}
-			aria-label={filterPlaceholder}
-			data-slot="entity-tree-filter"
-		/>
+	{#if searchable}
+		<div class="relative flex items-center">
+			<Input
+				type="search"
+				value={query}
+				oninput={(event) => setQuery(event.currentTarget.value)}
+				onkeydown={onSearchKeydown}
+				placeholder={searchPlaceholder}
+				aria-label={searchPlaceholder}
+				aria-busy={snap.searching ? true : undefined}
+				data-slot="entity-tree-search"
+				class="pe-8"
+			/>
+			{#if snap.searching}
+				<Loader
+					aria-hidden="true"
+					class="text-muted-foreground pointer-events-none absolute end-2 size-4 motion-safe:animate-spin"
+				/>
+			{/if}
+		</div>
 	{/if}
 
 	<div
@@ -293,6 +346,11 @@
 			<p class={stateClass}>
 				<Inbox aria-hidden="true" class="size-4 shrink-0" />
 				{emptyLabel}
+			</p>
+		{:else if noMatch}
+			<p data-slot="entity-tree-no-match" class={stateClass}>
+				<Search aria-hidden="true" class="size-4 shrink-0" />
+				{noMatchLabel}
 			</p>
 		{:else}
 			<!-- svelte-ignore a11y_no_noninteractive_element_to_interactive_role -->
@@ -337,21 +395,30 @@
 							class={cn(
 								'focus-visible:ring-ring focus-visible:ring-offset-background flex min-w-0 cursor-default gap-1.5 rounded-md px-2 py-1.5 text-sm outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2',
 								hasSubLabel ? 'items-start' : 'items-center',
+								dimming && !row.match && 'text-muted-foreground',
 								row.selected ? 'bg-accent text-accent-foreground' : 'hover:bg-muted/50'
 							)}
 						>
 							{#if node.hasChildren}
-								{#if row.loading}
-									<Loader aria-hidden="true" class="size-4 shrink-0 motion-safe:animate-spin" />
-								{:else}
-									<ChevronRight
-										aria-hidden="true"
-										class={cn(
-											'text-muted-foreground size-4 shrink-0 transition-transform duration-150 ease-out',
-											row.expanded && 'rotate-90'
-										)}
-									/>
-								{/if}
+								<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+								<span
+									aria-hidden="true"
+									data-slot="entity-tree-chevron"
+									onclick={(event) => openBranch(event, row)}
+									class="flex size-4 shrink-0 items-center justify-center"
+								>
+									{#if row.loading}
+										<Loader aria-hidden="true" class="size-4 shrink-0 motion-safe:animate-spin" />
+									{:else}
+										<ChevronRight
+											aria-hidden="true"
+											class={cn(
+												'text-muted-foreground size-4 shrink-0 transition-transform duration-150 ease-out',
+												row.expanded && 'rotate-90'
+											)}
+										/>
+									{/if}
+								</span>
 							{:else}
 								<span aria-hidden="true" class="size-4 shrink-0"></span>
 							{/if}
@@ -392,7 +459,11 @@
 
 							<span class="flex min-w-0 flex-1 flex-col">
 								<span class="flex min-w-0 items-center gap-1.5">
-									<span data-slot="entity-tree-label" class="truncate" title={name}>{name}</span>
+									<span data-slot="entity-tree-label" class="truncate" title={name}>
+										{#each matchRuns(name, snap.search) as part, i (i)}
+											{#if part.match}<span class="font-semibold">{part.text}</span>{:else}{part.text}{/if}
+										{/each}
+									</span>
 									{#if code}
 										<span data-slot="entity-tree-code" class="text-muted-foreground shrink-0 font-mono text-xs"
 											>{code}</span

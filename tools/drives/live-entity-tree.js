@@ -46,6 +46,21 @@ for (const framework of ['svelte', 'react']) {
   notes.push(
     `${framework}: ${badges.length} rows carry a status badge, first ${badges[0]?.getAttribute('data-status-code') ?? 'none'}`,
   );
+
+  // A row the site holds, searched for by a word of its own label: the search places it.
+  const wanted = labelOf(rows[0] ?? level[0]);
+  const word = (wanted ?? '').split(/[\s_]+/).filter((part) => part.length > 2).pop();
+  if (!word) return { verdict: `${framework}: no word to search for in "${wanted}"`, notes };
+  const shut = tree(framework).querySelector('[role="treeitem"]');
+  shut.click();
+  await wait(500);
+  const search = pane(framework).querySelector('[data-slot="entity-tree-search"]');
+  Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(search, word);
+  search.dispatchEvent(new Event('input', { bubbles: true }));
+  const found = () => items(framework).filter((n) => n.querySelector('[data-slot="entity-tree-label"] .font-semibold'));
+  for (let i = 0; i < 120 && found().length === 0; i += 1) await wait(250);
+  if (found().length === 0) return { verdict: `FAIL ${framework} searched "${word}" and placed nothing`, notes };
+  notes.push(`${framework}: searching "${word}" placed ${found().length} rows, first "${labelOf(found()[0])}"`);
 }
 
-return { verdict: 'PASS live nodes under a live project, opened one level at a time', notes };
+return { verdict: 'PASS live nodes under a live project, opened one level at a time and searched', notes };

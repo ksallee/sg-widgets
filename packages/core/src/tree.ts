@@ -4,8 +4,8 @@
  * The headless half of the tree widgets: nodes keyed by their path, one level
  * read at a time behind a loader, expand and collapse with a loading flag per
  * node, tri-state checkboxes that propagate both ways, single or multiple
- * selection, a focus cursor carrying the whole keyboard model, and a filter over
- * the nodes already loaded. There is no framework in it: a Svelte widget wraps it
+ * selection, a focus cursor carrying the whole keyboard model, and a search that
+ * opens the tree onto its hits. There is no framework in it: a Svelte widget wraps it
  * in `$state`, a React one in `useSyncExternalStore`, and neither reimplements
  * propagation, the cursor or type-ahead.
  *
@@ -16,11 +16,18 @@
  * runs through the field name `sg_sequence` (post_hierarchy_search) - so a seed
  * path is followed by taking whichever child is a prefix of it rather than by
  * parsing the path.
+ *
+ * Searching is two endpoints, because neither does it alone: `_text_search` matches
+ * the words and `hierarchy/_search` says where each hit sits, so the tree opens
+ * along every answered path and marks the rows the words found
+ * (post_entity_text_search, post_hierarchy_search).
  */
 import type { HierarchyNode, HierarchyRef, SgClient } from './client.js';
 import { hierarchyEntity } from './client.js';
 import type { EntityRef, WireCondition } from './filter.js';
 import type { SchemaService } from './schema-service.js';
+import type { FieldLookup } from './search.js';
+import { matchesEveryWord, scopeToProject } from './search.js';
 import type { FieldSchema } from './schema.js';
 import { statusFieldFor } from './schema.js';
 import type { StatusService } from './status-service.js';
@@ -80,6 +87,8 @@ export interface TreeRow {
   selected: boolean;
   /** True on the one node that owns the tab stop. */
   focused: boolean;
+  /** True when the search placed this row, or its label holds every word. */
+  match: boolean;
 }
 
 /** Everything a view renders. A new object on every change, so identity is the signal. */
@@ -89,7 +98,12 @@ export interface TreeState {
   error: Error | null;
   /** Path of the focus cursor, or null before the root is read. */
   cursor: string | null;
-  filter: string;
+  /** The text the tree is searching for. */
+  search: string;
+  /** True while a search is in flight. */
+  searching: boolean;
+  /** Paths of the rows the search marked, in visible order. */
+  matches: string[];
   /** Paths whose box is fully checked, branches included. */
   checked: string[];
   selected: string[];
@@ -114,11 +128,28 @@ export interface TreeOptions {
   /** Where the tree starts, `/Project/<id>` against the hierarchy loader. */
   rootPath: string;
   selection?: TreeSelectionMode;
+  /** Places rows by text. Without one, a search marks the labels already loaded. */
+  searcher?: TreeSearcher;
+  /** Types a search covers. Default: the types the levels already read stand for. */
+  searchTypes?: readonly string[];
+  /** How many levels `expandAll` opens under a node. Default 3. */
+  expandDepth?: number;
   /** How long a type-ahead buffer survives, in milliseconds. Default 800. */
   typeAheadMs?: number;
   /** The clock type-ahead measures on. */
   now?: () => number;
 }
+
+/** One row a search found, and where the tree puts it. */
+export interface TreeSearchHit {
+  ref: EntityRef;
+  label: string;
+  /** One path per level, root first; the last entry is the row itself. */
+  incrementalPath: string[];
+}
+
+/** Matches words and answers where each hit sits. */
+export type TreeSearcher = (text: string, entityTypes: readonly string[]) => Promise<TreeSearchHit[]>;
 
 export interface TreeEngine {
   readonly rootPath: string;
@@ -136,6 +167,8 @@ export interface TreeEngine {
   toggle(path: string): Promise<void>;
   /** Open every level down to a path, or to the deepest entry of an incremental path. */
   expandToPath(refs: string | readonly string[]): Promise<void>;
+  /** Open every level under a node, breadth first, down to `depth`. */
+  expandAll(path: string, depth?: number): Promise<void>;
   /** Move the focus cursor. A path outside the visible list is ignored. */
   focus(path: string): void;
   setChecked(path: string, on: boolean): void;
@@ -144,14 +177,40 @@ export interface TreeEngine {
   checkedRefs(): EntityRef[];
   select(path: string, options?: TreeSelectOptions): void;
   clearSelection(): void;
-  /** Narrow the loaded nodes. An ancestor of a match is kept. */
-  setFilter(text: string): void;
+  /**
+   * Place every row the words match, open the tree onto them and mark them. An
+   * empty text drops the marks and restores the expansion the search opened onto.
+   */
+  search(text: string): Promise<void>;
   /** True when the tree handled the key, which is when the caller stops it. */
   keyDown(event: TreeKey): boolean;
 }
 
 /** How deep `expandToPath` walks before it gives up. */
 const MAX_SEED_DEPTH = 16;
+/** Hits one search places. `_text_search` answers at most 25 rows a page (probe 053). */
+const MAX_SEARCH_HITS = 25;
+/** Levels one `expandAll` reads, whatever its depth. */
+const MAX_EXPAND_READS = 64;
+
+/**
+ * A path in the one spelling both endpoints can be compared in.
+ *
+ * `_expand` writes the ungrouped bucket `<field>/<GroupType>/__none__` and `_search`
+ * writes `<field>/__none__`, and both answer the same rows (064_hierarchy_expand_buckets).
+ * A group type is capitalised where a field name is not, which is the same rule
+ * `pathRefs` reads a path by.
+ */
+function canonicalPath(path: string): string {
+  return path.replace(/\/[A-Z][A-Za-z0-9]*\/__none__(?=\/|$)/g, '/__none__');
+}
+
+/** True when `target` is the path itself or sits under it, in either spelling. */
+function isUnder(path: string, target: string): boolean {
+  const here = canonicalPath(path);
+  const there = canonicalPath(target);
+  return there === here || there.startsWith(`${here}/`);
+}
 
 function asError(value: unknown): Error {
   return value instanceof Error ? value : new Error(String(value));
@@ -172,15 +231,22 @@ export function createTree(options: TreeOptions): TreeEngine {
   const levels = new Map<string, string[]>();
   const expanded = new Set<string>();
   const loading = new Set<string>();
+  /** Nodes an `expandAll` is walking under, which read as busy while it runs. */
+  const walking = new Set<string>();
   const pending = new Map<string, Promise<TreeNode | null>>();
   const checked = new Set<string>();
   const selected = new Set<string>();
+  const matches = new Set<string>();
   const listeners = new Set<() => void>();
 
   let status: TreeStatus = 'idle';
   let error: Error | null = null;
   let cursor: string | null = null;
-  let filter = '';
+  let searchText = '';
+  let searching = false;
+  /** The expansion a search opened onto, restored when the text is cleared. */
+  let beforeSearch: Set<string> | null = null;
+  let searchToken = 0;
   let typed = '';
   let typedAt = 0;
   let state: TreeState = build();
@@ -192,40 +258,24 @@ export function createTree(options: TreeOptions): TreeEngine {
 
   /* the visible list ------------------------------------------------------ */
 
-  /** Paths the filter keeps: every match, and every ancestor that leads to one. */
-  function keptPaths(): Set<string> | null {
-    const needle = filter.trim().toLowerCase();
-    if (needle.length === 0) return null;
-    const keep = new Set<string>();
-    for (const node of nodes.values()) {
-      if (!node.label.toLowerCase().includes(needle)) continue;
-      keep.add(node.path);
-      let up = node.parentPath;
-      while (up !== null) {
-        keep.add(up);
-        up = nodes.get(up)?.parentPath ?? null;
-      }
-    }
-    return keep;
-  }
-
   function build(): TreeState {
-    const kept = keptPaths();
     const rows: TreeRow[] = [];
+    const marked: string[] = [];
     const walk = (path: string): void => {
       const node = nodes.get(path);
       if (!node) return;
-      if (kept && !kept.has(path)) return;
+      const match = matches.has(path);
+      if (match) marked.push(path);
       rows.push({
         node,
         expanded: expanded.has(path),
-        loading: loading.has(path),
+        loading: loading.has(path) || walking.has(path),
         checked: checkStateOf(path),
         selected: selected.has(path),
         focused: cursor === path,
+        match,
       });
-      // While filtering, a branch that leads to a match is open whatever its own state.
-      if (expanded.has(path) || kept) for (const child of levels.get(path) ?? []) walk(child);
+      if (expanded.has(path)) for (const child of levels.get(path) ?? []) walk(child);
     };
     walk(rootPath);
     return {
@@ -233,7 +283,9 @@ export function createTree(options: TreeOptions): TreeEngine {
       status,
       error,
       cursor,
-      filter,
+      search: searchText,
+      searching,
+      matches: marked,
       checked: [...checked],
       selected: [...selected],
     };
@@ -262,6 +314,9 @@ export function createTree(options: TreeOptions): TreeEngine {
     nodes.set(own.path, own);
     const paths: string[] = [];
     for (const child of level.children) {
+      // A placeholder child carries no path of its own and stands for an empty level
+      // (post_hierarchy_expand); keeping it would key it over its own parent.
+      if (child.path === own.path) continue;
       paths.push(child.path);
       nodes.set(child.path, {
         path: child.path,
@@ -390,6 +445,49 @@ export function createTree(options: TreeOptions): TreeEngine {
     return false;
   }
 
+  /* searching -------------------------------------------------------------- */
+
+  /**
+   * Open every level down to a path and answer the node it landed on. `done`
+   * carries the paths already opened, so hits sharing a branch open it once.
+   */
+  async function walkTo(target: string, done: Set<string>): Promise<TreeNode | null> {
+    let here = await root();
+    if (!here) return null;
+    for (let depth = 0; depth < MAX_SEED_DEPTH; depth += 1) {
+      if (canonicalPath(here.path) === canonicalPath(target)) break;
+      if (!done.has(here.path)) {
+        done.add(here.path);
+        await engine.expand(here.path);
+      }
+      const next = (levels.get(here.path) ?? []).find((path) => isUnder(path, target));
+      if (next === undefined) break;
+      const node = nodes.get(next);
+      if (!node) break;
+      here = node;
+    }
+    return here;
+  }
+
+  /** The types the levels already read stand for, which is what a search covers. */
+  function searchTypes(): string[] {
+    if (options.searchTypes) return [...options.searchTypes];
+    const types = new Set<string>();
+    for (const node of nodes.values()) {
+      const entity = hierarchyEntity(node.ref);
+      if (entity) types.add(entity.type);
+      else if (node.ref.kind === 'entity_type' && typeof node.ref.value === 'string') types.add(node.ref.value);
+    }
+    // The root is the project itself, and a project is never a row under it.
+    types.delete('Project');
+    return [...types];
+  }
+
+  /** Loaded nodes whose label holds every word, which the server never answers for a folder. */
+  function markLoaded(text: string): void {
+    for (const node of nodes.values()) if (matchesEveryWord(node.label, text)) matches.add(node.path);
+  }
+
   /* the engine ------------------------------------------------------------ */
 
   const engine: TreeEngine = {
@@ -441,19 +539,36 @@ export function createTree(options: TreeOptions): TreeEngine {
     async expandToPath(refs: string | readonly string[]): Promise<void> {
       const target = typeof refs === 'string' ? refs : (refs[refs.length - 1] ?? '');
       if (target.length === 0) return;
-      let here = await root();
+      const here = await walkTo(target, new Set());
       if (!here) return;
-      for (let depth = 0; depth < MAX_SEED_DEPTH; depth += 1) {
-        if (here.path === target) break;
-        await engine.expand(here.path);
-        const next = (levels.get(here.path) ?? []).find((p) => target === p || target.startsWith(`${p}/`));
-        if (next === undefined) break;
-        const node = nodes.get(next);
-        if (!node) break;
-        here = node;
-      }
       cursor = here.path;
       emit();
+    },
+
+    async expandAll(path: string, depth: number = options.expandDepth ?? 3): Promise<void> {
+      const start = nodes.get(path);
+      if (!start || !start.hasChildren) return;
+      walking.add(path);
+      emit();
+      try {
+        let frontier = [path];
+        let budget = MAX_EXPAND_READS;
+        for (let level = 0; level < depth && frontier.length > 0 && budget > 0; level += 1) {
+          const reads: Array<Promise<TreeNode | null>> = [];
+          for (const here of frontier) {
+            if (!nodes.get(here)?.hasChildren) continue;
+            expanded.add(here);
+            if (levels.has(here) || budget === 0) continue;
+            budget -= 1;
+            reads.push(read(here));
+          }
+          await Promise.all(reads);
+          frontier = frontier.flatMap((here) => levels.get(here) ?? []);
+        }
+      } finally {
+        walking.delete(path);
+        emit();
+      }
     },
 
     focus(path: string): void {
@@ -506,9 +621,52 @@ export function createTree(options: TreeOptions): TreeEngine {
       emit();
     },
 
-    setFilter(text: string): void {
-      if (text === filter) return;
-      filter = text;
+    async search(text: string): Promise<void> {
+      const token = (searchToken += 1);
+      searchText = text;
+      matches.clear();
+      if (text.trim().length === 0) {
+        searching = false;
+        if (beforeSearch) {
+          expanded.clear();
+          for (const path of beforeSearch) expanded.add(path);
+          beforeSearch = null;
+        }
+        emit();
+        return;
+      }
+      if (!options.searcher) {
+        markLoaded(text);
+        emit();
+        return;
+      }
+      searching = true;
+      emit();
+      let hits: TreeSearchHit[] = [];
+      try {
+        hits = await options.searcher(text, searchTypes());
+      } catch (thrown) {
+        if (token !== searchToken) return;
+        error = asError(thrown);
+        searching = false;
+        emit();
+        return;
+      }
+      if (token !== searchToken) return;
+      beforeSearch ??= new Set(expanded);
+      const done = new Set<string>();
+      const placed: string[] = [];
+      for (const hit of hits.slice(0, MAX_SEARCH_HITS)) {
+        const landed = await walkTo(hit.incrementalPath[hit.incrementalPath.length - 1] ?? '', done);
+        if (token !== searchToken) return;
+        if (landed?.entity?.type === hit.ref.type && landed.entity.id === hit.ref.id) placed.push(landed.path);
+      }
+      for (const path of placed) matches.add(path);
+      // A folder is not a row, so the server never returns one; its label matches all the same.
+      markLoaded(text);
+      const first = placed[0];
+      if (first !== undefined) cursor = first;
+      searching = false;
       emit();
     },
 
@@ -548,6 +706,13 @@ export function createTree(options: TreeOptions): TreeEngine {
           if (!node) return false;
           engine.select(node.path, { additive: event.ctrlKey === true || event.metaKey === true });
           return true;
+        case '*': {
+          // The ARIA tree pattern opens every branch at the focus level, not just this one.
+          if (!node) return false;
+          const level = node.parentPath === null ? [node.path] : (levels.get(node.parentPath) ?? [node.path]);
+          for (const path of level) void engine.expandAll(path);
+          return true;
+        }
         default:
           if (event.key.length !== 1 || event.ctrlKey || event.metaKey || event.altKey) return false;
           return typeAhead(event.key);
@@ -579,9 +744,92 @@ export function hierarchyLoader(client: SgClient, options: HierarchyLoaderOption
   const wanted = [...new Set(['id', ...(options.fields ?? [])])];
   return async (path: string): Promise<TreeLevel> => {
     const answer = await client.hierarchyExpand(path);
-    const level: TreeLevel = { node: fromHierarchy(answer), children: answer.children.map(fromHierarchy) };
+    const children = (await ungrouped(client, answer)) ?? answer.children;
+    const level: TreeLevel = { node: fromHierarchy(answer), children: children.map(fromHierarchy) };
     if (wanted.length > 1) await readValues(client, [level.node, ...level.children], wanted);
     return level;
+  };
+}
+
+/** The segment sent to make the endpoint name the grouping field it expects. */
+const FIELD_PROBE = '__field__';
+/** `Unexpected field name in path: nope (expecting sg_sequence)` (post_hierarchy_expand). */
+const EXPECTING = /expecting\s+([A-Za-z0-9_]+)/;
+
+/**
+ * The rows a grouped level hides, or null when there are none to find.
+ *
+ * A grouping field with no rows hides every row under it: the level answers one
+ * `empty` child and no bucket, although the `__none__` path under it answers all of
+ * them (064_hierarchy_expand_buckets). The field that path runs through is whatever
+ * the site's navigation groups by, and the 400 the endpoint answers a bogus segment
+ * names it (post_hierarchy_expand). The bucket is asked for in `_search`'s spelling,
+ * `<field>/__none__`, which needs no group type and answers the same rows.
+ */
+async function ungrouped(client: SgClient, answer: HierarchyNode): Promise<HierarchyNode[] | null> {
+  const only = answer.children.length === 1 ? answer.children[0] : undefined;
+  if (!only || only.ref.kind !== 'empty') return null;
+  // Grouping sits directly under the type folder, and a bucket never groups again.
+  if (answer.ref.kind !== 'entity_type' || answer.path.includes('__none__')) return null;
+  let field: string | null = null;
+  try {
+    await client.hierarchyExpand(`${answer.path}/${FIELD_PROBE}`);
+  } catch (thrown) {
+    field = EXPECTING.exec(asError(thrown).message)?.[1] ?? null;
+  }
+  if (field === null) return null;
+  try {
+    const bucket = await client.hierarchyExpand(`${answer.path}/${field}/__none__`);
+    const rows = bucket.children.filter((child) => child.ref.kind !== 'empty');
+    return rows.length > 0 ? rows : null;
+  } catch {
+    return null;
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* the search adapter                                                         */
+/* -------------------------------------------------------------------------- */
+
+export interface HierarchySearcherOptions {
+  /** Answers whether a type carries `project`, so the words are scoped to it. */
+  schema?: FieldLookup;
+  /** Rows the text search asks for. Each one costs a path lookup. Default 10. */
+  limit?: number;
+}
+
+/**
+ * `_text_search` and `hierarchy/_search` chained, as a tree searcher.
+ *
+ * The hierarchy endpoint takes an entity and answers where it sits rather than
+ * matching words, so the words go to `_text_search` first and each hit is then
+ * asked for its path (post_hierarchy_search). A root path naming a project scopes
+ * the words to it, on every type that carries a `project` field.
+ */
+export function hierarchySearcher(
+  client: SgClient,
+  rootPath: string,
+  options: HierarchySearcherOptions = {},
+): TreeSearcher {
+  const limit = options.limit ?? 10;
+  const projectId = /^\/Project\/(\d+)/.exec(rootPath)?.[1];
+  return async (text: string, entityTypes: readonly string[]): Promise<TreeSearchHit[]> => {
+    if (entityTypes.length === 0) return [];
+    let types: Record<string, WireCondition[] | null> = Object.fromEntries(entityTypes.map((type) => [type, null]));
+    if (projectId !== undefined && options.schema) types = await scopeToProject(options.schema, types, Number(projectId));
+    const found = await client.textSearch(text, types, { size: limit, number: 1 });
+    const placed = await Promise.all(
+      found.map((row) =>
+        client
+          .hierarchySearch(rootPath, { type: row.type, id: row.id })
+          .then((answers) => answers[0] ?? null)
+          // A row the tree has no place for under this root is not a hit.
+          .catch(() => null),
+      ),
+    );
+    return placed.flatMap((path) =>
+      path ? [{ ref: path.ref, label: path.label, incrementalPath: path.incrementalPath }] : [],
+    );
   };
 }
 

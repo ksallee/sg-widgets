@@ -6,11 +6,13 @@ import {
   createStatusService,
   createTree,
   hierarchyLoader,
+  hierarchySearcher,
   isEmptyValue,
+  matchRuns,
   resolveTreeFields,
   TREE_STATUS_FIELDS,
 } from '@sg-widgets/core';
-import { Check, ChevronRight, CircleAlert, Inbox, Loader, Minus } from 'lucide-react';
+import { Check, ChevronRight, CircleAlert, Inbox, Loader, Minus, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
@@ -33,9 +35,11 @@ export interface EntityTreeProps extends DivProps {
   onCheckedChange?: (rows: EntityRef[]) => void;
   onSelect?: (node: TreeNode) => void;
   onError?: (error: Error) => void;
-  /** Shows a filter input that narrows the nodes already loaded. */
-  filterable?: boolean;
-  filterPlaceholder?: string;
+  /** Shows an input that searches the project and opens the tree onto the hits. */
+  searchable?: boolean;
+  searchPlaceholder?: string;
+  /** How many levels a whole-branch expansion opens. */
+  expandDepth?: number;
   /** Field holding the thumbnail URL. `false`, the default here, hides the leading slot. */
   thumbnail?: string | false;
   /** Field shown as the row's label. Falls back to the label the tree answers. */
@@ -57,10 +61,12 @@ export interface EntityTreeProps extends DivProps {
   label?: string;
   maxHeight?: string;
   emptyLabel?: string;
+  noMatchLabel?: string;
 }
 
 const stateClass = 'text-muted-foreground flex items-center justify-center gap-2 py-10 text-sm';
 const EMPTY_PLAN: TreeFieldPlan = { status: {}, secondary: {}, statuses: null };
+const DEBOUNCE_MS = 250;
 
 /** `aria-checked` as a tree row spells it: `mixed` for a part-checked branch. */
 function checkedAttr(state: TreeRow['checked']): 'true' | 'false' | 'mixed' {
@@ -80,8 +86,9 @@ function checkedAttr(state: TreeRow['checked']): 'true' | 'false' | 'mixed' {
  * Every row's fields come with its level: one read per type over the ids just returned,
  * so a sub-label or a status costs nothing per row.
  *
- * The filter narrows what is already loaded. It never asks the server, so a branch that
- * was never opened is not searched.
+ * Searching is two calls a query: `_text_search` matches the words and `hierarchy/_search`
+ * says where each hit sits, so the tree opens along every answered path, marks the rows the
+ * words found and dims the rest (post_entity_text_search, post_hierarchy_search).
  */
 export function EntityTree({
   client,
@@ -92,8 +99,9 @@ export function EntityTree({
   onCheckedChange,
   onSelect,
   onError,
-  filterable = false,
-  filterPlaceholder = 'Filter loaded nodes',
+  searchable = false,
+  searchPlaceholder = 'Search',
+  expandDepth = 3,
   thumbnail = false,
   labelField,
   subLabelField,
@@ -106,6 +114,7 @@ export function EntityTree({
   label = 'Project hierarchy',
   maxHeight = '24rem',
   emptyLabel = 'Nothing under this project',
+  noMatchLabel = 'Nothing matches every word',
   className,
   ...rest
 }: EntityTreeProps) {
@@ -127,15 +136,18 @@ export function EntityTree({
       createTree({
         rootPath,
         selection,
+        expandDepth,
         loader: hierarchyLoader(client, { fields: requested.split(',') }),
+        searcher: hierarchySearcher(client, rootPath, { schema }),
       }),
-    [client, rootPath, selection, requested],
+    [client, rootPath, selection, expandDepth, requested, schema],
   );
 
   const snap = useSyncExternalStore(engine.subscribe, engine.snapshot, engine.snapshot);
-  const [filter, setFilter] = useState('');
+  const [query, setQuery] = useState('');
   const [plan, setPlan] = useState<TreeFieldPlan>(EMPTY_PLAN);
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   useEffect(() => {
     void (seedPath ? engine.expandToPath(seedPath) : engine.load());
@@ -219,7 +231,38 @@ export function EntityTree({
     return field?.dataType ?? (secondaryIsId ? 'number' : 'text');
   }
 
+  /* searching --------------------------------------------------------------- */
+
+  const searchText = snap.search.trim();
+  const noMatch = searchText.length > 0 && !snap.searching && snap.matches.length === 0;
+  const dimming = searchText.length > 0 && snap.matches.length > 0;
+
+  function search(text: string): void {
+    setQuery(text);
+    clearTimeout(timer.current);
+    if (text.trim().length === 0) {
+      void engine.search('');
+      return;
+    }
+    timer.current = setTimeout(() => void engine.search(text), DEBOUNCE_MS);
+  }
+
+  function onSearchKeyDown(event: React.KeyboardEvent): void {
+    if (event.key !== 'Escape' || query.length === 0) return;
+    event.preventDefault();
+    event.stopPropagation();
+    search('');
+  }
+
   /* interaction ------------------------------------------------------------ */
+
+  /** Alt or Cmd/Ctrl on the chevron opens the whole branch rather than one level. */
+  function openBranch(event: React.MouseEvent, row: TreeRow): void {
+    event.stopPropagation();
+    engine.focus(row.node.path);
+    if (event.altKey || event.metaKey || event.ctrlKey) void engine.expandAll(row.node.path, expandDepth);
+    else void engine.toggle(row.node.path);
+  }
 
   function activate(row: TreeRow): void {
     engine.focus(row.node.path);
@@ -256,18 +299,26 @@ export function EntityTree({
       className={cn('flex w-full min-w-0 flex-col gap-2', className)}
       {...rest}
     >
-      {filterable ? (
-        <Input
-          type="search"
-          value={filter}
-          onChange={(event) => {
-            setFilter(event.target.value);
-            engine.setFilter(event.target.value);
-          }}
-          placeholder={filterPlaceholder}
-          aria-label={filterPlaceholder}
-          data-slot="entity-tree-filter"
-        />
+      {searchable ? (
+        <div className="relative flex items-center">
+          <Input
+            type="search"
+            value={query}
+            onChange={(event) => search(event.target.value)}
+            onKeyDown={onSearchKeyDown}
+            placeholder={searchPlaceholder}
+            aria-label={searchPlaceholder}
+            aria-busy={snap.searching ? true : undefined}
+            data-slot="entity-tree-search"
+            className="pe-8"
+          />
+          {snap.searching ? (
+            <Loader
+              aria-hidden="true"
+              className="text-muted-foreground pointer-events-none absolute end-2 size-4 motion-safe:animate-spin"
+            />
+          ) : null}
+        </div>
       ) : null}
 
       <div
@@ -290,6 +341,11 @@ export function EntityTree({
           <p className={stateClass}>
             <Inbox aria-hidden="true" className="size-4 shrink-0" />
             {emptyLabel}
+          </p>
+        ) : noMatch ? (
+          <p data-slot="entity-tree-no-match" className={stateClass}>
+            <Search aria-hidden="true" className="size-4 shrink-0" />
+            {noMatchLabel}
           </p>
         ) : (
           <ul
@@ -334,21 +390,29 @@ export function EntityTree({
                     className={cn(
                       'focus-visible:ring-ring focus-visible:ring-offset-background flex min-w-0 cursor-default gap-1.5 rounded-md px-2 py-1.5 text-sm outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2',
                       hasSubLabel ? 'items-start' : 'items-center',
+                      dimming && !row.match && 'text-muted-foreground',
                       row.selected ? 'bg-accent text-accent-foreground' : 'hover:bg-muted/50',
                     )}
                   >
                     {node.hasChildren ? (
-                      row.loading ? (
-                        <Loader aria-hidden="true" className="size-4 shrink-0 motion-safe:animate-spin" />
-                      ) : (
-                        <ChevronRight
-                          aria-hidden="true"
-                          className={cn(
-                            'text-muted-foreground size-4 shrink-0 transition-transform duration-150 ease-out',
-                            row.expanded && 'rotate-90',
-                          )}
-                        />
-                      )
+                      <span
+                        aria-hidden="true"
+                        data-slot="entity-tree-chevron"
+                        onClick={(event) => openBranch(event, row)}
+                        className="flex size-4 shrink-0 items-center justify-center"
+                      >
+                        {row.loading ? (
+                          <Loader aria-hidden="true" className="size-4 shrink-0 motion-safe:animate-spin" />
+                        ) : (
+                          <ChevronRight
+                            aria-hidden="true"
+                            className={cn(
+                              'text-muted-foreground size-4 shrink-0 transition-transform duration-150 ease-out',
+                              row.expanded && 'rotate-90',
+                            )}
+                          />
+                        )}
+                      </span>
                     ) : (
                       <span aria-hidden="true" className="size-4 shrink-0" />
                     )}
@@ -383,7 +447,15 @@ export function EntityTree({
                     <span className="flex min-w-0 flex-1 flex-col">
                       <span className="flex min-w-0 items-center gap-1.5">
                         <span data-slot="entity-tree-label" className="truncate" title={name}>
-                          {name}
+                          {matchRuns(name, snap.search).map((part, index) =>
+                            part.match ? (
+                              <span key={index} className="font-semibold">
+                                {part.text}
+                              </span>
+                            ) : (
+                              <span key={index}>{part.text}</span>
+                            ),
+                          )}
                         </span>
                         {code ? (
                           <span

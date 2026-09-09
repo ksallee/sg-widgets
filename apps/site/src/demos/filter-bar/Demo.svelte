@@ -1,23 +1,76 @@
 <script lang="ts">
-	import type { FilterGroup } from '@sg-widgets/core';
-	import { emptyFilter, toApi3Hash } from '@sg-widgets/core';
+	import type { CollectionColumn, EntityRow, FilterGroup, StatusRecord, WireGroup } from '@sg-widgets/core';
+	import { cellValue, createEntitySource, emptyFilter, resolveColumns, toApi3Hash } from '@sg-widgets/core';
 	import FilterBar from '$lib/registry/components/filter-bar.svelte';
+	import GroupedList from '$lib/registry/components/grouped-list.svelte';
+	import StatusBadge from '$lib/registry/components/status-badge.svelte';
+	import { createDemoContext } from '../_shared/client';
 	import { setDemoClient } from '../_shared/svelte';
+	import {
+		matchLabel,
+		readCount,
+		RESULT_DEBOUNCE_MS,
+		RESULT_PAGE_SIZE,
+		scopeToProject,
+		type ResultCount
+	} from '../_shared/results';
 
-	const client = setDemoClient();
+	const GROUP = 'sg_status_list';
+	const SUB = 'description';
+	const SECONDARY = 'sg_sequence';
+	const FIELDS = ['code', GROUP, SUB, SECONDARY];
+
+	const context = createDemoContext();
+	const client = setDemoClient(context.client);
 
 	let value = $state<FilterGroup>(emptyFilter());
 
-	// `_search` answers no total, so the demo counts the rows it read. The site has
-	// 40 shots, well under one page.
-	const matching = $derived(
-		client
-			.search('Shot', { filters: toApi3Hash(value), fields: ['code'], page: { size: 200 } })
-			.then((result) => result.data.length)
-	);
+	// The first tree goes in at construction, and the group path leads the sort, so the
+	// list's own first read is already the one it groups.
+	const source = createEntitySource({
+		client: context.client,
+		entityType: 'Shot',
+		fields: FIELDS,
+		filters: scopeToProject(context, value),
+		sort: [{ path: GROUP, descending: false }],
+		pageSize: RESULT_PAGE_SIZE
+	});
+
+	let count = $state<ResultCount>({ kind: 'counting' });
+
+	const wire = $derived(JSON.stringify(toApi3Hash(scopeToProject(context, value))));
+
+	$effect(() => {
+		const next = wire;
+		let live = true;
+		const timer = setTimeout(() => {
+			// An unchanged tree only re-counts: setting the same filter would re-read the page.
+			if (JSON.stringify(source.filters) !== next) void source.setFilters(JSON.parse(next) as WireGroup | null);
+			count = { kind: 'counting' };
+			void readCount(() => source.count()).then((answer) => {
+				if (live) count = answer;
+			});
+		}, RESULT_DEBOUNCE_MS);
+		return () => {
+			live = false;
+			clearTimeout(timer);
+		};
+	});
+
+	async function load(): Promise<{ columns: CollectionColumn[]; statuses: Record<string, StatusRecord> }> {
+		const [columns, table] = await Promise.all([
+			resolveColumns(context.schema, 'Shot', [GROUP, SUB, SECONDARY]),
+			context.statuses.byCode()
+		]);
+		return { columns, statuses: Object.fromEntries(table) };
+	}
 </script>
 
-<div class="flex flex-col gap-4">
+{#snippet leading(row: EntityRow)}
+	<StatusBadge code={String(cellValue(row, GROUP) ?? '')} variant="icon" size="sm" />
+{/snippet}
+
+<div class="flex min-w-0 flex-col gap-4">
 	<FilterBar
 		entityType="Shot"
 		{client}
@@ -25,13 +78,29 @@
 		bind:value
 	/>
 
-	<p class="text-muted-foreground text-sm" data-testid="matching">
-		{#await matching}
-			Counting shots…
-		{:then count}
-			{count} matching {count === 1 ? 'shot' : 'shots'}
+	<section class="flex min-w-0 flex-col gap-2">
+		<h4 class="text-muted-foreground text-xs font-medium tracking-wide uppercase">Result set</h4>
+		<p
+			class={count.kind === 'error' ? 'text-destructive text-sm' : 'text-muted-foreground text-sm tabular-nums'}
+			data-testid="result-count"
+		>
+			{matchLabel(count, 'Shot')}
+		</p>
+		{#await load()}
+			<p class="text-muted-foreground text-sm">Loading the site…</p>
+		{:then { columns, statuses }}
+			<GroupedList
+				{source}
+				groupBy={columns[0]!}
+				subLabel={columns[1]!}
+				secondary={columns[2]!}
+				{statuses}
+				{leading}
+				maxHeight="20rem"
+				emptyLabel="No Shot matches this filter"
+			/>
 		{:catch error}
-			{error.message}
+			<p class="text-destructive text-sm">{error.message}</p>
 		{/await}
-	</p>
+	</section>
 </div>

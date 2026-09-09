@@ -1,48 +1,87 @@
 <script lang="ts">
-	import type { SortKey } from '@sg-widgets/core';
-	import { toSortString } from '@sg-widgets/core';
+	import type { CollectionColumn, SortKey, SortSpec, StatusRecord } from '@sg-widgets/core';
+	import {
+		createEntitySource,
+		emptyFilter,
+		fromSortString,
+		resolveColumns,
+		serializeSort,
+		toSortString
+	} from '@sg-widgets/core';
+	import EntityTable from '$lib/registry/components/entity-table.svelte';
 	import SortPicker from '$lib/registry/components/sort-picker.svelte';
+	import { createDemoContext } from '../_shared/client';
 	import { setDemoClient } from '../_shared/svelte';
+	import { RESULT_PAGE_SIZE, scopeToProject } from '../_shared/results';
 
-	const client = setDemoClient();
+	const COLUMNS = [
+		{ path: 'code', width: 200 },
+		{ path: 'sg_status_list', width: 130 },
+		{ path: 'sg_sequence', width: 150 },
+		{ path: 'sg_shot_type', width: 130 },
+		{ path: 'updated_at', width: 170 }
+	];
 
-	let value = $state<SortKey[]>([
+	const INITIAL: SortKey[] = [
 		{ field: 'sg_status_list', direction: 'asc' },
 		{ field: 'code', direction: 'desc' }
-	]);
+	];
+
+	/** The keys as the source takes them, read back out of the string the picker emits. */
+	function specs(sort: string): SortSpec[] {
+		return fromSortString(sort).map((key) => ({ path: key.field, descending: key.direction === 'desc' }));
+	}
+
+	const context = createDemoContext();
+	const client = setDemoClient(context.client);
+
+	let value = $state<SortKey[]>(INITIAL);
 
 	const sort = $derived(toSortString(value));
-	const rows = $derived(
-		client
-			.search('Shot', { fields: ['code', 'sg_status_list'], sort, page: { size: 6 } })
-			.then((result) => result.data)
-	);
+
+	const source = createEntitySource({
+		client: context.client,
+		entityType: 'Shot',
+		fields: COLUMNS.map((column) => column.path),
+		filters: scopeToProject(context, emptyFilter()),
+		sort: specs(toSortString(INITIAL)),
+		pageSize: RESULT_PAGE_SIZE
+	});
+
+	$effect(() => {
+		// A key the site cannot sort on is a silent no-op or a refusal, never a crash: the
+		// table shows whichever it was (026_result_order).
+		if ((serializeSort(source.sort) ?? '') !== sort) void source.setSort(specs(sort));
+	});
+
+	async function load(): Promise<{ columns: CollectionColumn[]; statuses: Record<string, StatusRecord> }> {
+		const [columns, table] = await Promise.all([
+			resolveColumns(context.schema, 'Shot', COLUMNS),
+			context.statuses.byCode()
+		]);
+		return { columns, statuses: Object.fromEntries(table) };
+	}
+
+	const label = 'text-muted-foreground text-xs font-medium tracking-wide uppercase';
 </script>
 
-<div class="flex flex-col gap-4">
+<div class="flex min-w-0 flex-col gap-4">
 	<SortPicker entityType="Shot" {client} bind:value />
 
 	<section class="flex flex-col gap-2">
-		<h4 class="text-muted-foreground text-xs font-medium tracking-wide uppercase">sort</h4>
+		<h4 class={label}>sort</h4>
 		<pre
 			data-testid="sort-string"
 			class="border-border bg-muted text-foreground overflow-auto rounded-lg border p-3 font-mono text-xs">{sort ||
 				'(none)'}</pre>
 	</section>
 
-	<section class="flex flex-col gap-2">
-		<h4 class="text-muted-foreground text-xs font-medium tracking-wide uppercase">First six shots</h4>
-		{#await rows}
-			<p class="text-muted-foreground text-sm">Loading shots…</p>
-		{:then found}
-			<ul class="flex flex-col gap-2">
-				{#each found as row (row.id)}
-					<li class="flex min-w-0 items-center gap-2 text-sm">
-						<span class="min-w-0 flex-1 truncate">{row.attributes['code']}</span>
-						<span class="text-muted-foreground font-mono text-xs">{row.attributes['sg_status_list']}</span>
-					</li>
-				{/each}
-			</ul>
+	<section class="flex min-w-0 flex-col gap-2">
+		<h4 class={label}>Shots in that order</h4>
+		{#await load()}
+			<p class="text-muted-foreground text-sm">Loading the site…</p>
+		{:then { columns, statuses }}
+			<EntityTable {source} {columns} {statuses} maxHeight="20rem" emptyLabel="No Shot to order" />
 		{:catch error}
 			<p class="text-destructive text-sm">{error.message}</p>
 		{/await}

@@ -1,72 +1,113 @@
-import { useEffect, useState } from 'react';
-import type { EntityRow, SortKey } from '@sg-widgets/core';
-import { toSortString } from '@sg-widgets/core';
+import { useEffect, useMemo, useState } from 'react';
+import type { CollectionColumn, SortKey, StatusRecord } from '@sg-widgets/core';
+import {
+  createEntitySource,
+  emptyFilter,
+  fromSortString,
+  resolveColumns,
+  serializeSort,
+  toSortString,
+} from '@sg-widgets/core';
+import { EntityTable } from '@/registry/sg/components/entity-table';
 import { SortPicker } from '@/registry/sg/components/sort-picker';
-import { DemoClientProvider, useSgClient } from '../_shared/react';
+import { createDemoContext } from '../_shared/client';
+import { DemoClientProvider } from '../_shared/react';
+import { RESULT_PAGE_SIZE, scopeToProject } from '../_shared/results';
 
 const label = 'text-muted-foreground text-xs font-medium tracking-wide uppercase';
 
-function Picker() {
-  const client = useSgClient();
-  const [value, setValue] = useState<SortKey[]>([
-    { field: 'sg_status_list', direction: 'asc' },
-    { field: 'code', direction: 'desc' },
-  ]);
-  const [rows, setRows] = useState<EntityRow[] | null>(null);
-  const sort = toSortString(value);
+const COLUMNS = [
+  { path: 'code', width: 200 },
+  { path: 'sg_status_list', width: 130 },
+  { path: 'sg_sequence', width: 150 },
+  { path: 'sg_shot_type', width: 130 },
+  { path: 'updated_at', width: 170 },
+];
 
-  useEffect(() => {
-    let live = true;
-    setRows(null);
-    void client
-      .search('Shot', { fields: ['code', 'sg_status_list'], sort, page: { size: 6 } })
-      .then((result) => {
-        if (live) setRows(result.data);
-      });
-    return () => {
-      live = false;
-    };
-  }, [client, sort]);
+const INITIAL: SortKey[] = [
+  { field: 'sg_status_list', direction: 'asc' },
+  { field: 'code', direction: 'desc' },
+];
 
-  return (
-    <div className="flex flex-col gap-4">
-      <SortPicker entityType="Shot" client={client} value={value} onChange={setValue} />
+/** The keys as the source takes them, read back out of the string the picker emits. */
+function specs(sort: string) {
+  return fromSortString(sort).map((key) => ({ path: key.field, descending: key.direction === 'desc' }));
+}
 
-      <section className="flex flex-col gap-2">
-        <h4 className={label}>sort</h4>
-        <pre
-          data-testid="sort-string"
-          className="border-border bg-muted text-foreground overflow-auto rounded-lg border p-3 font-mono text-xs"
-        >
-          {sort || '(none)'}
-        </pre>
-      </section>
-
-      <section className="flex flex-col gap-2">
-        <h4 className={label}>First six shots</h4>
-        {rows === null ? (
-          <p className="text-muted-foreground text-sm">Loading shots…</p>
-        ) : (
-          <ul className="flex flex-col gap-2">
-            {rows.map((row) => (
-              <li key={row.id} className="flex min-w-0 items-center gap-2 text-sm">
-                <span className="min-w-0 flex-1 truncate">{String(row.attributes['code'])}</span>
-                <span className="text-muted-foreground font-mono text-xs">
-                  {String(row.attributes['sg_status_list'])}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-    </div>
-  );
+interface Loaded {
+  columns: CollectionColumn[];
+  statuses: Record<string, StatusRecord>;
 }
 
 export default function SortPickerDemo() {
+  const context = useMemo(() => createDemoContext(), []);
+  const [value, setValue] = useState<SortKey[]>(INITIAL);
+  const sort = toSortString(value);
+
+  const source = useMemo(
+    () =>
+      createEntitySource({
+        client: context.client,
+        entityType: 'Shot',
+        fields: COLUMNS.map((column) => column.path),
+        filters: scopeToProject(context, emptyFilter()),
+        sort: specs(toSortString(INITIAL)),
+        pageSize: RESULT_PAGE_SIZE,
+      }),
+    [context],
+  );
+
+  const [loaded, setLoaded] = useState<Loaded | null>(null);
+  const [schemaError, setSchemaError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let live = true;
+    Promise.all([resolveColumns(context.schema, 'Shot', COLUMNS), context.statuses.byCode()])
+      .then(([columns, table]) => live && setLoaded({ columns, statuses: Object.fromEntries(table) }))
+      .catch((error: unknown) => live && setSchemaError(error instanceof Error ? error.message : String(error)));
+    return () => {
+      live = false;
+    };
+  }, [context]);
+
+  useEffect(() => {
+    // A key the site cannot sort on is a silent no-op or a refusal, never a crash: the
+    // table shows whichever it was (026_result_order).
+    if ((serializeSort(source.sort) ?? '') !== sort) void source.setSort(specs(sort));
+  }, [source, sort]);
+
   return (
-    <DemoClientProvider>
-      <Picker />
+    <DemoClientProvider client={context.client}>
+      <div className="flex min-w-0 flex-col gap-4">
+        <SortPicker entityType="Shot" client={context.client} value={value} onChange={setValue} />
+
+        <section className="flex flex-col gap-2">
+          <h4 className={label}>sort</h4>
+          <pre
+            data-testid="sort-string"
+            className="border-border bg-muted text-foreground overflow-auto rounded-lg border p-3 font-mono text-xs"
+          >
+            {sort || '(none)'}
+          </pre>
+        </section>
+
+        <section className="flex min-w-0 flex-col gap-2">
+          <h4 className={label}>Shots in that order</h4>
+          {schemaError ? (
+            <p className="text-destructive text-sm">{schemaError}</p>
+          ) : loaded ? (
+            <EntityTable
+              source={source}
+              columns={loaded.columns}
+              statuses={loaded.statuses}
+              maxHeight="20rem"
+              emptyLabel="No Shot to order"
+            />
+          ) : (
+            <p className="text-muted-foreground text-sm">Loading the site…</p>
+          )}
+        </section>
+      </div>
     </DemoClientProvider>
   );
 }

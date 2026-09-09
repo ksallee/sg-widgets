@@ -23,12 +23,12 @@
 
 <div class="flex min-w-0 flex-col gap-4">
 	<section class={group_}>
-		<h4 class={label}>No filters yet</h4>
+		<h4 class={label}>No filters yet, not wired to the table</h4>
 		<FilterDialog entityType="Version" {client} bind:value={empty} />
 	</section>
 
 	<section class={group_}>
-		<h4 class={label}>Two applied</h4>
+		<h4 class={label}>Two applied, drives the table below</h4>
 		<FilterDialog entityType="Version" {client} bind:value={applied} />
 		<pre
 			data-testid="dialog-json"
@@ -39,5 +39,5 @@
 			)}</pre>
 	</section>
 
-	<VersionResults {context} value={applied} />
+	<VersionResults {context} value={applied} heading="Versions matching the second launcher" />
 </div>

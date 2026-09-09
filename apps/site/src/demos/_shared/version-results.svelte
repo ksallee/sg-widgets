@@ -20,7 +20,11 @@
 		type ResultCount
 	} from './results';
 
-	let { context, value }: { context: DemoContext; value: FilterNode } = $props();
+	let {
+		context,
+		value,
+		heading = 'Versions matching the filter'
+	}: { context: DemoContext; value: FilterNode; heading?: string } = $props();
 
 	// The first tree goes in at construction, so the table's own first read is already
 	// the filtered one.
@@ -63,7 +67,7 @@
 </script>
 
 <section class="flex min-w-0 flex-col gap-2">
-	<h4 class="text-muted-foreground text-xs font-medium tracking-wide uppercase">Versions matching the filter</h4>
+	<h4 class="text-muted-foreground text-xs font-medium tracking-wide uppercase">{heading}</h4>
 	<p
 		class={count.kind === 'error' ? 'text-destructive text-sm' : 'text-muted-foreground text-sm tabular-nums'}
 		data-testid="result-count"

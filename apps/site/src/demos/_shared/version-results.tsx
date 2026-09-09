@@ -25,7 +25,15 @@ interface Loaded {
   statuses: Record<string, StatusRecord>;
 }
 
-export function VersionResults({ context, value }: { context: DemoContext; value: FilterNode }) {
+export function VersionResults({
+  context,
+  value,
+  heading = 'Versions matching the filter',
+}: {
+  context: DemoContext;
+  value: FilterNode;
+  heading?: string;
+}) {
   // The first tree goes in at construction, so the table's own first read is already
   // the filtered one.
   const first = useRef(value);
@@ -73,7 +81,7 @@ export function VersionResults({ context, value }: { context: DemoContext; value
 
   return (
     <section className="flex min-w-0 flex-col gap-2">
-      <h4 className="text-muted-foreground text-xs font-medium tracking-wide uppercase">Versions matching the filter</h4>
+      <h4 className="text-muted-foreground text-xs font-medium tracking-wide uppercase">{heading}</h4>
       <p
         className={count.kind === 'error' ? 'text-destructive text-sm' : 'text-muted-foreground text-sm tabular-nums'}
         data-testid="result-count"

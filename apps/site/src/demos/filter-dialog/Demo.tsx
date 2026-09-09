@@ -23,12 +23,12 @@ export default function FilterDialogDemo() {
     <DemoClientProvider client={context.client}>
       <div className="flex min-w-0 flex-col gap-4">
         <section className={section}>
-          <h4 className={label}>No filters yet</h4>
+          <h4 className={label}>No filters yet, not wired to the table</h4>
           <FilterDialog entityType="Version" client={context.client} value={empty} onChange={setEmpty} />
         </section>
 
         <section className={section}>
-          <h4 className={label}>Two applied</h4>
+          <h4 className={label}>Two applied, drives the table below</h4>
           <FilterDialog entityType="Version" client={context.client} value={applied} onChange={setApplied} />
           <pre
             data-testid="dialog-json"
@@ -38,7 +38,7 @@ export default function FilterDialogDemo() {
           </pre>
         </section>
 
-        <VersionResults context={context} value={applied} />
+        <VersionResults context={context} value={applied} heading="Versions matching the second launcher" />
       </div>
     </DemoClientProvider>
   );

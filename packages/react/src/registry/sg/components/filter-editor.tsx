@@ -357,7 +357,7 @@ function GroupNode({ ctx, path, node }: { ctx: EditorContext; path: NodePath; no
           <Button
             variant="ghost"
             size="icon-sm"
-            className="text-muted-foreground hover:text-foreground shrink-0"
+            className="text-muted-foreground hover:text-foreground mt-1 shrink-0 self-start"
             disabled={ctx.disabled}
             aria-label="Remove group"
             data-slot="filter-remove"
@@ -425,7 +425,7 @@ function ConditionRow({ ctx, path, node }: { ctx: EditorContext; path: NodePath;
       <Button
         variant="ghost"
         size="icon-sm"
-        className="text-muted-foreground hover:text-foreground shrink-0"
+        className="text-muted-foreground hover:text-foreground mt-1 shrink-0 self-start"
         disabled={ctx.disabled}
         aria-label="Remove condition"
         data-slot="filter-remove"
@@ -440,7 +440,7 @@ function ConditionRow({ ctx, path, node }: { ctx: EditorContext; path: NodePath;
 function FieldSlot({ ctx, path, node }: { ctx: EditorContext; path: NodePath; node: FilterCondition }) {
   return (
     // The field is the row's widest cell: it takes 14rem, truncates, and gives the rest back.
-    <div data-slot="filter-field" className="w-56 min-w-24 shrink">
+    <div data-slot="filter-field" className="min-w-24 max-w-56 grow basis-24">
       {ctx.fieldChooser ? (
         ctx.fieldChooser({
           entityType: ctx.entityType,
@@ -529,7 +529,7 @@ function ValueSlot({ ctx, path, node }: { ctx: EditorContext; path: NodePath; no
   const args: ValueEditorArgs = { field, dataType, operator: node.operator, value: node.value, arity, disabled, onChange: set };
 
   return (
-    <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2" data-slot="filter-value">
+    <div className="flex min-w-40 flex-1 flex-wrap items-center gap-2" data-slot="filter-value">
       {ctx.unresolved(node.path) ? (
         <Skeleton className="h-8 min-w-0 flex-1" />
       ) : ctx.valueEditor ? (

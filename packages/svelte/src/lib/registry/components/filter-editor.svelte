@@ -264,7 +264,7 @@
 
 {#snippet fieldSlot(path: NodePath, node: FilterCondition)}
 	<!-- The field is the row's widest cell: it takes 14rem, truncates, and gives the rest back. -->
-	<div data-slot="filter-field" class="w-56 min-w-24 shrink">
+	<div data-slot="filter-field" class="min-w-24 max-w-56 grow basis-24">
 		{#if fieldChooser}
 			{@render fieldChooser({
 				entityType,
@@ -418,7 +418,7 @@
 	{@const kind = valueEditorFor(dataType, node.operator)}
 	{@const arity = conditionArity(node, dataType)}
 	{@const set = (v: ConditionValue) => edit(path, { ...node, value: v })}
-	<div class="flex min-w-0 flex-1 flex-wrap items-center gap-2" data-slot="filter-value">
+	<div class="flex min-w-40 flex-1 flex-wrap items-center gap-2" data-slot="filter-value">
 		{#if unresolved(node.path)}
 			<Skeleton class="h-8 min-w-0 flex-1" />
 		{:else if valueEditor}
@@ -599,7 +599,7 @@
 		<Button
 			variant="ghost"
 			size="icon-sm"
-			class="text-muted-foreground hover:text-foreground shrink-0"
+			class="text-muted-foreground hover:text-foreground mt-1 shrink-0 self-start"
 			{disabled}
 			aria-label="Remove condition"
 			data-slot="filter-remove"
@@ -643,7 +643,7 @@
 				<Button
 					variant="ghost"
 					size="icon-sm"
-					class="text-muted-foreground hover:text-foreground shrink-0"
+					class="text-muted-foreground hover:text-foreground mt-1 shrink-0 self-start"
 					{disabled}
 					aria-label="Remove group"
 					data-slot="filter-remove"

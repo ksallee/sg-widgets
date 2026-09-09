@@ -107,8 +107,8 @@ export default function FilterBarDemo() {
             <GroupedList
               source={source}
               groupBy={loaded.columns[0]!}
-              subLabel={loaded.columns[1]!}
-              secondary={loaded.columns[2]!}
+              subLabelField={loaded.columns[1]!}
+              secondaryField={loaded.columns[2]!}
               statuses={loaded.statuses}
               leading={leading}
               maxHeight="20rem"

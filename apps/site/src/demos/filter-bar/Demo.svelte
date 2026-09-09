@@ -93,8 +93,8 @@
 			<GroupedList
 				{source}
 				groupBy={columns[0]!}
-				subLabel={columns[1]!}
-				secondary={columns[2]!}
+				subLabelField={columns[1]!}
+				secondaryField={columns[2]!}
 				{statuses}
 				{leading}
 				maxHeight="20rem"

@@ -460,6 +460,51 @@
           "type": "registry:component"
         }
       ]
+    },
+    {
+      "name": "status-picker",
+      "type": "registry:component",
+      "title": "Status Picker",
+      "description": "One Flow Production Tracking status, picked from the codes a project offers.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte"
+      ],
+      "registryDependencies": [
+        "local:status-badge",
+        "select",
+        "skeleton"
+      ],
+      "files": [
+        {
+          "path": "src/lib/registry/components/status-picker.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "status-multi-picker",
+      "type": "registry:component",
+      "title": "Status Multi Picker",
+      "description": "Several Flow Production Tracking statuses, picked from the codes a project offers.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte"
+      ],
+      "registryDependencies": [
+        "local:status-badge",
+        "popover",
+        "command",
+        "checkbox",
+        "button",
+        "skeleton"
+      ],
+      "files": [
+        {
+          "path": "src/lib/registry/components/status-multi-picker.svelte",
+          "type": "registry:component"
+        }
+      ]
     }
   ]
 }

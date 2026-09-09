@@ -556,6 +556,61 @@
           "type": "registry:component"
         }
       ]
+    },
+    {
+      "name": "status-picker",
+      "type": "registry:component",
+      "title": "Status Picker",
+      "description": "One Flow Production Tracking status, picked from the codes a project offers.",
+      "categories": [
+        "flow-production-tracking",
+        "picker"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "https://sg-widgets.dev/r/react/status-badge.json",
+        "select",
+        "skeleton"
+      ],
+      "docs": "Pass a cached SgClient. The options are valid_values minus the project hidden_values; a code outside them still renders.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/status-picker.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "status-multi-picker",
+      "type": "registry:component",
+      "title": "Status Multi Picker",
+      "description": "Several Flow Production Tracking statuses, picked from the codes a project offers.",
+      "categories": [
+        "flow-production-tracking",
+        "picker"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "https://sg-widgets.dev/r/react/status-badge.json",
+        "popover",
+        "command",
+        "checkbox",
+        "button",
+        "skeleton"
+      ],
+      "docs": "Pass a cached SgClient. Selections outside the option set keep a row of their own rather than being dropped.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/status-multi-picker.tsx",
+          "type": "registry:component"
+        }
+      ]
     }
   ]
 }

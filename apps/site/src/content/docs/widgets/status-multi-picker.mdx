@@ -1,0 +1,86 @@
+---
+title: StatusMultiPicker
+description: Several Flow Production Tracking statuses, picked from the codes a project offers.
+---
+
+import Demo from '../../../components/Demo.astro';
+
+Picks any number of status codes for an entity type, offering only the codes the project it is scoped
+to allows.
+
+## Install
+
+```sh
+pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/status-multi-picker.json
+pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/status-multi-picker.json
+```
+
+<Demo name="status-multi-picker" title="StatusMultiPicker: per-project options, unknown codes, states and sizes" />
+
+## Props
+
+| prop | type | default | meaning |
+|---|---|---|---|
+| `client` | `SgClient` | required | The site to read from. Wrap it in `createQueryCache` so widgets on a page share one read. |
+| `entityType` | `string` | required | The type whose status field is offered. |
+| `projectId` | `number` | — | Offer the codes this project allows. |
+| `projectIds` | `number[]` | — | Offer the codes every one of these projects allows. |
+| `field` | `string` | status field | A list or status field other than the type's own. |
+| `value` | `string[]` | `[]` | The selected codes. `bind:value` in Svelte, `value` with `onValueChange` in React. |
+| `placeholder` | `string` | `'Select statuses'` | Shown with nothing selected. |
+| `searchPlaceholder` | `string` | `'Search statuses…'` | Placeholder of the search box. |
+| `emptyLabel` | `string` | `'No status matches.'` | Shown when the search matches nothing. |
+| `clearable` | `boolean` | `true` | Offers a control that clears the selection. |
+| `readonly` / `readOnly` | `boolean` | `false` | Keeps full contrast and drops the chevron, the popup and the clear control. |
+| `disabled` | `boolean` | `false` | Greys the control and takes it out of the tab order. |
+| `invalid` | `boolean` | `false` | Sets `aria-invalid` and the destructive ring. |
+| `showCode` | `boolean` | `false` | Shows the raw code instead of the label. The other one stays in the tooltip. |
+| `siteUrl` | `string` | — | Passed to every badge, for a sprite cell outside the status icon set. |
+| `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Heights 8, 9 and 10. |
+| `class` / `className` | `string` | — | Merged after the widget's own classes. |
+
+One selection shows as its badge, several as a count. Without a project the options are the site
+vocabulary, which hides nothing. `projectIds` offers the intersection of what each project allows, in
+the first project's order.
+
+The root carries the size and, while the options load, `data-loading`.
+
+## Events
+
+`onValueChange` fires with the whole array on every change, including the empty array from the clear
+control. A selected code the option set does not carry is kept, never dropped.
+
+## Slots
+
+None. The rows and the closed state are status badges.
+
+## Keyboard
+
+| key | does |
+|---|---|
+| <kbd>Space</kbd>, <kbd>Enter</kbd> | Opens the list, with the search box focused |
+| any text | Filters the rows |
+| <kbd>↑</kbd> <kbd>↓</kbd> | Moves the highlight |
+| <kbd>Home</kbd> <kbd>End</kbd> | First and last row |
+| <kbd>Enter</kbd> | Toggles the highlighted status; the list stays open |
+| <kbd>Esc</kbd> | Closes and keeps the selection |
+| <kbd>Tab</kbd> | Leaves the control, or reaches the clear control when there is one |
+
+## API behaviour
+
+A project's usable statuses are `valid_values` minus `hidden_values`, read with `project_id`.
+`valid_values` is the site's whole vocabulary and is byte-identical at every scope, so reading it
+alone tells you nothing about a project (probe 009).
+
+REST does not enforce `hidden_values` on write: a hidden status writes and reads back. Subtracting is
+right for offering a choice and wrong for testing a row, so a selected code outside the option set
+keeps a row of its own here, labelled with the code (field_types/status_list).
+
+A status list has no substring operator, so there is no server-side type-ahead over it. The
+vocabulary is read once and the search box filters it in the browser (field_types/status_list).
+
+Labels come from `display_values`, and a missing key falls back to the raw code rather than dropping
+the option (probe 009).
+
+Project's status field is `sg_status`, a plain `list` rather than a `status_list`. There is no Status
+row behind a `list`, so those options carry no icon and no colour (entity_types/Project).

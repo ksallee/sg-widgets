@@ -1,0 +1,83 @@
+---
+title: Entity Tree
+description: A lazy tree over a project's navigation hierarchy.
+---
+
+import Demo from '../../../components/Demo.astro';
+
+Walks the navigation tree the web interface draws, one level per call, from a project down to its
+shots and assets.
+
+## Install
+
+```sh
+pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/entity-tree.json
+pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/entity-tree.json
+```
+
+<Demo name="entity-tree" title="Entity Tree: a project seeded open to one shot, with checkboxes and a filter" />
+
+```ts
+<EntityTree
+  client={context.client}
+  rootPath="/Project/70"
+  seedPath="/Project/70/Shot/sg_sequence/Sequence/100/id/862"
+/>
+```
+
+## Props
+
+| prop | type | default | meaning |
+|---|---|---|---|
+| `client` | `SgClient` | — | Reads one level per call. Wrap it in a query cache. |
+| `rootPath` | `string` | — | Where the tree starts, `/Project/<id>`. |
+| `seedPath` | `string \| null` | `null` | Opens the tree down to this path on mount. |
+| `checkable` | `boolean` | `false` | Draws a checkbox per node. |
+| `filterable` | `boolean` | `false` | Shows an input that narrows the nodes already loaded. |
+| `filterPlaceholder` | `string` | `'Filter loaded nodes'` | Placeholder and label of that input. |
+| `maxHeight` | `string` | `'24rem'` | Height of the scrolling body. |
+| `emptyLabel` | `string` | `'Nothing under this project'` | Shown when the root has no children. |
+| `class` / `className` | `string` | — | Merged after the widget's own classes. |
+
+## Events
+
+| event | payload | when |
+|---|---|---|
+| `onselect` / `onSelect` | `TreeNode` | A node with nothing under it was chosen. |
+| `oncheckedchange` / `onCheckedChange` | `EntityRef[]` | The checked set changed. Only nodes that stand for a row are reported. |
+
+## Slots
+
+None.
+
+## Keyboard
+
+The tree keeps one tab stop. Focus lands on the node the cursor is on.
+
+| key | does |
+|---|---|
+| Down | Moves to the next visible node. |
+| Up | Moves to the previous visible node. |
+| Right | Expands a collapsed node, else moves to its first child. |
+| Left | Collapses an expanded node, else moves to its parent. |
+| Home | Moves to the first node. |
+| End | Moves to the last visible node. |
+| Enter, Space | Expands or collapses a branch, or selects a leaf. |
+| Space on a checkbox | Toggles that node. |
+
+## API behaviour
+
+`POST /hierarchy/_expand` answers one level: the node itself, and children carrying a label, a ref
+and `has_children`, which says whether expanding is worth a call. Walking a project is therefore one
+call per node (post_hierarchy_expand).
+
+That endpoint refuses the vendor content types every other POST on this API requires and accepts only
+`application/json`. `seed_entity_field` is documented and ignored, so it is not sent
+(post_hierarchy_expand).
+
+Which levels a project has is the site's own navigation configuration, not a fixed hierarchy: the
+probed site's shot path runs through the field name `sg_sequence` (post_hierarchy_search). `seedPath`
+is followed by taking whichever child is a prefix of it, never by parsing the path.
+
+The filter narrows what is already loaded. It never asks the server, so a branch that was never
+opened is not searched.

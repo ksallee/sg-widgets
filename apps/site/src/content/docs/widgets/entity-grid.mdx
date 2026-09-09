@@ -1,0 +1,73 @@
+---
+title: Entity Grid
+description: Flow Production Tracking rows as thumbnail cards, with selection and infinite scroll.
+---
+
+import Demo from '../../../components/Demo.astro';
+
+Renders rows from an entity source as cards: a thumbnail, the row's name, a status badge and up to
+two more fields. Scrolling to the end asks the source for the next page.
+
+## Install
+
+```sh
+pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/entity-grid.json
+pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/entity-grid.json
+```
+
+<Demo name="entity-grid" title="Entity Grid: Versions with a play overlay, three card sizes, selection and infinite scroll" />
+
+```ts
+const source = createEntitySource({
+  client: context.client,
+  entityType: 'Version',
+  fields: ['code', 'image', 'sg_status_list', 'user', 'created_at'],
+  pageSize: 12,
+});
+const secondary = await resolveColumns(context.schema, 'Version', ['user', 'created_at']);
+```
+
+## Props
+
+| prop | type | default | meaning |
+|---|---|---|---|
+| `source` | `EntitySource` | — | The rows and the paging behind them. |
+| `imagePath` | `string` | `'image'` | Path of the image field. |
+| `statusPath` | `string` | `'sg_status_list'` | Path of the status field. Project's is `sg_status`. |
+| `statusField` | `FieldSchema \| null` | `null` | The status field's schema, for its labels. |
+| `secondary` | `CollectionColumn[]` | `[]` | Up to two fields shown under the name. |
+| `statuses` | `Record<string, StatusRecord> \| null` | `null` | Status rows by code. |
+| `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Card width: 160, 224 or 288 pixels. |
+| `selectable` | `boolean` | `false` | Draws a checkbox on each card. |
+| `maxHeight` | `string` | `'32rem'` | Height of the scrolling body. |
+| `emptyLabel` | `string` | `'No rows'` | Shown when the read returned nothing. |
+| `class` / `className` | `string` | — | Merged after the widget's own classes. |
+
+## Events
+
+| event | payload | when |
+|---|---|---|
+| `onselectionchange` / `onSelectionChange` | `EntityRef[]` | The selection changed. |
+| `onselect` / `onSelect` | `EntityRow` | A card was activated, when `selectable` is off. |
+
+## Slots
+
+None.
+
+## Keyboard
+
+| key | does |
+|---|---|
+| Tab | Moves to the next card, or to its checkbox. |
+| Enter, Space on a card | Selects it, or emits the select event. |
+| Space on a checkbox | Toggles the card. |
+
+## API behaviour
+
+The value of an image field is a presigned URL re-signed on every read, and it is the only state
+marker there is: null means the row never had a thumbnail, and a URL under the transient status path
+means one is still transcoding. All three states render (field_types/image).
+
+A Version card carries a play overlay. Paging stops on a short page: `links.next` is emitted on every
+page forever, including empty ones (006_pagination). The total beside the card count comes from one
+`_summarize` call (020_summarize).

@@ -13,7 +13,8 @@ if (groups().length < 2) return { verdict: 'FAIL fewer than two groups', notes }
 const first = groups()[0];
 const header = first.querySelector('button');
 const shown = first.querySelectorAll('[data-slot="grouped-list-row"]').length;
-const stated = Number(header.textContent.trim().split(/\s+/).pop());
+// The count is the last element of the header row; the label beside it is a FieldValue.
+const stated = Number(header.lastElementChild.textContent.trim());
 notes.push(`first group states ${stated} and shows ${shown}`);
 if (stated !== shown) return { verdict: `FAIL the header count is ${stated} against ${shown} rows`, notes };
 

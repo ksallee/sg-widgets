@@ -4,6 +4,21 @@ const pane = () => $$('[data-sg-demo] [data-pane]').find((p) => p.offsetParent !
 const items = () => [...pane().querySelectorAll('[data-slot="entity-tree"] [role="treeitem"]')];
 const at = (path) => items().find((n) => n.dataset.path === path);
 const labelOf = (node) => node.textContent.trim();
+const isOpen = (node) => node?.getAttribute('aria-expanded') === 'true';
+const collapse = async (path) => {
+  const node = at(path);
+  if (isOpen(node)) {
+    node.click();
+    await wait(300);
+  }
+};
+const expand = async (path) => {
+  const node = at(path);
+  if (node && !isOpen(node)) {
+    node.click();
+    await wait(300);
+  }
+};
 
 for (let i = 0; i < 40 && items().length === 0; i += 1) await wait(250);
 if (items().length === 0) return { verdict: 'FAIL the tree rendered no nodes' };
@@ -14,17 +29,14 @@ const seeded = items().find((n) => n.dataset.path.endsWith('/id/862'));
 if (!seeded) return { verdict: 'FAIL seedPath did not open the tree to the shot', notes };
 notes.push(`seedPath opened ${items().length} nodes, down to "${labelOf(seeded)}"`);
 
-// Collapse the whole project, then expand two levels by clicking.
-const root = at('/Project/70');
-root.click();
-await wait(300);
-if (items().length !== 1) return { verdict: `FAIL collapsing the root left ${items().length} nodes`, notes };
-root.click();
-for (let i = 0; i < 20 && items().length < 2; i += 1) await wait(200);
+// Shut the seeded branch, then open it two levels by clicking.
+await collapse('/Project/70/Shot/sg_sequence/Sequence/100');
+await collapse('/Project/70/Shot');
+const shut = items().length;
+notes.push(`collapsed to ${shut} nodes`);
+if (shut !== 3) return { verdict: `FAIL collapsing the Shots branch left ${shut} nodes, expected 3`, notes };
 
-const shots = at('/Project/70/Shot');
-if (!shots) return { verdict: 'FAIL no Shots branch under the project', notes };
-shots.click();
+await expand('/Project/70/Shot');
 for (let i = 0; i < 40 && !items().some((n) => n.dataset.path.includes('/Sequence/')); i += 1) await wait(200);
 const sequence = items().find((n) => n.dataset.path.includes('/Sequence/'));
 if (!sequence) return { verdict: 'FAIL expanding Shots produced no sequences', notes };
@@ -61,9 +73,6 @@ await wait(300);
 
 // Keyboard: the cursor moves down the visible list.
 const cursor = () => items().find((n) => n.getAttribute('aria-selected') === 'true')?.dataset.path;
-at('/Project/70').focus();
-at('/Project/70').click();
-await wait(200);
 const from = cursor();
 items()[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
 await wait(250);

@@ -114,3 +114,21 @@ tell the user".
 6. Empty, loading, error states present and consistent.
 7. Focus rings intact, keyboard documented.
 8. `w-full` default, truncation with title.
+
+## 9. Row anatomy and its props
+
+Every widget that lists entity rows (pickers, search, grouped list, grid cards, tree, table cells
+that show an entity) draws the same row and takes the same props to shape it, so a caller learns
+them once:
+
+| prop | meaning | default |
+|---|---|---|
+| `thumbnail` | `false`, or the image field name (`'image'`) | `'image'` in pickers and search, `false` in dense lists |
+| `labelField` | the field shown as the main label | the display-name chain in core |
+| `subLabelField` / `subLabel(row)` | the muted line under the label | the entity type when several types are shown, else none |
+| `secondaryField` / `secondary(row)` | the right-aligned column, rendered by data type through FieldValue | none |
+| `showCode` | show programmatic names beside display names where the row is a field or a type | `false` |
+| `fields` | extra fields to request so a caller's own sub-label or secondary can read them | `[]` |
+
+A widget may add props of its own, but never a second spelling for one of these. Presets (user,
+project) are configurations of these props, not forks.

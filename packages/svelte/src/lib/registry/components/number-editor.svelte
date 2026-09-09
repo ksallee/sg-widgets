@@ -123,6 +123,7 @@
 		hoursPerDay,
 		frameRate,
 		symbol = '$',
+		hint: showHint = false,
 		min,
 		max,
 		size = 'md',

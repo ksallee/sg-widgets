@@ -26,7 +26,9 @@ export default function EntityMultiPickerDemo() {
   const [failing] = useState(() => createDemoClient());
 
   const [shots, setShots] = useState<EntityRef[]>([]);
+  const [withStatus, setWithStatus] = useState<EntityRef[]>([]);
   const [anything, setAnything] = useState<EntityRef[]>([]);
+  const [custom, setCustom] = useState<EntityRef[]>([]);
   // Bare references: type and id, no name. Resolved on mount, one read per type.
   const [bare, setBare] = useState<EntityRef[]>([
     { type: 'Shot', id: 866 },
@@ -52,8 +54,22 @@ export default function EntityMultiPickerDemo() {
         </div>
       </section>
 
+      <section className={group} data-demo-case="status-secondary">
+        <h4 className={label}>Status as secondary</h4>
+        <div className={field}>
+          <EntityMultiPicker
+            client={client}
+            entityTypes={['Shot']}
+            secondaryField="sg_status_list"
+            value={withStatus}
+            onValueChange={setWithStatus}
+            clearable
+          />
+        </div>
+      </section>
+
       <section className={group} data-demo-case="multi-type">
-        <h4 className={label}>Three types at once</h4>
+        <h4 className={label}>Three types at once, the type under the name</h4>
         <div className={field}>
           <EntityMultiPicker
             client={client}
@@ -61,6 +77,20 @@ export default function EntityMultiPickerDemo() {
             value={anything}
             onValueChange={setAnything}
             placeholder="Search shots, assets and sequences…"
+            clearable
+          />
+        </div>
+      </section>
+
+      <section className={group} data-demo-case="custom-secondary">
+        <h4 className={label}>Custom secondary</h4>
+        <div className={field}>
+          <EntityMultiPicker
+            client={client}
+            entityTypes={['Shot']}
+            secondary={(row) => `#${row.id}`}
+            value={custom}
+            onValueChange={setCustom}
             clearable
           />
         </div>

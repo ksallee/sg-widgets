@@ -30,6 +30,8 @@ export interface FieldValueProps extends Omit<React.HTMLAttributes<HTMLSpanEleme
   field?: Pick<FieldSchema, 'displayValues'> | null;
   /** `Status` rows by code, for the status name and icon (probe 010). */
   statuses?: Record<string, StatusRecord> | null;
+  /** The site the stock sprite is served from, for a status icon the package does not bundle. */
+  siteUrl?: string;
   /** The site's `hours_per_day` from `GET /preferences`; durations then render in days (field_types/duration). */
   hoursPerDay?: number;
   locale?: string;
@@ -57,6 +59,7 @@ export function FieldValue({
   dataType,
   field = null,
   statuses = null,
+  siteUrl,
   hoursPerDay,
   locale,
   precision,
@@ -112,7 +115,13 @@ export function FieldValue({
           ))}
         </span>
       ) : kind === 'status' ? (
-        <StatusBadge code={String(value)} status={statuses?.[String(value)] ?? null} field={field} size="sm" />
+        <StatusBadge
+          code={String(value)}
+          status={statuses?.[String(value)] ?? null}
+          field={field}
+          size="sm"
+          siteUrl={siteUrl}
+        />
       ) : kind === 'image' ? (
         <Thumbnail src={String(value)} size="sm" alt="" />
       ) : kind === 'checkbox' ? (

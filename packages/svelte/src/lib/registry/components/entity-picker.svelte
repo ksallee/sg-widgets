@@ -1,5 +1,12 @@
 <script lang="ts" module>
-	import type { EntityRef, FilterGroup, PickerRow, SgClient, WireGroup } from '@sg-widgets/core';
+	import type {
+		EntityRef,
+		FilterGroup,
+		PickerRow,
+		SearchFieldSpec,
+		SgClient,
+		WireGroup
+	} from '@sg-widgets/core';
 
 	export type EntityPickerSize = 'sm' | 'md' | 'lg';
 
@@ -25,10 +32,14 @@
 		client: SgClient;
 		/** Field holding the row label. Defaults to the display-name chain. */
 		labelField?: string;
-		/** Extra fields the query is matched against, on top of the display-name chain. */
-		searchFields?: string[];
-		/** Field shown right-aligned. Defaults to the row id, in the mono treatment. */
+		/**
+		 * Extra fields the query is matched against, on top of the display-name chain. A
+		 * function is called with the query, so a field is searched only when it suits it.
+		 */
+		searchFields?: SearchFieldSpec[] | ((query: string) => SearchFieldSpec[]);
+		/** Field shown right-aligned, drawn by its data type. Nothing is shown without it. */
 		secondaryField?: string;
+		/** Right-aligned text of the caller's own making. Wins over `secondaryField`. */
 		secondary?: (row: PickerRow) => string;
 		/** Field shown under the label. Defaults to the type when several types are searched. */
 		subLabelField?: string;
@@ -36,6 +47,8 @@
 		/** Field holding the thumbnail URL. `false` hides the leading slot. */
 		thumbnailField?: string | false;
 		roundThumbnail?: boolean;
+		/** The site the status sprite is served from, for a secondary that is a status. */
+		siteUrl?: string;
 		/** Extra fields to request, so a caller's own sub-label or secondary can be read. */
 		fields?: string[];
 		/** Pre-filter merged into every search with `and`. */
@@ -61,22 +74,27 @@
 </script>
 
 <script lang="ts">
+	import type { FieldSchema, StatusRecord } from '@sg-widgets/core';
 	import {
 		createEntitySearch,
+		createSchemaService,
+		createStatusService,
 		entityKey,
 		highlightRuns,
+		isEmptyValue,
 		placeholderName,
+		renderKindFor,
 		withSelectedPinned
 	} from '@sg-widgets/core';
 	import ChevronsUpDown from '@lucide/svelte/icons/chevrons-up-down';
 	import SearchX from '@lucide/svelte/icons/search-x';
 	import TriangleAlert from '@lucide/svelte/icons/triangle-alert';
-	import Type from '@lucide/svelte/icons/type';
 	import X from '@lucide/svelte/icons/x';
 	import * as Command from '$lib/components/ui/command/index.js';
 	import * as Popover from '$lib/components/ui/popover/index.js';
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
 	import EntityChip from '$lib/registry/components/entity-chip.svelte';
+	import FieldValue from '$lib/registry/components/field-value.svelte';
 	import Thumbnail from '$lib/registry/components/thumbnail.svelte';
 	import UserAvatar from '$lib/registry/components/user-avatar.svelte';
 	import { cn } from '$lib/utils.js';
@@ -99,11 +117,12 @@
 		subLabel,
 		thumbnailField = 'image',
 		roundThumbnail = false,
+		siteUrl,
 		fields,
 		filters = null,
 		projectId,
 		exclude,
-		minQueryLength = 2,
+		minQueryLength = 0,
 		pageSize = 20,
 		placeholder = 'Search for an entity',
 		searchPlaceholder = 'Search…',
@@ -119,9 +138,15 @@
 		class: className
 	}: Props = $props();
 
+	// One schema service for the widget, built from the prop so a client swapped in
+	// reloads. The controller shares it, so a type's fields are read once.
+	const schema = $derived(createSchemaService(client));
+	const statusTable = $derived(createStatusService(client));
+
 	// svelte-ignore state_referenced_locally
 	const search = createEntitySearch({
 		client,
+		schema,
 		entityTypes,
 		labelField,
 		searchFields,
@@ -148,6 +173,7 @@
 	$effect(() => {
 		search.update({
 			client,
+			schema,
 			entityTypes,
 			labelField,
 			searchFields,
@@ -165,8 +191,10 @@
 		});
 	});
 
+	// The search runs for an open picker only: the list is what the popover shows, and
+	// a closed one has nobody to show it to.
 	$effect(() => {
-		search.setQuery(query);
+		if (open) search.setQuery(query);
 	});
 
 	// A bare reference is resolved by one batched read, latched on the reference
@@ -193,8 +221,34 @@
 	const hasSubLabel = $derived(Boolean(subLabelField || subLabel || polymorphic));
 	const interactive = $derived(!disabled && !readonly);
 	const showClear = $derived(clearable && Boolean(value) && interactive);
-	/** The id is the only secondary that is a code, so it is the only one set in mono. */
-	const secondaryIsId = $derived(!secondary && !secondaryField);
+	/** An id is a code, and codes are the mono treatment of `docs/design-rules.md`. */
+	const secondaryIsId = $derived(secondaryField === 'id');
+
+	interface SecondaryPlan {
+		/** The secondary field's schema, per searched type. */
+		fields: Record<string, FieldSchema | undefined>;
+		/** `Status` rows by code, read only when the field is a status (probe 010). */
+		statuses: Record<string, StatusRecord> | null;
+	}
+
+	/**
+	 * What the secondary column draws with: one field read per searched type through
+	 * the cached schema service. The read hangs off the props through a derived and
+	 * never off an effect with a "last seen" key.
+	 */
+	function loadSecondary(types: string[], name: string | undefined): SecondaryPlan {
+		const plan = $state<SecondaryPlan>({ fields: {}, statuses: null });
+		if (!name) return plan;
+		void Promise.all(types.map((type) => schema.field(type, name))).then(async (found) => {
+			plan.fields = Object.fromEntries(types.map((type, i) => [type, found[i]]));
+			if (found.some((field) => field && renderKindFor(field.dataType) === 'status')) {
+				plan.statuses = Object.fromEntries(await statusTable.byCode());
+			}
+		}, onerror);
+		return plan;
+	}
+
+	const secondaryPlan = $derived(loadSecondary(entityTypes, secondaryField));
 
 	function thumbOf(row: PickerRow): string | null {
 		if (thumbnailField === false) return null;
@@ -211,13 +265,14 @@
 		return polymorphic ? row.type : '';
 	}
 
-	function secondaryOf(row: PickerRow): string {
-		if (secondary) return secondary(row);
-		if (secondaryField) {
-			const raw = row.values[secondaryField];
-			return raw === null || raw === undefined ? '' : String(raw);
-		}
-		return `#${row.id}`;
+	/** The id is on the row itself, not among the attributes a read returns. */
+	function secondaryValue(row: PickerRow): unknown {
+		if (!secondaryField) return null;
+		return secondaryField === 'id' ? row.id : row.values[secondaryField];
+	}
+
+	function secondaryType(row: PickerRow): string {
+		return secondaryPlan.fields[row.type]?.dataType ?? (secondaryIsId ? 'number' : 'text');
 	}
 
 	function isPerson(row: PickerRow): boolean {
@@ -242,10 +297,14 @@
 
 	A query past `minQueryLength` becomes one `contains` condition per word, `or`'d
 	across the type's display-name fields, and goes to `POST /entity/<type>/_search`
-	once per searched type. Client-side filtering is off: the server is the only
-	authority on what matches. A response from an abandoned query is dropped rather
-	than shown, reads come from the query cache, and every row is held under
-	`Type:id` because a numeric id alone collides across types.
+	once per searched type. Under it the same search runs without the name condition,
+	so an open picker lists the rows worked on most recently. Client-side filtering is
+	off: the server is the only authority on what matches. A response from an abandoned
+	query is dropped rather than shown, reads come from the query cache, and every row
+	is held under `Type:id` because a numeric id alone collides across types.
+
+	The secondary column is drawn by the field's data type through FieldValue, so a
+	status is a badge and a date is formatted.
 -->
 <div
 	data-slot="entity-picker"
@@ -318,14 +377,6 @@
 								<Skeleton class="h-8 w-full" />
 							{/each}
 						</div>
-					{:else if snap.tooShort && options.length === 0}
-						<div
-							data-slot="entity-picker-hint"
-							class="text-muted-foreground flex items-center justify-center gap-1.5 py-6 text-center text-sm"
-						>
-							<Type aria-hidden="true" class="size-4 shrink-0" />
-							<span>Type {minQueryLength} characters to search.</span>
-						</div>
 					{:else}
 						<Command.Empty>
 							<span class="text-muted-foreground inline-flex items-center gap-1.5">
@@ -335,6 +386,9 @@
 						</Command.Empty>
 						{#each options as row (entityKey(row))}
 							{@const chosen = Boolean(value && entityKey(value) === entityKey(row))}
+							{@const sub = subLabelOf(row)}
+							{@const custom = secondary ? secondary(row) : ''}
+							{@const raw = secondaryValue(row)}
 							<Command.Item
 								data-slot="entity-picker-option"
 								data-entity-type={row.type}
@@ -370,18 +424,37 @@
 												class={run.match ? 'font-semibold' : undefined}>{run.text}</span
 											>{/each}
 									</span>
-									{#if subLabelOf(row)}
-										<span class="text-muted-foreground truncate text-xs">{subLabelOf(row)}</span>
+									{#if sub}
+										<!-- Highlighted too, so a row matched on its login or its email shows why. -->
+										<span data-slot="entity-picker-sub-label" class="text-muted-foreground truncate text-xs"
+											>{#each highlightRuns(sub, snap.query) as run, i (i)}<span
+													class={run.match ? 'font-semibold' : undefined}>{run.text}</span
+												>{/each}</span
+										>
 									{/if}
 								</span>
-								{#if secondaryOf(row)}
+								{#if custom}
+									<span
+										data-slot="entity-picker-secondary"
+										class="text-muted-foreground shrink-0 text-xs">{custom}</span
+									>
+								{:else if secondaryField && !isEmptyValue(raw)}
 									<span
 										data-slot="entity-picker-secondary"
 										class={cn(
-											'text-muted-foreground shrink-0 text-xs',
+											'text-muted-foreground flex shrink-0 items-center text-xs',
 											secondaryIsId && 'font-mono tabular-nums'
-										)}>{secondaryOf(row)}</span
+										)}
 									>
+										<FieldValue
+											value={raw}
+											dataType={secondaryType(row)}
+											field={secondaryPlan.fields[row.type] ?? null}
+											statuses={secondaryPlan.statuses}
+											{siteUrl}
+											class="w-auto justify-end text-xs"
+										/>
+									</span>
 								{/if}
 							</Command.Item>
 						{/each}

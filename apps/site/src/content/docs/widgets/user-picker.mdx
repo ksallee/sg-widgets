@@ -5,8 +5,8 @@ description: People and script accounts, chosen by server-side search across nam
 
 import Demo from '../../../components/Demo.astro';
 
-Searches people, and optionally script accounts, on the server, with an avatar and a login on every
-row.
+Searches people, and optionally script accounts, on the server, with an avatar and an address on
+every row.
 
 ## Install
 
@@ -33,9 +33,10 @@ Every prop of [EntityPicker](/widgets/entity-picker/) and
 
 `placeholder` defaults to `Search for a person`, or `Search for people` on the multi picker.
 
-The query is matched against the display-name chain plus `login` and `email`, and those two fields
-are requested so the row can show them. A person's sub-label is their login; a script account's is
-`API user`.
+The query is matched against the display-name chain and the email, and against `login` while the
+query holds no whitespace. Both fields are requested so the row can show them. A person's sub-label
+is their email; a script account's is `API user`. `subLabelField="login"` puts the login there
+instead.
 
 ## Events
 
@@ -58,6 +59,10 @@ The same as [EntityPicker](/widgets/entity-picker/) and
 `login` is the only unique field on HumanUser and is what impersonation matches; `email` is not
 unique, and `code` does not exist at all, so a filter on it is a 400
 (entity_types/HumanUser).
+
+Everyone on a site shares an email domain, so the address is matched with `starts_with` until the
+query holds an `@`, and with `contains` after that. `contains` on the whole address would match the
+domain and with it every person on the site (017_filter_operators).
 
 `sg_status_list` on HumanUser is two codes, `act` and `dis`, with `act` the default
 (entity_types/HumanUser). Active-only is that condition, and it is dropped on ApiUser, which has no

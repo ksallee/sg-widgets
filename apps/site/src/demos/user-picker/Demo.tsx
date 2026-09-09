@@ -15,6 +15,7 @@ export default function UserPickerDemo() {
 
   const [one, setOne] = useState<EntityRef | null>(null);
   const [people, setPeople] = useState<EntityRef[]>([]);
+  const [byAddress, setByAddress] = useState<EntityRef | null>(null);
   const [peopleOnly, setPeopleOnly] = useState<EntityRef | null>(null);
   const [withInactive, setWithInactive] = useState<EntityRef | null>(null);
   // A bare reference: type and id, no name. Resolved on mount.
@@ -33,6 +34,18 @@ export default function UserPickerDemo() {
         <h4 className={label}>Several, with checkbox rows</h4>
         <div className={field}>
           <UserMultiPicker client={client} value={people} onValueChange={setPeople} clearable />
+        </div>
+      </section>
+
+      <section className={group} data-demo-case="by-address">
+        <h4 className={label}>Matched on the name, the address or the login</h4>
+        <div className={field}>
+          <UserPicker
+            client={client}
+            value={byAddress}
+            onValueChange={setByAddress}
+            placeholder="Try ada, ada.lo or @example.studio…"
+          />
         </div>
       </section>
 

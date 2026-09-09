@@ -1,6 +1,6 @@
 <script lang="ts" module>
-	import type { FilterGroup, PickerRow, WireGroup } from '@sg-widgets/core';
-	import { asFilterGroup, condition, mergeFilters } from '@sg-widgets/core';
+	import type { FilterGroup, PickerRow, SearchFieldSpec, WireGroup } from '@sg-widgets/core';
+	import { asFilterGroup, condition, mergeFilters, userSearchFields } from '@sg-widgets/core';
 
 	/** People and script accounts, in that order. */
 	export function userTypes(includeApiUsers: boolean): string[] {
@@ -23,16 +23,25 @@
 		);
 	}
 
-	/** `API user` for a script account, the login for a person, nothing without one. */
+	/** `API user` for a script account, the email for a person, nothing without one. */
 	export function userSubLabel(row: PickerRow): string {
 		if (row.type === 'ApiUser') return 'API user';
-		const login = row.values['login'];
-		return typeof login === 'string' && login.length > 0 ? `@${login}` : '';
+		const email = row.values['email'];
+		return typeof email === 'string' ? email : '';
 	}
 
-	/** Login and email are searched, so they have to be read (entity_types/HumanUser). */
+	/** The caller's own search fields, on top of the ones a person is searched by. */
+	export function userSearchFieldsWith(
+		extra: SearchFieldSpec[] | ((query: string) => SearchFieldSpec[])
+	): (query: string) => SearchFieldSpec[] {
+		return (query: string) => [
+			...userSearchFields(query),
+			...(typeof extra === 'function' ? extra(query) : extra)
+		];
+	}
+
+	/** Login and email are searched and shown, so they have to be read (entity_types/HumanUser). */
 	export const USER_FIELDS = ['login', 'email', 'sg_status_list'];
-	export const USER_SEARCH_FIELDS = ['login', 'email'];
 </script>
 
 <script lang="ts">
@@ -66,13 +75,13 @@
 
 	The generic entity picker with the person configuration: human users and,
 	optionally, script accounts; active people only unless asked otherwise; the
-	query matched against the name, the login and the email; an avatar per row and
-	the login under the name.
+	query matched against the name, the email and, while it holds no whitespace, the
+	login; an avatar per row and the email under the name.
 -->
 <EntityPicker
 	bind:value
 	entityTypes={userTypes(includeApiUsers)}
-	searchFields={[...USER_SEARCH_FIELDS, ...searchFields]}
+	searchFields={userSearchFieldsWith(searchFields)}
 	fields={[...USER_FIELDS, ...fields]}
 	filters={userFilters(includeInactive, filters)}
 	subLabel={userSubLabel}

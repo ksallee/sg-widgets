@@ -10,6 +10,11 @@
  * it has no `fields` parameter, so every row comes back as name, links and status
  * only, and a picker needs a thumbnail and a sub-label
  * (endpoints/post_entity_text_search).
+ *
+ * With nothing typed, or less than `minQueryLength`, the same search runs without the
+ * name condition, sorted `-updated_at`, so an open picker lists the rows most recently
+ * worked on rather than nothing. The caller's pre-filter, project scope and exclusions
+ * still apply.
  */
 import type { EntityRow, SearchResult, SgClient } from './client.js';
 import type { EntityRef, FilterGroup, FilterNode, WireGroup } from './filter.js';
@@ -78,22 +83,55 @@ export function queryTokens(query: string): string[] {
   return query.trim().split(/\s+/).filter(Boolean);
 }
 
+/** One field a query is matched against, and how. */
+export interface SearchField {
+  path: string;
+  /** Default `contains`. `starts_with` keeps a shared tail, such as an email domain, out of the match. */
+  operator?: 'contains' | 'starts_with' | 'ends_with' | 'is';
+}
+
+/** A field name, or a field name with the operator it is matched with. */
+export type SearchFieldSpec = string | SearchField;
+
+function asSearchField(spec: SearchFieldSpec): SearchField {
+  return typeof spec === 'string' ? { path: spec } : spec;
+}
+
 /**
  * The filter a typed query becomes: every word must match, each anywhere in the
  * field, and a word may sit in any one of `fields`. So "pub an" finds
  * "Published Anna" and a login search finds a person by either half of a name.
  *
  * An empty query, or no fields, gives an empty group, which matches every row:
- * `"conditions": []` is 200 and unscoped (030_complex_filters). `contains`
- * through a dotted path works too, so a field may be `entity.Shot.code`
- * (017_filter_operators).
+ * `"conditions": []` is 200 and unscoped (030_complex_filters). `contains` and
+ * `starts_with` both work on text fields and through dotted paths, so a field may
+ * be `entity.Shot.code` (017_filter_operators).
  */
-export function nameSearchFilter(query: string, fields: readonly string[]): FilterGroup {
+export function nameSearchFilter(query: string, fields: readonly SearchFieldSpec[]): FilterGroup {
   const tokens = queryTokens(query);
-  const usable = fields.filter((f) => f.length > 0);
+  const usable = fields.map(asSearchField).filter((f) => f.path.length > 0);
   if (tokens.length === 0 || usable.length === 0) return group('and');
-  const perField = usable.map((field) => group('and', tokens.map((token) => condition(field, 'contains', token))));
+  const perField = usable.map((field) =>
+    group('and', tokens.map((token) => condition(field.path, field.operator ?? 'contains', token))),
+  );
   return perField.length === 1 ? (perField[0] as FilterGroup) : group('or', perField);
+}
+
+/**
+ * The extra fields a person search matches, for the query as typed.
+ *
+ * The email is always searched, because it is what a person is known by on a site,
+ * but only on its local part until the query holds an `@`: every address shares one
+ * domain, so `contains` on "le" matches `example.studio` and with it the whole site.
+ * A login never holds whitespace, so it is dropped once the query does. The
+ * display-name chain is searched either way.
+ */
+export function userSearchFields(query: string): SearchFieldSpec[] {
+  const trimmed = query.trim();
+  if (trimmed.length === 0) return [];
+  const fields: SearchFieldSpec[] = [{ path: 'email', operator: trimmed.includes('@') ? 'contains' : 'starts_with' }];
+  if (!/\s/.test(trimmed)) fields.push('login');
+  return fields;
 }
 
 /** Accept either the editor tree or the wire shape wherever a caller supplies a filter. */
@@ -217,9 +255,13 @@ export interface EntitySearchOptions {
   entityTypes: string[];
   /** Field holding the row label. Defaults to the display-name chain. */
   labelField?: string | undefined;
-  /** Extra fields the query is matched against, on top of the display-name chain. */
-  searchFields?: string[] | undefined;
-  /** Field shown right-aligned. Defaults to the id. */
+  /**
+   * Extra fields the query is matched against, on top of the display-name chain.
+   * A function is called with the query, so a field is searched only when the query
+   * suits it, and a field may name the operator it is matched with.
+   */
+  searchFields?: SearchFieldSpec[] | ((query: string) => SearchFieldSpec[]) | undefined;
+  /** Field shown right-aligned, rendered by its data type. Nothing is shown without it. */
   secondaryField?: string | undefined;
   /** Field shown under the label. Defaults to the entity type when several are searched. */
   subLabelField?: string | undefined;
@@ -247,7 +289,7 @@ export interface EntitySearchState {
   rows: PickerRow[];
   /** True when another page exists. From a full page, never from `links.next` (006_pagination). */
   hasMore: boolean;
-  /** True while the query is shorter than the minimum, so no search has run. */
+  /** True while the query is shorter than the minimum, so the rows answer no query. */
   tooShort: boolean;
 }
 
@@ -269,9 +311,11 @@ export interface EntitySearch {
   dispose(): void;
 }
 
-const DEFAULT_MIN_QUERY_LENGTH = 2;
+const DEFAULT_MIN_QUERY_LENGTH = 0;
 const DEFAULT_PAGE_SIZE = 20;
 const DEFAULT_DEBOUNCE_MS = 250;
+/** Most recently worked on first, for the list an open picker shows before anything is typed (026_result_order). */
+const BROWSE_SORT = '-updated_at';
 
 function asError(cause: unknown): Error {
   return cause instanceof Error ? cause : new Error(String(cause));
@@ -286,8 +330,10 @@ export function createEntitySearch(options: EntitySearchOptions): EntitySearch {
   const listeners = new Set<(state: EntitySearchState) => void>();
   /** Keys already asked for, so a failed or empty hydration is not retried forever. */
   const hydrated = new Set<string>();
-  /** Search fields and the project path, per type. Resolved once, from the cached schema. */
+  /** The fields and the project path of a type. Resolved once, from the cached schema. */
   const plans = new Map<string, Promise<TypePlan>>();
+  /** True once a search has run, so changed props reload only a picker already showing rows. */
+  let started = false;
 
   let state: EntitySearchState = { query: '', loading: false, error: null, rows: [], hasMore: false, tooShort: true };
   let pending: ReturnType<typeof setTimeout> | undefined;
@@ -310,10 +356,15 @@ export function createEntitySearch(options: EntitySearchOptions): EntitySearch {
     return opts.minQueryLength ?? DEFAULT_MIN_QUERY_LENGTH;
   }
 
+  /** True when the query carries no name condition, so the request is the plain first page. */
+  function isBrowse(query: string): boolean {
+    const typed = query.trim().length;
+    return typed === 0 || typed < minLength();
+  }
+
   /* fields ---------------------------------------------------------------- */
 
   interface TypePlan {
-    searchFields: string[];
     /** `project`, `projects`, or null when the type is not project-scoped. */
     projectPath: string | null;
     /** Every field the type has, so a pre-filter can be pruned to it. */
@@ -330,15 +381,22 @@ export function createEntitySearch(options: EntitySearchOptions): EntitySearch {
     if (cached) return cached;
     const promise = (async (): Promise<TypePlan> => {
       const fields = await schema.fields(entityType);
-      const wanted = [...DISPLAY_NAME_FIELDS, ...(opts.labelField ? [opts.labelField] : []), ...(opts.searchFields ?? [])];
-      const searchFields = [...new Set(wanted)].filter((name) => fields[name] !== undefined);
       // Project is site-wide and has no project field; a person's membership is the
       // `projects` multi_entity on the row (entity_types/HumanUser, 018_project_listing).
       const projectPath = fields['project'] ? 'project' : fields['projects'] ? 'projects' : null;
-      return { searchFields, projectPath, fieldNames: new Set(Object.keys(fields)) };
+      return { projectPath, fieldNames: new Set(Object.keys(fields)) };
     })();
     plans.set(entityType, promise);
     return promise;
+  }
+
+  /** The fields this query is matched against, before the type is known. The first mention of a path wins. */
+  function searchFieldsFor(query: string): SearchField[] {
+    const extra = typeof opts.searchFields === 'function' ? opts.searchFields(query) : (opts.searchFields ?? []);
+    const specs = [...DISPLAY_NAME_FIELDS, ...(opts.labelField ? [opts.labelField] : []), ...extra].map(asSearchField);
+    const byPath = new Map<string, SearchField>();
+    for (const spec of specs) if (!byPath.has(spec.path)) byPath.set(spec.path, spec);
+    return [...byPath.values()];
   }
 
   /** The union a row needs to render, deduplicated. Unknown names are dropped at 200. */
@@ -358,7 +416,8 @@ export function createEntitySearch(options: EntitySearchOptions): EntitySearch {
 
   async function filtersFor(entityType: string, query: string): Promise<WireGroup | null> {
     const plan = await planFor(entityType);
-    const parts: FilterNode[] = [nameSearchFilter(query, plan.searchFields)];
+    const fields = searchFieldsFor(query).filter((field) => plan.fieldNames.has(field.path));
+    const parts: FilterNode[] = [nameSearchFilter(query, fields)];
     const caller = asFilterGroup(opts.filters);
     const pruned = caller ? pruneFilterToFields(caller, plan.fieldNames) : null;
     if (pruned) parts.push(pruned);
@@ -375,10 +434,13 @@ export function createEntitySearch(options: EntitySearchOptions): EntitySearch {
   async function fetchPage(query: string, number: number): Promise<{ rows: PickerRow[]; hasMore: boolean }> {
     const size = opts.pageSize ?? DEFAULT_PAGE_SIZE;
     const fields = requestedFields();
+    // Nothing typed leaves the rows in id order, which is the oldest work on the site,
+    // so the browse list is sorted instead (026_result_order).
+    const sort = isBrowse(query) ? BROWSE_SORT : undefined;
     const results = await Promise.all(
       opts.entityTypes.map(async (entityType): Promise<SearchResult> => {
         const filters = await filtersFor(entityType, query);
-        return client.search(entityType, { filters, fields, page: { size, number } });
+        return client.search(entityType, { filters, fields, page: { size, number }, ...(sort ? { sort } : {}) });
       }),
     );
     const rows: PickerRow[] = [];
@@ -396,6 +458,7 @@ export function createEntitySearch(options: EntitySearchOptions): EntitySearch {
     run += 1;
     const id = run;
     page = number;
+    started = true;
     emit({ loading: true, error: null });
     void fetchPage(query, number).then(
       (result) => {
@@ -404,12 +467,13 @@ export function createEntitySearch(options: EntitySearchOptions): EntitySearch {
         if (disposed || id !== run) return;
         remember(result.rows);
         emit({
-          query,
+          // A browse list answers no query, so nothing in it is highlighted.
+          query: isBrowse(query) ? '' : query,
           loading: false,
           error: null,
           rows: number === 1 ? result.rows : [...state.rows, ...result.rows],
           hasMore: result.hasMore,
-          tooShort: false,
+          tooShort: query.trim().length < minLength(),
         });
       },
       (cause: unknown) => {
@@ -500,20 +564,13 @@ export function createEntitySearch(options: EntitySearchOptions): EntitySearch {
       return () => listeners.delete(listener);
     },
     setQuery(query: string): void {
-      if (query.trim().length < minLength()) {
-        // Below the minimum nothing is searched and the results are dropped, but
-        // the selected rows are held elsewhere, so a selection never disappears.
-        run += 1;
-        if (pending !== undefined) clearTimeout(pending);
-        pending = undefined;
-        emit({ query, loading: false, error: null, rows: [], hasMore: false, tooShort: true });
-        return;
-      }
-      emit({ query });
+      // Under the minimum the name condition is dropped, but the search still runs:
+      // the list an open picker shows is the first page, not nothing.
+      emit({ query: isBrowse(query) ? '' : query });
       schedule(query);
     },
     loadMore(): void {
-      if (!state.hasMore || state.loading || state.tooShort) return;
+      if (!state.hasMore || state.loading) return;
       search(state.query, page + 1);
     },
     hydrate,
@@ -530,8 +587,9 @@ export function createEntitySearch(options: EntitySearchOptions): EntitySearch {
       if (requestShape() === before) return;
       plans.clear();
       hydrated.clear();
-      if (state.query.trim().length >= minLength()) search(state.query, 1);
-      else emit({ rows: [], hasMore: false, tooShort: true });
+      // A picker that has never searched stays idle: the first request is the one
+      // its list asks for when it opens.
+      if (started) search(state.query, 1);
     },
     dispose(): void {
       disposed = true;
@@ -545,7 +603,7 @@ export function createEntitySearch(options: EntitySearchOptions): EntitySearch {
     return JSON.stringify([
       opts.entityTypes,
       opts.labelField ?? null,
-      opts.searchFields ?? null,
+      typeof opts.searchFields === 'function' ? 'per query' : (opts.searchFields ?? null),
       requestedFields(),
       asFilterGroup(opts.filters),
       opts.projectId ?? null,

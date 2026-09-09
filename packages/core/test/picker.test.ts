@@ -16,6 +16,7 @@ import {
   placeholderName,
   pruneFilterToFields,
   queryTokens,
+  userSearchFields,
   withSelectedPinned,
 } from '../src/picker.js';
 
@@ -70,6 +71,17 @@ describe('nameSearchFilter', () => {
     expect(toApi3Hash(nameSearchFilter('   ', ['name']))).toBeNull();
   });
 
+  it('takes the operator a field is matched with', () => {
+    const filter = nameSearchFilter('le', [{ path: 'email', operator: 'starts_with' }, 'login']);
+    expect(toApi3Hash(filter)).toEqual({
+      logical_operator: 'or',
+      conditions: [
+        { logical_operator: 'and', conditions: [['email', 'starts_with', 'le']] },
+        { logical_operator: 'and', conditions: [['login', 'contains', 'le']] },
+      ],
+    });
+  });
+
   it('keeps every word against every field, not one word per field', () => {
     const filter = nameSearchFilter('ada love', ['name', 'login']);
     expect(toApi3Hash(filter)).toEqual({
@@ -91,6 +103,21 @@ describe('nameSearchFilter', () => {
         },
       ],
     });
+  });
+});
+
+describe('userSearchFields', () => {
+  it('matches the email on its local part until the query holds an @', () => {
+    expect(userSearchFields('le')).toEqual([{ path: 'email', operator: 'starts_with' }, 'login']);
+    expect(userSearchFields('le@example.studio')).toEqual([{ path: 'email', operator: 'contains' }, 'login']);
+  });
+
+  it('drops the login once the query holds whitespace, because a login never does', () => {
+    expect(userSearchFields('anna van')).toEqual([{ path: 'email', operator: 'starts_with' }]);
+  });
+
+  it('is empty for an empty query', () => {
+    expect(userSearchFields('   ')).toEqual([]);
   });
 });
 
@@ -248,13 +275,63 @@ describe('createEntitySearch', () => {
     return { mock, client, search };
   }
 
-  it('runs nothing under the minimum query length and clears the rows', async () => {
-    const { search } = harness();
-    search.setQuery('sh010');
+  it('lists the first page, last updated first, with nothing typed', async () => {
+    const { search } = harness({ fields: ['updated_at'] });
+    search.setQuery('');
     await until(() => search.state.rows.length > 0);
+    expect(search.state.rows).toHaveLength(5);
+    expect(search.state.hasMore).toBe(true);
+    const dates = search.state.rows.map((row) => String(row.values['updated_at']));
+    expect(dates).toEqual([...dates].sort().reverse());
+  });
+
+  it('drops the name condition under the minimum query length instead of the rows', async () => {
+    const { search } = harness({ minQueryLength: 2, fields: ['updated_at'] });
+    search.setQuery('sh010');
+    await until(() => search.state.rows.length > 0 && search.state.rows.every((r) => r.name.startsWith('sh010')));
     search.setQuery('s');
+    await until(() => !search.state.loading && search.state.rows.some((r) => !r.name.startsWith('sh010')));
     expect(search.state.tooShort).toBe(true);
-    expect(search.state.rows).toEqual([]);
+    expect(search.state.rows).toHaveLength(5);
+    // Nothing is highlighted, because the rows answer no query.
+    expect(search.state.query).toBe('');
+  });
+
+  it('keeps the project scope and the exclusions on the unfiltered list', async () => {
+    const { search } = harness({ projectId: 71, fields: ['project'] });
+    search.setQuery('');
+    const rows = await until(() => (search.state.rows.length > 0 ? search.state.rows : null));
+    expect(rows.every((row) => (row.values['project'] as { id: number }).id === 71)).toBe(true);
+    const dropped = rows[0] as PickerRow;
+    search.update({ exclude: [{ type: 'Shot', id: dropped.id }] });
+    await until(() => search.state.rows.length > 0 && !search.state.rows.some((r) => r.id === dropped.id));
+    expect(search.state.rows.some((r) => r.id === dropped.id)).toBe(false);
+  });
+
+  it('pages the unfiltered list with the load more row', async () => {
+    const { search } = harness({ pageSize: 3 });
+    search.setQuery('');
+    await until(() => search.state.rows.length > 0);
+    expect(search.state.rows).toHaveLength(3);
+    search.loadMore();
+    await until(() => search.state.rows.length > 3);
+    expect(new Set(search.state.rows.map(entityKey)).size).toBe(6);
+  });
+
+  it('does not match every person through the domain they share', async () => {
+    const { search } = harness({ entityTypes: ['HumanUser'], searchFields: userSearchFields });
+    search.setQuery('le');
+    await until(() => search.state.rows.length > 0);
+    await tick(20);
+    // `contains` on the whole address matches all eight through `example.studio`.
+    expect(search.state.rows.map((r) => r.name)).toEqual(['Cleo Dias']);
+  });
+
+  it('matches the whole address once the query holds an @', async () => {
+    const { search } = harness({ entityTypes: ['HumanUser'], searchFields: userSearchFields });
+    search.setQuery('bo.chen@example.studio');
+    await until(() => search.state.rows.length > 0);
+    expect(search.state.rows.map((r) => r.name)).toEqual(['Bo Chen']);
   });
 
   it('finds rows whose label holds every word', async () => {

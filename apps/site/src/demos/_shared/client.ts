@@ -9,7 +9,7 @@
  * caching path rather than a shortcut. `latencyMs` is deliberately non-zero: a
  * widget's loading state is part of what a reviewer is here to look at.
  *
- * The toolbar's Live control swaps that for a real site; see `./live`. Every
+ * The header's Connect control swaps that for a real site; see `./live`. Every
  * function here answers the live client in that mode, so a demo asks for its
  * client once and does not care which site it got.
  *
@@ -41,7 +41,7 @@ export function getDemoClient(): SgClient {
 export interface DemoContext extends SgContext {
   /** True when the rows come from a real site. */
   live: boolean;
-  /** The project to scope to: the toolbar's pick in live mode, the mock's own otherwise. */
+  /** The project to scope to: the Connect panel's pick in live mode, the mock's own otherwise. */
   projectId: number;
   /** The same, for a demo that names a second mock project of its own. */
   projectFor(mockId: number): number;

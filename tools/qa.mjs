@@ -8,11 +8,11 @@
 // never share a server. Without it, --url (or --path on --base, default http://127.0.0.1:4321) is used.
 //
 // The drive file is the body of an async function receiving ({wait, $, $$, harness}). `harness.set`
-// writes the demo toolbar's localStorage keys (framework: svelte|react|both, theme: light|dark,
+// writes the demo view's localStorage keys (framework: svelte|react|both, theme: light|dark,
 // motion: normal|reduced, palette: default|stone|..., radius: default|none|sm|md|lg|xl) and the
-// toolbar re-reads them at once; the flags below set them for the initial load. Whatever the body
-// returns is printed as JSON under `result`, next to `console` (errors and warnings only) and
-// `shot`/`video` paths.
+// page re-reads them at once; the flags below set them for the initial load. --dark also sets
+// Starlight's own theme key, which is what the stage follows. Whatever the body returns is printed
+// as JSON under `result`, next to `console` (errors and warnings only) and `shot`/`video` paths.
 //
 // --live runs the demos against the site named by the repo's .env.local instead of the mock, through
 // the dev-only /live/dev-token endpoint, so it needs a dev server (--start, or --url on one).
@@ -129,19 +129,20 @@ async function main() {
     reducedMotion: a.reducedMotion ? 'reduce' : 'no-preference',
     ...(a.video ? { recordVideo: { dir: dirname(resolve(a.video)), size: { width: vw, height: vh } } } : {}),
   });
-  // Demo.astro stores raw strings under these keys; keep them in sync with its KEYS table.
+  // demo-prefs.ts stores raw strings under these keys; keep them in sync with its KEYS table.
   const prefs = {};
+  // The stage follows Starlight's theme select, so --dark has to set Starlight's key too.
+  const starlightTheme = a.dark ? 'dark' : 'light';
   if (a.framework) prefs.framework = a.framework;
   // Live mode reads the site through /live/dev-token, which only `astro dev` answers.
   if (a.live) prefs.source = 'live';
   if (a.project) prefs.project = JSON.stringify({ id: Number(a.project) });
   if (a.dark) prefs.theme = 'dark';
   if (a.reducedMotion) prefs.motion = 'reduced';
-  if (Object.keys(prefs).length) {
-    await ctx.addInitScript((p) => {
-      for (const [k, v] of Object.entries(p)) localStorage.setItem('sg-demo:' + k, v);
-    }, prefs);
-  }
+  await ctx.addInitScript((p) => {
+    for (const [k, v] of Object.entries(p.prefs)) localStorage.setItem('sg-demo:' + k, v);
+    localStorage.setItem('starlight-theme', p.starlightTheme);
+  }, { prefs, starlightTheme });
   const page = await ctx.newPage();
   const consoleLog = [];
   page.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') consoleLog.push(`${m.type()}: ${m.text()}`); });

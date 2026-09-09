@@ -2,9 +2,11 @@
  * The view every demo on the site wears: framework, palette, radius, light/dark and
  * reduced motion.
  *
- * The control bar writes these, the demos read them, and `sg-demo:*` in `localStorage`
- * carries them from page to page and from tab to tab. A palette swaps token values on
- * a demo stage and nothing else; none of these controls changes what a widget renders.
+ * The palette select in Starlight's header and the toolbar on each example write these,
+ * the demos read them, and `sg-demo:*` in `localStorage` carries them from page to page
+ * and from tab to tab. Light and dark is the one nobody sets here: it follows Starlight's
+ * own theme select through `watchTheme`. A palette swaps token values on a demo stage and
+ * nothing else; none of these controls changes what a widget renders.
  */
 
 export interface Palette {
@@ -16,8 +18,8 @@ export interface Palette {
 }
 
 /**
- * Called the palette everywhere a name could be read as the light/dark theme the Dark
- * toggle switches. `default` has no block in themes.css and leaves the stage on the
+ * Called the palette everywhere a name could be read as the light/dark theme Starlight's
+ * own select switches. `default` has no block in themes.css and leaves the stage on the
  * nova tokens.
  */
 export const palettes: Palette[] = [
@@ -137,7 +139,7 @@ function loadFont(family: string | undefined): void {
   document.head.append(link);
 }
 
-/** Put the current view on every demo on the page, and back on the bar's controls. */
+/** Put the current view on every demo on the page, and back on the controls. */
 export function applyPrefs(): void {
   for (const root of document.querySelectorAll<HTMLElement>('[data-sg-demo]')) {
     root.dataset.framework = prefs.framework;
@@ -154,25 +156,41 @@ export function applyPrefs(): void {
     }
   }
 
-  const bar = document.querySelector<HTMLElement>('[data-sg-bar]');
-  if (!bar) return;
+  // Every example carries the same toolbar, so a change on one shows on all of them.
+  for (const toolbar of document.querySelectorAll<HTMLElement>('[data-sg-toolbar]')) {
+    for (const pick of toolbar.querySelectorAll<HTMLButtonElement>('[data-framework-pick]')) {
+      pick.setAttribute('aria-pressed', String(pick.dataset.frameworkPick === prefs.framework));
+    }
 
-  for (const pick of bar.querySelectorAll<HTMLButtonElement>('[data-framework-pick]')) {
-    pick.setAttribute('aria-pressed', String(pick.dataset.frameworkPick === prefs.framework));
+    const radiusPick = toolbar.querySelector<HTMLSelectElement>('[data-radius-pick]');
+    if (radiusPick) radiusPick.value = prefs.radius;
+
+    toolbar.querySelector('[data-motion-toggle]')?.setAttribute('aria-pressed', String(prefs.motion === 'reduced'));
   }
 
-  const palettePick = bar.querySelector<HTMLSelectElement>('[data-palette-pick]');
+  const palettePick = document.querySelector<HTMLSelectElement>('.sg-palette select');
   if (palettePick) palettePick.value = prefs.palette;
   loadFont(palettes.find((palette) => palette.name === prefs.palette)?.font);
-
-  const radiusPick = bar.querySelector<HTMLSelectElement>('[data-radius-pick]');
-  if (radiusPick) radiusPick.value = prefs.radius;
-
-  bar.querySelector('[data-theme-toggle]')?.setAttribute('aria-pressed', String(prefs.theme === 'dark'));
-  bar.querySelector('[data-motion-toggle]')?.setAttribute('aria-pressed', String(prefs.motion === 'reduced'));
 }
 
 let watching = false;
+let following = false;
+
+/**
+ * Follow Starlight's theme select. It stamps `light` or `dark` on the root, and the
+ * stage wears whichever the docs page wears, so a reviewer reads one theme at a time.
+ * `sg-demo:theme` still owns the stage, so the headless driver can set it on its own.
+ */
+function watchTheme(): void {
+  if (following) return;
+  following = true;
+  const follow = (): void => {
+    const theme = document.documentElement.dataset.theme;
+    if (theme && theme !== prefs.theme) setPref('theme', theme);
+  };
+  new MutationObserver(follow).observe(document.documentElement, { attributeFilter: ['data-theme'] });
+  follow();
+}
 
 /**
  * Follow the keys. The headless driver (tools/qa.mjs) sets them and fires `storage`
@@ -180,6 +198,7 @@ let watching = false;
  * markup, and the same listener keeps two open tabs in step.
  */
 export function watchPrefs(): void {
+  watchTheme();
   if (watching) return;
   watching = true;
   window.addEventListener('storage', () => {

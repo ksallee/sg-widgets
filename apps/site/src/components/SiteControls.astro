@@ -1,0 +1,274 @@
+---
+/**
+ * The site's two demo controls, in Starlight's header beside the search box and the
+ * theme select: a palette select, and a Connect button holding everything that says
+ * what the demos read.
+ *
+ * The palette is Starlight's own `Select`, so it is the theme select's twin. Connect
+ * is a button in the search box's shape, and its label carries the state: `Connect`
+ * on fixtures, `Live · <site> · <project>` on a real site, where only the site host
+ * ever truncates.
+ *
+ * The panel is a plain element, not the shadcn Popover: it holds the project picker,
+ * itself a Bits UI popover that portals to `<body>`, and dismissing on an outside
+ * click has to let that portalled surface through. It also keeps the header free of a
+ * hydration boundary. The panel wears the shadcn tokens through `sg-demo-chrome` so
+ * the picker inside it looks like a picker; the two header controls wear Starlight's
+ * own `--sl-color-*` so they look like the header.
+ */
+import { Icon } from '@astrojs/starlight/components';
+import Select from '@astrojs/starlight/components/Select.astro';
+import { palettes } from './demo-prefs';
+
+const control =
+  'inline-flex h-8 items-center justify-center px-2 text-sm text-muted-foreground select-none ' +
+  'transition-[color,background-color,opacity,transform] duration-150 ease-out ' +
+  'hover:bg-accent hover:text-accent-foreground ' +
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ' +
+  'active:scale-[0.98] ' +
+  'aria-pressed:bg-accent aria-pressed:text-accent-foreground aria-pressed:font-medium';
+
+const segmentClass = `${control} border-l border-border first:border-l-0`;
+const buttonClass = `${control} rounded-md border border-border bg-background`;
+const groupClass =
+  'inline-flex h-8 shrink-0 self-start items-center overflow-hidden rounded-md border border-border bg-background';
+const fieldClass = 'flex flex-col gap-1.5';
+const labelClass = 'text-xs font-medium text-muted-foreground';
+const inputClass =
+  'h-8 w-full rounded-md border border-border bg-background px-2 text-sm text-foreground ' +
+  'placeholder:text-muted-foreground ' +
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background';
+---
+
+<span class="sg-palette">
+  <Select
+    icon="pencil"
+    label="Palette"
+    options={palettes.map((palette) => ({
+      label: palette.label,
+      value: palette.name,
+      selected: palette.name === 'default',
+    }))}
+    width="7em"
+  />
+</span>
+
+<div class="sg-connect" data-sg-connect data-source="mock" data-live-state="anon">
+  <button
+    type="button"
+    class="sg-connect-trigger"
+    data-connect-trigger
+    aria-expanded="false"
+    aria-haspopup="dialog"
+    aria-controls="sg-connect-panel"
+  >
+    <Icon name="link" class="sg-connect-icon" />
+    <span class="sg-connect-label" data-connect-label>
+      <span data-connect-lead>Connect</span>
+      <span class="sg-connect-sep" data-connect-sep-site aria-hidden="true" hidden>&middot;</span>
+      <span class="sg-connect-host" data-connect-host hidden></span>
+      <span class="sg-connect-sep" data-connect-sep-scope aria-hidden="true" hidden>&middot;</span>
+      <span data-connect-scope hidden></span>
+    </span>
+  </button>
+
+  <div
+    class="sg-connect-panel sg-demo sg-demo-chrome rounded-lg border border-border shadow-lg"
+    id="sg-connect-panel"
+    role="dialog"
+    aria-label="What the demos read"
+  >
+    <div class="flex flex-col gap-4 p-4">
+      <div class={groupClass} role="group" aria-label="Data source">
+        <button type="button" class={segmentClass} data-source-pick="mock" aria-pressed="true">Mock</button>
+        <button type="button" class={segmentClass} data-source-pick="live" aria-pressed="false">Live</button>
+      </div>
+
+      <label class={fieldClass}>
+        <span class={labelClass}>Site</span>
+        <input
+          type="url"
+          class={inputClass}
+          data-live-site
+          spellcheck="false"
+          autocomplete="off"
+          placeholder="https://your-studio.shotgrid.autodesk.com"
+        />
+      </label>
+
+      <p class="text-sm text-muted-foreground" data-live-status></p>
+
+      <p class="text-xs text-muted-foreground" data-live-dev-note>
+        The script key in .env.local mints the token, so nobody has to log in.
+      </p>
+
+      <div class="flex items-center gap-2">
+        <button type="button" class={buttonClass} data-live-login>Log in</button>
+        <button type="button" class={buttonClass} data-live-logout>Log out</button>
+      </div>
+
+      <div class={fieldClass} data-live-project-field>
+        <span class={labelClass}>Project</span>
+        <div class="w-full" data-live-project></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  /**
+   * Wires both controls. The palette writes a `sg-demo:*` key and the demos read it;
+   * Connect hands its panel to demo-live.ts, which owns the source, the site, the
+   * login and the project.
+   */
+  import { applyPrefs, setPref, watchPrefs } from './demo-prefs';
+  import { mountLiveControls } from './demo-live';
+
+  const root = (): HTMLElement | null => document.querySelector<HTMLElement>('[data-sg-connect]');
+
+  function setOpen(open: boolean): void {
+    const connect = root();
+    if (!connect) return;
+    connect.toggleAttribute('data-open', open);
+    connect.querySelector('[data-connect-trigger]')?.setAttribute('aria-expanded', String(open));
+  }
+
+  function isOpen(): boolean {
+    return root()?.hasAttribute('data-open') ?? false;
+  }
+
+  /* A shadcn surface inside the panel portals to `<body>`, so a click in one is a
+     click in the panel. */
+  function inside(target: HTMLElement): boolean {
+    return Boolean(
+      target.closest('[data-sg-connect]') ||
+        target.closest('[data-slot="popover-content"]') ||
+        target.closest('[data-slot="select-content"]') ||
+        target.closest('[data-slot="dialog-content"]'),
+    );
+  }
+
+  document.addEventListener('click', (event) => {
+    const target = event.target as HTMLElement | null;
+    if (!target) return;
+    if (target.closest('[data-connect-trigger]')) {
+      setOpen(!isOpen());
+      return;
+    }
+    if (isOpen() && !inside(target)) setOpen(false);
+  });
+
+  document.addEventListener('keydown', (event) => {
+    // A picker inside the panel takes Escape first; the panel closes on the next one.
+    if (event.key !== 'Escape' || !isOpen()) return;
+    if (document.querySelector('[data-slot="popover-content"]')) return;
+    setOpen(false);
+    root()?.querySelector<HTMLButtonElement>('[data-connect-trigger]')?.focus({ preventScroll: true });
+  });
+
+  document.addEventListener('change', (event) => {
+    const select = (event.target as HTMLElement | null)?.closest<HTMLSelectElement>('.sg-palette select');
+    if (select) setPref('palette', select.value);
+  });
+
+  applyPrefs();
+  watchPrefs();
+  void mountLiveControls();
+</script>
+
+<style>
+  /*
+   * The two controls, in Starlight's own header vocabulary: the palette select is
+   * upstream's `Select`, and Connect is the shape of the search button.
+   */
+  .sg-palette {
+    display: flex;
+    align-items: center;
+  }
+
+  .sg-connect {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  .sg-connect-trigger {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    max-width: 18rem;
+    height: 2rem;
+    padding-inline: 0.75rem;
+    border: 1px solid var(--sl-color-gray-5);
+    border-radius: 0.5rem;
+    background-color: var(--sl-color-black);
+    color: var(--sl-color-gray-2);
+    font-family: inherit;
+    font-size: var(--sl-text-sm);
+    cursor: pointer;
+  }
+
+  .sg-connect-trigger:hover {
+    border-color: var(--sl-color-gray-2);
+    color: var(--sl-color-white);
+  }
+
+  .sg-connect-icon {
+    font-size: 1rem;
+    flex-shrink: 0;
+  }
+
+  .sg-connect-label {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    min-width: 0;
+    white-space: nowrap;
+  }
+
+  /* The one thing on the site allowed to truncate. */
+  .sg-connect-host {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .sg-connect-panel {
+    position: absolute;
+    inset-block-start: calc(100% + 0.5rem);
+    inset-inline-end: 0;
+    display: none;
+    width: 24rem;
+    max-width: calc(100vw - 2 * var(--sl-nav-pad-x));
+  }
+
+  .sg-connect[data-open] .sg-connect-panel {
+    display: block;
+    animation: sg-connect-in 200ms ease-out;
+  }
+
+  @keyframes sg-connect-in {
+    from {
+      opacity: 0;
+      transform: translateY(-4px) scale(0.95);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .sg-connect[data-open] .sg-connect-panel {
+      animation: none;
+    }
+  }
+
+  /*
+   * The login, the dev note and the project belong to the state they apply to. These
+   * rules are unlayered, so they outrank the Tailwind display utilities on the same
+   * elements; `hidden` on its own would not.
+   */
+  [data-sg-connect]:not([data-live-ready]) [data-live-project-field],
+  [data-sg-connect]:not([data-live-state='anon']) [data-live-login],
+  [data-sg-connect]:not([data-live-state='in']) [data-live-logout],
+  [data-sg-connect]:not([data-live-state='dev']) [data-live-dev-note] {
+    display: none;
+  }
+</style>

@@ -1,7 +1,7 @@
 /**
  * Live mode: the demos on this site, reading a real Flow PT site.
  *
- * The toolbar's Mock/Live control writes `sg-demo:source`, and in `live` every
+ * The header's Mock/Live control writes `sg-demo:source`, and in `live` every
  * demo runs against `RestClient` instead of the mock. The browser calls
  * `/api/v1` itself: every path there answers an OPTIONS preflight with the
  * request origin echoed, `allow-credentials: true`, methods GET POST PUT PATCH
@@ -41,7 +41,7 @@ export interface DemoProject {
   name?: string;
 }
 
-/** What the toolbar shows and what the live client was built from. */
+/** What the Connect panel shows and what the live client was built from. */
 export interface LiveState {
   source: DemoSource;
   siteUrl: string;
@@ -103,7 +103,7 @@ export function setDemoSource(source: DemoSource): void {
   write(KEYS.source, source);
 }
 
-/** The site the toolbar offers: the last one used, else the build's own default. */
+/** The site the Connect panel offers: the last one used, else the build's own default. */
 export function demoSiteUrl(): string {
   return text(KEYS.site) ?? (import.meta.env.PUBLIC_FPT_SITE_URL as string | undefined) ?? '';
 }
@@ -202,7 +202,7 @@ async function resolve(): Promise<LiveState> {
 }
 
 /**
- * Settle the source and its auth. The toolbar and the islands both wait on this,
+ * Settle the source and its auth. The header control and the islands both wait on this,
  * so a demo is built against a client that is already able to read.
  */
 export function prepareDemoSource(): Promise<LiveState> {

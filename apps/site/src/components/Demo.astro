@@ -8,9 +8,10 @@
  * src/styles/themes.css, light or dark, at any radius and with motion reduced, without
  * leaving the page and without touching Starlight's theme or their OS settings.
  *
- * The controls are the site's control bar, one strip under the header; see DemoBar.astro.
- * A demo carries a title line and the stage, reads the view from `sg-demo:*` and follows
- * a change to those keys without a reload.
+ * A demo carries its own toolbar -- framework, reduced motion and radius, see
+ * DemoToolbar.astro -- and the stage under it. The palette and what the demos read are
+ * site-wide and live in Starlight's header. A demo reads the view from `sg-demo:*` and
+ * follows a change to those keys without a reload.
  *
  * A demo is a directory under `src/demos/<name>/` holding `Demo.svelte` and
  * `Demo.tsx`. Both are found by name through a glob -- no registration step -- and
@@ -22,10 +23,12 @@
  * children), unchanged shadcn focus rings, and motion limited to opacity and transform
  * at duration-150.
  */
+import DemoToolbar from './DemoToolbar.astro';
+
 interface Props {
   /** Directory name under `src/demos/`. */
   name: string;
-  /** Optional caption shown on the title line. */
+  /** Optional caption shown at the head of the toolbar. */
   title?: string;
 }
 
@@ -56,16 +59,7 @@ if (!svelteDemos[`../demos/${name}/Demo.svelte`] || !reactDemos[`../demos/${name
   data-motion="normal"
   data-source="mock"
 >
-  {
-    title && (
-      <figcaption
-        class="truncate border-b border-border bg-muted px-3 py-2 text-xs text-muted-foreground"
-        title={title}
-      >
-        {title}
-      </figcaption>
-    )
-  }
+  <DemoToolbar title={title} />
 
   <div class="sg-demo grid gap-px bg-border" data-stage data-theme="default" data-radius="default">
     <section class="min-w-0 bg-background p-4" data-pane="svelte">

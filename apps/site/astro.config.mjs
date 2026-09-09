@@ -26,9 +26,10 @@ export default defineConfig({
       title: 'sg-widgets',
       description: 'shadcn-compatible widgets for Flow Production Tracking, for React and Svelte.',
       customCss: ['./src/styles/global.css'],
-      // The demo control bar is site chrome, not page content: the frame renders it
-      // once, under the header, on the pages that carry a demo.
-      components: { PageFrame: './src/components/overrides/PageFrame.astro' },
+      // The palette and what the demos read are site-wide, so they sit in the header
+      // beside the search box and the theme select. Starlight's own header takes no
+      // props and offers no slot, so the override is a copy of it.
+      components: { Header: './src/components/overrides/Header.astro' },
       sidebar: [
         { label: 'Start', items: [{ label: 'Introduction', slug: 'start/introduction' }] },
         { label: 'Widgets', items: [{ autogenerate: { directory: 'widgets' } }] },
@@ -41,7 +42,7 @@ export default defineConfig({
   vite: {
     plugins: [tailwindcss()],
     // The monorepo keeps one `.env.local` at its root. The dev-token endpoint reads the
-    // script key from it, and `PUBLIC_FPT_SITE_URL` fills the toolbar's site field.
+    // script key from it, and `PUBLIC_FPT_SITE_URL` fills the Connect panel's site field.
     envDir: repoRoot,
     // Every demo is discovered at startup, so the optimizer bundles all dependencies once
     // instead of re-bundling on first visit and answering the in-flight requests with 504.

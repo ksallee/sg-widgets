@@ -6,6 +6,7 @@ Monorepo: `packages/core` (headless TS, npm), `packages/react` (shadcn registry,
 
 - Framework-neutral logic goes in core: operator vocabularies, value shapes, filter serialisation, status subtraction, display-name fallback, the Project status-field exception, client calls. UI packages never inline a ShotGrid quirk.
 - API behaviour comes from `~/dev/sg-groundtruth/corpus` (read `INDEX.md` first). Cite the probe or card in a comment when encoding a quirk. Do not guess REST behaviour.
+- Follow `docs/design-rules.md` (spacing scale, parents own gaps, motion, states). Reuse shadcn and community registry items before hand-rolling a control.
 - UI uses only shadcn tokens (`--background`, `--primary`, `--muted`, `--border`, `--ring`, `--radius`, ...). Status colours come from site data and layer on top.
 - Order per widget: core model + tests, then Svelte, then React. Both must exist before a widget is documented.
 - Never copy code from `~/Downloads/some_files`. Ideas only.

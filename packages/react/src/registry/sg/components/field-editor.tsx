@@ -137,7 +137,7 @@ export function FieldEditor({
     setMode('edit');
     // The control does not exist until the toggle has rendered.
     requestAnimationFrame(() => {
-      root.current?.querySelector<HTMLElement>('input, textarea, [data-slot="select-trigger"]')?.focus();
+      root.current?.querySelector<HTMLElement>('input, textarea, [data-slot="select-trigger"]')?.focus({ preventScroll: true });
     });
   };
 
@@ -145,7 +145,7 @@ export function FieldEditor({
     if (current === 'display') return;
     liveError.current = null;
     setMode('display');
-    requestAnimationFrame(() => display.current?.focus());
+    requestAnimationFrame(() => display.current?.focus({ preventScroll: true }));
   };
 
   const cancel = (): void => {

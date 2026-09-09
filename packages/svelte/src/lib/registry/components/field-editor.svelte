@@ -131,7 +131,7 @@
 		setMode('edit');
 		// The control does not exist until the toggle has rendered.
 		requestAnimationFrame(() => {
-			ref?.querySelector<HTMLElement>('input, textarea, [data-slot="select-trigger"]')?.focus();
+			ref?.querySelector<HTMLElement>('input, textarea, [data-slot="select-trigger"]')?.focus({ preventScroll: true });
 		});
 	}
 
@@ -139,7 +139,7 @@
 		if (mode === 'display') return;
 		liveError = null;
 		setMode('display');
-		requestAnimationFrame(() => display?.focus());
+		requestAnimationFrame(() => display?.focus({ preventScroll: true }));
 	}
 
 	function cancel(): void {

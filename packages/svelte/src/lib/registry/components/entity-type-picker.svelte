@@ -160,7 +160,10 @@
 			</span>
 		</Popover.Trigger>
 
+		<!-- Fixed: the Command list scrolls its highlighted row into view on mount, and an absolute wrapper
+		     still at the page origin would drag the page there with it. -->
 		<Popover.Content
+			strategy="fixed"
 			data-picker="entity-type"
 			onOpenAutoFocus={(e) => {
 				e.preventDefault();

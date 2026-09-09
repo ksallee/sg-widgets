@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { MockClient } from '../src/mock.js';
 import { createSgContext } from '../src/context.js';
-import type { EntityRow, EntityTypeInfo, HierarchyNode, SummarizeOptions, SummarizeResult, SearchOptions, SearchResult, SgClient, TextSearchRow } from '../src/client.js';
-import type { WireGroup } from '../src/filter.js';
+import type { EntityRow, EntityTypeInfo, HierarchyNode, HierarchyPath, SummarizeOptions, SummarizeResult, SearchOptions, SearchResult, SgClient, TextSearchRow } from '../src/client.js';
+import type { EntityRef, TextSearchFilter } from '../src/filter.js';
 import type { FieldSchema } from '../src/schema.js';
 import type { StatusRecord } from '../src/status.js';
 
@@ -25,7 +25,7 @@ function counting(inner: SgClient): { client: SgClient; calls: string[] } {
       calls.push(`search ${entityType}`);
       return inner.search(entityType, options);
     },
-    textSearch(text: string, entityTypes: Record<string, WireGroup | null>, page?: { size?: number; number?: number }): Promise<TextSearchRow[]> {
+    textSearch(text: string, entityTypes: Record<string, TextSearchFilter>, page?: { size?: number; number?: number }): Promise<TextSearchRow[]> {
       calls.push(`textSearch ${text}`);
       return inner.textSearch(text, entityTypes, page);
     },
@@ -36,6 +36,10 @@ function counting(inner: SgClient): { client: SgClient; calls: string[] } {
     update(entityType: string, id: number, patch: Record<string, unknown>): Promise<EntityRow> {
       calls.push(`update ${entityType} ${id}`);
       return inner.update(entityType, id, patch);
+    },
+    hierarchySearch(rootPath: string, entity: EntityRef): Promise<HierarchyPath[]> {
+      calls.push(`hierarchySearch ${rootPath} ${entity.type}:${entity.id}`);
+      return inner.hierarchySearch(rootPath, entity);
     },
     hierarchyExpand(path: string): Promise<HierarchyNode> {
       calls.push(`hierarchyExpand ${path}`);

@@ -14,6 +14,7 @@ import type {
   EntityRow,
   EntityTypeInfo,
   HierarchyNode,
+  HierarchyPath,
   SearchOptions,
   SearchResult,
   SgClient,
@@ -23,7 +24,8 @@ import type {
   TextSearchRow,
 } from './client.js';
 import { SgApiError } from './client.js';
-import type { EntityRef, WireCondition, WireGroup } from './filter.js';
+import type { EntityRef, TextSearchFilter, WireCondition, WireGroup } from './filter.js';
+import { toFilterArray } from './filter.js';
 import type { Operator } from './field-types.js';
 import { isFilterable, isLinkType, isNumericType, NEGATING_OPERATORS, operatorsFor } from './field-types.js';
 import type { FieldSchema } from './schema.js';
@@ -874,7 +876,7 @@ export class MockClient implements SgClient {
 
   async textSearch(
     text: string,
-    entityTypes: Record<string, WireGroup | null>,
+    entityTypes: Record<string, TextSearchFilter>,
     page?: { size?: number; number?: number },
   ): Promise<TextSearchRow[]> {
     await this.gate();
@@ -890,21 +892,20 @@ export class MockClient implements SgClient {
     const needles = words.map((w) => w.toLowerCase());
     const hits: Array<TextSearchRow & { sortName: string }> = [];
     for (const [type, filter] of Object.entries(entityTypes)) {
+      // The map's value is a filter array, `[]` for none, and the array form is `and` only.
+      const group: WireGroup = { logical_operator: 'and', conditions: toFilterArray(filter) };
       for (const row of this.fixtures.rows.get(type) ?? []) {
-        if (!this.matchGroup(row, type, filter)) continue;
+        if (!this.matchGroup(row, type, group)) continue;
         const name = displayNameOf(row.values, `#${row.id}`);
         // A row also matches on the name of the row it links to, the pair under `attributes.links`.
-        const linked = this.linkedName(row);
-        const haystack = `${name} ${linked}`.toLowerCase();
+        const links = this.linkedPair(row);
+        const haystack = `${name} ${links[1]}`.toLowerCase();
         if (!needles.every((w) => haystack.includes(w))) continue;
         hits.push({
           type,
           id: row.id,
           name,
-          // `_text_search` has no `fields` parameter: every row is name, links and status, whatever
-          // the type, so a client that needs a thumbnail or a project re-reads with `search`.
-          image: null,
-          projectId: null,
+          links,
           status: (row.values['sg_status_list'] ?? row.values['sg_status'] ?? null) as string | null,
           sortName: name,
         });
@@ -1042,8 +1043,19 @@ export class MockClient implements SgClient {
       hasChildren: hasChildren ?? children.length > 0,
       children,
     });
+    const tasksOf = (row: Row): Row[] =>
+      ((row.values['tasks'] as EntityRef[] | undefined) ?? [])
+        .map((t) => this.fixtures.index.get(`Task:${t.id}`))
+        .filter((t): t is Row => t !== undefined);
+    // A Shot or an Asset carries its Tasks, so it is a level rather than a leaf.
     const leaf = (row: Row, own: string): HierarchyNode =>
-      node(displayNameOf(row.values, `#${row.id}`), { kind: 'entity', value: { type: row.type, id: row.id } }, own, [], false);
+      node(
+        displayNameOf(row.values, `#${row.id}`),
+        { kind: 'entity', value: { type: row.type, id: row.id } },
+        own,
+        [],
+        tasksOf(row).length > 0,
+      );
     const rowsOf = (type: string): Row[] =>
       (this.fixtures.rows.get(type) ?? []).filter((r) => (r.values['project'] as EntityRef | null)?.id === projectId);
 
@@ -1090,8 +1102,107 @@ export class MockClient implements SgClient {
         shots.map((r) => leaf(r, `${path}/id/${r.id}`)),
       );
     }
-    // A leaf, or a path this fixture does not model: a node with nothing under it.
+    // A Shot or an Asset, which holds a Tasks folder, and the folder itself.
+    const owner = rest[rest.length - 2] === 'id' ? this.rowAtPath(rest) : null;
+    if (owner) {
+      const tasks = tasksOf(owner);
+      return node(
+        displayNameOf(owner.values, `#${owner.id}`),
+        { kind: 'entity', value: { type: owner.type, id: owner.id } },
+        path,
+        tasks.length > 0 ? [node('Tasks', { kind: 'entity_type', value: 'Task' }, `${path}/Task`, [], true)] : [],
+      );
+    }
+    if (rest[rest.length - 1] === 'Task') {
+      const holder = this.rowAtPath(rest.slice(0, -1));
+      const tasks = holder ? tasksOf(holder) : [];
+      return node(
+        'Tasks',
+        { kind: 'entity_type', value: 'Task' },
+        path,
+        tasks.map((t) => leaf(t, `${path}/id/${t.id}`)),
+      );
+    }
+    // A path this fixture does not model: a node with nothing under it.
     return node(path.split('/').pop() ?? '', { kind: 'empty', value: null }, path, [], false);
+  }
+
+  /**
+   * Where a row sits in the tree. The endpoint takes an entity and answers its
+   * breadcrumb; it does not match words (post_hierarchy_search).
+   */
+  async hierarchySearch(rootPath: string, entity: EntityRef): Promise<HierarchyPath[]> {
+    await this.gate();
+    const incremental = this.pathTo(entity);
+    const self = incremental[incremental.length - 1];
+    if (self === undefined || !self.startsWith(rootPath)) return [];
+    const labels = incremental.slice(1, -1).map((p) => this.labelAtPath(p));
+    const row = this.fixtures.index.get(`${entity.type}:${entity.id}`);
+    return [
+      {
+        label: row ? displayNameOf(row.values, `#${entity.id}`) : `${entity.type} #${entity.id}`,
+        // The project is not in `path_label`, and the row itself is not either.
+        pathLabel: labels.join(' > '),
+        incrementalPath: incremental,
+        ref: { type: entity.type, id: entity.id },
+        projectId: row ? ((row.values['project'] as EntityRef | undefined)?.id ?? row.id) : null,
+      },
+    ];
+  }
+
+  /** What a level of the tree is called, without opening it. */
+  private labelAtPath(path: string): string {
+    const rest = path.split('/').filter(Boolean).slice(2);
+    const last = rest[rest.length - 1];
+    if (last === 'Asset') return 'Assets';
+    if (last === 'Shot') return 'Shots';
+    if (last === 'Task') return 'Tasks';
+    if (rest[rest.length - 2] === 'Sequence') {
+      const sequence = this.fixtures.index.get(`Sequence:${Number(last)}`);
+      return sequence ? displayNameOf(sequence.values, `#${sequence.id}`) : '';
+    }
+    const row = this.rowAtPath(rest);
+    return row ? displayNameOf(row.values, `#${row.id}`) : '';
+  }
+
+  /** The row a `.../id/<n>` path segment names, from the type the path last named. */
+  private rowAtPath(rest: string[]): Row | null {
+    const id = Number(rest[rest.length - 1]);
+    if (!Number.isInteger(id)) return null;
+    const type = rest.includes('Task') ? 'Task' : rest[0] === 'Asset' ? 'Asset' : 'Shot';
+    return this.fixtures.index.get(`${type}:${id}`) ?? null;
+  }
+
+  /** The breadcrumb to a row, root first, the row itself last. Empty when it is not in the tree. */
+  private pathTo(entity: EntityRef): string[] {
+    const row = this.fixtures.index.get(`${entity.type}:${entity.id}`);
+    if (!row) return [];
+    if (entity.type === 'Project') return [`/Project/${entity.id}`];
+    const projectId = (row.values['project'] as EntityRef | undefined)?.id;
+    if (projectId === undefined) return [];
+    const root = `/Project/${projectId}`;
+    switch (entity.type) {
+      case 'Sequence':
+        return [root, `${root}/Shot`, `${root}/Shot/sg_sequence/Sequence/${entity.id}`];
+      case 'Asset':
+        return [root, `${root}/Asset`, `${root}/Asset/id/${entity.id}`];
+      case 'Shot': {
+        const sequence = row.values['sg_sequence'] as EntityRef | null;
+        if (!sequence) return [];
+        const above = this.pathTo({ type: 'Sequence', id: sequence.id });
+        return [...above, `${above[above.length - 1]}/id/${entity.id}`];
+      }
+      case 'Task': {
+        const owner = row.values['entity'] as EntityRef | null;
+        if (!owner) return [];
+        const above = this.pathTo(owner);
+        if (above.length === 0) return [];
+        const ownerPath = above[above.length - 1] as string;
+        return [...above, `${ownerPath}/Task`, `${ownerPath}/Task/id/${entity.id}`];
+      }
+      default:
+        return [];
+    }
   }
 
   async statuses(): Promise<StatusRecord[]> {
@@ -1233,16 +1344,17 @@ export class MockClient implements SgClient {
     return field.dataType;
   }
 
-  private linkedName(row: Row): string {
+  private linkedPair(row: Row): [string, string] {
     // `attributes.links` is the linked row's type and name, `["", ""]` when it links to nothing.
     for (const fieldName of ['entity', 'sg_sequence', 'project']) {
       const value = row.values[fieldName];
       if (value && !Array.isArray(value)) {
-        const name = this.displayNameOfRef(value as EntityRef);
-        if (name !== undefined) return name;
+        const entityRef = value as EntityRef;
+        const name = this.displayNameOfRef(entityRef);
+        if (name !== undefined) return [entityRef.type, name];
       }
     }
-    return '';
+    return ['', ''];
   }
 
   /* ---------------------------------------------------------------------- */

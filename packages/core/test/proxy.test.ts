@@ -62,6 +62,19 @@ describe('round trip', () => {
     expect(rows).toEqual(await direct.textSearch('sh', { Shot: null }, { size: 3 }));
   });
 
+  it('carries both hierarchy calls', async () => {
+    const direct = new MockClient();
+    const client = proxy(new MockClient());
+    const entity = { type: 'Shot', id: 862 };
+    expect(await client.hierarchySearch('/Project/70', entity)).toEqual(await direct.hierarchySearch('/Project/70', entity));
+    expect(await client.hierarchyExpand('/Project/70')).toEqual(await direct.hierarchyExpand('/Project/70'));
+  });
+
+  it('rejects a hierarchy search with no entity, before it reaches the client', async () => {
+    const client = proxy(new MockClient());
+    await expect(client.hierarchySearch('/Project/70', null as never)).rejects.toThrow(/must be a \{type, id\} object/);
+  });
+
   it('sends the headers the caller supplies, per request', async () => {
     const inner = new MockClient();
     const { fetch, seen } = wired(inner);

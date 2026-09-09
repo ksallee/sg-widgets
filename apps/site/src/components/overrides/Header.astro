@@ -92,10 +92,11 @@ const shouldRenderSearch =
             calc(var(--__sidebar-width) + max(0rem, var(--__main-column-fr) - var(--sl-nav-gap))),
             auto
           )
-          /* 2 (search box): all free space that is available. */
-          1fr
+          /* 2 (search box): the free space, capped so the controls on the right keep their labels. */
+          minmax(12rem, 28rem)
           /* 3 (right items): use the space that these need. */
           auto;
+        justify-content: space-between;
         align-content: center;
       }
     }

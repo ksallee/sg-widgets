@@ -5,16 +5,16 @@
 
 	/** The control ladder of `docs/design-rules.md`: 8 / 9 / 10. */
 	const BOX: Record<DateTimeEditorSize, string> = {
-	sm: 'h-8 px-2',
-	md: 'h-9 px-3',
-	lg: 'h-10 px-3'
+		sm: 'h-8 px-2',
+		md: 'h-9 px-3',
+		lg: 'h-10 px-3'
 	};
 
-/** The calendar glyph grows one step at `lg`, as the status picker's does. */
-const GLYPH: Record<DateTimeEditorSize, string> = {
-	sm: 'size-4',
-	md: 'size-4',
-	lg: 'size-5'
+	/** The calendar glyph grows one step at `lg`, as the status picker's does. */
+	const GLYPH: Record<DateTimeEditorSize, string> = {
+		sm: 'size-4',
+		md: 'size-4',
+		lg: 'size-5'
 	};
 
 	const DATE_ONLY = /^(\d{4})-(\d{2})-(\d{2})$/;

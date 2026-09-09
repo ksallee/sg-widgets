@@ -229,10 +229,10 @@ describe('imageState', () => {
 
 describe('initialsOf', () => {
   it('takes the first and last word', () => {
-    expect(initialsOf('Kevin Sallee')).toBe('KS');
-    expect(initialsOf('Kevin van der Meer')).toBe('KM');
+    expect(initialsOf('Ada Lovelace')).toBe('AL');
+    expect(initialsOf('Anna van der Meer')).toBe('AM');
     expect(initialsOf('Madonna')).toBe('M');
-    expect(initialsOf('k.sallee')).toBe('KS');
+    expect(initialsOf('j.doe')).toBe('JD');
     expect(initialsOf('  spaced   out  ')).toBe('SO');
     expect(initialsOf('')).toBe('');
     expect(initialsOf(null)).toBe('');

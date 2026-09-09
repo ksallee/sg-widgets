@@ -21,7 +21,7 @@ The third path is a shared schema cache service with two operations: fetch the f
 **Shared helper contracts** (referenced, not included in the folder — their behaviour must be reproduced):
 
 - A display-name helper that, given a flattened entity, returns the best human label.
-- A tokenized name filter builder: takes a raw query string, splits on whitespace, and produces a ShotGrid filter that requires *every* token to appear in the name field (so "pub ke" matches "Published Kevin"). A second variant takes a query plus a list of field names and produces the same all-tokens-must-match semantics but OR'd across name/login/email.
+- A tokenized name filter builder: takes a raw query string, splits on whitespace, and produces a ShotGrid filter that requires *every* token to appear in the name field (so "pub an" matches "Published Anna"). A second variant takes a query plus a list of field names and produces the same all-tokens-must-match semantics but OR'd across name/login/email.
 - A filter merge helper that combines the generated name filter with caller-supplied extra filter triples into one filter expression.
 - A highlight segmenter that, given a label and the current query, returns an ordered list of text runs each flagged as highlighted or not; the UI renders highlighted runs in bold.
 - Schema path helpers: one resolves a dotted field path into a friendly arrow-joined display path (asynchronously, pulling each intermediate entity type's schema through the cache), the other resolves a single dotted path to one display name.

@@ -339,8 +339,8 @@ export const COLOR_SENTINEL = 'pipeline_step';
 
 /**
  * Initials for an avatar fallback, from a person's display name. Takes the first
- * letter of the first and last word, so "Kevin Sallee" is KS and "Kevin van der
- * Meer" is KM. A single word gives one letter; a `login` such as `k.sallee` is
+ * letter of the first and last word, so "Ada Lovelace" is AL and "Anna van der
+ * Meer" is AM. A single word gives one letter; a `login` such as `j.doe` is
  * split on its punctuation too.
  */
 /**

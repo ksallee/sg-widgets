@@ -73,9 +73,9 @@ export default function UserAvatarDemo() {
           <h4 className={label}>Initials fallback</h4>
           <div className={row}>
             <UserAvatar name="Ada Lovelace" />
-            <UserAvatar name="Kevin van der Meer" />
+            <UserAvatar name="Anna van der Meer" />
             <UserAvatar name="Madonna" />
-            <UserAvatar name="k.sallee" />
+            <UserAvatar name="j.doe" />
             <UserAvatar name="" />
           </div>
         </section>
@@ -84,9 +84,9 @@ export default function UserAvatarDemo() {
           <h4 className={label}>Initials, tinted from the name</h4>
           <div className={row}>
             <UserAvatar name="Ada Lovelace" color="auto" />
-            <UserAvatar name="Kevin van der Meer" color="auto" />
+            <UserAvatar name="Anna van der Meer" color="auto" />
             <UserAvatar name="Madonna" color="auto" />
-            <UserAvatar name="k.sallee" color="auto" />
+            <UserAvatar name="j.doe" color="auto" />
             <UserAvatar name="Grace Hopper" color="auto" />
             <UserAvatar name="Alan Turing" color="auto" />
             <UserAvatar name="Bo Chen" color="auto" inactive />

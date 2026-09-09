@@ -351,6 +351,115 @@
           "type": "registry:component"
         }
       ]
+    },
+    {
+      "name": "filter-editor",
+      "type": "registry:component",
+      "title": "Filter Editor",
+      "description": "A Flow Production Tracking filter tree edited as rows and nested groups, with the operator menu and the value editor chosen by the field data type.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte"
+      ],
+      "registryDependencies": [
+        "badge",
+        "button",
+        "checkbox",
+        "command",
+        "input",
+        "popover",
+        "select",
+        "toggle-group"
+      ],
+      "files": [
+        {
+          "path": "src/lib/registry/components/filter-editor.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "filter-dialog",
+      "type": "registry:component",
+      "title": "Filter Dialog",
+      "description": "The launcher pair from the legacy filter panel: Add filters, Edit filters with a count, and a clear control, opening the editor in a dialog.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte"
+      ],
+      "registryDependencies": [
+        "badge",
+        "button",
+        "checkbox",
+        "command",
+        "input",
+        "popover",
+        "select",
+        "toggle-group",
+        "dialog",
+        "local:filter-editor"
+      ],
+      "files": [
+        {
+          "path": "src/lib/registry/components/filter-dialog.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "filter-bar",
+      "type": "registry:component",
+      "title": "Filter Bar",
+      "description": "Quick facet pills over one entity type, each listing a field values with counts and writing an in condition into a bound filter tree.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte"
+      ],
+      "registryDependencies": [
+        "badge",
+        "button",
+        "checkbox",
+        "command",
+        "input",
+        "popover",
+        "select",
+        "toggle-group",
+        "dialog",
+        "local:filter-dialog"
+      ],
+      "files": [
+        {
+          "path": "src/lib/registry/components/filter-bar.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "sort-picker",
+      "type": "registry:component",
+      "title": "Sort Picker",
+      "description": "The ordered sort keys of a query, with add, remove and reorder, emitting the sort string the REST API takes.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte"
+      ],
+      "registryDependencies": [
+        "badge",
+        "button",
+        "checkbox",
+        "command",
+        "input",
+        "popover",
+        "select",
+        "toggle-group",
+        "separator"
+      ],
+      "files": [
+        {
+          "path": "src/lib/registry/components/sort-picker.svelte",
+          "type": "registry:component"
+        }
+      ]
     }
   ]
 }

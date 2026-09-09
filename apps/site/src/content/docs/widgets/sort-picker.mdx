@@ -1,0 +1,65 @@
+---
+title: SortPicker
+description: The ordered sort keys of a query, and the sort string they serialise to.
+---
+
+import Demo from '../../../components/Demo.astro';
+
+An ordered list of sort keys. Each is a field and a direction; the list serialises to the `sort`
+string `_search` takes.
+
+## Install
+
+```sh
+pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/sort-picker.json
+pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/sort-picker.json
+```
+
+<Demo name="sort-picker" title="SortPicker: two keys over Shot, with the rows they order" />
+
+## Props
+
+| prop | type | default | meaning |
+|---|---|---|---|
+| `entityType` | `string` | required | Type the field list is read on. |
+| `client` | `SgClient` | required | Reads the schema. |
+| `schema` | `SchemaService` | one built from `client` | Share one across a page. |
+| `value` | `SortKey[]` | `[]` | The keys, in order. Two-way in Svelte through `bind:value`. |
+| `hidePaths` | `string[]` | `[]` | Paths kept out of the field list. A pattern hides itself and everything under it. |
+| `disabled` | `boolean` | `false` | Blocks the trigger. |
+| `class` / `className` | `string` | — | Merged after the widget's own classes. |
+
+## Events
+
+| event | React | Svelte | payload |
+|---|---|---|---|
+| change | `onChange` | `onChange`, `bind:value` | The keys and the `sort` string, on every edit. |
+
+## Slots
+
+None.
+
+## Keyboard
+
+| key | does |
+|---|---|
+| `Enter`, `Space` | Opens the list, and toggles a direction or a move control inside it. |
+| `Tab` | Moves through each key's direction, move and remove controls, then to the field search. |
+| `Arrow` keys | Move the cursor in the field list, and between ascending and descending. |
+| `Escape` | Closes the list. |
+
+## API behaviour
+
+`sort` is one string: field names comma-joined, a leading `-` marking a descending key, as
+`sort=sg_status_list,-id` (026_result_order). The array-of-objects spelling, a leading `+` and a
+trailing ` desc` are each a 400. With no sort, rows come back id ascending, and id ascending is the
+implicit tiebreak whether or not it is in the list. Dotted paths sort.
+
+A sort naming a field that does not exist is a silent 200 in default order, where the same name in a
+filter is a 400, so the field list is built from the schema. Sorting a `uuid` or a `pivot_column`
+field is a 400 and sorting a `summary`, `url`, `password` or `serializable` field is a silent no-op;
+none of them appear in the list. A `calculated` field sorts correctly even though it cannot be
+filtered.
+
+`in` does not preserve the order of the ids it was given: rows come back id ascending regardless, so
+an explicit id order has to be restored on the client.

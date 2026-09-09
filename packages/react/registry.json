@@ -427,6 +427,135 @@
           "type": "registry:component"
         }
       ]
+    },
+    {
+      "name": "filter-editor",
+      "type": "registry:component",
+      "title": "Filter Editor",
+      "description": "A Flow Production Tracking filter tree edited as rows and nested groups, with the operator menu and the value editor chosen by the field data type.",
+      "categories": [
+        "flow-production-tracking",
+        "filter"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "badge",
+        "button",
+        "checkbox",
+        "command",
+        "input",
+        "popover",
+        "select",
+        "toggle-group"
+      ],
+      "docs": "Takes a FilterGroup and emits one on every edit. toApi3Hash turns it into the body _search takes.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/filter-editor.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "filter-dialog",
+      "type": "registry:component",
+      "title": "Filter Dialog",
+      "description": "The launcher pair from the legacy filter panel: Add filters, Edit filters with a count, and a clear control, opening the editor in a dialog.",
+      "categories": [
+        "flow-production-tracking",
+        "filter"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "badge",
+        "button",
+        "checkbox",
+        "command",
+        "input",
+        "popover",
+        "select",
+        "toggle-group",
+        "dialog",
+        "https://sg-widgets.dev/r/react/filter-editor.json"
+      ],
+      "docs": "Edits are staged. Only Apply emits; Cancel drops them and Clear all emits an empty filter.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/filter-dialog.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "filter-bar",
+      "type": "registry:component",
+      "title": "Filter Bar",
+      "description": "Quick facet pills over one entity type, each listing a field values with counts and writing an in condition into a bound filter tree.",
+      "categories": [
+        "flow-production-tracking",
+        "filter"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "badge",
+        "button",
+        "checkbox",
+        "command",
+        "input",
+        "popover",
+        "select",
+        "toggle-group",
+        "dialog",
+        "https://sg-widgets.dev/r/react/filter-dialog.json"
+      ],
+      "docs": "Pass counts to compute the numbers with a _summarize grouping call; without it the bar tallies one page of rows.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/filter-bar.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "sort-picker",
+      "type": "registry:component",
+      "title": "Sort Picker",
+      "description": "The ordered sort keys of a query, with add, remove and reorder, emitting the sort string the REST API takes.",
+      "categories": [
+        "flow-production-tracking",
+        "filter"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "badge",
+        "button",
+        "checkbox",
+        "command",
+        "input",
+        "popover",
+        "select",
+        "toggle-group",
+        "separator"
+      ],
+      "docs": "Emits both the keys and the comma-joined sort string, a leading minus marking a descending key.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/sort-picker.tsx",
+          "type": "registry:component"
+        }
+      ]
     }
   ]
 }

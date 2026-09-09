@@ -56,8 +56,8 @@ The trade-off is the same in both: a dependency is addressed by URL, so a regist
 different host resolves its own items only if that host is the one baked in. The Svelte form is
 relative and therefore host-independent; React has no relative option that reaches the network.
 
-Anything from the upstream registries is referenced by its plain name (`"button"`) in Svelte and
-by `"@shadcn/button"` in React.
+Anything from the upstream registries is referenced by its plain name (`"button"`) in both. React
+also resolves the `"@shadcn/button"` form, but plain names are what every item here uses.
 
 ## 4. npm dependencies
 

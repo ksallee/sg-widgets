@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import type { SchemaService, SgClient, SortKey } from '@sg-widgets/core';
 import { createSchemaService, friendlyFieldPath, isSortable, toSortString } from '@sg-widgets/core';
 import {
@@ -7,6 +7,7 @@ import {
   ArrowUpIcon,
   ChevronDownIcon,
   ChevronUpIcon,
+  GripVerticalIcon,
   XIcon,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -16,6 +17,7 @@ import { Separator } from '@/components/ui/separator';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { cn } from '@/lib/utils';
 import { FieldPicker } from '@/registry/sg/components/field-picker';
+import { useSortable } from '@/registry/sg/components/sortable';
 
 export interface SortPickerProps {
   entityType: string;
@@ -95,6 +97,26 @@ export function SortPicker({
     commit(next);
   }
 
+  const { ref: sortableRef, dragging, announcement } = useSortable<HTMLDivElement>({
+    ids: chosen,
+    onOrderChange: (order) =>
+      commit(order.map((field) => value.find((k) => k.field === field) as SortKey)),
+    label: nameOf,
+    disabled,
+  });
+
+  function onKeyKeys(event: KeyboardEvent<HTMLButtonElement>, index: number) {
+    // The sortable owns the arrow keys while it carries a row.
+    if (disabled || dragging !== null || !event.altKey) return;
+    if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      move(index, -1);
+    } else if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      move(index, 1);
+    }
+  }
+
   return (
     <div className={cn('inline-flex min-w-0 items-center', className)} data-slot="sort-picker">
       <Popover>
@@ -114,14 +136,31 @@ export function SortPicker({
           ) : null}
         </PopoverTrigger>
         <PopoverContent className="flex w-96 flex-col gap-3 p-3" align="start">
-          <div className="flex min-w-0 flex-col gap-2" data-slot="sort-keys">
+          <div className="flex min-w-0 flex-col gap-2" data-slot="sort-keys" ref={sortableRef}>
             {value.map((key, i) => (
               <div
                 key={key.field}
-                className="flex min-w-0 items-center gap-2"
+                className={cn(
+                  'bg-popover flex min-w-0 items-center gap-2 rounded-md',
+                  'data-[dragging]:z-10 data-[dragging]:opacity-90 data-[dragging]:shadow-md',
+                  'data-[drop-target]:bg-accent/40',
+                )}
                 data-slot="sort-key"
+                data-sortable-id={key.field}
                 data-field={key.field}
               >
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  data-slot="sort-grip"
+                  data-sortable-handle="true"
+                  onKeyDown={(event) => onKeyKeys(event, i)}
+                  aria-label={`Reorder ${nameOf(key.field)}`}
+                  title="Drag to reorder, or press Space and use the arrow keys"
+                  className="cursor-grab touch-none active:cursor-grabbing"
+                >
+                  <GripVerticalIcon />
+                </Button>
                 <span className="min-w-0 flex-1 truncate text-sm" title={key.field}>
                   {nameOf(key.field)}
                 </span>
@@ -180,6 +219,15 @@ export function SortPicker({
                 No sort. Rows come back id ascending.
               </p>
             ) : null}
+          </div>
+          <div
+            data-slot="sort-live-region"
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+            className="sr-only"
+          >
+            {announcement}
           </div>
           <Separator />
           <FieldPicker

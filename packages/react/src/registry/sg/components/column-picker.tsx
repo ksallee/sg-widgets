@@ -23,6 +23,7 @@ import {
   FileText,
   Fingerprint,
   Globe,
+  GripVertical,
   Hash,
   Image,
   KeyRound,
@@ -56,6 +57,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import { useSortable } from '@/registry/sg/components/sortable';
 
 export type ColumnPickerSize = 'sm' | 'md' | 'lg';
 
@@ -281,6 +283,13 @@ export function ColumnPicker({
     onValueChange?.(moveFieldPath(value, from, to));
   }
 
+  const { ref: sortableRef, dragging, announcement } = useSortable<HTMLOListElement>({
+    ids: value,
+    onOrderChange: (next) => onValueChange?.(next),
+    label: (path) => labelOf(path) ?? path,
+    disabled: !editable,
+  });
+
   /** Every hop clears the search box; nothing is remounted, so focus stays in the input. */
   function descend(field: FieldOption, through: string): void {
     setHops([...hops, { name: field.name, displayName: field.displayName, through }]);
@@ -341,7 +350,8 @@ export function ColumnPicker({
   }
 
   function onRowKeys(event: KeyboardEvent<HTMLButtonElement>, index: number): void {
-    if (!editable) return;
+    // The sortable owns the arrow keys while it carries a row.
+    if (!editable || dragging !== null) return;
     if (event.altKey && event.key === 'ArrowUp') {
       event.preventDefault();
       move(index, index - 1);
@@ -574,7 +584,9 @@ export function ColumnPicker({
               {emptyLabel}
             </p>
           ) : (
+            <>
             <ol
+              ref={sortableRef}
               data-slot="column-picker-list"
               className="flex max-h-72 min-w-0 flex-col gap-2 overflow-y-auto"
             >
@@ -582,10 +594,30 @@ export function ColumnPicker({
                 <li
                   key={path}
                   data-slot="column-picker-column"
+                  data-sortable-id={path}
                   data-index={index}
                   data-path={path}
-                  className={cn('flex min-w-0 items-center gap-2 rounded-md px-2 py-1.5', ROW[size])}
+                  className={cn(
+                    'bg-background flex min-w-0 items-center gap-2 rounded-md px-2 py-1.5',
+                    'data-[dragging]:z-10 data-[dragging]:opacity-90 data-[dragging]:shadow-md',
+                    'data-[drop-target]:bg-accent/40',
+                    ROW[size],
+                  )}
                 >
+                  {editable ? (
+                    <Button
+                      variant="ghost"
+                      size={ACTION[size]}
+                      data-slot="column-picker-grip"
+                      data-sortable-handle="true"
+                      onKeyDown={(event) => onRowKeys(event, index)}
+                      aria-label={`Reorder ${labelOf(path) ?? path}`}
+                      title="Drag to reorder, or press Space and use the arrow keys"
+                      className="cursor-grab touch-none active:cursor-grabbing"
+                    >
+                      <GripVertical aria-hidden="true" />
+                    </Button>
+                  ) : null}
                   {labelOf(path) === undefined ? (
                     <Skeleton className="h-4 w-32" />
                   ) : (
@@ -635,6 +667,16 @@ export function ColumnPicker({
                 </li>
               ))}
             </ol>
+            <div
+              data-slot="column-picker-live-region"
+              role="status"
+              aria-live="polite"
+              aria-atomic="true"
+              className="sr-only"
+            >
+              {announcement}
+            </div>
+            </>
           )}
 
           {compact && !readOnly ? (

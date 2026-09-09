@@ -168,6 +168,22 @@
       ]
     },
     {
+      "name": "sortable",
+      "type": "registry:component",
+      "title": "Sortable",
+      "description": "Pointer and keyboard reordering for one list, as an attachment: drag handles, live-region announcements and transform-only motion.",
+      "dependencies": [
+        "@sg-widgets/core"
+      ],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "src/lib/registry/components/sortable.svelte.ts",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
       "name": "column-picker",
       "type": "registry:component",
       "title": "Column Picker",
@@ -181,7 +197,8 @@
         "checkbox",
         "command",
         "popover",
-        "skeleton"
+        "skeleton",
+        "local:sortable"
       ],
       "files": [
         {
@@ -478,7 +495,8 @@
         "popover",
         "separator",
         "toggle-group",
-        "local:field-picker"
+        "local:field-picker",
+        "local:sortable"
       ],
       "files": [
         {

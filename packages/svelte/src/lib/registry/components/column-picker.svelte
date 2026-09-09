@@ -38,6 +38,7 @@
 	import FileText from '@lucide/svelte/icons/file-text';
 	import Fingerprint from '@lucide/svelte/icons/fingerprint';
 	import Globe from '@lucide/svelte/icons/globe';
+	import GripVertical from '@lucide/svelte/icons/grip-vertical';
 	import Hash from '@lucide/svelte/icons/hash';
 	import Image from '@lucide/svelte/icons/image';
 	import KeyRound from '@lucide/svelte/icons/key-round';
@@ -64,6 +65,7 @@
 	import * as Popover from '$lib/components/ui/popover/index.js';
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
 	import { cn } from '$lib/utils.js';
+	import { createSortable } from '$lib/registry/components/sortable.svelte.js';
 
 	type Props = {
 		/** Reads the schema. Build it once per app with `createSchemaService`. */
@@ -273,6 +275,13 @@
 		emit(moveFieldPath(value, from, to));
 	}
 
+	const sortable = createSortable({
+		ids: () => value,
+		onOrderChange: (next) => emit(next),
+		label: (path) => labelOf(path) ?? path,
+		disabled: () => !editable
+	});
+
 	/** Every hop clears the search box; nothing is remounted, so focus stays in the input. */
 	function descend(field: FieldOption, through: string): void {
 		hops = [...hops, { name: field.name, displayName: field.displayName, through }];
@@ -333,7 +342,8 @@
 	}
 
 	function onRowKeys(event: KeyboardEvent, index: number): void {
-		if (!editable) return;
+		// The sortable owns the arrow keys while it carries a row.
+		if (!editable || sortable.dragging !== null) return;
 		if (event.altKey && event.key === 'ArrowUp') {
 			event.preventDefault();
 			move(index, index - 1);
@@ -562,14 +572,35 @@
 				<ol
 					data-slot="column-picker-list"
 					class="flex max-h-72 min-w-0 flex-col gap-2 overflow-y-auto"
+					{@attach sortable.attach}
 				>
 					{#each value as path, index (path)}
 						<li
 							data-slot="column-picker-column"
+							data-sortable-id={path}
 							data-index={index}
 							data-path={path}
-							class={cn('flex min-w-0 items-center gap-2 rounded-md px-2 py-1.5', ROW[size])}
+							class={cn(
+								'bg-background flex min-w-0 items-center gap-2 rounded-md px-2 py-1.5',
+								'data-[dragging]:z-10 data-[dragging]:opacity-90 data-[dragging]:shadow-md',
+								'data-[drop-target]:bg-accent/40',
+								ROW[size]
+							)}
 						>
+							{#if editable}
+								<Button
+									variant="ghost"
+									size={ACTION[size]}
+									data-slot="column-picker-grip"
+									data-sortable-handle="true"
+									onkeydown={(event) => onRowKeys(event, index)}
+									aria-label={`Reorder ${labelOf(path) ?? path}`}
+									title="Drag to reorder, or press Space and use the arrow keys"
+									class="cursor-grab touch-none active:cursor-grabbing"
+								>
+									<GripVertical aria-hidden="true" />
+								</Button>
+							{/if}
 							{#if labelOf(path) === undefined}
 								<Skeleton class="h-4 w-32" />
 							{:else}
@@ -615,6 +646,15 @@
 						</li>
 					{/each}
 				</ol>
+				<div
+					data-slot="column-picker-live-region"
+					role="status"
+					aria-live="polite"
+					aria-atomic="true"
+					class="sr-only"
+				>
+					{sortable.announcement}
+				</div>
 			{/if}
 
 			{#if compact && !readonly}

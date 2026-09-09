@@ -541,6 +541,8 @@ export function EntityPicker({
         disabled={disabled}
         value={selectedKey || null}
         onValueChange={(next) => choose(next ?? '')}
+        // The chip shows the selection; the input never carries the item's key as text.
+        itemToStringLabel={() => ''}
         inputValue={query}
         onInputValueChange={(next, details) => {
           if (details.reason === 'item-press') return;

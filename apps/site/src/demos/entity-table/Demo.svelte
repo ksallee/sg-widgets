@@ -1,9 +1,17 @@
 <script lang="ts">
-	import type { CollectionColumn, EntityRef, FilterGroup, StatusRecord } from '@sg-widgets/core';
-	import { condition, createEntitySource, emptyFilter, resolveColumns } from '@sg-widgets/core';
+	import type { CollectionColumn, EntityRef, FilterGroup, SortKey, StatusRecord } from '@sg-widgets/core';
+	import {
+		condition,
+		createEntitySource,
+		emptyFilter,
+		group,
+		resolveColumns,
+		toSortSpecs
+	} from '@sg-widgets/core';
 	import ColumnPicker from '$lib/registry/components/column-picker.svelte';
 	import EntityTable from '$lib/registry/components/entity-table.svelte';
-	import FilterDialog from '$lib/registry/components/filter-dialog.svelte';
+	import FilterBar from '$lib/registry/components/filter-bar.svelte';
+	import SortPicker from '$lib/registry/components/sort-picker.svelte';
 	import { createDemoContext } from '../_shared/client';
 	import { setDemoContext } from '../_shared/svelte';
 
@@ -19,26 +27,32 @@
 	};
 	const PATHS = Object.keys(WIDTHS);
 	const SHOWN = ['code', 'entity', 'sg_status_list', 'image', 'description', 'user'];
+	const FACETS = ['sg_status_list'];
 
 	const context = createDemoContext({ counts: { versions: 320 } });
 	setDemoContext(context);
+
+	// The mock's rows are one project's already; a real site's are not.
+	const scope = context.live
+		? group('and', [condition('project', 'is', { type: 'Project', id: context.projectId })])
+		: null;
 
 	const source = createEntitySource({
 		client: context.client,
 		entityType: 'Version',
 		fields: PATHS,
-		// The mock's rows are one project's already; a real site's are not.
-		filters: context.live ? condition('project', 'is', { type: 'Project', id: context.projectId }) : null,
+		filters: scope,
 		mode: 'pages',
 		pageSize: 25
 	});
 
 	let columns = $state<CollectionColumn[]>([]);
 	let filter = $state<FilterGroup>(emptyFilter());
+	let sortKeys = $state<SortKey[]>([]);
+	let selected = $state<EntityRef[]>([]);
 	let picking = $state(false);
 	let grouped = $state(false);
 	let compact = $state(false);
-	let selected = $state<EntityRef[]>([]);
 
 	async function load(): Promise<{ statuses: Record<string, StatusRecord> }> {
 		const [resolved, table] = await Promise.all([
@@ -86,21 +100,24 @@
 		<EntityTable
 			{source}
 			bind:columns
+			bind:selection={selected}
+			filters={filter}
+			sort={toSortSpecs(sortKeys)}
 			{statuses}
 			{context}
 			selectable
 			editable
 			density={compact ? 'compact' : 'default'}
 			groupBy={grouped ? 'sg_status_list' : null}
-			onSelectionChange={(rows) => (selected = rows)}
 		>
 			{#snippet toolbarStart()}
+				<FilterBar entityType="Version" {context} facets={FACETS} baseFilter={scope} size="sm" bind:value={filter} />
 				<div class="flex flex-col gap-2">
 					<button type="button" class={toggle} aria-pressed={picking} onclick={() => (picking = !picking)}>
 						Columns
 					</button>
 					{#if picking}
-						<div class="w-64">
+						<div class="w-56">
 							<ColumnPicker
 								{context}
 								entityType="Version"
@@ -116,15 +133,7 @@
 				</div>
 			{/snippet}
 			{#snippet toolbarEnd()}
-				<FilterDialog
-					entityType="Version"
-					{context}
-					value={filter}
-					onChange={(next) => {
-						filter = next;
-						void source.setFilters(next);
-					}}
-				/>
+				<SortPicker entityType="Version" {context} size="sm" bind:value={sortKeys} />
 			{/snippet}
 		</EntityTable>
 	</div>

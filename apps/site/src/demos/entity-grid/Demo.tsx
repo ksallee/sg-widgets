@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { CollectionColumn, EntityRef, EntityRow } from '@sg-widgets/core';
-import { condition, createEntitySource, resolveColumns } from '@sg-widgets/core';
+import { cellValue, condition, createEntitySource, displayNameOf, resolveColumns } from '@sg-widgets/core';
 import { EntityGrid } from '@/registry/sg/components/entity-grid';
+import { Thumbnail } from '@/registry/sg/components/thumbnail';
 import { createDemoContext } from '../_shared/client';
 
 const ARTIST = 'user';
@@ -15,6 +16,9 @@ const toggle =
   'aria-pressed:bg-accent aria-pressed:text-accent-foreground aria-pressed:font-medium';
 const group = 'flex flex-col gap-2';
 const label = 'text-muted-foreground text-xs font-medium tracking-wide uppercase';
+
+/** The demo holds every third row back, to show what a disabled row does. */
+const isRowDisabled = (row: EntityRow): boolean => row.id % 3 === 0;
 
 export default function EntityGridDemo() {
   const context = useMemo(() => createDemoContext(), []);
@@ -104,6 +108,40 @@ export default function EntityGridDemo() {
           secondaryField={artist}
           size="sm"
           maxHeight="18rem"
+        />
+      </section>
+
+      <section className={group} data-testid="grid-disabled">
+        <h4 className={label}>Every third row disabled</h4>
+        <EntityGrid
+          source={sources.short}
+          context={context}
+          secondaryField={artist}
+          size="sm"
+          selectable
+          maxHeight="18rem"
+          isRowDisabled={isRowDisabled}
+        />
+      </section>
+
+      <section className={group} data-testid="grid-card">
+        <h4 className={label}>A card of the caller&rsquo;s own</h4>
+        <EntityGrid
+          source={sources.short}
+          context={context}
+          size="sm"
+          maxHeight="18rem"
+          card={({ row }) => (
+            <article className="border-border bg-card hover:bg-accent/50 flex h-full flex-col gap-2 rounded-md border p-3 transition-colors duration-150">
+              <Thumbnail src={cellValue(row, 'image') as string | null} alt="" size="lg" className="w-full" />
+              <span className="truncate text-sm font-medium" title={displayNameOf(row.attributes, String(row.id))}>
+                {displayNameOf(row.attributes, String(row.id))}
+              </span>
+              <span className="text-muted-foreground font-mono text-xs tabular-nums">
+                {row.type} {row.id}
+              </span>
+            </article>
+          )}
         />
       </section>
     </div>

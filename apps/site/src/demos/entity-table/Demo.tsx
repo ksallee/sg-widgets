@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { CollectionColumn, EntityRef, FilterGroup, StatusRecord } from '@sg-widgets/core';
-import { condition, createEntitySource, emptyFilter, resolveColumns } from '@sg-widgets/core';
+import type { CollectionColumn, EntityRef, FilterGroup, SortKey, StatusRecord } from '@sg-widgets/core';
+import { condition, createEntitySource, emptyFilter, group, resolveColumns, toSortSpecs } from '@sg-widgets/core';
 import { ColumnPicker } from '@/registry/sg/components/column-picker';
 import { EntityTable } from '@/registry/sg/components/entity-table';
-import { FilterDialog } from '@/registry/sg/components/filter-dialog';
+import { FilterBar } from '@/registry/sg/components/filter-bar';
+import { SortPicker } from '@/registry/sg/components/sort-picker';
 import { createDemoContext } from '../_shared/client';
 import { DemoContextProvider } from '../_shared/react';
 
@@ -19,6 +20,7 @@ const WIDTHS: Record<string, number> = {
 };
 const PATHS = Object.keys(WIDTHS);
 const SHOWN = ['code', 'entity', 'sg_status_list', 'image', 'description', 'user'];
+const FACETS = ['sg_status_list'];
 
 const toggle =
   'inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-background px-2 text-sm ' +
@@ -28,28 +30,35 @@ const toggle =
 
 export default function EntityTableDemo() {
   const context = useMemo(() => createDemoContext({ counts: { versions: 320 } }), []);
+  // The mock's rows are one project's already; a real site's are not.
+  const scope = useMemo(
+    () =>
+      context.live ? group('and', [condition('project', 'is', { type: 'Project', id: context.projectId })]) : null,
+    [context],
+  );
   const source = useMemo(
     () =>
       createEntitySource({
         client: context.client,
         entityType: 'Version',
         fields: PATHS,
-        // The mock's rows are one project's already; a real site's are not.
-        filters: context.live ? condition('project', 'is', { type: 'Project', id: context.projectId }) : null,
+        filters: scope,
         mode: 'pages',
         pageSize: 25,
       }),
-    [context],
+    [context, scope],
   );
 
   const [columns, setColumns] = useState<CollectionColumn[]>([]);
   const [statuses, setStatuses] = useState<Record<string, StatusRecord> | null>(null);
   const [filter, setFilter] = useState<FilterGroup>(emptyFilter());
+  const [sortKeys, setSortKeys] = useState<SortKey[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [picking, setPicking] = useState(false);
   const [grouped, setGrouped] = useState(false);
   const [compact, setCompact] = useState(false);
   const [selected, setSelected] = useState<EntityRef[]>([]);
+  const sort = useMemo(() => toSortSpecs(sortKeys), [sortKeys]);
 
   const pickColumns = useCallback(
     (paths: string[]) => {
@@ -104,44 +113,50 @@ export default function EntityTableDemo() {
           source={source}
           columns={columns}
           onColumnsChange={setColumns}
+          selection={selected}
+          onSelectionChange={setSelected}
+          filters={filter}
+          sort={sort}
           statuses={statuses}
           context={context}
           selectable
           editable
           density={compact ? 'compact' : 'default'}
           groupBy={grouped ? 'sg_status_list' : null}
-          onSelectionChange={setSelected}
           toolbarStart={
-            <div className="flex flex-col gap-2">
-              <button type="button" className={toggle} aria-pressed={picking} onClick={() => setPicking(!picking)}>
-                Columns
-              </button>
-              {picking ? (
-                <div className="w-64">
-                  <ColumnPicker
-                    context={context}
-                    entityType="Version"
-                    size="sm"
-                    deepLinks={false}
-                    filter={(_field, path) => PATHS.includes(path)}
-                    placeholder="Add a column"
-                    value={columns.map((column) => column.path)}
-                    onValueChange={pickColumns}
-                  />
-                </div>
-              ) : null}
-            </div>
+            <>
+              <FilterBar
+                entityType="Version"
+                context={context}
+                facets={FACETS}
+                baseFilter={scope}
+                size="sm"
+                value={filter}
+                onChange={setFilter}
+              />
+              <div className="flex flex-col gap-2">
+                <button type="button" className={toggle} aria-pressed={picking} onClick={() => setPicking(!picking)}>
+                  Columns
+                </button>
+                {picking ? (
+                  <div className="w-56">
+                    <ColumnPicker
+                      context={context}
+                      entityType="Version"
+                      size="sm"
+                      deepLinks={false}
+                      filter={(_field, path) => PATHS.includes(path)}
+                      placeholder="Add a column"
+                      value={columns.map((column) => column.path)}
+                      onValueChange={pickColumns}
+                    />
+                  </div>
+                ) : null}
+              </div>
+            </>
           }
           toolbarEnd={
-            <FilterDialog
-              entityType="Version"
-              context={context}
-              value={filter}
-              onChange={(next) => {
-                setFilter(next);
-                void source.setFilters(next);
-              }}
-            />
+            <SortPicker entityType="Version" context={context} size="sm" value={sortKeys} onChange={setSortKeys} />
           }
         />
       </div>

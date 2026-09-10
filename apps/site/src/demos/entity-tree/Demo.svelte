@@ -15,14 +15,31 @@
 
 	let picked = $state<TreeNode | null>(null);
 	let checked = $state<EntityRef[]>([]);
+	let expanded = $state<string[]>([]);
+
+	/** Opening a branch from outside the tree: put its path in `expanded`. */
+	function openAssets(): void {
+		const path = `${rootPath}/Asset`;
+		if (!expanded.includes(path)) expanded = [...expanded, path];
+	}
 
 	const group = 'flex flex-col gap-2';
 	const label = 'text-muted-foreground text-xs font-medium tracking-wide uppercase';
+	const toggle =
+		'inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-background px-2 text-sm ' +
+		'text-muted-foreground outline-none transition-colors duration-150 hover:bg-accent hover:text-accent-foreground ' +
+		'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background';
 </script>
 
 <div class="flex w-full min-w-0 flex-col gap-4">
 	<section class={group}>
 		<h4 class={label}>A project, seeded open, searchable, with checkboxes</h4>
+		<div class="flex flex-wrap items-center gap-2">
+			<button type="button" class={toggle} data-testid="open-assets" onclick={openAssets}>Open Assets</button>
+			<span class="text-muted-foreground text-xs tabular-nums" data-testid="expanded-count">
+				{expanded.length} open
+			</span>
+		</div>
 		<EntityTree
 			{context}
 			{rootPath}
@@ -31,6 +48,7 @@
 			searchable
 			{searchPlaceholder}
 			showCode
+			bind:expanded
 			onSelect={(node) => (picked = node)}
 			onCheckedChange={(rows) => (checked = rows)}
 		/>

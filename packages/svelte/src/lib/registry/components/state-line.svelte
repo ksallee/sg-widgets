@@ -27,7 +27,7 @@
 		icon?: LucideIcon | Component | null;
 		/** `popover` for a list, `table` for a body, `none` under loaded rows. */
 		pad?: StateLinePad;
-		/** The `data-slot` the widget names this block. */
+		/** The `data-slot` this block carries. Defaults to `state-line`. */
 		slotName?: string;
 		/** Anything after the line: a retry control. */
 		children?: Snippet;
@@ -53,7 +53,7 @@
 -->
 <div
 	bind:this={ref}
-	data-slot={slotName}
+	data-slot={slotName ?? 'state-line'}
 	data-state={state}
 	class={cn(LINE, TONE[state], PAD[pad], className)}
 	{...rest}

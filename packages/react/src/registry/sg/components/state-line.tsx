@@ -22,7 +22,7 @@ export interface StateLineProps extends React.HTMLAttributes<HTMLDivElement> {
   icon?: LucideIcon | null;
   /** `popover` for a list, `table` for a body, `none` under loaded rows. */
   pad?: StateLinePad;
-  /** The `data-slot` the widget names this block. */
+  /** The `data-slot` this block carries. Defaults to `state-line`. */
   slotName?: string;
   /** Anything after the line: a retry control. */
   children?: React.ReactNode;
@@ -45,7 +45,7 @@ export function StateLine({
 }: StateLineProps) {
   return (
     <div
-      data-slot={slotName}
+      data-slot={slotName ?? 'state-line'}
       data-state={state}
       className={cn(LINE, TONE[state], PAD[pad], className)}
       {...rest}

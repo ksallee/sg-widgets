@@ -226,7 +226,9 @@
   :is(.sg-demo, [data-slot='popover-content'], [data-slot='select-content'], [data-slot='dialog-content'], [data-slot='hover-card-content']) *::before,
   :is(.sg-demo, [data-slot='popover-content'], [data-slot='select-content'], [data-slot='dialog-content'], [data-slot='hover-card-content']) *::after {
     box-sizing: border-box;
-    border: 0 solid;
+    /* The colour is part of the reset: the packages' `* { @apply border-border }` base is
+     * not imported here, and a bare `border` utility would otherwise take currentColor. */
+    border: 0 solid var(--border);
   }
 
   :is(.sg-demo, [data-slot='popover-content'], [data-slot='select-content'], [data-slot='dialog-content'], [data-slot='hover-card-content']) {

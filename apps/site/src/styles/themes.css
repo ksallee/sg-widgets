@@ -7,8 +7,8 @@
  * with `[data-theme='dark']` for the page around it, which Starlight's chrome reads
  * through the `--sl-*` mapping in `global.css`. The values are written once for both.
  *
- * `data-theme='autodesk'` and `data-sg-palette='autodesk'` match no block here and keep
- * the Autodesk tokens `global.css` sets, which the site wears by default. So does any
+ * `data-theme='default'` and `data-sg-palette='default'` match no block here and keep
+ * the base tokens `global.css` sets, which the site wears by default. So does any
  * name this file does not know.
  *
  * A light block carries `--radius`; the dark block carries colours only, so the radius

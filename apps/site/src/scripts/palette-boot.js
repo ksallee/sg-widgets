@@ -32,6 +32,6 @@
   };
 
   const root = document.documentElement;
-  root.dataset.sgPalette = read('palette', 'autodesk');
+  root.dataset.sgPalette = read('palette', 'default');
   root.dataset.sgRadius = read('radius', 'default');
 })();

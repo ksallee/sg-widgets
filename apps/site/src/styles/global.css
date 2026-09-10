@@ -140,8 +140,7 @@
 }
 
 /*
- * The one copy of the shadcn tokens: the Autodesk palette, which the site wears by
- * default.
+ * The one copy of the shadcn tokens: the default palette, drawn from Autodesk's Weave.
  *
  * Weave is Autodesk's design system, the successor to the HIG, and
  * `@weave-design/theme-data` is the token package it publishes. The values below are

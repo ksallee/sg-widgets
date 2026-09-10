@@ -10,7 +10,7 @@
 
 /** The family each palette's `--font-sans` starts with; the three without a block keep Geist. */
 const FAMILY = {
-  autodesk: 'Geist Variable',
+  default: 'Geist Variable',
   nova: 'Geist Variable',
   vercel: 'Geist Variable',
   supabase: 'Outfit Variable',

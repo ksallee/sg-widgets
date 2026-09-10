@@ -20,13 +20,13 @@ export interface Palette {
 
 /**
  * Called the palette everywhere a name could be read as the light/dark theme Starlight's
- * own select switches. `autodesk` has no block in themes.css and leaves the stage on the
+ * own select switches. `default` has no block in themes.css and leaves the stage on the
  * tokens global.css sets, which is why it is also the fallback: a name from a browser
  * that stored one of the palettes this list has dropped resolves to it and lands on the
  * same tokens the page had already painted.
  */
 export const palettes: Palette[] = [
-  { name: 'autodesk', label: 'Autodesk' },
+  { name: 'default', label: 'Default' },
   { name: 'nova', label: 'Nova' },
   { name: 'vercel', label: 'Vercel' },
   { name: 'supabase', label: 'Supabase' },

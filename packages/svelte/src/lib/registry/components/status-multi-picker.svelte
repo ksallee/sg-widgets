@@ -299,10 +299,10 @@
 		const target = event.target as HTMLElement | null;
 		// The chip's remove control, the clear control and the chevron own their own press.
 		if (target?.closest('button')) return;
-		if (inline && target !== inputEl) {
-			event.preventDefault();
-			inputEl?.focus({ preventScroll: true });
-		}
+		// The press's own default would move focus to the body and off whichever caret
+		// takes it: the field's, or the popup's once the effect below focuses it.
+		if (target !== inputEl) event.preventDefault();
+		if (inline && target !== inputEl) inputEl?.focus({ preventScroll: true });
 		setOpen(true);
 	}
 

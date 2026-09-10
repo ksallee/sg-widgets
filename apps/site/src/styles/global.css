@@ -181,7 +181,7 @@
  */
 .sg-demo.dark,
 :root[data-theme='dark'] .sg-demo-chrome,
-:root[data-theme='dark'] :is([data-slot='popover-content'], [data-slot='select-content'], [data-slot='dialog-content'], [data-slot='hover-card-content']) {
+:root[data-theme='dark'] :is([data-slot='popover-content'], [data-slot='select-content'], [data-slot='dialog-content'], [data-slot='hover-card-content'], [data-slot$='-picker-content']) {
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);
@@ -221,17 +221,17 @@
  * which would otherwise get the UA styles.
  */
 @layer sg-demo-base {
-  :is(.sg-demo, [data-slot='popover-content'], [data-slot='select-content'], [data-slot='dialog-content'], [data-slot='hover-card-content']),
-  :is(.sg-demo, [data-slot='popover-content'], [data-slot='select-content'], [data-slot='dialog-content'], [data-slot='hover-card-content']) *,
-  :is(.sg-demo, [data-slot='popover-content'], [data-slot='select-content'], [data-slot='dialog-content'], [data-slot='hover-card-content']) *::before,
-  :is(.sg-demo, [data-slot='popover-content'], [data-slot='select-content'], [data-slot='dialog-content'], [data-slot='hover-card-content']) *::after {
+  :is(.sg-demo, [data-slot='popover-content'], [data-slot='select-content'], [data-slot='dialog-content'], [data-slot='hover-card-content'], [data-slot$='-picker-content']),
+  :is(.sg-demo, [data-slot='popover-content'], [data-slot='select-content'], [data-slot='dialog-content'], [data-slot='hover-card-content'], [data-slot$='-picker-content']) *,
+  :is(.sg-demo, [data-slot='popover-content'], [data-slot='select-content'], [data-slot='dialog-content'], [data-slot='hover-card-content'], [data-slot$='-picker-content']) *::before,
+  :is(.sg-demo, [data-slot='popover-content'], [data-slot='select-content'], [data-slot='dialog-content'], [data-slot='hover-card-content'], [data-slot$='-picker-content']) *::after {
     box-sizing: border-box;
     /* The colour is part of the reset: the packages' `* { @apply border-border }` base is
      * not imported here, and a bare `border` utility would otherwise take currentColor. */
     border: 0 solid var(--border);
   }
 
-  :is(.sg-demo, [data-slot='popover-content'], [data-slot='select-content'], [data-slot='dialog-content'], [data-slot='hover-card-content']) {
+  :is(.sg-demo, [data-slot='popover-content'], [data-slot='select-content'], [data-slot='dialog-content'], [data-slot='hover-card-content'], [data-slot$='-picker-content']) {
     background-color: var(--background);
     color: var(--foreground);
     font-family: var(--font-sans);
@@ -241,27 +241,27 @@
     outline-color: color-mix(in oklab, var(--ring) 50%, transparent);
   }
 
-  :is(.sg-demo, [data-slot='popover-content'], [data-slot='select-content'], [data-slot='dialog-content'], [data-slot='hover-card-content']) :is(h1, h2, h3, h4, h5, h6) {
+  :is(.sg-demo, [data-slot='popover-content'], [data-slot='select-content'], [data-slot='dialog-content'], [data-slot='hover-card-content'], [data-slot$='-picker-content']) :is(h1, h2, h3, h4, h5, h6) {
     font-size: inherit;
     font-weight: inherit;
     margin: 0;
   }
 
-  :is(.sg-demo, [data-slot='popover-content'], [data-slot='select-content'], [data-slot='dialog-content'], [data-slot='hover-card-content']) :is(p, ul, ol, dl, figure, blockquote, pre, hr) {
+  :is(.sg-demo, [data-slot='popover-content'], [data-slot='select-content'], [data-slot='dialog-content'], [data-slot='hover-card-content'], [data-slot$='-picker-content']) :is(p, ul, ol, dl, figure, blockquote, pre, hr) {
     margin: 0;
   }
 
-  :is(.sg-demo, [data-slot='popover-content'], [data-slot='select-content'], [data-slot='dialog-content'], [data-slot='hover-card-content']) :is(ul, ol) {
+  :is(.sg-demo, [data-slot='popover-content'], [data-slot='select-content'], [data-slot='dialog-content'], [data-slot='hover-card-content'], [data-slot$='-picker-content']) :is(ul, ol) {
     list-style: none;
     padding: 0;
   }
 
-  :is(.sg-demo, [data-slot='popover-content'], [data-slot='select-content'], [data-slot='dialog-content'], [data-slot='hover-card-content']) a {
+  :is(.sg-demo, [data-slot='popover-content'], [data-slot='select-content'], [data-slot='dialog-content'], [data-slot='hover-card-content'], [data-slot$='-picker-content']) a {
     color: inherit;
     text-decoration: inherit;
   }
 
-  :is(.sg-demo, [data-slot='popover-content'], [data-slot='select-content'], [data-slot='dialog-content'], [data-slot='hover-card-content']) :is(button, input, optgroup, select, textarea) {
+  :is(.sg-demo, [data-slot='popover-content'], [data-slot='select-content'], [data-slot='dialog-content'], [data-slot='hover-card-content'], [data-slot$='-picker-content']) :is(button, input, optgroup, select, textarea) {
     font: inherit;
     color: inherit;
     letter-spacing: inherit;
@@ -272,32 +272,32 @@
     opacity: 1;
   }
 
-  :is(.sg-demo, [data-slot='popover-content'], [data-slot='select-content'], [data-slot='dialog-content'], [data-slot='hover-card-content']) :is(button, [type='button'], [type='reset'], [type='submit']) {
+  :is(.sg-demo, [data-slot='popover-content'], [data-slot='select-content'], [data-slot='dialog-content'], [data-slot='hover-card-content'], [data-slot$='-picker-content']) :is(button, [type='button'], [type='reset'], [type='submit']) {
     appearance: button;
     background-image: none;
     cursor: default;
   }
 
-  :is(.sg-demo, [data-slot='popover-content'], [data-slot='select-content'], [data-slot='dialog-content'], [data-slot='hover-card-content']) :is(button, [role='button']):not(:disabled) {
+  :is(.sg-demo, [data-slot='popover-content'], [data-slot='select-content'], [data-slot='dialog-content'], [data-slot='hover-card-content'], [data-slot$='-picker-content']) :is(button, [role='button']):not(:disabled) {
     cursor: pointer;
   }
 
-  :is(.sg-demo, [data-slot='popover-content'], [data-slot='select-content'], [data-slot='dialog-content'], [data-slot='hover-card-content']) :is(img, svg, video, canvas, audio, iframe, embed, object) {
+  :is(.sg-demo, [data-slot='popover-content'], [data-slot='select-content'], [data-slot='dialog-content'], [data-slot='hover-card-content'], [data-slot$='-picker-content']) :is(img, svg, video, canvas, audio, iframe, embed, object) {
     display: block;
     vertical-align: middle;
   }
 
-  :is(.sg-demo, [data-slot='popover-content'], [data-slot='select-content'], [data-slot='dialog-content'], [data-slot='hover-card-content']) :is(img, video) {
+  :is(.sg-demo, [data-slot='popover-content'], [data-slot='select-content'], [data-slot='dialog-content'], [data-slot='hover-card-content'], [data-slot$='-picker-content']) :is(img, video) {
     max-width: 100%;
     height: auto;
   }
 
-  :is(.sg-demo, [data-slot='popover-content'], [data-slot='select-content'], [data-slot='dialog-content'], [data-slot='hover-card-content']) ::placeholder {
+  :is(.sg-demo, [data-slot='popover-content'], [data-slot='select-content'], [data-slot='dialog-content'], [data-slot='hover-card-content'], [data-slot$='-picker-content']) ::placeholder {
     color: color-mix(in oklab, currentcolor 50%, transparent);
     opacity: 1;
   }
 
-  :is(.sg-demo, [data-slot='popover-content'], [data-slot='select-content'], [data-slot='dialog-content'], [data-slot='hover-card-content']) :is(code, kbd, samp, pre) {
+  :is(.sg-demo, [data-slot='popover-content'], [data-slot='select-content'], [data-slot='dialog-content'], [data-slot='hover-card-content'], [data-slot$='-picker-content']) :is(code, kbd, samp, pre) {
     font-family: var(--font-mono, ui-monospace, monospace);
     font-size: 1em;
     background: none;

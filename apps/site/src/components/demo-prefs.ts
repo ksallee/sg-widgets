@@ -5,12 +5,15 @@
  * The palette select in Starlight's header and the toolbar on each example write these,
  * the demos read them, and `sg-demo:*` in `localStorage` carries them from page to page
  * and from tab to tab. Light and dark is the one nobody sets here: it follows Starlight's
- * own theme select through `watchTheme`. A palette swaps token values on a demo stage and
- * nothing else; none of these controls changes what a widget renders.
+ * own theme select through `watchTheme`. A palette swaps token values on the stage and on
+ * the page around it; none of these controls changes what a widget renders.
  */
 
 export interface Palette {
-  /** The `data-theme` the stage carries, and the key src/styles/themes.css holds. */
+  /**
+   * The `data-theme` the stage carries, the `data-sg-palette` the page carries, and the
+   * key src/styles/themes.css holds.
+   */
   name: string;
   label: string;
   /** The `family` query the palette's own typeface needs from Google Fonts. */
@@ -141,13 +144,20 @@ function loadFont(family: string | undefined): void {
 
 /** Put the current view on every demo on the page, and back on the controls. */
 export function applyPrefs(): void {
+  // The palette and the radius also land on `:root`, where the `--sl-*` block in
+  // global.css hands the tokens to Starlight, so the header, the sidebar and the
+  // content follow the demos. src/scripts/palette-boot.js writes the same two before
+  // the first paint. Light and dark is Starlight's own `data-theme` and is left alone.
+  document.documentElement.dataset.sgPalette = prefs.palette;
+  document.documentElement.dataset.sgRadius = prefs.radius;
+
   for (const root of document.querySelectorAll<HTMLElement>('[data-sg-demo]')) {
     root.dataset.framework = prefs.framework;
     root.dataset.motion = prefs.motion;
 
-    // Palette and radius land on the stage, never on the figure: the frame follows the
-    // docs page, and Starlight's chrome is outside both. The palette's attribute is
-    // `data-theme` because that is the hook themes.css selects on.
+    // Palette and radius land on the stage, never on the figure: the frame reads the
+    // page's own tokens, which the root attributes above already carry. The stage's
+    // palette attribute is `data-theme` because that is the hook themes.css selects on.
     const stage = root.querySelector<HTMLElement>('[data-stage]');
     if (stage) {
       stage.classList.toggle('dark', prefs.theme === 'dark');

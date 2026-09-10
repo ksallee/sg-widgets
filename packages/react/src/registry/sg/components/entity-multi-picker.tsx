@@ -704,6 +704,15 @@ export function EntityMultiPicker({
             details.cancel();
             return;
           }
+          // A summary control holds no input, so the click that opened it lands outside
+          // the popup a moment later; a press on the control is never a dismissal.
+          if (!next && details.reason === 'outside-press') {
+            const target = (details.event as Event | undefined)?.target as Node | null | undefined;
+            if (target && controlRef.current?.contains(target)) {
+              details.cancel();
+              return;
+            }
+          }
           setOpen(interactive ? next : false);
           if (!next) setQuery('');
         }}

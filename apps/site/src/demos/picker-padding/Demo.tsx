@@ -8,7 +8,6 @@
 import { Fragment, useMemo } from 'react';
 import type { ReactNode } from 'react';
 import type { EntityRef } from '@sg-widgets/core';
-import { createSchemaService } from '@sg-widgets/core';
 import { ContextSelector, type WorkContext } from '@/registry/sg/components/context-selector';
 import { EntityMultiPicker } from '@/registry/sg/components/entity-multi-picker';
 import { EntityPicker } from '@/registry/sg/components/entity-picker';
@@ -36,8 +35,6 @@ const caption = 'text-muted-foreground text-xs';
 
 export default function PickerPaddingDemo() {
   const context = useMemo(() => createDemoContext(), []);
-  const client = context.client;
-  const schema = useMemo(() => createSchemaService(client), [client]);
   const projectId = context.projectId;
   const project: EntityRef = context.live
     ? { type: 'Project', id: projectId }
@@ -48,18 +45,18 @@ export default function PickerPaddingDemo() {
       ? { project, entity: ASSET, task: null }
       : { project: null, entity: null, task: null };
     return [
-      ['entity-picker', <EntityPicker client={client} entityTypes={['Asset']} size={size} value={filled ? ASSET : null} />],
-      ['entity-multi-picker', <EntityMultiPicker client={client} entityTypes={['Asset']} size={size} value={filled ? [ASSET] : []} />],
-      ['user-picker', <UserPicker client={client} size={size} value={filled ? PERSON : null} />],
-      ['user-multi-picker', <UserMultiPicker client={client} size={size} value={filled ? [PERSON] : []} />],
-      ['project-picker', <ProjectPicker client={client} size={size} value={filled ? project : null} />],
-      ['project-multi-picker', <ProjectMultiPicker client={client} size={size} value={filled ? [project] : []} />],
-      ['status-picker', <StatusPicker client={client} entityType="Version" projectId={projectId} size={size} value={filled ? 'ip' : undefined} />],
-      ['status-multi-picker', <StatusMultiPicker client={client} entityType="Version" projectId={projectId} size={size} value={filled ? ['ip', 'apr'] : []} />],
-      ['entity-type-picker', <EntityTypePicker schema={schema} size={size} value={filled ? 'Shot' : null} />],
-      ['entity-type-multi-picker', <EntityTypePicker schema={schema} multiple size={size} value={filled ? ['Shot', 'Asset'] : []} />],
-      ['field-picker', <FieldPicker schema={schema} entityType="Version" size={size} value={filled ? 'code' : ''} />],
-      ['context-selector', <ContextSelector client={client} size={size} context={work} currentUser={PERSON} />],
+      ['entity-picker', <EntityPicker context={context} entityTypes={['Asset']} size={size} value={filled ? ASSET : null} />],
+      ['entity-multi-picker', <EntityMultiPicker context={context} entityTypes={['Asset']} size={size} value={filled ? [ASSET] : []} />],
+      ['user-picker', <UserPicker context={context} size={size} value={filled ? PERSON : null} />],
+      ['user-multi-picker', <UserMultiPicker context={context} size={size} value={filled ? [PERSON] : []} />],
+      ['project-picker', <ProjectPicker context={context} size={size} value={filled ? project : null} />],
+      ['project-multi-picker', <ProjectMultiPicker context={context} size={size} value={filled ? [project] : []} />],
+      ['status-picker', <StatusPicker context={context} entityType="Version" projectId={projectId} size={size} value={filled ? 'ip' : undefined} />],
+      ['status-multi-picker', <StatusMultiPicker context={context} entityType="Version" projectId={projectId} size={size} value={filled ? ['ip', 'apr'] : []} />],
+      ['entity-type-picker', <EntityTypePicker context={context} size={size} value={filled ? 'Shot' : null} />],
+      ['entity-type-multi-picker', <EntityTypePicker context={context} multiple size={size} value={filled ? ['Shot', 'Asset'] : []} />],
+      ['field-picker', <FieldPicker context={context} entityType="Version" size={size} value={filled ? 'code' : ''} />],
+      ['context-selector', <ContextSelector context={context} size={size} workContext={work} currentUser={PERSON} />],
     ];
   }
 

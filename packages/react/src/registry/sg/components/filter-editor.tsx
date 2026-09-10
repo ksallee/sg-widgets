@@ -241,7 +241,7 @@ export function FilterEditor({
     return () => {
       live = false;
     };
-  }, [context, entityType]);
+  }, [context.schema, entityType]);
 
   /**
    * The leaf schema of every dotted path the tree holds, added once and kept.
@@ -267,7 +267,7 @@ export function FilterEditor({
       }
       return job;
     },
-    [context, entityType],
+    [context.schema, entityType],
   );
 
   useEffect(() => {

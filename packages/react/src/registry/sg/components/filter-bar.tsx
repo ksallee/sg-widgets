@@ -109,7 +109,7 @@ export function FilterBar({
     return () => {
       live = false;
     };
-  }, [context, entityType]);
+  }, [context.schema, entityType]);
 
   // Counts are read against the filter with every facet's own condition stripped, so
   // ticking one value does not empty its neighbours. One read serves every pill.
@@ -150,7 +150,7 @@ export function FilterBar({
       live = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [context, entityType, fields, facets.join(','), scope, sampleSize, counts]);
+  }, [context.client, entityType, fields, facets.join(','), scope, sampleSize, counts]);
 
   const conditionOf = (name: string): FilterCondition | null => findCondition(value, name)?.condition ?? null;
 

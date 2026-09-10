@@ -173,7 +173,9 @@ export function StatusPicker({
   const projectKey = (projectIds ?? (projectId === undefined ? [] : [projectId])).join(',');
   const store = useMemo(
     () => statusOptionStore(context, entityType, projectKey, field),
-    [context, entityType, projectKey, field],
+    // The services are what the store reads through, and they outlive a context copy.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [context.schema, context.statuses, entityType, projectKey, field],
   );
   const query = useSyncExternalStore(store.subscribe, store.snapshot, store.snapshot);
 

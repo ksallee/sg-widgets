@@ -91,7 +91,7 @@ export function SortPicker({
         setLabels((held) => ({ ...held, [at]: label }));
       });
     },
-    [context, entityType],
+    [context.schema, entityType],
   );
 
   useEffect(() => {

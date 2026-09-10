@@ -347,6 +347,8 @@
 				{context}
 				hoursPerDay={prefs.hoursPerDay}
 				locale={prefs.locale}
+				timeZone={prefs.timeZone}
+				frameRate={prefs.frameRate}
 				{precision}
 				currencySymbol={symbol ?? '$'}
 				{emptyLabel}
@@ -361,6 +363,8 @@
 			{context}
 			hoursPerDay={prefs.hoursPerDay}
 			locale={prefs.locale}
+			timeZone={prefs.timeZone}
+			frameRate={prefs.frameRate}
 			{precision}
 			currencySymbol={symbol ?? '$'}
 			{emptyLabel}

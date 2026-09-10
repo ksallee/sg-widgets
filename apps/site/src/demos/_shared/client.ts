@@ -74,6 +74,18 @@ function scoped(context: SgContext, live: boolean): DemoContext {
   return { ...context, live, projectId: projectFor(MOCK_PROJECT_ID), projectFor };
 }
 
+let liveScoped: DemoContext | undefined;
+
+/**
+ * The live context, wrapped once. The wrapper is what a widget is handed, so it has to
+ * be the same object on every call: a React widget keyed on the context rebuilds its
+ * reads when it is handed a new one.
+ */
+function liveDemoContext(): DemoContext {
+  liveScoped ??= scoped(liveContext(), true);
+  return liveScoped;
+}
+
 /**
  * A context of its own, for a demo whose fixtures differ from the shared site's.
  * `counts` scales a type: the table demo needs more Versions than the 60 the
@@ -81,7 +93,7 @@ function scoped(context: SgContext, live: boolean): DemoContext {
  * has one site and one set of rows, so the options are ignored there.
  */
 export function createDemoContext(options: MockClientOptions = {}): DemoContext {
-  if (isLive()) return scoped(liveContext(), true);
+  if (isLive()) return liveDemoContext();
   return scoped(createSgContext({ client: counting(new MockClient({ ...MOCK, ...options })) }), false);
 }
 
@@ -89,7 +101,7 @@ let singleton: DemoContext | undefined;
 
 /** The one context every demo on this site shares: one cache, one schema read, one status table. */
 export function getDemoContext(): DemoContext {
-  if (isLive()) return scoped(liveContext(), true);
+  if (isLive()) return liveDemoContext();
   singleton ??= createDemoContext();
   return singleton;
 }

@@ -294,6 +294,8 @@ export function FieldEditor({
             context={context}
             hoursPerDay={prefs.hoursPerDay}
             locale={prefs.locale}
+            timeZone={prefs.timeZone}
+            frameRate={prefs.frameRate}
             precision={precision}
             currencySymbol={symbol ?? '$'}
             emptyLabel={emptyLabel}
@@ -308,6 +310,8 @@ export function FieldEditor({
           context={context}
           hoursPerDay={prefs.hoursPerDay}
           locale={prefs.locale}
+          timeZone={prefs.timeZone}
+          frameRate={prefs.frameRate}
           precision={precision}
           currencySymbol={symbol ?? '$'}
           emptyLabel={emptyLabel}

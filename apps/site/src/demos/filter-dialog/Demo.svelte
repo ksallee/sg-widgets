@@ -13,7 +13,7 @@
 	let applied = $state<FilterGroup>(
 		group('and', [
 			condition('sg_status_list', 'in', ['rev', 'vwd', 'fin']),
-			condition('created_at', 'greater_than', '2025-01-01T00:00:00Z')
+			condition('created_at', 'in_last', [1, 'YEAR'])
 		])
 	);
 

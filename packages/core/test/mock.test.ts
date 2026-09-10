@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MockClient } from '../src/mock.js';
+import { MockClient, MOCK_NOW } from '../src/mock.js';
 import { SgApiError } from '../src/client.js';
 import type { EntityRow, SearchResult } from '../src/client.js';
 import type { WireGroup } from '../src/filter.js';
@@ -174,6 +174,192 @@ describe('filter operators on status_list, list and number', () => {
     expect(await count(c, 'Task', only('due_date', 'between', ['2026-02-01', '2026-03-01']))).toBe(
       due.filter((d) => d >= '2026-02-01' && d <= '2026-03-01').length,
     );
+  });
+});
+
+describe('relative and calendar date operators', () => {
+  /** The mock's own today, a Monday, at midday UTC. */
+  const NOW = MOCK_NOW;
+
+  /** Asset ids, and the date each carries around that Monday. 1234 and 1235 keep none. */
+  const DATES: Record<number, string> = {
+    1226: '2026-01-05', // today
+    1227: '2026-01-04', // yesterday, the Sunday that ends the previous week
+    1228: '2026-01-06', // tomorrow
+    1229: '2025-12-31', // the last day of the previous month, and of the previous year
+    1230: '2026-01-11', // the Sunday that ends this week
+    1231: '2026-01-12', // the Monday that starts the next one
+    1232: '2026-02-01', // next month
+    1233: '2025-12-06', // 30 days back
+  };
+
+  /** Version ids, and the moment each carries. The other 52 rows keep none. */
+  const MOMENTS: Record<number, string> = {
+    17055: '2026-01-05T11:00:00Z', // exactly one hour back
+    17056: '2026-01-05T10:59:59Z', // a second before that
+    17057: '2026-01-05T00:00:00Z', // midnight today
+    17058: '2026-01-04T23:59:59Z', // the last second of yesterday
+    17059: '2026-01-05T13:00:00Z', // exactly one hour ahead
+    17060: '2026-01-11T23:59:59Z', // the last second of this week
+    17061: '2026-01-12T00:00:00Z', // the first second of the next one
+    17062: '2025-12-31T23:59:59Z', // the last second of the previous year
+  };
+
+  /** A pinned-clock site carrying `values` on `field`, and null on every other row of the type. */
+  async function sited(
+    type: string,
+    field: string,
+    values: Record<number, string>,
+    now: string | (() => number) = NOW,
+  ): Promise<MockClient> {
+    const c = new MockClient({ now });
+    for (const row of c.rowsOf(type)) {
+      const id = Number(row['id']);
+      await c.update(type, id, { [field]: values[id] ?? null });
+    }
+    return c;
+  }
+
+  async function ids(c: MockClient, type: string, field: string, operator: Operator, value: unknown): Promise<number[]> {
+    const res = await c.search(type, { filters: only(field, operator, value), fields: ['id'], page: { size: 500 } });
+    return res.data.map((row) => row.id);
+  }
+
+  describe('a date field', () => {
+    const dates = (): Promise<MockClient> => sited('Asset', 'sg_due_date', DATES);
+    const matching = async (operator: Operator, value: unknown): Promise<number[]> =>
+      ids(await dates(), 'Asset', 'sg_due_date', operator, value);
+
+    it('counts in_last back from the clock, in every unit', async () => {
+      // A date has no time of day, so a window shorter than a day still matches today (field_types/date).
+      expect(await matching('in_last', [1, 'HOUR'])).toEqual([1226]);
+      expect(await matching('in_last', [1, 'DAY'])).toEqual([1226, 1227]);
+      expect(await matching('in_last', [1, 'WEEK'])).toEqual([1226, 1227, 1229]);
+      expect(await matching('in_last', [30, 'DAY'])).toEqual([1226, 1227, 1229, 1233]);
+      expect(await matching('in_last', [1, 'MONTH'])).toEqual([1226, 1227, 1229, 1233]);
+      expect(await matching('in_last', [1, 'YEAR'])).toEqual([1226, 1227, 1229, 1233]);
+    });
+
+    it('counts in_next forward from the clock, in every unit', async () => {
+      expect(await matching('in_next', [1, 'HOUR'])).toEqual([1226]);
+      expect(await matching('in_next', [1, 'DAY'])).toEqual([1226, 1228]);
+      expect(await matching('in_next', [1, 'WEEK'])).toEqual([1226, 1228, 1230, 1231]);
+      expect(await matching('in_next', [1, 'MONTH'])).toEqual([1226, 1228, 1230, 1231, 1232]);
+      expect(await matching('in_next', [1, 'YEAR'])).toEqual([1226, 1228, 1230, 1231, 1232]);
+    });
+
+    it('adds the rows with no date to the negating forms', async () => {
+      expect(await matching('not_in_last', [1, 'DAY'])).toEqual([1228, 1229, 1230, 1231, 1232, 1233, 1234, 1235]);
+      expect(await matching('not_in_next', [1, 'DAY'])).toEqual([1227, 1229, 1230, 1231, 1232, 1233, 1234, 1235]);
+      // The positive forms never do.
+      expect(await matching('in_last', [100, 'YEAR'])).not.toContain(1234);
+      expect(await matching('in_next', [100, 'YEAR'])).not.toContain(1234);
+    });
+
+    it('buckets a calendar day, week, month and year at the UTC boundary', async () => {
+      expect(await matching('in_calendar_day', 0)).toEqual([1226]);
+      expect(await matching('in_calendar_day', -1)).toEqual([1227]);
+      expect(await matching('in_calendar_day', 1)).toEqual([1228]);
+      // A week runs Monday to Sunday, so yesterday is the previous one and this Sunday is this one.
+      expect(await matching('in_calendar_week', 0)).toEqual([1226, 1228, 1230]);
+      expect(await matching('in_calendar_week', -1)).toEqual([1227, 1229]);
+      expect(await matching('in_calendar_week', 1)).toEqual([1231]);
+      expect(await matching('in_calendar_month', 0)).toEqual([1226, 1227, 1228, 1230, 1231]);
+      expect(await matching('in_calendar_month', -1)).toEqual([1229, 1233]);
+      expect(await matching('in_calendar_month', 1)).toEqual([1232]);
+      expect(await matching('in_calendar_year', 0)).toEqual([1226, 1227, 1228, 1230, 1231, 1232]);
+      expect(await matching('in_calendar_year', -1)).toEqual([1229, 1233]);
+      expect(await matching('in_calendar_year', 1)).toEqual([]);
+      // A bare offset and a one-element array are the same value (field_types/date).
+      expect(await matching('in_calendar_day', [0])).toEqual([1226]);
+    });
+  });
+
+  describe('a date_time field', () => {
+    const moments = (): Promise<MockClient> => sited('Version', 'client_approved_at', MOMENTS);
+    const matching = async (operator: Operator, value: unknown): Promise<number[]> =>
+      ids(await moments(), 'Version', 'client_approved_at', operator, value);
+
+    it('counts in_last and in_next to the second', async () => {
+      // Where a date stands for its whole day, a moment is a point: midnight today is an hour out.
+      expect(await matching('in_last', [1, 'HOUR'])).toEqual([17055]);
+      expect(await matching('in_next', [1, 'HOUR'])).toEqual([17059]);
+      expect(await matching('in_last', [1, 'DAY'])).toEqual([17055, 17056, 17057, 17058]);
+      expect(await matching('in_next', [1, 'WEEK'])).toEqual([17059, 17060, 17061]);
+      expect(await matching('in_last', [1, 'MONTH'])).toEqual([17055, 17056, 17057, 17058, 17062]);
+      expect(await matching('in_last', [1, 'YEAR'])).toEqual([17055, 17056, 17057, 17058, 17062]);
+    });
+
+    it('adds the rows with no moment to the negating forms', async () => {
+      const negated = await matching('not_in_last', [1, 'HOUR']);
+      expect(negated).toHaveLength(59);
+      expect(negated).not.toContain(17055);
+      // 52 of the 60 Versions carry nothing at all, and every one of them is in the answer.
+      expect(negated).toContain(17063);
+      expect(await matching('in_last', [1, 'HOUR'])).not.toContain(17063);
+    });
+
+    it('buckets a calendar day, week, month and year at the UTC boundary', async () => {
+      expect(await matching('in_calendar_day', 0)).toEqual([17055, 17056, 17057, 17059]);
+      expect(await matching('in_calendar_day', -1)).toEqual([17058]);
+      expect(await matching('in_calendar_week', 0)).toEqual([17055, 17056, 17057, 17059, 17060]);
+      expect(await matching('in_calendar_week', 1)).toEqual([17061]);
+      expect(await matching('in_calendar_month', 0)).toEqual([17055, 17056, 17057, 17058, 17059, 17060, 17061]);
+      expect(await matching('in_calendar_month', -1)).toEqual([17062]);
+      expect(await matching('in_calendar_year', 0)).toEqual([17055, 17056, 17057, 17058, 17059, 17060, 17061]);
+      expect(await matching('in_calendar_year', -1)).toEqual([17062]);
+    });
+  });
+
+  it('clamps a month and a year onto a day the target does not have', async () => {
+    const march = await sited('Asset', 'sg_due_date', { 1226: '2026-02-28', 1227: '2026-02-27' }, '2026-03-31T12:00:00Z');
+    expect(await ids(march, 'Asset', 'sg_due_date', 'in_last', [1, 'MONTH'])).toEqual([1226]);
+    const leap = await sited('Asset', 'sg_due_date', { 1226: '2027-02-28', 1227: '2027-02-27' }, '2028-02-29T12:00:00Z');
+    expect(await ids(leap, 'Asset', 'sg_due_date', 'in_last', [1, 'YEAR'])).toEqual([1226]);
+  });
+
+  it('400s on a value that is not [count, UNIT]', async () => {
+    const c = await sited('Asset', 'sg_due_date', DATES);
+    const refused = (operator: Operator, value: unknown): Promise<unknown> =>
+      c.search('Asset', { filters: only('sg_due_date', operator, value) });
+    await expect(refused('in_last', 1)).rejects.toMatchObject({
+      status: 400,
+      message: "API read() 'in_last' 'relation' expects a 2-element array: [1]",
+    });
+    await expect(refused('in_last', [1])).rejects.toMatchObject({ status: 400 });
+    await expect(refused('in_next', [100, 'day'])).rejects.toMatchObject({
+      status: 400,
+      message:
+        `API read() 'in_next' 'relation' doesn't support the 'day' time unit: [100, "day"]` +
+        `  Valid time units: ["HOUR", "DAY", "WEEK", "MONTH", "YEAR"]`,
+    });
+    await expect(refused('in_last', [-10, 'DAY'])).rejects.toMatchObject({
+      status: 400,
+      message: "API read() 'in_last' 'relation' expects at a positive Integer time unit",
+    });
+    // The value is refused before the rows are read, so a negating form on a row with no date still 400s.
+    await expect(refused('not_in_last', [0, 'DAY'])).rejects.toBeInstanceOf(SgApiError);
+  });
+
+  it('reads the clock on every call, and defaults it to now', async () => {
+    let now = Date.parse(NOW);
+    const c = await sited('Asset', 'sg_due_date', { 1226: '2026-01-05' }, () => now);
+    expect(await ids(c, 'Asset', 'sg_due_date', 'in_calendar_day', 0)).toEqual([1226]);
+    now += 86_400_000;
+    expect(await ids(c, 'Asset', 'sg_due_date', 'in_calendar_day', 0)).toEqual([]);
+    expect(await ids(c, 'Asset', 'sg_due_date', 'in_calendar_day', -1)).toEqual([1226]);
+
+    const live = new MockClient();
+    await live.update('Asset', 1226, { sg_due_date: new Date().toISOString().slice(0, 10) });
+    expect(await ids(live, 'Asset', 'sg_due_date', 'in_calendar_day', 0)).toContain(1226);
+  });
+
+  it('reaches the fixtures from MOCK_NOW', async () => {
+    const c = new MockClient({ now: MOCK_NOW });
+    // Every Version is created inside the 120 days before the mock's today, and none after it.
+    expect(await count(c, 'Version', only('created_at', 'in_last', [120, 'DAY']))).toBe(60);
+    expect(await count(c, 'Version', only('created_at', 'in_next', [1, 'YEAR']))).toBe(0);
+    expect(await count(c, 'Version', only('created_at', 'not_in_next', [1, 'YEAR']))).toBe(60);
   });
 });
 

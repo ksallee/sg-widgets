@@ -9,7 +9,7 @@ Shows a field value and turns it into the right editor for its data type.
 
 ## Install
 
-Installing this pulls FieldValue and all eight editors with it.
+Installing this pulls FieldValue, the eight typed editors and the three pickers with it.
 
 ```sh
 pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/field-editor.json
@@ -30,10 +30,17 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/field-editor.j
 | `list` | ListSelect |
 | `url` | UrlEditor |
 | `color` | ColorEditor |
-| `status_list`, `entity`, `multi_entity` | none; the picker widgets own these |
+| `status_list` | StatusPicker |
+| `entity` | EntityPicker |
+| `multi_entity` | EntityMultiPicker |
 | `image`, `calculated`, `summary`, `pivot_column`, everything else | none; display only |
 
 A field whose type has no editor stays on the display half whatever the mode says.
+
+The last three read the API, so they need `context`. A status field also needs its schema's
+`entity_type` and a link field its `valid_types`; without either the field stays on the display
+half. `projectId` scopes a status picker to the codes the project allows and an entity picker's
+search to that project.
 
 ## Props
 
@@ -54,7 +61,7 @@ A field whose type has no editor stays on the display half whatever the mode say
 | `frameRate` | `number` | the context's | Frames a second, for timecodes. |
 | `precision` | `number` | — | Decimals on a float. |
 | `symbol` | `string` | `'$'` | Shown before a currency value. |
-| `projectId` | `number` | — | Removes a list field's hidden values. |
+| `projectId` | `number` | — | Removes a list field's hidden values, and scopes a status or entity picker. |
 | `multiline` | `boolean` | `false` | A textarea on a text field. |
 | `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Control height. |
 | `disabled` | `boolean` | `false` | |
@@ -81,15 +88,23 @@ A field whose type has no editor stays on the display half whatever the mode say
 | `Enter` | Opens the editor from the display half; commits and closes it from the edit half. |
 | `Space` | Opens the editor from the display half. |
 | `Escape` | Cancels the edit and returns to the display half. |
-| `Tab` | Commits and returns to the display half, unless focus stays inside a popover the editor opened. |
+| `Tab` | Commits and returns to the display half, unless focus stays inside a popup the editor opened. |
+| a press outside | Commits and returns to the display half. |
 
 Enter keeps the textarea of a multi-line text field open; leave it with `Tab`.
 
-On a field whose editor is a button over a popup — a date, a date-time, a list — Enter opens the
-popup. The value commits inside it and the edit half stays until focus leaves.
+On a field whose editor is a button over a popup — a date, a date-time, a list, a status — Enter
+opens the popup. On an entity field Enter chooses the highlighted row. Either way the value commits
+inside the popup and the edit half stays until the press or the focus move that leaves it.
+
+The commit is on Enter or on the press that lands outside, never on the blur itself: the control is
+blurred first so what it holds is emitted, then the editor closes.
 
 ## API behaviour
 
 The write shapes each editor emits are the ones its own page documents. The dispatch itself follows
-the data types the corpus names, and the types with no editor here are the ones a picker owns or the
-ones REST cannot write (field_types/status_list, entity, calculated, summary, pivot_column).
+the data types the corpus names, and the types with no editor here are the ones REST cannot write
+(field_types/calculated, summary, pivot_column).
+
+A status value is the raw code, never the display label (field_types/status_list). An entity value is
+one `{type, id}` hash and a multi-entity value a list of them (field_types/entity).

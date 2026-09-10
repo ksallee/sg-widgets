@@ -398,7 +398,7 @@
 		type="single"
 		allowDeselect={false}
 		{disabled}
-		inputValue={query}
+		bind:inputValue={() => query, (next) => (query = next)}
 		bind:open={() => open, setOpen}
 		bind:value={() => selectedKey, setSelected}
 	>

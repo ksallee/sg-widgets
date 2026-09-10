@@ -38,6 +38,9 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/status-picker.
 | `open` | `boolean` | `false` | Whether the popup is showing. Two-way in Svelte. |
 | `class` / `className` | `string` | — | Merged after the widget's own classes. |
 
+Every other attribute is spread onto the root: `id`, `aria-*`, `data-*`, key handlers and a
+`ref` to the root element.
+
 Without a project the options are the site vocabulary, which hides nothing. `projectIds` offers the
 intersection of what each project allows, in the first project's order.
 

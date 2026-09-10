@@ -36,7 +36,10 @@ const BADGE: Record<StatusPickerSize, 'sm' | 'md'> = { sm: 'sm', md: 'sm', lg: '
 const TRIGGER =
   'border-input bg-background focus-visible:ring-ring focus-visible:ring-offset-background aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 flex w-full min-w-0 items-center rounded-md border text-sm outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 aria-invalid:ring-2';
 
-export interface StatusPickerProps {
+export interface StatusPickerProps extends React.HTMLAttributes<HTMLDivElement> {
+  /** The root element. */
+  ref?: React.Ref<HTMLDivElement>;
+
   /** The site to read from. Wrap it in `createQueryCache` so widgets on a page share one read. */
   client: SgClient;
   entityType: string;
@@ -153,6 +156,8 @@ export function StatusPicker({
   open: openProp,
   onOpenChange,
   className,
+  ref,
+  ...rest
 }: StatusPickerProps) {
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const open = openProp ?? uncontrolledOpen;
@@ -258,10 +263,12 @@ export function StatusPicker({
 
   return (
     <div
+      ref={ref}
       data-slot="status-picker"
       data-size={size}
       data-loading={query.loading ? 'true' : undefined}
       className={cn('relative flex w-full min-w-0 items-center', className)}
+      {...rest}
     >
       {readonly ? (
         <div

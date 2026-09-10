@@ -112,7 +112,11 @@ function secondaryPlanStore(
 }
 
 /** Everything both entity pickers take. They differ only in the shape of the value. */
-export interface EntityPickerBaseProps {
+export interface EntityPickerBaseProps
+  extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onError'> {
+  /** The root element. */
+  ref?: React.Ref<HTMLDivElement>;
+
   /** Types to search. One for a homogeneous picker, several for a polymorphic one. */
   entityTypes: string[];
   /** A cached client. Every read goes through it. */
@@ -219,6 +223,8 @@ export function EntityPicker({
   onOpenChange,
   onError,
   className,
+  ref,
+  ...rest
 }: EntityPickerProps) {
   const errorRef = useRef(onError);
   errorRef.current = onError;
@@ -534,6 +540,7 @@ export function EntityPicker({
 
   return (
     <div
+      ref={ref}
       data-slot="entity-picker"
       data-size={size}
       data-multiple="false"
@@ -542,6 +549,7 @@ export function EntityPicker({
         disabled && 'pointer-events-none opacity-50',
         className,
       )}
+      {...rest}
     >
       <ComboboxPrimitive.Root
         items={keys}

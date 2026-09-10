@@ -51,6 +51,7 @@
 </script>
 
 <script lang="ts">
+	import type { HTMLAttributes } from 'svelte/elements';
 	import type { EntityTypeInfo, SchemaService } from '@sg-widgets/core';
 	import { filterEntityTypes, matchesTokens, summariseSelection } from '@sg-widgets/core';
 	import { Combobox } from 'bits-ui';
@@ -61,9 +62,9 @@
 	import X from '@lucide/svelte/icons/x';
 	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
-	import { cn } from '$lib/utils.js';
+	import { cn, type WithElementRef } from '$lib/utils.js';
 
-	type Props = {
+	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>, HTMLDivElement> & {
 		/** Reads the site's enabled types. Build it once per app with `createSchemaService`. */
 		schema: SchemaService;
 		/** A type code in single mode, an array of them in multi mode. */
@@ -114,7 +115,9 @@
 		size = 'md',
 		open = $bindable(false),
 		onOpenChange,
-		class: className
+		class: className,
+		ref = $bindable(null),
+		...rest
 	}: Props = $props();
 	let controlEl = $state<HTMLElement | null>(null);
 	let inputEl = $state<HTMLInputElement | null>(null);
@@ -466,11 +469,13 @@
 	Multi mode keeps the popup open and ticks the chosen rows.
 -->
 <div
+	bind:this={ref}
 	data-slot="entity-type-picker"
 	data-size={size}
 	data-multiple={multiple ? 'true' : 'false'}
 	data-summary={multiple ? summary : undefined}
 	class={cn('relative flex w-full min-w-0 items-center', className)}
+	{...rest}
 >
 	{#if multiple}
 		<Combobox.Root

@@ -180,7 +180,10 @@ interface EditorContext {
   pickPreset: (path: NodePath, node: FilterCondition, id: string) => void;
 }
 
-export interface FilterEditorProps {
+export interface FilterEditorProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange'> {
+  /** The root element. */
+  ref?: React.Ref<HTMLDivElement>;
+
   /** Type the root of every field path is read on. */
   entityType: string;
   client: SgClient;
@@ -228,6 +231,8 @@ export function FilterEditor({
   valueEditor,
   entityEditor,
   className,
+  ref,
+  ...rest
 }: FilterEditorProps) {
   const service = useMemo(() => schema ?? createSchemaService(client), [schema, client]);
   const [fields, setFields] = useState<Record<string, FieldSchema>>({});
@@ -325,10 +330,12 @@ export function FilterEditor({
 
   return (
     <div
-      className={cn('flex w-full min-w-0 flex-col gap-3', disabled && 'opacity-50', className)}
+      ref={ref}
       data-slot="filter-editor"
       data-entity-type={entityType}
       aria-disabled={disabled ? 'true' : undefined}
+      className={cn('flex w-full min-w-0 flex-col gap-3', disabled && 'opacity-50', className)}
+      {...rest}
     >
       <GroupNode ctx={ctx} path={[]} node={value} />
     </div>

@@ -28,6 +28,9 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/hierarchical-s
 | `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Row text, leading slot and glyphs. |
 | `class` / `className` | `string` | — | Merged after the widget's own classes. |
 
+Every other attribute is spread onto the root: `id`, `aria-*`, `data-*`, key handlers and a
+`ref` to the root element.
+
 With no query the list is one level of the tree. With a query it is the rows that match, each shown
 as the breadcrumb that reaches it, the row itself last and in bold.
 

@@ -115,6 +115,7 @@
 	import ChevronDownIcon from '@lucide/svelte/icons/chevron-down';
 	import PlusIcon from '@lucide/svelte/icons/plus';
 	import XIcon from '@lucide/svelte/icons/x';
+	import type { HTMLAttributes } from 'svelte/elements';
 	import type { SchemaService, SgClient } from '@sg-widgets/core';
 	import {
 		appendAt,
@@ -142,7 +143,7 @@
 	import * as Select from '$lib/components/ui/select/index.js';
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
 	import * as ToggleGroup from '$lib/components/ui/toggle-group/index.js';
-	import { cn } from '$lib/utils.js';
+	import { cn, type WithElementRef } from '$lib/utils.js';
 	import CheckboxEditor from '$lib/registry/components/checkbox-editor.svelte';
 	import DateEditor from '$lib/registry/components/date-editor.svelte';
 	import DateTimeEditor from '$lib/registry/components/date-time-editor.svelte';
@@ -155,7 +156,7 @@
 	import StatusPicker from '$lib/registry/components/status-picker.svelte';
 	import TextEditor from '$lib/registry/components/text-editor.svelte';
 
-	type Props = {
+	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>, HTMLDivElement> & {
 		/** Type the root of every field path is read on. */
 		entityType: string;
 		client: SgClient;
@@ -188,7 +189,9 @@
 		fieldChooser,
 		valueEditor,
 		entityEditor,
-		class: className
+		class: className,
+		ref = $bindable(null),
+		...rest
 	}: Props = $props();
 
 	const service = $derived(schema ?? createSchemaService(client));
@@ -730,10 +733,12 @@
 	pins its value draws no editor at all.
 -->
 <div
-	class={cn('flex w-full min-w-0 flex-col gap-3', disabled && 'opacity-50', className)}
+	bind:this={ref}
 	data-slot="filter-editor"
 	data-entity-type={entityType}
 	aria-disabled={disabled ? 'true' : undefined}
+	class={cn('flex w-full min-w-0 flex-col gap-3', disabled && 'opacity-50', className)}
+	{...rest}
 >
 	{@render groupNode([], value)}
 </div>

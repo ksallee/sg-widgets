@@ -97,7 +97,10 @@ const ICONS: Record<string, typeof Type> = {
   type: Type,
 };
 
-export interface ColumnPickerProps {
+export interface ColumnPickerProps extends React.HTMLAttributes<HTMLDivElement> {
+  /** The root element. */
+  ref?: React.Ref<HTMLDivElement>;
+
   /** Reads the schema. Build it once per app with `createSchemaService`. */
   schema: SchemaService;
   /** The type every path starts on. */
@@ -180,6 +183,8 @@ export function ColumnPicker({
   invalid = false,
   size = 'md',
   className,
+  ref,
+  ...rest
 }: ColumnPickerProps) {
   /** The field picker's own value, cleared as soon as the path is appended. */
   const [adding, setAdding] = useState('');
@@ -192,6 +197,12 @@ export function ColumnPicker({
   const [labels, setLabels] = useState<Record<string, string>>({});
   const [failure, setFailure] = useState<string | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
+  /** The widget reads its own root to move focus, and the caller still gets its ref. */
+  const setRoot = (node: HTMLDivElement | null): void => {
+    rootRef.current = node;
+    if (typeof ref === 'function') ref(node);
+    else if (ref) ref.current = node;
+  };
 
   const type = currentType(entityType, hops);
   const editable = !readonly && !disabled;
@@ -659,7 +670,7 @@ export function ColumnPicker({
 
   return (
     <div
-      ref={rootRef}
+      ref={setRoot}
       data-slot="column-picker"
       data-size={size}
       data-layout={layout}
@@ -671,6 +682,7 @@ export function ColumnPicker({
         disabled && 'pointer-events-none opacity-50',
         className,
       )}
+      {...rest}
     >
       {layout === 'dual' ? (
         <div

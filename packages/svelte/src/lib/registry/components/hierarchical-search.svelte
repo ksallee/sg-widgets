@@ -50,6 +50,7 @@
 </script>
 
 <script lang="ts">
+	import type { HTMLAttributes } from 'svelte/elements';
 	import type { SgClient } from '@sg-widgets/core';
 	import {
 		breadcrumb,
@@ -73,9 +74,9 @@
 	import Video from '@lucide/svelte/icons/video';
 	import * as Command from '$lib/components/ui/command/index.js';
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
-	import { cn } from '$lib/utils.js';
+	import { cn, type WithElementRef } from '$lib/utils.js';
 
-	type Props = {
+	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>, HTMLDivElement> & {
 		/** Where rows come from. Wrap it in `createQueryCache` once for the whole app. */
 		client: SgClient;
 		/** Where the tree starts, `/Project/<id>` for one project or `/` for the site. */
@@ -95,7 +96,9 @@
 		onSelect,
 		placeholder = 'Search the hierarchy…',
 		size = 'md',
-		class: className
+		class: className,
+		ref = $bindable(null),
+		...rest
 	}: Props = $props();
 
 	const schema = $derived(createSchemaService(client));
@@ -295,7 +298,7 @@
 	result a breadcrumb. The path runs through field names such as `sg_sequence`,
 	because the tree follows the site's own navigation configuration.
 -->
-<div data-slot="hierarchical-search" class={cn('w-full', className)}>
+<div bind:this={ref} data-slot="hierarchical-search" class={cn('w-full', className)} {...rest}>
 	<!-- Server-side matching only, so the list never filters what came back. -->
 	<Command.Root shouldFilter={false} bind:value={cursor} class="border-border rounded-md border" onkeydown={onKeydown}>
 		<Command.Input value={query} {placeholder} oninput={(e) => setQuery(e.currentTarget.value)} />

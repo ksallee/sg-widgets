@@ -93,7 +93,11 @@ const TEXT: Record<HierarchicalSearchSize, string> = {
   lg: 'text-base',
 };
 
-export interface HierarchicalSearchProps {
+export interface HierarchicalSearchProps
+  extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onSelect'> {
+  /** The root element. */
+  ref?: React.Ref<HTMLDivElement>;
+
   /** Where rows come from. Wrap it in `createQueryCache` once for the whole app. */
   client: SgClient;
   /** Where the tree starts, `/Project/<id>` for one project or `/` for the site. */
@@ -125,6 +129,8 @@ export function HierarchicalSearch({
   placeholder = 'Search the hierarchy…',
   size = 'md',
   className,
+  ref,
+  ...rest
 }: HierarchicalSearchProps) {
   const schema = useMemo(() => createSchemaService(client), [client]);
 
@@ -309,7 +315,7 @@ export function HierarchicalSearch({
   }, [rootPath, client]);
 
   return (
-    <div data-slot="hierarchical-search" className={cn('w-full', className)}>
+    <div ref={ref} data-slot="hierarchical-search" className={cn('w-full', className)} {...rest}>
       {/* Server-side matching only, so the list never filters what came back. */}
       <Command shouldFilter={false} className="border-border rounded-md border" onKeyDown={onKeydown}>
         <CommandInput value={query} placeholder={placeholder} onValueChange={setQuery} />

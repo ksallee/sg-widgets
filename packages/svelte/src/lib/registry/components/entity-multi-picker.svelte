@@ -118,6 +118,7 @@
 </script>
 
 <script lang="ts">
+	import type { HTMLAttributes } from 'svelte/elements';
 	import type { FieldSchema, StatusRecord } from '@sg-widgets/core';
 	import {
 		createEntitySearch,
@@ -143,9 +144,10 @@
 	import FieldValue from '$lib/registry/components/field-value.svelte';
 	import Thumbnail from '$lib/registry/components/thumbnail.svelte';
 	import UserAvatar from '$lib/registry/components/user-avatar.svelte';
-	import { cn } from '$lib/utils.js';
+	import { cn, type WithElementRef } from '$lib/utils.js';
 
-	type Props = EntityMultiPickerBaseProps & {
+	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>, HTMLDivElement> &
+		EntityMultiPickerBaseProps & {
 		/** The chosen rows, two-way. Bare `{type, id}` members are resolved on mount. */
 		value?: EntityRef[];
 		onValueChange?: (value: EntityRef[], rows: PickerRow[]) => void;
@@ -186,7 +188,9 @@
 		onOpenChange,
 		onValueChange,
 		onError,
-		class: className
+		class: className,
+		ref = $bindable(null),
+		...rest
 	}: Props = $props();
 
 	// One schema service for the widget, built from the prop so a client swapped in
@@ -498,11 +502,13 @@
 	status is a badge and a date is formatted.
 -->
 <div
+	bind:this={ref}
 	data-slot="entity-picker"
 	data-size={size}
 	data-multiple="true"
 	data-summary={summary}
 	class={cn('relative flex w-full min-w-0 items-center', disabled && 'pointer-events-none opacity-50', className)}
+	{...rest}
 >
 	<Combobox.Root
 		type="multiple"

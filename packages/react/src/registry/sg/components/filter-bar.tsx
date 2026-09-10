@@ -44,7 +44,10 @@ const GLYPH: Record<FilterBarSize, string> = { sm: 'size-4', md: 'size-4', lg: '
 /** The button step beside a pill of each height. */
 const BTN: Record<FilterBarSize, 'sm' | 'default' | 'lg'> = { sm: 'sm', md: 'default', lg: 'lg' };
 
-export interface FilterBarProps {
+export interface FilterBarProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange'> {
+  /** The root element. */
+  ref?: React.Ref<HTMLDivElement>;
+
   entityType: string;
   client: SgClient;
   schema?: SchemaService;
@@ -94,6 +97,8 @@ export function FilterBar({
   sampleSize = 200,
   onChange,
   className,
+  ref,
+  ...rest
 }: FilterBarProps) {
   const service = useMemo(() => schema ?? createSchemaService(client), [schema, client]);
   const [fields, setFields] = useState<Record<string, FieldSchema>>({});
@@ -228,7 +233,12 @@ export function FilterBar({
   const activeCount = facets.filter((name) => Boolean(conditionOf(name))).length;
 
   return (
-    <div className={cn('flex w-full min-w-0 flex-wrap items-center gap-2', className)} data-slot="filter-bar">
+    <div
+      ref={ref}
+      data-slot="filter-bar"
+      className={cn('flex w-full min-w-0 flex-wrap items-center gap-2', className)}
+      {...rest}
+    >
       {facets.map((name) => {
         const field = fields[name];
         const found = conditionOf(name);

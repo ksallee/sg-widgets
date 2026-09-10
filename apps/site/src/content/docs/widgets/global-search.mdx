@@ -33,6 +33,9 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/global-search.
 | `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Trigger heights 8, 9 and 10, and the row's leading slot. |
 | `class` / `className` | `string` | — | Merged after the widget's own classes. |
 
+Every other attribute is spread onto the root: `id`, `aria-*`, `data-*`, key handlers and a
+`ref` to the root element.
+
 Recents live in the caller. The widget hands back the new list and never writes anywhere, so where
 they are kept between sessions is the app's decision.
 

@@ -57,6 +57,7 @@
 </script>
 
 <script lang="ts">
+	import type { HTMLAttributes } from 'svelte/elements';
 	import type { FieldSchema, SgClient, StatusRecord } from '@sg-widgets/core';
 	import { createSchemaService } from '@sg-widgets/core';
 	import ChevronDown from '@lucide/svelte/icons/chevron-down';
@@ -64,12 +65,12 @@
 	import TriangleAlert from '@lucide/svelte/icons/triangle-alert';
 	import * as Popover from '$lib/components/ui/popover/index.js';
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
-	import { cn } from '$lib/utils.js';
+	import { cn, type WithElementRef } from '$lib/utils.js';
 	import EntityChip from '$lib/registry/components/entity-chip.svelte';
 	import HierarchicalSearch from '$lib/registry/components/hierarchical-search.svelte';
 	import StatusBadge from '$lib/registry/components/status-badge.svelte';
 
-	type Props = {
+	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>, HTMLDivElement> & {
 		/** Where rows come from. Wrap it in `createQueryCache` once for the whole app. */
 		client: SgClient;
 		context?: WorkContext;
@@ -98,7 +99,9 @@
 		size = 'md',
 		open = $bindable(false),
 		onOpenChange,
-		class: className
+		class: className,
+		ref = $bindable(null),
+		...rest
 	}: Props = $props();
 
 	const schema = $derived(createSchemaService(client));
@@ -201,7 +204,7 @@
 	to the current user, and a drill-down over the navigation tree. Assigned tasks are
 	one `_search` on Task filtered by `task_assignees`, grouped under their project.
 -->
-<div data-slot="context-selector" class={cn('w-full', className)}>
+<div bind:this={ref} data-slot="context-selector" class={cn('w-full', className)} {...rest}>
 	<Popover.Root bind:open={() => open, setOpen}>
 		<Popover.Trigger
 			data-slot="context-selector-trigger"

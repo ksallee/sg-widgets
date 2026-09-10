@@ -47,6 +47,9 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/field-picker.j
 | `open` | `boolean` | `false` | Whether the popover is showing. Two-way in Svelte. |
 | `className` / `class` | `string` | — | Merged after the widget's own classes. |
 
+Every other attribute is spread onto the root: `id`, `aria-*`, `data-*`, key handlers and a
+`ref` to the root element.
+
 The value is a dotted path. A root field is its own code; every hop names the field followed and the
 type it landed on, which is the syntax a projection and a filter both take.
 

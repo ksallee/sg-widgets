@@ -41,6 +41,9 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/entity-type-pi
 | `open` | `boolean` | `false` | Whether the popup is showing. Two-way in Svelte. |
 | `className` / `class` | `string` | — | Merged after the widget's own classes. |
 
+Every other attribute is spread onto the root: `id`, `aria-*`, `data-*`, key handlers and a
+`ref` to the root element.
+
 Each row shows the display name, with the code beneath it in mono when the two differ, unless
 `showCode` is off. In multi mode every row carries a checkbox and the list stays open across
 selections.

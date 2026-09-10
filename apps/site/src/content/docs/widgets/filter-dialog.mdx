@@ -36,6 +36,9 @@ anything.
 | `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Launcher heights 8, 9 and 10. Passed to the editor inside. |
 | `class` / `className` | `string` | — | Merged after the widget's own classes. |
 
+Every other attribute is spread onto the root: `id`, `aria-*`, `data-*`, key handlers and a
+`ref` to the root element.
+
 ## Events
 
 | event | payload | when |

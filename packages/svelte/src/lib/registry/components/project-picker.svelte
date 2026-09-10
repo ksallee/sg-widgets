@@ -19,10 +19,13 @@
 </script>
 
 <script lang="ts">
+	import type { HTMLAttributes } from 'svelte/elements';
 	import type { EntityRef, PickerRow } from '@sg-widgets/core';
+	import { type WithElementRef } from '$lib/utils.js';
 	import EntityPicker, { type EntityPickerBaseProps } from './entity-picker.svelte';
 
-	type Props = Omit<EntityPickerBaseProps, 'entityTypes'> & {
+	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>, HTMLDivElement> &
+		Omit<EntityPickerBaseProps, 'entityTypes'> & {
 		value?: EntityRef | null;
 		onValueChange?: (value: EntityRef | null, row: PickerRow | null) => void;
 		/** Offer projects whose `archived` checkbox is set. */
@@ -37,6 +40,7 @@
 		placeholder = 'Search for a project',
 		emptyLabel = 'No project matches.',
 		open = $bindable(false),
+		ref = $bindable(null),
 		...rest
 	}: Props = $props();
 </script>
@@ -51,6 +55,7 @@
 <EntityPicker
 	bind:value
 	bind:open
+	bind:ref
 	entityTypes={['Project']}
 	fields={[...PROJECT_FIELDS, ...fields]}
 	filters={projectFilters(includeArchived, filters)}

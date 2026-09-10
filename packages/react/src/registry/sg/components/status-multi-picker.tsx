@@ -127,7 +127,10 @@ const PICKER_NOTE = 'flex items-center justify-center gap-1.5 py-6 text-center t
 const PICKER_ICON_BUTTON =
   'hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring focus-visible:ring-offset-background pointer-events-auto shrink-0 rounded-sm p-0.5 opacity-70 outline-none transition-colors duration-150 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-2 motion-safe:active:scale-[0.98]';
 
-export interface StatusMultiPickerProps {
+export interface StatusMultiPickerProps extends React.HTMLAttributes<HTMLDivElement> {
+  /** The root element. */
+  ref?: React.Ref<HTMLDivElement>;
+
   /** The site to read from. Wrap it in `createQueryCache` so widgets on a page share one read. */
   client: SgClient;
   entityType: string;
@@ -255,6 +258,8 @@ export function StatusMultiPicker({
   open: openProp,
   onOpenChange,
   className,
+  ref,
+  ...rest
 }: StatusMultiPickerProps) {
   const projectKey = (projectIds ?? (projectId === undefined ? [] : [projectId])).join(',');
   const store = useMemo(
@@ -410,11 +415,13 @@ export function StatusMultiPicker({
 
   return (
     <div
+      ref={ref}
       data-slot="status-multi-picker"
       data-size={size}
       data-summary={summary}
       data-loading={query.loading ? 'true' : undefined}
       className={cn('relative flex w-full min-w-0 items-center', className)}
+      {...rest}
     >
       <ComboboxPrimitive.Root
         multiple

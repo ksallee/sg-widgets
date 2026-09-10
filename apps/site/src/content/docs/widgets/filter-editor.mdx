@@ -38,6 +38,9 @@ nesting reads as one indent; the foot carries the add-condition and add-group co
 | `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Condition-row heights 7, 8 and 9: a row is a control inside a control, so its ladder sits one step down. |
 | `class` / `className` | `string` | — | Merged after the widget's own classes. |
 
+Every other attribute is spread onto the root: `id`, `aria-*`, `data-*`, key handlers and a
+`ref` to the root element.
+
 ## Events
 
 | event | payload | when |

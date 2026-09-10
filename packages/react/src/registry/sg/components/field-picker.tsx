@@ -90,7 +90,10 @@ const ICONS: Record<string, typeof Type> = {
   type: Type,
 };
 
-export interface FieldPickerProps {
+export interface FieldPickerProps extends React.HTMLAttributes<HTMLDivElement> {
+  /** The root element. */
+  ref?: React.Ref<HTMLDivElement>;
+
   /** Reads the schema. Build it once per app with `createSchemaService`. */
   schema: SchemaService;
   /** The type the path starts on. */
@@ -172,6 +175,8 @@ export function FieldPicker({
   open: openProp,
   onOpenChange,
   className,
+  ref,
+  ...rest
 }: FieldPickerProps) {
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const open = openProp ?? uncontrolledOpen;
@@ -327,10 +332,12 @@ export function FieldPicker({
 
   return (
     <div
+      ref={ref}
       data-slot="field-picker"
       data-size={size}
       data-depth={hops.length}
       className={cn('relative flex w-full min-w-0 items-center', className)}
+      {...rest}
     >
       <Popover open={open} onOpenChange={(next) => setOpen(readonly || disabled ? false : next)}>
         <PopoverTrigger

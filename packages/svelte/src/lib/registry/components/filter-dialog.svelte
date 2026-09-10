@@ -13,6 +13,7 @@
 </script>
 
 <script lang="ts">
+	import type { HTMLAttributes } from 'svelte/elements';
 	import type { Snippet } from 'svelte';
 	import FilterIcon from '@lucide/svelte/icons/list-filter';
 	import PencilIcon from '@lucide/svelte/icons/pencil';
@@ -22,13 +23,13 @@
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
-	import { cn } from '$lib/utils.js';
+	import { cn, type WithElementRef } from '$lib/utils.js';
 	import FilterEditor, {
 		type FieldChooserArgs,
 		type ValueEditorArgs
 	} from '$lib/registry/components/filter-editor.svelte';
 
-	type Props = {
+	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>, HTMLDivElement> & {
 		entityType: string;
 		client: SgClient;
 		schema?: SchemaService;
@@ -65,7 +66,9 @@
 		fieldChooser,
 		valueEditor,
 		entityEditor,
-		class: className
+		class: className,
+		ref = $bindable(null),
+		...rest
 	}: Props = $props();
 
 	let draft = $state<FilterGroup>(value);
@@ -104,7 +107,12 @@
 	anything. Edits inside the dialog are staged: only Apply emits, Cancel drops
 	them, and Clear all emits an empty filter.
 -->
-<div class={cn('inline-flex items-center gap-2', className)} data-slot="filter-dialog">
+<div
+	bind:this={ref}
+	data-slot="filter-dialog"
+	class={cn('inline-flex items-center gap-2', className)}
+	{...rest}
+>
 	<!-- The draft starts from the applied value every time the dialog opens, so a cancelled edit leaves nothing behind. -->
 	<Dialog.Root bind:open={() => open, setOpen}>
 		<Dialog.Trigger

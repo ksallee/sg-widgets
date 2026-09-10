@@ -15,6 +15,7 @@
 </script>
 
 <script lang="ts">
+	import type { HTMLAttributes } from 'svelte/elements';
 	import type { FieldHop, FieldOption, FieldSchema, SchemaService } from '@sg-widgets/core';
 	import {
 		currentType,
@@ -56,9 +57,9 @@
 	import * as Command from '$lib/components/ui/command/index.js';
 	import * as Popover from '$lib/components/ui/popover/index.js';
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
-	import { cn } from '$lib/utils.js';
+	import { cn, type WithElementRef } from '$lib/utils.js';
 
-	type Props = {
+	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>, HTMLDivElement> & {
 		/** Reads the schema. Build it once per app with `createSchemaService`. */
 		schema: SchemaService;
 		/** The type the path starts on. */
@@ -128,7 +129,9 @@
 		size = 'md',
 		open = $bindable(false),
 		onOpenChange,
-		class: className
+		class: className,
+		ref = $bindable(null),
+		...rest
 	}: Props = $props();
 
 	const ICONS: Record<string, typeof Type> = {
@@ -341,10 +344,12 @@
 	date behind a link.
 -->
 <div
+	bind:this={ref}
 	data-slot="field-picker"
 	data-size={size}
 	data-depth={hops.length}
 	class={cn('relative flex w-full min-w-0 items-center', className)}
+	{...rest}
 >
 	<Popover.Root bind:open={() => open, setOpen}>
 		<Popover.Trigger

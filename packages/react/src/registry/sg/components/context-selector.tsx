@@ -67,7 +67,10 @@ const GLYPH: Record<ContextSelectorSize, string> = { sm: 'size-4', md: 'size-4',
 /** A chip inside a control sits one step down the leaf ladder. */
 const CHIP: Record<ContextSelectorSize, 'sm' | 'md'> = { sm: 'sm', md: 'sm', lg: 'md' };
 
-export interface ContextSelectorProps {
+export interface ContextSelectorProps extends React.HTMLAttributes<HTMLDivElement> {
+  /** The root element. */
+  ref?: React.Ref<HTMLDivElement>;
+
   /** Where rows come from. Wrap it in `createQueryCache` once for the whole app. */
   client: SgClient;
   context?: WorkContext;
@@ -103,6 +106,8 @@ export function ContextSelector({
   open: openProp,
   onOpenChange,
   className,
+  ref,
+  ...rest
 }: ContextSelectorProps) {
   const schema = useMemo(() => createSchemaService(client), [client]);
 
@@ -197,7 +202,7 @@ export function ContextSelector({
   }
 
   return (
-    <div data-slot="context-selector" className={cn('w-full', className)}>
+    <div ref={ref} data-slot="context-selector" className={cn('w-full', className)} {...rest}>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger
           data-slot="context-selector-trigger"

@@ -23,7 +23,10 @@ export type SortPickerSize = 'sm' | 'md' | 'lg';
 const BOX: Record<SortPickerSize, string> = { sm: 'h-8 px-2', md: 'h-9 px-3', lg: 'h-10 px-3' };
 const GLYPH: Record<SortPickerSize, string> = { sm: 'size-4', md: 'size-4', lg: 'size-5' };
 
-export interface SortPickerProps {
+export interface SortPickerProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange'> {
+  /** The root element. */
+  ref?: React.Ref<HTMLDivElement>;
+
   entityType: string;
   client: SgClient;
   schema?: SchemaService;
@@ -65,6 +68,8 @@ export function SortPicker({
   open: openProp,
   onOpenChange,
   className,
+  ref,
+  ...rest
 }: SortPickerProps) {
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const open = openProp ?? uncontrolledOpen;
@@ -135,7 +140,12 @@ export function SortPicker({
   }
 
   return (
-    <div className={cn('inline-flex min-w-0 items-center', className)} data-slot="sort-picker">
+    <div
+      ref={ref}
+      data-slot="sort-picker"
+      className={cn('inline-flex min-w-0 items-center', className)}
+      {...rest}
+    >
       <Popover open={open} onOpenChange={(next) => setOpen(disabled ? false : next)}>
         <PopoverTrigger
           disabled={disabled}

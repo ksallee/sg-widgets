@@ -32,7 +32,11 @@ const ICON: Record<FilterDialogSize, 'icon-sm' | 'icon' | 'icon-lg'> = {
   lg: 'icon-lg',
 };
 
-export interface FilterDialogProps {
+export interface FilterDialogProps
+  extends Omit<React.HTMLAttributes<HTMLDivElement>, 'title' | 'onChange'> {
+  /** The root element. */
+  ref?: React.Ref<HTMLDivElement>;
+
   entityType: string;
   client: SgClient;
   schema?: SchemaService;
@@ -78,6 +82,8 @@ export function FilterDialog({
   valueEditor,
   entityEditor,
   className,
+  ref,
+  ...rest
 }: FilterDialogProps) {
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const open = openProp ?? uncontrolledOpen;
@@ -100,7 +106,12 @@ export function FilterDialog({
   }
 
   return (
-    <div className={cn('inline-flex items-center gap-2', className)} data-slot="filter-dialog">
+    <div
+      ref={ref}
+      data-slot="filter-dialog"
+      className={cn('inline-flex items-center gap-2', className)}
+      {...rest}
+    >
       {/* The draft starts from the applied value every time the dialog opens, so a cancelled edit leaves nothing behind. */}
       <Dialog
         open={open}

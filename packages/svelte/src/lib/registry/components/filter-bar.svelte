@@ -12,6 +12,7 @@
 </script>
 
 <script lang="ts">
+	import type { HTMLAttributes } from 'svelte/elements';
 	import PlusIcon from '@lucide/svelte/icons/plus';
 	import XIcon from '@lucide/svelte/icons/x';
 	import type {
@@ -44,10 +45,10 @@
 	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
 	import * as Command from '$lib/components/ui/command/index.js';
 	import * as Popover from '$lib/components/ui/popover/index.js';
-	import { cn } from '$lib/utils.js';
+	import { cn, type WithElementRef } from '$lib/utils.js';
 	import FilterDialog from '$lib/registry/components/filter-dialog.svelte';
 
-	type Props = {
+	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>, HTMLDivElement> & {
 		entityType: string;
 		client: SgClient;
 		schema?: SchemaService;
@@ -83,7 +84,9 @@
 		baseFilter = null,
 		sampleSize = 200,
 		onChange,
-		class: className
+		class: className,
+		ref = $bindable(null),
+		...rest
 	}: Props = $props();
 
 	const service = $derived(schema ?? createSchemaService(client));
@@ -243,7 +246,12 @@
 	otherwise from tallying one page of rows, which makes them as complete as the page
 	size allowed.
 -->
-<div class={cn('flex w-full min-w-0 flex-wrap items-center gap-2', className)} data-slot="filter-bar">
+<div
+	bind:this={ref}
+	data-slot="filter-bar"
+	class={cn('flex w-full min-w-0 flex-wrap items-center gap-2', className)}
+	{...rest}
+>
 	{#each facets as name (name)}
 		{@const field = fields[name]}
 		{@const found = conditionOf(name)}

@@ -47,6 +47,9 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/column-picker.
 | `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Row height. |
 | `className` / `class` | `string` | — | Merged after the widget's own classes. |
 
+Every other attribute is spread onto the root: `id`, `aria-*`, `data-*`, key handlers and a
+`ref` to the root element.
+
 Picking a field appends its path to the end of the list and clears the picker, which takes focus
 back for the next one. A path already chosen is off the list, so a column is never added twice.
 

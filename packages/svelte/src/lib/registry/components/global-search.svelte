@@ -45,6 +45,7 @@
 </script>
 
 <script lang="ts">
+	import type { HTMLAttributes } from 'svelte/elements';
 	import type { SgClient } from '@sg-widgets/core';
 	import { createSchemaService, hydrate, matchRuns, scopeToProject } from '@sg-widgets/core';
 	import type { Snippet } from 'svelte';
@@ -54,12 +55,12 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Kbd } from '$lib/components/ui/kbd/index.js';
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
-	import { cn } from '$lib/utils.js';
+	import { cn, type WithElementRef } from '$lib/utils.js';
 	import EntityChip from '$lib/registry/components/entity-chip.svelte';
 	import Thumbnail from '$lib/registry/components/thumbnail.svelte';
 	import UserAvatar from '$lib/registry/components/user-avatar.svelte';
 
-	type Props = {
+	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>, HTMLDivElement> & {
 		/** Where rows come from. Wrap it in `createQueryCache` once for the whole app. */
 		client: SgClient;
 		entityTypes?: GlobalSearchTypes;
@@ -103,7 +104,9 @@
 		placeholder = 'Search…',
 		label = 'Search',
 		class: className,
-		trigger
+		trigger,
+		ref = $bindable(null),
+		...rest
 	}: Props = $props();
 
 	const schema = $derived(createSchemaService(client));
@@ -342,14 +345,26 @@
 {/snippet}
 
 {#if inline}
-	<div data-slot="global-search" data-variant="inline" class={cn('w-full', className)}>
+	<div
+		bind:this={ref}
+		data-slot="global-search"
+		data-variant="inline"
+		class={cn('w-full', className)}
+		{...rest}
+	>
 		<!-- Server-side matching only, so the list never filters what came back. -->
 		<Command.Root shouldFilter={false} bind:value={cursor} class="border-border rounded-md border">
 			{@render body()}
 		</Command.Root>
 	</div>
 {:else}
-	<div data-slot="global-search" data-variant="dialog" class={cn('w-full', className)}>
+	<div
+		bind:this={ref}
+		data-slot="global-search"
+		data-variant="dialog"
+		class={cn('w-full', className)}
+		{...rest}
+	>
 		{#if trigger}
 			{@render trigger({ open: () => setOpen(true) })}
 		{:else}

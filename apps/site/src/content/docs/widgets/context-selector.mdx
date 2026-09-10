@@ -30,6 +30,9 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/context-select
 | `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Trigger heights 8, 9 and 10, and the chips inside it. |
 | `class` / `className` | `string` | — | Merged after the widget's own classes. |
 
+Every other attribute is spread onto the root: `id`, `aria-*`, `data-*`, key handlers and a
+`ref` to the root element.
+
 A `WorkContext` is a project, an entity and a task, each of them a row reference or null.
 
 The popover holds three sections in this order: the recents the caller passed, the tasks assigned to

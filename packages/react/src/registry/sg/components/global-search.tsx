@@ -62,7 +62,10 @@ const GLYPH: Record<GlobalSearchSize, string> = { sm: 'size-4', md: 'size-4', lg
 /** A row's leading slot sits one step down the leaf ladder. */
 const LEAD: Record<GlobalSearchSize, 'sm' | 'md'> = { sm: 'sm', md: 'sm', lg: 'md' };
 
-export interface GlobalSearchProps {
+export interface GlobalSearchProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onSelect'> {
+  /** The root element. */
+  ref?: React.Ref<HTMLDivElement>;
+
   /** Where rows come from. Wrap it in `createQueryCache` once for the whole app. */
   client: SgClient;
   entityTypes?: GlobalSearchTypes;
@@ -115,6 +118,8 @@ export function GlobalSearch({
   label = 'Search',
   className,
   trigger,
+  ref,
+  ...rest
 }: GlobalSearchProps) {
   const schema = useMemo(() => createSchemaService(client), [client]);
 
@@ -363,7 +368,13 @@ export function GlobalSearch({
 
   if (inline) {
     return (
-      <div data-slot="global-search" data-variant="inline" className={cn('w-full', className)}>
+      <div
+        ref={ref}
+        data-slot="global-search"
+        data-variant="inline"
+        className={cn('w-full', className)}
+        {...rest}
+      >
         {/* Server-side matching only, so the list never filters what came back. */}
         <Command shouldFilter={false} className="border-border rounded-md border">
           {body}
@@ -373,7 +384,13 @@ export function GlobalSearch({
   }
 
   return (
-    <div data-slot="global-search" data-variant="dialog" className={cn('w-full', className)}>
+    <div
+      ref={ref}
+      data-slot="global-search"
+      data-variant="dialog"
+      className={cn('w-full', className)}
+      {...rest}
+    >
       {trigger ? (
         trigger({ open: () => setOpen(true) })
       ) : (

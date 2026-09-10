@@ -12,6 +12,7 @@
 	import ArrowUpDownIcon from '@lucide/svelte/icons/arrow-up-down';
 	import GripVerticalIcon from '@lucide/svelte/icons/grip-vertical';
 	import XIcon from '@lucide/svelte/icons/x';
+	import type { HTMLAttributes } from 'svelte/elements';
 	import type { SchemaService, SgClient, SortKey } from '@sg-widgets/core';
 	import { createSchemaService, friendlyFieldPath, isSortable, toSortString } from '@sg-widgets/core';
 	import { Badge } from '$lib/components/ui/badge/index.js';
@@ -19,11 +20,11 @@
 	import * as Popover from '$lib/components/ui/popover/index.js';
 	import { Separator } from '$lib/components/ui/separator/index.js';
 	import * as ToggleGroup from '$lib/components/ui/toggle-group/index.js';
-	import { cn } from '$lib/utils.js';
+	import { cn, type WithElementRef } from '$lib/utils.js';
 	import FieldPicker from '$lib/registry/components/field-picker.svelte';
 	import { createSortable } from '$lib/registry/components/sortable.svelte.js';
 
-	type Props = {
+	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>, HTMLDivElement> & {
 		entityType: string;
 		client: SgClient;
 		schema?: SchemaService;
@@ -51,7 +52,9 @@
 		onChange,
 		open = $bindable(false),
 		onOpenChange,
-		class: className
+		class: className,
+		ref = $bindable(null),
+		...rest
 	}: Props = $props();
 
 	function setOpen(next: boolean): void {
@@ -146,7 +149,12 @@
 	through links. An unsortable or unknown field is a silent 200 no-op with the rows
 	in default order, so only types that sort are offered.
 -->
-<div class={cn('inline-flex min-w-0 items-center', className)} data-slot="sort-picker">
+<div
+	bind:this={ref}
+	data-slot="sort-picker"
+	class={cn('inline-flex min-w-0 items-center', className)}
+	{...rest}
+>
 	<Popover.Root bind:open={() => open, setOpen}>
 		<Popover.Trigger
 			{disabled}

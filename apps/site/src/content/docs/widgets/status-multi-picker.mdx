@@ -42,6 +42,9 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/status-multi-p
 | `open` | `boolean` | `false` | Whether the popup is showing. Two-way in Svelte. |
 | `class` / `className` | `string` | — | Merged after the widget's own classes. |
 
+Every other attribute is spread onto the root: `id`, `aria-*`, `data-*`, key handlers and a
+`ref` to the root element.
+
 `chips` makes the control a token field: every badge, wrapped, each with its own remove control,
 the caret beside them, and `+n` after the last badge `max` allows.
 `icons` is the same field with the labels dropped and no per-badge remove, so removal happens in

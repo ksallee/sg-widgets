@@ -51,6 +51,9 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/entity-picker.
 | `open` | `boolean` | `false` | Whether the popup is showing. Two-way in Svelte. |
 | `class` / `className` | `string` | — | Merged after the widget's own classes. |
 
+Every other attribute is spread onto the root: `id`, `aria-*`, `data-*`, key handlers and a
+`ref` to the root element.
+
 The secondary column shows nothing until `secondaryField` or `secondary` asks for something.
 `secondaryField` is drawn by the field's data type, so a status is a badge, an entity is the name it
 links to, a date is formatted and a number is right-aligned in tabular figures; `secondaryField="id"`

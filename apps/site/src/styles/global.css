@@ -7,9 +7,12 @@
  * whole nova token set (`--background`, `--primary`, ...) on `:root`, restyle `body`,
  * and pull in Tailwind's preflight. Importing either would fight Starlight's own reset
  * and theme; importing both would define every token twice. So the site imports
- * neither, and the block below is the single copy of those tokens on this site --
- * scoped to `.sg-demo` so Starlight's chrome is untouched. When the packages change a
- * token value, mirror it here; nothing else on the site reads these variables.
+ * neither, and the block below is the single copy of those tokens on this site. When
+ * the packages change a token value, mirror it here.
+ *
+ * The tokens sit on `:root`, and the `--sl-*` block further down hands them to
+ * Starlight, so the header, sidebar, content and code blocks wear the palette the
+ * demos wear. The stage keeps its own copy and its own light/dark.
  *
  * The layer order is Starlight's recommended one for Tailwind v4, which deliberately
  * omits `tailwindcss/preflight.css`: a global preflight would flatten Starlight's
@@ -39,9 +42,10 @@
 @import '@fontsource-variable/geist';
 
 /*
- * The palettes the demo toolbar can put on the stage. Unlayered, like the token block
- * below, and every rule in it carries a `[data-theme]` or `[data-radius]` attribute, so
- * it outranks the defaults on specificity wherever the import lands.
+ * The palettes the toolbar can put on a stage and on the page around it. Unlayered, like
+ * the token block below, and every rule in it carries a `[data-theme]`, `[data-radius]`,
+ * `[data-sg-palette]` or `[data-sg-radius]` attribute, so it outranks the defaults on
+ * specificity wherever the import lands.
  */
 @import './themes.css';
 
@@ -127,11 +131,13 @@
 /*
  * The one copy of the shadcn tokens.
  *
- * Also on `:root`, because a popover portals to `<body>` and so leaves the stage: the
- * stage block below still wins on the stage itself, and a portalled popup reads these.
+ * On `:root`, so the whole page reads them: Starlight's chrome through the `--sl-*`
+ * mapping further down, the demo frame and a portalled popup -- both of which sit
+ * outside the stage -- by inheritance. `[data-stage]` is the stage itself, which holds
+ * its own palette and its own light/dark and so pins the tokens again on the element.
  */
 :root,
-.sg-demo {
+[data-stage] {
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
@@ -169,19 +175,16 @@
 /*
  * Dark tokens, for two independent things:
  *
- * - `.sg-demo.dark` -- the demo stage's own dark class, driven by the toggle in the
- *   demo toolbar. Starlight themes with `:root[data-theme='dark']`, so the two never
- *   collide and a reviewer can read dark docs while QAing a light widget.
- * - `.sg-demo-chrome` under a dark Starlight -- the harness furniture (toolbar,
- *   frame) follows the docs theme, so a demo does not glare on a dark page. The stage
- *   nested inside redefines the tokens from `.sg-demo` above, so it stays independent.
- * - a portalled surface under a dark Starlight -- a popover, a select popup, a hover
- *   card and a dialog all sit on `<body>`, outside the stage, so they follow the docs theme as
- *   the chrome does.
+ * - `:root[data-theme='dark']` -- the docs page, the spelling Starlight's own theme
+ *   select writes. Everything outside the stage follows it: the chrome through the
+ *   `--sl-*` mapping below, the demo frame and the portalled surfaces (a popover, a
+ *   select popup, a hover card, a dialog all sit on `<body>`) by inheritance.
+ * - `[data-stage].dark` -- the demo stage's own dark class, driven by the toggle in the
+ *   demo toolbar. It pins the tokens on the stage element, so a reviewer can read dark
+ *   docs while QAing a light widget.
  */
-.sg-demo.dark,
-:root[data-theme='dark'] .sg-demo-chrome,
-:root[data-theme='dark'] :is([data-slot='popover-content'], [data-slot='select-content'], [data-slot='dialog-content'], [data-slot='hover-card-content'], [data-slot$='-picker-content']) {
+:root[data-theme='dark'],
+[data-stage].dark {
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);
@@ -213,6 +216,86 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
+}
+
+/*
+ * Starlight's chrome, on the tokens above.
+ *
+ * Starlight draws its header, sidebar, table of contents, content, search dialog, code
+ * blocks and mobile menu from the `--sl-*` variables it defines in `@layer
+ * starlight.base` (@astrojs/starlight/style/props.css). This block is unlayered, so it
+ * outranks that definition, and every value here reads a token: the palette on `:root`
+ * reaches the chrome through the tokens, and no rule below names a palette.
+ *
+ * Starlight's grey ramp runs from the colour furthest from the page (`--sl-color-white`,
+ * which headings take) to the page itself (`--sl-color-black`), and swaps ends between
+ * light and dark. So each step maps to the token that plays its part, never to a
+ * lightness, and the ramp turns over with the theme on its own.
+ *
+ * Left on Starlight's own values: `--sl-shadow-*`, which are neutral alpha blacks, and
+ * `--sl-color-{orange,green,blue,purple,red}*`, which asides use to say what kind of
+ * note they are.
+ */
+:root {
+  --sl-font: var(--font-sans);
+  --sl-font-mono: var(--font-mono);
+
+  --sl-color-white: var(--foreground);
+  --sl-color-gray-1: var(--foreground);
+  /* Chrome text one step off the body's, so a sidebar link has somewhere to go on hover. */
+  --sl-color-gray-2: color-mix(in oklab, var(--foreground) 85%, var(--background));
+  /* Muted text, pulled towards the body's colour so it clears AA in every palette. */
+  --sl-color-gray-3: color-mix(in oklab, var(--muted-foreground) 75%, var(--foreground));
+  /* Rules and icon fills: dimmer than muted text, still darker than a border. */
+  --sl-color-gray-4: color-mix(in oklab, var(--muted-foreground) 65%, var(--background));
+  --sl-color-gray-5: var(--border);
+  --sl-color-gray-6: var(--muted);
+  --sl-color-gray-7: var(--muted);
+  --sl-color-black: var(--background);
+
+  --sl-color-text: var(--foreground);
+  --sl-color-bg: var(--background);
+  --sl-color-bg-nav: var(--background);
+  --sl-color-bg-sidebar: var(--background);
+  --sl-color-bg-inline-code: var(--muted);
+
+  /* One accent, the token the widgets take for their strongest surface. */
+  --sl-color-accent: var(--primary);
+  --sl-color-accent-high: var(--primary);
+  --sl-color-accent-low: color-mix(in oklab, var(--primary) 22%, var(--background));
+  --sl-color-bg-accent: var(--primary);
+  /*
+   * The accent as text -- a link, the current heading in the table of contents -- sits
+   * on the page rather than on a surface of its own, and a palette whose `--primary` is
+   * a bright colour would not clear AA there. Half way to the body's colour keeps the
+   * hue and the contrast; where `--primary` is already near `--foreground` it changes
+   * nothing.
+   */
+  --sl-color-text-accent: color-mix(in oklab, var(--primary) 50%, var(--foreground));
+  /*
+   * What Starlight writes on the accent -- the current page in the sidebar. The page's
+   * own colour, so it inherits the contrast the line above guarantees.
+   */
+  --sl-color-text-invert: var(--background);
+
+  --sl-color-hairline: var(--border);
+  --sl-color-hairline-light: var(--border);
+  --sl-color-hairline-shade: var(--border);
+}
+
+/*
+ * The wash behind the search dialog: a fixed dark scrim in both themes, as the shadcn
+ * dialog overlay is. It is read from the `::backdrop` pseudo-element, which the tokens
+ * do not reach, so it carries no `var()`.
+ */
+:root,
+::backdrop {
+  --sl-color-backdrop-overlay: oklch(0 0 0 / 60%);
+}
+
+/* Pagefind's own corners; the dialog's are a hard 0.5rem upstream and stay there. */
+#starlight__search {
+  --sl-search-corners: var(--radius);
 }
 
 /*

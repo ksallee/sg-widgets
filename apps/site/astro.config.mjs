@@ -1,4 +1,5 @@
 // @ts-check
+import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
@@ -13,6 +14,10 @@ const svelteLib = fileURLToPath(new URL('svelte/src/lib', packages));
 const coreSrc = fileURLToPath(new URL('core/src/index.ts', packages));
 const repoRoot = fileURLToPath(new URL('../../', import.meta.url));
 
+// Inlined in the head, so the stored palette is on `:root` before the first paint. Read
+// as text rather than imported: this file is the head entry, not a module the page runs.
+const paletteBoot = readFileSync(new URL('./src/scripts/palette-boot.js', import.meta.url), 'utf8');
+
 export default defineConfig({
   // Set so the sitemap Starlight emits has absolute URLs (and to silence its warning).
   site: 'https://sg-widgets.dev',
@@ -26,6 +31,21 @@ export default defineConfig({
       title: 'sg-widgets',
       description: 'shadcn-compatible widgets for Flow Production Tracking, for React and Svelte.',
       customCss: ['./src/styles/global.css'],
+      head: [{ tag: 'script', content: paletteBoot }],
+      // The code block is a surface of the page like a card is: the frame, its border
+      // and its corners come from the tokens, and only the syntax colours stay
+      // Starlight's own. Starlight already draws the frame background from
+      // `--sl-color-gray-6/7`; these are the settings it leaves on Expressive Code's
+      // defaults.
+      expressiveCode: {
+        styleOverrides: {
+          borderRadius: 'var(--radius)',
+          codeBackground: 'var(--sl-color-bg-inline-code)',
+          codeFontFamily: 'var(--sl-font-mono)',
+          codeSelectionBackground: 'var(--sl-color-accent-low)',
+          uiFontFamily: 'var(--sl-font)',
+        },
+      },
       // The palette and what the demos read are site-wide, so they sit in the header
       // beside the search box and the theme select. Starlight's own header takes no
       // props and offers no slot, so the override is a copy of it.

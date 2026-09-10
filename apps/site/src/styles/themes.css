@@ -1,18 +1,17 @@
 /*
- * Palettes the demo stage can wear, and a radius override that sits on top of any of
- * them.
+ * Palettes the site can wear, and a radius override that sits on top of any of them.
  *
- * Each block redefines the shadcn tokens `global.css` sets on `.sg-demo`, scoped to
- * `.sg-demo[data-theme='<name>']` and its `.dark` companion -- the same two selectors
- * the stage already switches between, so a palette reaches the widgets and nothing
- * else. Starlight's chrome reads none of these variables.
+ * Each block redefines the shadcn tokens `global.css` sets, and carries two selectors
+ * for the two places a palette lands: `.sg-demo[data-theme='<name>']` and its `.dark`
+ * companion, the pair the stage switches between, and `:root[data-sg-palette='<name>']`
+ * with `[data-theme='dark']` for the page around it, which Starlight's chrome reads
+ * through the `--sl-*` mapping in `global.css`. The values are written once for both.
  *
- * The stage at `data-theme='default'` matches no block here and keeps the nova neutral
- * tokens `global.css` sets.
+ * `data-theme='default'` and `data-sg-palette='default'` match no block here and keep
+ * the nova neutral tokens `global.css` sets.
  *
- * A light block carries `--radius` and `--font-sans`; the dark block carries colours
- * only. Radius and font do not change with light and dark, and the radius override
- * below is a plain `.sg-demo[data-radius]` rule that has to outrank them.
+ * A light block carries `--radius`; the dark block carries colours only, so the radius
+ * override at the foot of the file has only the light block to outrank.
  *
  * Values are copied from their source, unedited. A font a palette names by family is
  * fetched by the toolbar when that palette is picked, never on page load; without it
@@ -20,7 +19,8 @@
  */
 
 /* shadcn base colour `stone` -- https://ui.shadcn.com/docs/theming */
-.sg-demo[data-theme='stone'] {
+.sg-demo[data-theme='stone'],
+:root[data-sg-palette='stone'] {
   --background: oklch(1 0 0);
   --foreground: oklch(0.147 0.004 49.25);
   --card: oklch(1 0 0);
@@ -55,7 +55,8 @@
   --radius: 0.625rem;
 }
 
-.sg-demo[data-theme='stone'].dark {
+.sg-demo[data-theme='stone'].dark,
+:root[data-sg-palette='stone'][data-theme='dark'] {
   --background: oklch(0.147 0.004 49.25);
   --foreground: oklch(0.985 0.001 106.423);
   --card: oklch(0.216 0.006 56.043);
@@ -90,7 +91,8 @@
 }
 
 /* shadcn base colour `zinc` -- https://ui.shadcn.com/docs/theming */
-.sg-demo[data-theme='zinc'] {
+.sg-demo[data-theme='zinc'],
+:root[data-sg-palette='zinc'] {
   --background: oklch(1 0 0);
   --foreground: oklch(0.141 0.005 285.823);
   --card: oklch(1 0 0);
@@ -125,7 +127,8 @@
   --radius: 0.625rem;
 }
 
-.sg-demo[data-theme='zinc'].dark {
+.sg-demo[data-theme='zinc'].dark,
+:root[data-sg-palette='zinc'][data-theme='dark'] {
   --background: oklch(0.141 0.005 285.823);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.21 0.006 285.885);
@@ -160,7 +163,8 @@
 }
 
 /* shadcn base colour `mauve` -- https://ui.shadcn.com/docs/theming */
-.sg-demo[data-theme='mauve'] {
+.sg-demo[data-theme='mauve'],
+:root[data-sg-palette='mauve'] {
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0.008 326);
   --card: oklch(1 0 0);
@@ -195,7 +199,8 @@
   --radius: 0.625rem;
 }
 
-.sg-demo[data-theme='mauve'].dark {
+.sg-demo[data-theme='mauve'].dark,
+:root[data-sg-palette='mauve'][data-theme='dark'] {
   --background: oklch(0.145 0.008 326);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.212 0.019 322.12);
@@ -230,7 +235,8 @@
 }
 
 /* shadcn base colour `mist` -- https://ui.shadcn.com/docs/theming */
-.sg-demo[data-theme='mist'] {
+.sg-demo[data-theme='mist'],
+:root[data-sg-palette='mist'] {
   --background: oklch(1 0 0);
   --foreground: oklch(0.148 0.004 228.8);
   --card: oklch(1 0 0);
@@ -265,7 +271,8 @@
   --radius: 0.625rem;
 }
 
-.sg-demo[data-theme='mist'].dark {
+.sg-demo[data-theme='mist'].dark,
+:root[data-sg-palette='mist'][data-theme='dark'] {
   --background: oklch(0.148 0.004 228.8);
   --foreground: oklch(0.987 0.002 197.1);
   --card: oklch(0.218 0.008 223.9);
@@ -300,7 +307,8 @@
 }
 
 /* tweakcn preset `vercel` -- https://tweakcn.com/r/themes/vercel.json */
-.sg-demo[data-theme='vercel'] {
+.sg-demo[data-theme='vercel'],
+:root[data-sg-palette='vercel'] {
   --background: oklch(0.9900 0 0);
   --foreground: oklch(0 0 0);
   --card: oklch(1 0 0);
@@ -334,10 +342,10 @@
   --sidebar-border: oklch(0.9400 0 0);
   --sidebar-ring: oklch(0 0 0);
   --radius: 0.5rem;
-  --font-sans: Geist, sans-serif;
 }
 
-.sg-demo[data-theme='vercel'].dark {
+.sg-demo[data-theme='vercel'].dark,
+:root[data-sg-palette='vercel'][data-theme='dark'] {
   --background: oklch(0 0 0);
   --foreground: oklch(1 0 0);
   --card: oklch(0.1400 0 0);
@@ -373,7 +381,8 @@
 }
 
 /* tweakcn preset `supabase` -- https://tweakcn.com/r/themes/supabase.json */
-.sg-demo[data-theme='supabase'] {
+.sg-demo[data-theme='supabase'],
+:root[data-sg-palette='supabase'] {
   --background: oklch(0.9911 0 0);
   --foreground: oklch(0.2046 0 0);
   --card: oklch(0.9911 0 0);
@@ -407,10 +416,10 @@
   --sidebar-border: oklch(0.9037 0 0);
   --sidebar-ring: oklch(0.8348 0.1302 160.9080);
   --radius: 0.5rem;
-  --font-sans: Outfit, sans-serif;
 }
 
-.sg-demo[data-theme='supabase'].dark {
+.sg-demo[data-theme='supabase'].dark,
+:root[data-sg-palette='supabase'][data-theme='dark'] {
   --background: oklch(0.1822 0 0);
   --foreground: oklch(0.9288 0.0126 255.5078);
   --card: oklch(0.2046 0 0);
@@ -446,7 +455,8 @@
 }
 
 /* tweakcn preset `claude` -- https://tweakcn.com/r/themes/claude.json */
-.sg-demo[data-theme='claude'] {
+.sg-demo[data-theme='claude'],
+:root[data-sg-palette='claude'] {
   --background: oklch(0.9818 0.0054 95.0986);
   --foreground: oklch(0.3438 0.0269 95.7226);
   --card: oklch(0.9818 0.0054 95.0986);
@@ -480,10 +490,10 @@
   --sidebar-border: oklch(0.9401 0 0);
   --sidebar-ring: oklch(0.7731 0 0);
   --radius: 0.5rem;
-  --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
 }
 
-.sg-demo[data-theme='claude'].dark {
+.sg-demo[data-theme='claude'].dark,
+:root[data-sg-palette='claude'][data-theme='dark'] {
   --background: oklch(0.2679 0.0036 106.6427);
   --foreground: oklch(0.8074 0.0142 93.0137);
   --card: oklch(0.2679 0.0036 106.6427);
@@ -519,7 +529,8 @@
 }
 
 /* tweakcn preset `twitter` -- https://tweakcn.com/r/themes/twitter.json */
-.sg-demo[data-theme='twitter'] {
+.sg-demo[data-theme='twitter'],
+:root[data-sg-palette='twitter'] {
   --background: oklch(1.0000 0 0);
   --foreground: oklch(0.1884 0.0128 248.5103);
   --card: oklch(0.9784 0.0011 197.1387);
@@ -553,10 +564,10 @@
   --sidebar-border: oklch(0.9271 0.0101 238.5177);
   --sidebar-ring: oklch(0.6818 0.1584 243.3540);
   --radius: 1.3rem;
-  --font-sans: Open Sans, sans-serif;
 }
 
-.sg-demo[data-theme='twitter'].dark {
+.sg-demo[data-theme='twitter'].dark,
+:root[data-sg-palette='twitter'][data-theme='dark'] {
   --background: oklch(0 0 0);
   --foreground: oklch(0.9328 0.0025 228.7857);
   --card: oklch(0.2097 0.0080 274.5332);
@@ -592,7 +603,8 @@
 }
 
 /* tweakcn preset `catppuccin` -- https://tweakcn.com/r/themes/catppuccin.json */
-.sg-demo[data-theme='catppuccin'] {
+.sg-demo[data-theme='catppuccin'],
+:root[data-sg-palette='catppuccin'] {
   --background: oklch(0.9578 0.0058 264.5321);
   --foreground: oklch(0.4355 0.0430 279.3250);
   --card: oklch(1.0000 0 0);
@@ -626,10 +638,10 @@
   --sidebar-border: oklch(0.8083 0.0174 271.1982);
   --sidebar-ring: oklch(0.5547 0.2503 297.0156);
   --radius: 0.35rem;
-  --font-sans: Montserrat, sans-serif;
 }
 
-.sg-demo[data-theme='catppuccin'].dark {
+.sg-demo[data-theme='catppuccin'].dark,
+:root[data-sg-palette='catppuccin'][data-theme='dark'] {
   --background: oklch(0.2155 0.0254 284.0647);
   --foreground: oklch(0.8787 0.0426 272.2767);
   --card: oklch(0.2429 0.0304 283.9110);
@@ -668,18 +680,44 @@
  * The radius override. Last in the file, so it beats the `--radius` a palette's light
  * block sets at the same specificity. `default` leaves the palette's own value alone.
  */
-.sg-demo[data-radius='none'] {
+.sg-demo[data-radius='none'],
+:root[data-sg-radius='none'] {
   --radius: 0rem;
 }
-.sg-demo[data-radius='sm'] {
+.sg-demo[data-radius='sm'],
+:root[data-sg-radius='sm'] {
   --radius: 0.25rem;
 }
-.sg-demo[data-radius='md'] {
+.sg-demo[data-radius='md'],
+:root[data-sg-radius='md'] {
   --radius: 0.5rem;
 }
-.sg-demo[data-radius='lg'] {
+.sg-demo[data-radius='lg'],
+:root[data-sg-radius='lg'] {
   --radius: 0.75rem;
 }
-.sg-demo[data-radius='xl'] {
+.sg-demo[data-radius='xl'],
+:root[data-sg-radius='xl'] {
   --radius: 1rem;
+}
+
+/*
+ * The typeface a palette names, on the stage only. Starlight's chrome stays on the
+ * site's own sans through `--sl-font`, so a docs page keeps one voice whichever
+ * palette the header holds.
+ */
+.sg-demo[data-theme='vercel'] {
+  --font-sans: Geist, sans-serif;
+}
+.sg-demo[data-theme='supabase'] {
+  --font-sans: Outfit, sans-serif;
+}
+.sg-demo[data-theme='claude'] {
+  --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+}
+.sg-demo[data-theme='twitter'] {
+  --font-sans: Open Sans, sans-serif;
+}
+.sg-demo[data-theme='catppuccin'] {
+  --font-sans: Montserrat, sans-serif;
 }

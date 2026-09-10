@@ -3,6 +3,7 @@
 //
 //   node tools/qa.mjs --url http://127.0.0.1:4321/widgets/ --shot out.png
 //   node tools/qa.mjs --start --path /widgets/status-badge/ --drive drive.js --dark --reduced-motion
+//   node tools/qa.mjs --start --path /widgets/entity-picker/ --palette vercel --dark --shot out.png
 //
 // --start builds nothing: it runs `astro dev` on a free port with its own .astro dir, so two agents
 // never share a server. Without it, --url (or --path on --base, default http://127.0.0.1:4321) is used.
@@ -10,9 +11,10 @@
 // The drive file is the body of an async function receiving ({wait, $, $$, harness}). `harness.set`
 // writes the demo view's localStorage keys (framework: svelte|react|both, theme: light|dark,
 // motion: normal|reduced, palette: default|stone|..., radius: default|none|sm|md|lg|xl) and the
-// page re-reads them at once; the flags below set them for the initial load. --dark also sets
-// Starlight's own theme key, which is what the stage follows. Whatever the body returns is printed
-// as JSON under `result`, next to `console` (errors and warnings only) and `shot`/`video` paths.
+// page re-reads them at once; the flags below set them for the initial load. --palette dresses the
+// docs chrome as well as the demos, and --dark also sets Starlight's own theme key, which is what
+// the stage follows. Whatever the body returns is printed as JSON under `result`, next to `console`
+// (errors and warnings only) and `shot`/`video` paths.
 //
 // --live runs the demos against the site named by the repo's .env.local instead of the mock, through
 // the dev-only /live/dev-token endpoint, so it needs a dev server (--start, or --url on one).
@@ -43,6 +45,7 @@ function args(argv) {
       case '--video': a.video = next(); break;
       case '--viewport': a.viewport = next(); break;
       case '--timeout': a.timeout = Number(next()); break;
+      case '--palette': a.palette = next(); break;
       case '--dark': a.dark = true; break;
       case '--reduced-motion': a.reducedMotion = true; break;
       case '--framework': a.framework = next(); break;
@@ -134,6 +137,9 @@ async function main() {
   // The stage follows Starlight's theme select, so --dark has to set Starlight's key too.
   const starlightTheme = a.dark ? 'dark' : 'light';
   if (a.framework) prefs.framework = a.framework;
+  // The palette dresses the docs chrome as well as the stage, so a shot of one page
+  // shows both wearing it.
+  if (a.palette) prefs.palette = a.palette;
   // Live mode reads the site through /live/dev-token, which only `astro dev` answers.
   if (a.live) prefs.source = 'live';
   if (a.project) prefs.project = JSON.stringify({ id: Number(a.project) });

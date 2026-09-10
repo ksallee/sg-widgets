@@ -18,6 +18,12 @@
 		{ type: 'Asset', id: 1226 }
 	]);
 	let excluding = $state<EntityRef[]>([]);
+	/** A token field with chips already in it, for the keyboard. */
+	let tokens = $state<EntityRef[]>([
+		{ type: 'Asset', id: 1226, name: 'charAda' },
+		{ type: 'Asset', id: 1227, name: 'charBruno' },
+		{ type: 'Asset', id: 1228, name: 'propLantern' }
+	]);
 	let paged = $state<EntityRef[]>([]);
 	let failed = $state<EntityRef[]>([]);
 	let lastError = $state<string | null>(null);
@@ -55,6 +61,19 @@
 		<h4 class={label}>Several shots</h4>
 		<div class={field}>
 			<EntityMultiPicker {client} entityTypes={['Shot']} bind:value={shots} clearable />
+		</div>
+	</section>
+
+	<section class={group} data-demo-case="tokens">
+		<h4 class={label}>A token field: Backspace walks the chips</h4>
+		<div class={field}>
+			<EntityMultiPicker
+				{client}
+				entityTypes={['Asset']}
+				summary="chips"
+				bind:value={tokens}
+				clearable
+			/>
 		</div>
 	</section>
 

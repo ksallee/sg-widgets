@@ -49,6 +49,9 @@
 	const PICKER_ICON_BUTTON =
 		'hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring focus-visible:ring-offset-background pointer-events-auto shrink-0 rounded-sm p-0.5 opacity-70 outline-none transition-colors duration-150 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-2 motion-safe:active:scale-[0.98]';
 
+	/** The chip a Backspace has armed. The keyboard cursor wears the focus ring. */
+	const PICKER_ARMED = 'ring-ring ring-offset-background ring-2 ring-offset-1';
+
 	/** The row a press on the last row of a page carries, rather than an entity key. */
 	const LOAD_MORE = '__load-more';
 
@@ -107,6 +110,7 @@
 </script>
 
 <script lang="ts">
+	import { tick } from 'svelte';
 	import type { HTMLAttributes } from 'svelte/elements';
 	import type { FieldSchema, StatusRecord } from '@sg-widgets/core';
 	import {
@@ -115,9 +119,12 @@
 		createStatusService,
 		entityKey,
 		highlightRuns,
+		holdsArmed,
 		isEmptyValue,
+		pickerKeyIntent,
 		placeholderName,
 		renderKindFor,
+		scrollHighlightedIntoView,
 		withSelectedPinned
 	} from '@sg-widgets/core';
 	import { Combobox } from 'bits-ui';
@@ -204,8 +211,11 @@
 
 	let snap = $state(search.state);
 	let controlEl = $state<HTMLElement | null>(null);
+	let listEl = $state<HTMLElement | null>(null);
 	let inputEl = $state<HTMLInputElement | null>(null);
 	let query = $state('');
+	/** True once a Backspace has highlighted the chip. The next one clears it. */
+	let armed = $state(false);
 	/** A press on the load-more row is not a selection, and must not close the popup. */
 	let paging = false;
 
@@ -350,11 +360,60 @@
 			return;
 		}
 		const wanted = interactive ? next : false;
-		if (!wanted) query = '';
+		if (!wanted) {
+			query = '';
+			armed = false;
+		}
 		if (wanted === open) return;
 		open = wanted;
 		onOpenChange?.(open);
 	}
+
+	// Nothing to arm once the value is gone.
+	$effect(() => {
+		if (armed && !value) armed = false;
+	});
+
+	/**
+	 * Backspace, Escape and the arrows. The primitive's own handler runs after this
+	 * one, so a key this picker owns is prevented rather than shared.
+	 */
+	function onKey(event: KeyboardEvent): void {
+		const intent = pickerKeyIntent(event.key, {
+			open,
+			query,
+			count: value ? 1 : 0,
+			armed: armed ? 0 : null,
+			editable: interactive
+		});
+		if (!holdsArmed(event.key)) armed = false;
+		switch (intent.kind) {
+			case 'dismiss':
+				setOpen(false);
+				return;
+			case 'arm':
+				event.preventDefault();
+				armed = true;
+				return;
+			case 'remove':
+				event.preventDefault();
+				clear();
+				return;
+			case 'follow':
+				void tick().then(() => scrollHighlightedIntoView(listEl));
+				return;
+			default:
+				return;
+		}
+	}
+
+	// A load-more page appends rows under the highlighted one, and a new query
+	// replaces them all; either way the list follows the highlight.
+	$effect(() => {
+		void snap.rows.length;
+		if (!open) return;
+		void tick().then(() => scrollHighlightedIntoView(listEl));
+	});
 
 	function setSelected(key: string): void {
 		if (key === LOAD_MORE) {
@@ -427,6 +486,8 @@
 						entity={chipEntity}
 						thumbnail={selectedRow ? thumbOf(selectedRow) : null}
 						size={PICKER_CHIP[size]}
+						data-armed={armed ? 'true' : undefined}
+						class={armed ? PICKER_ARMED : undefined}
 					/>
 				</span>
 			{/if}
@@ -438,6 +499,7 @@
 				readonly={readonly || undefined}
 				placeholder={chipEntity ? searchPlaceholder : placeholder}
 				oninput={(e) => (query = e.currentTarget.value)}
+				onkeydown={onKey}
 				class={PICKER_INPUT}
 			/>
 		</div>
@@ -457,7 +519,7 @@
 				sideOffset={4}
 				class={PICKER_POPUP}
 			>
-				<div data-slot="entity-picker-list" class={PICKER_LIST}>
+				<div bind:this={listEl} data-slot="entity-picker-list" class={PICKER_LIST}>
 					{#if snap.error}
 						<div data-slot="entity-picker-error" class={cn(PICKER_NOTE, 'text-destructive')}>
 							<TriangleAlert aria-hidden="true" class="size-4 shrink-0" />

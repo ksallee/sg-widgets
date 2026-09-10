@@ -87,9 +87,10 @@ code beside it, sub-label, right-aligned secondary.
 |---|---|
 | any text | Opens the list and searches the server. |
 | `Enter`, `Space` | On the chevron, opens the list. |
-| `Up`, `Down` | Moves the highlight through the rows. |
+| `Up`, `Down` | Moves the highlight through the rows and keeps it in view, including across a load more page. The last row holds it rather than wrapping. |
 | `Enter` | Chooses the highlighted row, or loads the next page on the load more row. |
-| `Escape` | Closes the list and clears the query. |
+| `Backspace` | In an empty search box, highlights the chosen row's chip. A second one clears the value. Any other key releases it. |
+| `Escape` | Closes the list and clears the query. On a closed picker it does nothing. |
 | `Tab` | Moves to the clear control, then the chevron, then out. |
 
 ## API behaviour

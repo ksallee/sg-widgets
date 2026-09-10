@@ -62,9 +62,10 @@ bold, sub-label, right-aligned secondary.
 |---|---|
 | any text | Searches the server, from the caret under `chips` and from the popup's search box otherwise. |
 | `Enter`, `Space` | On the chevron, opens the list. |
-| `Up`, `Down` | Moves the highlight through the rows. |
+| `Up`, `Down` | Moves the highlight through the rows and keeps it in view, including across a load more page. The last row holds it rather than wrapping. |
 | `Enter` | Ticks or unticks the highlighted row. The list stays open. |
-| `Escape` | Closes the list and clears the query. |
+| `Backspace` | In an empty search box, highlights the last chip. A second one removes it. Any other key releases it. |
+| `Escape` | Closes the list and clears the query. On a closed picker it does nothing. |
 | `Tab` | Moves through the chips' remove controls, then `+n`, the clear control and the chevron. |
 
 ## API behaviour

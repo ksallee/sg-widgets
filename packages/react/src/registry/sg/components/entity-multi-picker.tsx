@@ -20,9 +20,12 @@ import {
   createStatusService,
   entityKey,
   highlightRuns,
+  holdsArmed,
   isEmptyValue,
+  pickerKeyIntent,
   placeholderName,
   renderKindFor,
+  scrollHighlightedIntoView,
   summariseSelection,
   withSelectedPinned,
 } from '@sg-widgets/core';
@@ -146,6 +149,8 @@ const PICKER_ROW =
   'data-highlighted:bg-accent data-highlighted:text-accent-foreground relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0';
 /** The centred line every empty, loading and error state uses. */
 const PICKER_NOTE = 'flex items-center justify-center gap-1.5 py-6 text-center text-sm';
+/** The chip a Backspace has armed. The keyboard cursor wears the focus ring. */
+const PICKER_ARMED = 'ring-ring ring-offset-background ring-2 ring-offset-1';
 /** The clear control, shared by every picker in this registry. */
 const PICKER_ICON_BUTTON =
   'hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring focus-visible:ring-offset-background pointer-events-auto shrink-0 rounded-sm p-0.5 opacity-70 outline-none transition-colors duration-150 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-2 motion-safe:active:scale-[0.98]';
@@ -357,11 +362,15 @@ export function EntityMultiPicker({
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const open = openProp ?? uncontrolledOpen;
   const setOpen = (next: boolean): void => {
+    if (!next) setArmedChip(null);
     setUncontrolledOpen(next);
     onOpenChange?.(next);
   };
   const [query, setQuery] = useState('');
+  /** The chip a Backspace has highlighted. The next one removes it. */
+  const [armedChip, setArmedChip] = useState<number | null>(null);
   const controlRef = useRef<HTMLDivElement | null>(null);
+  const listRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const chipsRef = useRef<HTMLSpanElement | null>(null);
   /** A press on the load-more row is not a selection, and must not close the popup. */
@@ -528,6 +537,49 @@ export function EntityMultiPicker({
     );
   }
 
+  // A chip removed from under the highlight takes it with it.
+  const armed = armedChip !== null && armedChip < value.length ? armedChip : null;
+
+  /**
+   * Backspace, Escape and the arrows. The primitive's own handler runs after this
+   * one, so a key this picker owns is prevented rather than shared.
+   */
+  function onKey(event: React.KeyboardEvent<HTMLInputElement>): void {
+    const intent = pickerKeyIntent(event.key, {
+      open,
+      query,
+      count: value.length,
+      armed,
+      editable: interactive,
+    });
+    if (!holdsArmed(event.key)) setArmedChip(null);
+    switch (intent.kind) {
+      case 'dismiss':
+        setOpen(false);
+        setQuery('');
+        return;
+      case 'arm':
+        event.preventDefault();
+        setArmedChip(intent.index);
+        return;
+      case 'remove': {
+        event.preventDefault();
+        const chip = value[intent.index];
+        if (chip) emit(value.filter((other) => entityKey(other) !== entityKey(chip)));
+        return;
+      }
+      case 'follow':
+        // The highlight moves after this handler, so the list follows it a frame later.
+        requestAnimationFrame(() => scrollHighlightedIntoView(listRef.current));
+        return;
+      default:
+        // A closed picker leaves Escape alone: the primitive would clear the value.
+        if (event.key === 'Escape') {
+          (event as { preventBaseUIHandler?: () => void }).preventBaseUIHandler?.();
+        }
+    }
+  }
+
   function choose(keys: string[]): void {
     if (keys.includes(LOAD_MORE)) {
       pagingRef.current = true;
@@ -541,6 +593,13 @@ export function EntityMultiPicker({
 
   const keys = [...options.map(entityKey), ...(state.hasMore ? [LOAD_MORE] : [])];
   const byKey = new Map(options.map((row) => [entityKey(row), row]));
+
+  // A load-more page appends rows under the highlighted one, and a new query
+  // replaces them all; either way the list follows the highlight.
+  useEffect(() => {
+    if (!open) return;
+    scrollHighlightedIntoView(listRef.current);
+  }, [open, state.rows.length]);
 
   let note: ReactNode = null;
   if (state.error) {
@@ -692,6 +751,8 @@ export function EntityMultiPicker({
         filter={null}
         openOnInputClick={false}
         autoHighlight
+        // Down stops at the last row rather than wrapping, as it does on Bits UI.
+        loopFocus={false}
         disabled={disabled}
         value={selectedKeys}
         onValueChange={(next) => choose(next)}
@@ -767,8 +828,9 @@ export function EntityMultiPicker({
                       removable={interactive}
                       onRemove={() => emit(value.filter((other) => entityKey(other) !== entityKey(chip.ref)))}
                       data-chip=""
+                      data-armed={armed === index ? 'true' : undefined}
                       hidden={row.ready && index >= plan.shown.length}
-                      className="shrink-0"
+                      className={cn('shrink-0', armed === index && PICKER_ARMED)}
                     />
                   ))}
                   {plan.overflow > 0 ? (
@@ -799,6 +861,7 @@ export function EntityMultiPicker({
               aria-label={placeholder}
               readOnly={readonly || undefined}
               placeholder={value.length > 0 ? '' : placeholder}
+              onKeyDown={onKey}
               className={PICKER_INPUT}
             />
           ) : null}
@@ -830,11 +893,12 @@ export function EntityMultiPicker({
                     data-slot="entity-picker-input"
                     aria-label={searchPlaceholder}
                     placeholder={searchPlaceholder}
+                    onKeyDown={onKey}
                     className={PICKER_SEARCH}
                   />
                 </div>
               )}
-              <ComboboxPrimitive.List data-slot="entity-picker-list" className={PICKER_LIST}>
+              <ComboboxPrimitive.List ref={listRef} data-slot="entity-picker-list" className={PICKER_LIST}>
                 {note ?? ((key: string) => renderRow(key))}
               </ComboboxPrimitive.List>
             </ComboboxPrimitive.Popup>

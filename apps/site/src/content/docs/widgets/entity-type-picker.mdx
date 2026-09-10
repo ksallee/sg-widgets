@@ -76,9 +76,10 @@ None.
 |---|---|
 | any text | Narrows the rows, from the caret in a token field and from the popup's search box otherwise. |
 | `Enter`, `Space` | On the chevron, opens the list. |
-| `Down`, `Up` | Move the cursor through the rows. |
+| `Down`, `Up` | Move the cursor through the rows and keep it in view. The last row holds it rather than wrapping. |
 | `Enter` | Choose the highlighted type. In multi mode, toggles it and keeps the list open. |
-| `Escape` | Close, keeping the value and clearing the query. |
+| `Backspace` | In an empty search box, highlights the last chip. A second one removes it. |
+| `Escape` | Close, keeping the value and clearing the query. On a closed picker it does nothing. |
 
 ## API behaviour
 

@@ -28,8 +28,11 @@ export default defineConfig({
   adapter: node({ mode: 'standalone' }),
   integrations: [
     starlight({
-      title: 'sg-widgets',
+      title: 'SG Widgets',
       description: 'shadcn-compatible widgets for Flow Production Tracking, for React and Svelte.',
+      // The mark alone, with the default palette's values pinned and its dark values
+      // behind a `prefers-color-scheme` query inside the file, so it follows the OS.
+      favicon: '/favicon.svg',
       customCss: ['./src/styles/global.css'],
       head: [{ tag: 'script', content: paletteBoot }],
       // The code block is a surface of the page like a card is: the frame, its border
@@ -48,8 +51,12 @@ export default defineConfig({
       },
       // The palette and what the demos read are site-wide, so they sit in the header
       // beside the search box and the theme select. Starlight's own header takes no
-      // props and offers no slot, so the override is a copy of it.
-      components: { Header: './src/components/overrides/Header.astro' },
+      // props and offers no slot, so the override is a copy of it. The site title is
+      // the wordmark.
+      components: {
+        Header: './src/components/overrides/Header.astro',
+        SiteTitle: './src/components/overrides/SiteTitle.astro',
+      },
       sidebar: [
         { label: 'Start', items: [{ label: 'Introduction', slug: 'start/introduction' }] },
         {

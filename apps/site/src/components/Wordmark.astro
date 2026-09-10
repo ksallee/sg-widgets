@@ -1,59 +1,54 @@
 ---
 /**
- * One lockup: a type treatment, at one size, with a mark in front of it or without one.
+ * The site's wordmark: the mark beside the title.
  *
- * Both treatments are the same two words in the same face and the same weight split --
- * SG medium, Widgets regular -- and differ only in what carries the colour. Colours are
- * tokens, so a treatment is judged under whichever palette and theme the page wears, and
- * the mark is sized in `em`, so it scales with the type. The word carrying the plain ink
- * takes it from `currentColor`, which is `--foreground` on the page and
- * `--sidebar-foreground` on the nav strip, so a lockup holds on either ground.
- *
- * `size` is any CSS length. The page passes the size Starlight gives the site title and a
- * display size.
+ * The title splits at its first space. The head word is the ink at medium weight, the
+ * tail the muted ink at regular, both in the sans the page wears. The ink is
+ * `currentColor`, so the head word takes the colour of the element around it and the
+ * mark's front tile with it. The type takes its size from that element too; the mark
+ * takes `size`, in `em` by default so it scales with the type. At 1.2em one tile stands
+ * as tall as a capital and the pair as tall as the line.
  */
 import WordmarkMark from './WordmarkMark.astro';
-import type { MarkTake, TypeTreatment } from './wordmark-variants';
 
 interface Props {
-  /** An `id` from typeTreatments. */
-  treatment: TypeTreatment['id'];
-  /** An `id` from markTakes. Without one the type stands alone. */
-  mark?: MarkTake['id'];
-  size: string;
+  title?: string;
+  /** The mark's box side; any CSS length. */
+  size?: string;
 }
 
-const { treatment, mark, size } = Astro.props;
+const { title = 'SG Widgets', size = '1.2em' } = Astro.props;
+const [head, ...rest] = title.split(' ');
+const tail = rest.join(' ');
 ---
 
-<span class="lockup" style={`font-size:${size}`}>
-  {mark && <WordmarkMark mark={mark} size="1.15em" />}
-
-  {
-    treatment === 'muted-tail' && (
-      <span>
-        <span class="font-medium">SG</span> <span class="font-normal text-muted-foreground">Widgets</span>
-      </span>
-    )
-  }
-
-  {
-    treatment === 'primary-head' && (
-      <span>
-        <span class="font-medium text-primary">SG</span> <span class="font-normal">Widgets</span>
-      </span>
-    )
-  }
+<span class="wordmark">
+  <WordmarkMark size={size} />
+  <span class="type" translate="no"><span class="head">{head}</span> <span class="tail">{tail}</span></span>
 </span>
 
 <style>
-  /* The lockup owns the space between a mark and the type; the space between the two
+  /* The lockup owns the space between the mark and the type; the space between the two
      words is a word space, so it stays a typographic one at every size. */
-  .lockup {
+  .wordmark {
     display: inline-flex;
     align-items: center;
     gap: 0.4em;
     line-height: 1.1;
     white-space: nowrap;
+    min-width: 0;
+  }
+
+  .type {
+    overflow: hidden;
+  }
+
+  .head {
+    font-weight: 500;
+  }
+
+  .tail {
+    font-weight: 400;
+    color: var(--muted-foreground);
   }
 </style>

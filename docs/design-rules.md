@@ -137,3 +137,10 @@ them once:
 
 A widget may add props of its own, but never a second spelling for one of these. Presets (user,
 project) are configurations of these props, not forks.
+
+`subLabelField` and `secondaryField` take one type everywhere: a bare path, or a column already
+resolved from the schema so the value renders by its data type. `fields` only ever means fields to
+request; a list of values a widget draws is `details`.
+
+The row itself is one component per framework, `picker-row`, and every widget that lists entity rows
+composes it rather than drawing a second one.

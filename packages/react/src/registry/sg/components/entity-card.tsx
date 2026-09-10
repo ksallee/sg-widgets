@@ -1,10 +1,10 @@
 import { Fragment, useEffect, useState, type HTMLAttributes, type ReactNode } from 'react';
 import type {
-  CollectionColumn,
   EntityCardColumn,
   EntityCardModel,
   EntityRef,
   EntityRow,
+  FieldSpec,
   FieldTextOptions,
   SgClient,
   SgContext,
@@ -19,6 +19,7 @@ import {
   imageState,
   isEmptyValue,
   loadEntityCard,
+  pathOf,
   preferencesOf,
   renderKindFor,
   urlLink,
@@ -70,12 +71,6 @@ const GLYPHS = {
   PublishedFile: FileBox,
 } as const;
 
-/** The path of a row-anatomy prop, whether it came as a path or as a resolved column. */
-function pathOf(spec: string | CollectionColumn | null | undefined): string {
-  if (spec === null || spec === undefined) return '';
-  return typeof spec === 'string' ? spec : spec.path;
-}
-
 export interface EntityCardProps extends Omit<HTMLAttributes<HTMLDivElement>, 'children'> {
   /** The cached client, the schema service, the site url and the preferences the card reads through. */
   context?: SgContext;
@@ -94,11 +89,11 @@ export interface EntityCardProps extends Omit<HTMLAttributes<HTMLDivElement>, 'c
   /** Field shown as the name. Defaults to the type's own display name. `tile` only. */
   labelField?: string | null;
   /** The left of the tile's metadata line: a path, or a resolved column so it renders by type. */
-  subLabelField?: string | CollectionColumn | null;
+  subLabelField?: FieldSpec | null;
   /** The caller's own sub-label. Wins over `subLabelField`. */
   subLabel?: (row: EntityRow) => string;
   /** The right of the tile's metadata line: a path, or a resolved column so it renders by type. */
-  secondaryField?: string | CollectionColumn | null;
+  secondaryField?: FieldSpec | null;
   /** The caller's own text on the right of the metadata line. Wins over `secondaryField`. */
   secondary?: (row: EntityRow) => string;
   /** Show the row's `code` beside the name when the two differ. `tile` only. */

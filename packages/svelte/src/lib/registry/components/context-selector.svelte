@@ -1,5 +1,5 @@
 <script lang="ts" module>
-	import type { EntityRef } from '@sg-widgets/core';
+	import type { EntityRef, FieldSpec } from '@sg-widgets/core';
 
 	export type ContextSelectorSize = 'sm' | 'md' | 'lg';
 
@@ -33,6 +33,8 @@
 		entity: EntityRef | null;
 		step: string;
 		status: string;
+		/** Every field the read answered, so the row anatomy can draw from it. */
+		values: Record<string, unknown>;
 	}
 
 	export const EMPTY_CONTEXT: WorkContext = { project: null, entity: null, task: null };
@@ -63,7 +65,8 @@
 
 <script lang="ts">
 	import type { HTMLAttributes } from 'svelte/elements';
-	import type { FieldSchema, SgContext, StatusRecord } from '@sg-widgets/core';
+	import type { PickerRow, SgContext } from '@sg-widgets/core';
+	import { pathOf, rowFields } from '@sg-widgets/core';
 	import ChevronDown from '@lucide/svelte/icons/chevron-down';
 	import ListChecks from '@lucide/svelte/icons/list-checks';
 	import TriangleAlert from '@lucide/svelte/icons/triangle-alert';
@@ -72,7 +75,7 @@
 	import { cn, type WithElementRef } from '$lib/utils.js';
 	import EntityChip from '$lib/registry/components/entity-chip.svelte';
 	import HierarchicalSearch from '$lib/registry/components/hierarchical-search.svelte';
-	import StatusBadge from '$lib/registry/components/status-badge.svelte';
+	import Row from '$lib/registry/components/picker-row.svelte';
 
 	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>, HTMLDivElement> & {
 		/** The widget context. Every read goes through it, so widgets on a page share one cache. */
@@ -86,6 +89,22 @@
 		recentLimit?: number;
 		onRecentsChange?: (recents: WorkContext[]) => void;
 		onWorkContextChange?: (workContext: WorkContext) => void;
+		/** Field holding the thumbnail URL. `false` leaves every task row on its glyph. */
+		thumbnail?: string | false;
+		/** Field holding a task row's label. Defaults to the task's own name. */
+		labelField?: string;
+		/** The muted line under the label: a path, or a resolved column. */
+		subLabelField?: FieldSpec | null;
+		/** The muted line of the caller's own making. Wins over `subLabelField`. */
+		subLabel?: (task: MyTask) => string;
+		/** The right-aligned value: a path, or a resolved column so it renders by type. */
+		secondaryField?: FieldSpec | null;
+		/** Right-aligned text of the caller's own making. Wins over `secondaryField`. */
+		secondary?: (task: MyTask) => string;
+		/** Show the row's `code` beside the label when the two differ. */
+		showCode?: boolean;
+		/** Extra fields to request, so a caller's own sub-label or secondary can read them. */
+		fields?: string[];
 		size?: ContextSelectorSize;
 		/** Whether the popover is showing, two-way. */
 		open?: boolean;
@@ -101,6 +120,14 @@
 		recentLimit = 5,
 		onRecentsChange,
 		onWorkContextChange,
+		thumbnail = 'image',
+		labelField,
+		subLabelField = null,
+		subLabel,
+		secondaryField = 'sg_status_list',
+		secondary,
+		showCode = false,
+		fields = [],
 		size = 'md',
 		open = $bindable(false),
 		onOpenChange,
@@ -109,14 +136,10 @@
 		...rest
 	}: Props = $props();
 
-	const schema = $derived(context.schema);
-
 	let tasks = $state<MyTask[]>([]);
 	/** True until the first read of the assigned tasks lands. */
 	let loading = $state(true);
 	let failure = $state<string | null>(null);
-	let statuses = $state<Record<string, StatusRecord>>({});
-	let statusField = $state<FieldSchema | null>(null);
 
 	const rootPath = $derived(workContext.project ? `/Project/${workContext.project.id}` : '/');
 	const chips = $derived(
@@ -135,22 +158,6 @@
 	});
 
 	$effect(() => {
-		let live = true;
-		void Promise.all([context.statuses.byCode(), schema.field('Task', 'sg_status_list')])
-			.then(([rows, field]) => {
-				if (!live) return;
-				statuses = Object.fromEntries(rows);
-				statusField = field ?? null;
-			})
-			.catch(() => {
-				// A badge falls back to the raw code, which is always readable.
-			});
-		return () => {
-			live = false;
-		};
-	});
-
-	$effect(() => {
 		const user = currentUser;
 		if (!user) return;
 		let live = true;
@@ -159,18 +166,31 @@
 				// `task_assignees` is a multi_entity of Group and HumanUser (entity_types/Task).
 				filters: { logical_operator: 'and', conditions: [['task_assignees', 'in', [{ type: user.type, id: user.id }]]] },
 				// A Task is named by `content`: it has no `code` and no `name` (entity_types/Task).
-				fields: ['content', 'sg_status_list', 'project', 'entity', 'step'],
+				fields: rowFields({ thumbnail, labelField, subLabelField, secondaryField, showCode, fields }, [
+					'content',
+					'sg_status_list',
+					'project',
+					'entity',
+					'step'
+				]),
 				page: { size: 50 }
 			})
 			.then((result) => {
 				if (!live) return;
-				tasks = result.data.map((row) => ({
-					task: { type: 'Task', id: row.id, name: String(row.attributes['content'] ?? `Task #${row.id}`) },
-					project: (row.relationships['project']?.data as EntityRef | null) ?? null,
-					entity: (row.relationships['entity']?.data as EntityRef | null) ?? null,
-					step: (row.relationships['step']?.data as EntityRef | null)?.name ?? '',
-					status: String(row.attributes['sg_status_list'] ?? '')
-				}));
+				tasks = result.data.map((row) => {
+					const values: Record<string, unknown> = { ...row.attributes };
+					for (const [name, link] of Object.entries(row.relationships)) values[name] = link?.data ?? null;
+					const named = labelField ? values[labelField] : undefined;
+					const label = typeof named === 'string' && named.length > 0 ? named : String(row.attributes['content'] ?? `Task #${row.id}`);
+					return {
+						task: { type: 'Task', id: row.id, name: label },
+						project: (row.relationships['project']?.data as EntityRef | null) ?? null,
+						entity: (row.relationships['entity']?.data as EntityRef | null) ?? null,
+						step: (row.relationships['step']?.data as EntityRef | null)?.name ?? '',
+						status: String(row.attributes['sg_status_list'] ?? ''),
+						values
+					};
+				});
 			})
 			.catch((error: unknown) => {
 				if (!live) return;
@@ -189,6 +209,21 @@
 		if (next === open) return;
 		open = next;
 		onOpenChange?.(next);
+	}
+
+	/** The row a task draws as: the reference and every field the read answered. */
+	function rowOf(task: MyTask): PickerRow {
+		return { type: 'Task', id: task.task.id, name: task.task.name ?? '', values: task.values };
+	}
+
+	/**
+	 * The muted line under the label. With no field and no function of the caller's,
+	 * it is what the task hangs off and the step it belongs to.
+	 */
+	function subLabelOf(task: MyTask): string | undefined {
+		if (subLabel) return subLabel(task);
+		if (pathOf(subLabelField)) return undefined;
+		return [task.entity?.name, task.step].filter(Boolean).join(' · ');
 	}
 
 	function apply(next: WorkContext): void {
@@ -289,20 +324,19 @@
 								data-entity-id={row.task.id}
 								onclick={() => apply({ project: row.project, entity: row.entity, task: row.task })}
 							>
-								<ListChecks aria-hidden="true" class="text-muted-foreground size-4 shrink-0" />
-								<span class="flex min-w-0 flex-1 flex-col">
-									<span class="truncate" title={row.task.name}>{row.task.name}</span>
-									<span class="text-muted-foreground truncate text-xs">
-										{[row.entity?.name, row.step].filter(Boolean).join(' · ')}
-									</span>
-								</span>
-								<StatusBadge
-									code={row.status}
-									status={statuses[row.status]}
-									field={statusField}
-									size={CHIP[size]}
-									siteUrl={context.siteUrl}
-								/>
+								<Row
+									row={rowOf(row)}
+									{thumbnail}
+									{showCode}
+									{subLabelField}
+									subLabel={subLabelOf(row)}
+									{secondaryField}
+									secondary={secondary ? secondary(row) : undefined}
+									{size}
+									{context}
+								>
+									{#snippet glyph()}<ListChecks aria-hidden="true" class="size-4" />{/snippet}
+								</Row>
 							</button>
 						{/each}
 					{/each}
@@ -315,6 +349,11 @@
 					{context}
 					{rootPath}
 					{size}
+					{thumbnail}
+					{labelField}
+					{subLabelField}
+					{showCode}
+					{fields}
 					onSelect={(leaf, path) => apply(contextFromPath(leaf, path))}
 					placeholder="Search for a task or a shot…"
 				/>

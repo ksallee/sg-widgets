@@ -48,9 +48,16 @@ for (const framework of ['svelte', 'react']) {
   if (!tasks) return fail(`${framework}: no assigned tasks`);
   const projects = $$('[data-slot="context-my-tasks"] h5', popover).map((h) => h.textContent.trim());
   if (projects.length === 0) return fail(`${framework}: assigned tasks are not grouped by project`);
-  const badges = $$('[data-slot="context-my-tasks"] [data-slot="status-badge"]', popover);
+  // The secondary's data type is a schema read, so the badges land after the rows.
+  const badges =
+    (await until(() => {
+      const found = $$('[data-slot="context-my-tasks"] [data-slot="status-badge"]', popover);
+      return found.length === tasks.length ? found : null;
+    })) ?? $$('[data-slot="context-my-tasks"] [data-slot="status-badge"]', popover);
   if (badges.length !== tasks.length) return fail(`${framework}: ${badges.length} badges for ${tasks.length} tasks`);
-  const steps = tasks.map((t) => t.querySelector('.text-xs')?.textContent.trim()).filter(Boolean);
+  const steps = tasks
+    .map((t) => t.querySelector('[data-slot="picker-row-sub-label"]')?.textContent.trim())
+    .filter(Boolean);
   if (steps.length !== tasks.length) return fail(`${framework}: a task row has no step line`);
   if (!$('[data-slot="hierarchical-search"]', popover)) return fail(`${framework}: no tree in the popover`);
 

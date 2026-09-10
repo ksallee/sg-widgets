@@ -35,8 +35,9 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/status-multi-p
 | `disabled` | `boolean` | `false` | Greys the control and takes it out of the tab order. |
 | `invalid` | `boolean` | `false` | Sets `aria-invalid` and the destructive ring. |
 | `showCode` | `boolean` | `false` | Shows the raw code instead of the label. The other one stays in the tooltip. |
-| `summary` | `'chips' \| 'ellipsis' \| 'count' \| 'icons' \| 'names'` | `'ellipsis'` | What the control shows for the selection. `both` is the old spelling of `chips`. |
-| `max` | `number` | `0` | Badges drawn before the rest becomes `+n`. `0` lets the row fit what it can, and `icons` draws twice as many. |
+| `summary` | `'chips' \| 'ellipsis' \| 'count'` | `'ellipsis'` | How many of the selection the control shows. |
+| `badge` | `'both' \| 'icon' \| 'text'` | `'both'` | What one selected status is drawn as. |
+| `max` | `number` | `0` | Badges drawn before the rest becomes `+n`. `0` lets the row fit what it can, and `badge="icon"` draws twice as many. |
 | `siteUrl` | `string` | the context's | Passed to every badge, for a sprite cell outside the status icon set. |
 | `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Heights 8, 9 and 10. |
 | `open` | `boolean` | `false` | Whether the popup is showing. Two-way in Svelte. |
@@ -45,14 +46,15 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/status-multi-p
 Every other attribute is spread onto the root: `id`, `aria-*`, `data-*`, key handlers and a
 `ref` to the root element.
 
-`chips` makes the control a token field: every badge, wrapped, each with its own remove control,
-the caret beside them, and `+n` after the last badge `max` allows.
-`icons` is the same field with the labels dropped and no per-badge remove, so removal happens in
-the list; it fits twice as many.
-`ellipsis` makes the control a one-line trigger: as many whole badges as the row fits, never a
-cut one, then `+n` inline after the last, and the search box at the top of the popup.
-`names` and `count` make it the same trigger, reading the labels joined by commas and
-`3 selected`.
+`summary` and `badge` are two axes. `summary` says how many of the selection the control shows:
+`chips` makes it a token field with every badge, wrapped, each with its own remove control, the caret
+beside them, and `+n` after the last badge `max` allows; `ellipsis` makes it a one-line trigger with
+as many whole badges as the row fits, never a cut one, then `+n` inline after the last, and the
+search box at the top of the popup; `count` is the same trigger reading `3 selected`.
+
+`badge` says what one status is drawn as: `both` is the icon and the label, `icon` drops the label
+and the per-badge remove, so removal happens in the list and twice as many fit, and `text` is the
+label alone.
 A press on `+n` opens the list, where the hidden codes are. Without a project the options are the site
 vocabulary, which hides nothing. `projectIds` offers the intersection of what each project allows,
 in the first project's order.
@@ -75,7 +77,7 @@ None. The rows and the closed state are status badges.
 | key | does |
 |---|---|
 | <kbd>Space</kbd>, <kbd>Enter</kbd> | On the chevron, opens the list |
-| any text | Narrows the rows, from the caret under `chips` and `icons` and from the popup's search box otherwise |
+| any text | Narrows the rows, from the caret under `chips` and from the popup's search box otherwise |
 | <kbd>↑</kbd> <kbd>↓</kbd> | Moves the highlight and keeps it in view; the last row holds it rather than wrapping |
 | <kbd>Home</kbd> <kbd>End</kbd> | First and last row |
 | <kbd>Enter</kbd> | Toggles the highlighted status; the list stays open |

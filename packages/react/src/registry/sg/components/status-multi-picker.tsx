@@ -13,14 +13,13 @@ import { ChevronsUpDown, Search, SearchX, TriangleAlert, X } from 'lucide-react'
 import { Checkbox } from '@/components/ui/checkbox';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-import { StatusBadge } from '@/registry/sg/components/status-badge';
+import { StatusBadge, type StatusBadgeVariant } from '@/registry/sg/components/status-badge';
 
 export type StatusMultiPickerSize = 'sm' | 'md' | 'lg';
 /**
  * What the control shows for the selection. `both` is the old spelling of `chips`.
  * `icons` drops the labels and `names` reads the labels as one line of text.
  */
-export type StatusMultiPickerSummary = PickerSummary | 'icons' | 'names' | 'both';
 
 /**
  * Controls follow the input ladder of `docs/design-rules.md`. `data-empty` takes the
@@ -166,7 +165,9 @@ export interface StatusMultiPickerProps extends React.HTMLAttributes<HTMLDivElem
   /** Show the raw code instead of the label. The other one stays in the tooltip. */
   showCode?: boolean;
   /** What the control shows for the selection. */
-  summary?: StatusMultiPickerSummary;
+  summary?: PickerSummary;
+  /** What one selected status is drawn as. Orthogonal to how many the control shows. */
+  badge?: StatusBadgeVariant;
   /** Badges drawn before the rest becomes `+n`. `0` lets the row fit what it can. */
   max?: number;
   /** The site the stock sprite is served from, passed to every badge. Defaults to the context's. */
@@ -267,6 +268,7 @@ export function StatusMultiPicker({
   invalid = false,
   showCode = false,
   summary = 'ellipsis',
+  badge = 'both',
   max = 0,
   siteUrl,
   size = 'md',
@@ -312,20 +314,18 @@ export function StatusMultiPicker({
   const shown = rows.filter((option) => matchesTokens(search, option.label, option.code));
   const byCode = new Map(rows.map((option) => [option.code, option]));
 
-  /** `both` is the old spelling of `chips`, and `icons` fits twice as many. */
-  const mode: PickerSummary =
-    summary === 'both' || summary === 'icons' || summary === 'names' ? 'chips' : summary;
   /**
-   * A badge control is a token field, with the caret beside the badges. A summary
+   * A chip control is a token field, with the caret beside the badges. A summary
    * control is a trigger, and keeps its search box at the top of the popup instead.
    */
-  const inline = summary !== 'ellipsis' && summary !== 'count' && summary !== 'names';
+  const inline = summary === 'chips';
   /** What the badges look like, so a change to any of it re-measures the row. */
-  const rowKey = `${size}|${summary}|${showCode}|${value.map((code) => byCode.get(code)?.label ?? code).join(', ')}`;
-  const row = useChipRow(mode === 'ellipsis', rowKey, controlRef, badgesRef);
+  const rowKey = `${size}|${summary}|${badge}|${showCode}|${value.map((code) => byCode.get(code)?.label ?? code).join(', ')}`;
+  const row = useChipRow(summary === 'ellipsis', rowKey, controlRef, badgesRef);
   const plan = summariseSelection(value, (code) => byCode.get(code)?.label ?? code, {
-    summary: mode,
-    max: summary === 'icons' ? max * 2 : max,
+    summary,
+    // A bare icon is half a badge wide, so a fixed cap fits twice as many.
+    max: badge === 'icon' ? max * 2 : max,
     fit: row.fit,
   });
 
@@ -403,7 +403,7 @@ export function StatusMultiPicker({
     }
   }
 
-  const badge = (code: string, variant: 'both' | 'icon') => (
+  const statusBadge = (code: string, variant: StatusBadgeVariant) => (
     <StatusBadge
       code={code}
       status={query.statuses.get(code) ?? null}
@@ -425,8 +425,8 @@ export function StatusMultiPicker({
       hidden={row.ready && index >= plan.shown.length}
       className={cn('flex min-w-0 shrink-0 items-center gap-1', armed === index && PICKER_ARMED)}
     >
-      {badge(code, summary === 'icons' ? 'icon' : 'both')}
-      {interactive && summary !== 'icons' ? (
+      {statusBadge(code, badge)}
+      {interactive && badge !== 'icon' ? (
         <button
           type="button"
           data-slot="status-multi-picker-remove"
@@ -481,7 +481,7 @@ export function StatusMultiPicker({
         <span data-slot="status-multi-picker-check" className="flex h-5 shrink-0 items-center">
           <Checkbox checked={chosen} tabIndex={-1} aria-hidden="true" className="pointer-events-none" />
         </span>
-        {badge(code, 'both')}
+        {statusBadge(code, 'both')}
       </ComboboxPrimitive.Item>
     );
   }
@@ -492,6 +492,7 @@ export function StatusMultiPicker({
       data-slot="status-multi-picker"
       data-size={size}
       data-summary={summary}
+      data-badge={badge}
       data-loading={query.loading ? 'true' : undefined}
       className={cn('relative flex w-full min-w-0 items-center', className)}
       {...rest}
@@ -544,10 +545,6 @@ export function StatusMultiPicker({
               {summary === 'count' ? (
                 <span data-slot="status-multi-picker-count" className="truncate">
                   {plan.countLabel}
-                </span>
-              ) : summary === 'names' ? (
-                <span data-slot="status-multi-picker-names" className="truncate">
-                  {plan.title}
                 </span>
               ) : (
                 /*

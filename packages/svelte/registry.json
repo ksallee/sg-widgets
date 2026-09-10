@@ -126,6 +126,26 @@
       ]
     },
     {
+      "name": "picker-row",
+      "type": "registry:component",
+      "title": "Picker Row",
+      "description": "The row every picker, search and tree draws: a picture, a highlighted label, a sub-label and a typed secondary.",
+      "dependencies": [
+        "@sg-widgets/core"
+      ],
+      "registryDependencies": [
+        "local:field-value",
+        "local:thumbnail",
+        "local:user-avatar"
+      ],
+      "files": [
+        {
+          "path": "src/lib/registry/components/picker-row.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
       "name": "entity-type-picker",
       "type": "registry:component",
       "title": "Entity Type Picker",
@@ -640,6 +660,7 @@
         "local:field-value",
         "local:status-badge",
         "local:thumbnail",
+        "checkbox",
         "skeleton",
         "input"
       ],
@@ -662,9 +683,7 @@
       ],
       "registryDependencies": [
         "local:entity-chip",
-        "local:field-value",
-        "local:thumbnail",
-        "local:user-avatar",
+        "local:picker-row",
         "skeleton"
       ],
       "files": [
@@ -686,9 +705,7 @@
       ],
       "registryDependencies": [
         "local:entity-chip",
-        "local:field-value",
-        "local:thumbnail",
-        "local:user-avatar",
+        "local:picker-row",
         "checkbox",
         "skeleton"
       ],
@@ -758,8 +775,7 @@
       ],
       "registryDependencies": [
         "local:entity-chip",
-        "local:thumbnail",
-        "local:user-avatar",
+        "local:picker-row",
         "command",
         "dialog",
         "button",
@@ -783,6 +799,7 @@
         "@lucide/svelte"
       ],
       "registryDependencies": [
+        "local:picker-row",
         "command",
         "skeleton"
       ],
@@ -804,7 +821,7 @@
       ],
       "registryDependencies": [
         "local:entity-chip",
-        "local:status-badge",
+        "local:picker-row",
         "local:hierarchical-search",
         "popover",
         "skeleton"

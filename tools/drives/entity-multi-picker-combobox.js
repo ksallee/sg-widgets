@@ -84,7 +84,7 @@ for (const framework of ['svelte', 'react']) {
     continue;
   }
   const bold = matched.filter((row) =>
-    [...row.querySelectorAll('[data-slot="entity-picker-label"] .font-semibold')].some(
+    [...row.querySelectorAll('[data-slot="picker-row-label"] .font-semibold')].some(
       (run) => run.textContent.toLowerCase() === 'sh010',
     ),
   ).length;

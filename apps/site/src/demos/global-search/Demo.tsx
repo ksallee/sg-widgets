@@ -4,6 +4,7 @@ import { GlobalSearch } from '@/registry/sg/components/global-search';
 import { createDemoContext } from '../_shared/client';
 
 const TYPES = ['Shot', 'Asset', 'Sequence', 'Task', 'Version', 'HumanUser', 'Project'];
+const SHOTS = ['Shot'];
 
 const group = 'flex flex-col gap-2';
 const label = 'text-muted-foreground text-xs font-medium tracking-wide uppercase';
@@ -42,6 +43,19 @@ export default function Demo() {
           inline
           onSelect={setPicked}
           placeholder="Search one project…"
+        />
+      </section>
+
+      <section className={group} data-demo="anatomy">
+        <h4 className={label}>The row props: a description under the label and a typed secondary</h4>
+        <GlobalSearch
+          context={context}
+          entityTypes={SHOTS}
+          inline
+          subLabelField="description"
+          secondaryField="sg_status_list"
+          onSelect={(entity) => setPicked(entity)}
+          placeholder="Search shots…"
         />
       </section>
 

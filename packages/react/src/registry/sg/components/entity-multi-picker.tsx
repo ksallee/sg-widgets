@@ -1,28 +1,24 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import type { PointerEvent as ReactPointerEvent, ReactNode, RefObject } from 'react';
 import type {
   ChipRow,
   EntityRef,
-  FieldSchema,
+  FieldSpec,
   FilterGroup,
-  PickerRow,
+  PickerRow as PickerRowData,
   PickerSummary,
-  SchemaService,
   SearchFieldSpec,
   SgContext,
-  StatusRecord,
-  StatusService,
   WireGroup,
 } from '@sg-widgets/core';
 import {
   createEntitySearch,
   entityKey,
-  highlightRuns,
   holdsArmed,
-  isEmptyValue,
+  pathOf,
   pickerKeyIntent,
   placeholderName,
-  renderKindFor,
+  rowThumbnail,
   scrollHighlightedIntoView,
   summariseSelection,
   withSelectedPinned,
@@ -32,9 +28,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ChevronsUpDown, Search, SearchX, TriangleAlert, X } from 'lucide-react';
 import { EntityChip } from '@/registry/sg/components/entity-chip';
-import { FieldValue } from '@/registry/sg/components/field-value';
-import { Thumbnail } from '@/registry/sg/components/thumbnail';
-import { UserAvatar } from '@/registry/sg/components/user-avatar';
+import { PickerRow } from '@/registry/sg/components/picker-row';
 import { cn } from '@/lib/utils';
 
 export type EntityMultiPickerSize = 'sm' | 'md' | 'lg';
@@ -156,50 +150,6 @@ const PICKER_ICON_BUTTON =
 /** The row a press on the last row of a page carries, rather than an entity key. */
 const LOAD_MORE = '__load-more';
 
-interface SecondaryPlan {
-  /** The secondary field's schema, per searched type. */
-  fields: Record<string, FieldSchema | undefined>;
-  /** `Status` rows by code, read only when the field is a status (probe 010). */
-  statuses: Record<string, StatusRecord> | null;
-}
-
-const NO_SECONDARY: SecondaryPlan = { fields: {}, statuses: null };
-
-/**
- * What the secondary column draws with: one field read per searched type through the
- * cached schema service, as a store, so the read starts in a memo over the props and
- * never in an effect with a "last seen" key.
- */
-function secondaryPlanStore(
-  schema: SchemaService,
-  statusTable: StatusService,
-  types: string[],
-  name: string | undefined,
-  onError: (error: Error) => void,
-) {
-  const listeners = new Set<() => void>();
-  let snapshot = NO_SECONDARY;
-  if (name) {
-    void Promise.all(types.map((type) => schema.field(type, name)))
-      .then(async (found) => {
-        const fields = Object.fromEntries(types.map((type, i) => [type, found[i]]));
-        const status = found.some((field) => field && renderKindFor(field.dataType) === 'status');
-        snapshot = { fields, statuses: status ? Object.fromEntries(await statusTable.byCode()) : null };
-        for (const listener of listeners) listener();
-      })
-      .catch((error: unknown) => onError(error instanceof Error ? error : new Error(String(error))));
-  }
-  return {
-    subscribe(listener: () => void): () => void {
-      listeners.add(listener);
-      return () => {
-        listeners.delete(listener);
-      };
-    },
-    snapshot: (): SecondaryPlan => snapshot,
-  };
-}
-
 /** Everything both entity pickers take. They differ only in the shape of the value. */
 export interface EntityMultiPickerBaseProps
   extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onError'> {
@@ -217,13 +167,14 @@ export interface EntityMultiPickerBaseProps
    * function is called with the query, so a field is searched only when it suits it.
    */
   searchFields?: SearchFieldSpec[] | ((query: string) => SearchFieldSpec[]);
-  /** Field shown right-aligned, drawn by its data type. Nothing is shown without it. */
-  secondaryField?: string;
+  /** Field shown right-aligned, drawn by its data type. A path, or a resolved column. */
+  secondaryField?: FieldSpec | null;
   /** Right-aligned text of the caller's own making. Wins over `secondaryField`. */
-  secondary?: (row: PickerRow) => string;
-  /** Field shown under the label. Defaults to the type when several types are searched. */
-  subLabelField?: string;
-  subLabel?: (row: PickerRow) => string;
+  secondary?: (row: PickerRowData) => string;
+  /** Field shown under the label: a path, or a resolved column. */
+  subLabelField?: FieldSpec | null;
+  /** The muted line of the caller's own making. Wins over `subLabelField`. */
+  subLabel?: (row: PickerRowData) => string;
   /** Field holding the thumbnail URL. `false` hides the leading slot. */
   thumbnail?: string | false;
   roundThumbnail?: boolean;
@@ -264,7 +215,7 @@ export interface EntityMultiPickerBaseProps
 export interface EntityMultiPickerProps extends EntityMultiPickerBaseProps {
   /** The chosen rows. Bare `{type, id}` members are resolved on mount. */
   value?: EntityRef[];
-  onValueChange?: (value: EntityRef[], rows: PickerRow[]) => void;
+  onValueChange?: (value: EntityRef[], rows: PickerRowData[]) => void;
 }
 
 /**
@@ -325,16 +276,7 @@ export function EntityMultiPicker({
   // The context's own services, so every widget on the page shares one schema read
   // and one status table.
   const schema = context.schema;
-  const statusTable = context.statuses;
   const site = siteUrl ?? context.siteUrl;
-  const secondaryStore = useMemo(
-    () =>
-      secondaryPlanStore(schema, statusTable, entityTypes, secondaryField, (error) =>
-        errorRef.current?.(error),
-      ),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [schema, statusTable, entityTypes.join(','), secondaryField],
-  );
 
   const [search] = useState(() =>
     createEntitySearch({
@@ -435,7 +377,7 @@ export function EntityMultiPicker({
     return {
       ref,
       entity: { type: ref.type, id: ref.id, name: row?.name || ref.name || placeholderName(ref) },
-      thumbnail: row ? thumbOf(row) : null,
+      thumbnail: row ? rowThumbnail(row.values, { thumbnail }) : null,
     };
   });
   /**
@@ -454,13 +396,6 @@ export function EntityMultiPicker({
   const hasSubLabel = Boolean(subLabelField || subLabel);
   const interactive = !disabled && !readonly;
   const showClear = clearable && value.length > 0 && interactive;
-  /** An id is a code, and codes are the mono treatment of `docs/design-rules.md`. */
-  const secondaryIsId = secondaryField === 'id';
-  const secondaryPlan = useSyncExternalStore(
-    secondaryStore.subscribe,
-    secondaryStore.snapshot,
-    secondaryStore.snapshot,
-  );
 
   /** A press anywhere in the field opens the list and puts the caret in the input. */
   function openFromControl(event: ReactPointerEvent<HTMLDivElement>): void {
@@ -481,43 +416,18 @@ export function EntityMultiPicker({
     inputRef.current?.focus({ preventScroll: true });
   }, [open, inline]);
 
-  function thumbOf(row: PickerRow): string | null {
-    if (thumbnail === false) return null;
-    const raw = row.values[thumbnail ?? 'image'];
-    return typeof raw === 'string' ? raw : null;
+  /** The caller's own sub-label. Absent, the row reads `subLabelField` itself. */
+  function subLabelOf(row: PickerRowData): string | undefined {
+    return subLabel ? subLabel(row) : undefined;
   }
 
-  function subLabelOf(row: PickerRow): string {
-    if (subLabel) return subLabel(row);
-    if (subLabelField) {
-      const raw = row.values[subLabelField];
-      return raw === null || raw === undefined ? '' : String(raw);
-    }
-    return '';
+  /** The caller's own secondary, and the type on a polymorphic list that names no field. */
+  function customSecondary(row: PickerRowData): string | undefined {
+    if (secondary) return secondary(row);
+    return !pathOf(secondaryField) && polymorphic ? row.type : undefined;
   }
 
-  /** The programmatic name, when it says something the label does not. */
-  function codeOf(row: PickerRow): string {
-    if (!showCode) return '';
-    const raw = row.values['code'];
-    return typeof raw === 'string' && raw.length > 0 && raw !== row.name ? raw : '';
-  }
-
-  /** The id is on the row itself, not among the attributes a read returns. */
-  function secondaryValue(row: PickerRow): unknown {
-    if (!secondaryField) return null;
-    return secondaryField === 'id' ? row.id : row.values[secondaryField];
-  }
-
-  function secondaryType(row: PickerRow): string {
-    return secondaryPlan.fields[row.type]?.dataType ?? (secondaryIsId ? 'number' : 'text');
-  }
-
-  function isPerson(row: PickerRow): boolean {
-    return row.type === 'HumanUser' || row.type === 'ApiUser';
-  }
-
-  function rowFor(key: string): PickerRow | null {
+  function rowFor(key: string): PickerRowData | null {
     return options.find((option) => entityKey(option) === key) ?? search.known.get(key) ?? null;
   }
 
@@ -585,7 +495,7 @@ export function EntityMultiPicker({
       search.loadMore();
       return;
     }
-    const rows = keys.map(rowFor).filter((row): row is PickerRow => row !== null);
+    const rows = keys.map(rowFor).filter((row): row is PickerRowData => row !== null);
     search.remember(rows);
     emit(rows.map((row) => ({ type: row.type, id: row.id, name: row.name })));
   }
@@ -641,10 +551,6 @@ export function EntityMultiPicker({
     const row = byKey.get(key);
     if (!row) return null;
     const chosen = selected.has(key);
-    const sub = subLabelOf(row);
-    const code = codeOf(row);
-    const custom = secondary ? secondary(row) : !secondaryField && polymorphic ? row.type : '';
-    const raw = secondaryValue(row);
     return (
       <ComboboxPrimitive.Item
         key={key}
@@ -658,75 +564,20 @@ export function EntityMultiPicker({
         <span data-slot="entity-picker-check" className="flex h-5 shrink-0 items-center">
           <Checkbox checked={chosen} tabIndex={-1} aria-hidden="true" className="pointer-events-none" />
         </span>
-        {thumbnail === false ? null : (
-          <span data-slot="entity-picker-leading" className="flex shrink-0 items-center">
-            {isPerson(row) ? (
-              <UserAvatar
-                name={row.name}
-                image={thumbOf(row)}
-                size={size}
-                apiUser={row.type === 'ApiUser'}
-                inactive={row.values['sg_status_list'] === 'dis'}
-              />
-            ) : (
-              <Thumbnail
-                src={thumbOf(row)}
-                aspect="square"
-                size={size}
-                className={roundThumbnail ? 'rounded-full' : undefined}
-              />
-            )}
-          </span>
-        )}
-        <span className="flex min-w-0 flex-1 flex-col">
-          <span data-slot="entity-picker-label" className="flex min-w-0 items-center gap-1.5" title={row.name}>
-            <span className="truncate">
-              {highlightRuns(row.name, state.query).map((run, i) => (
-                <span key={i} className={run.match ? 'font-semibold' : undefined}>
-                  {run.text}
-                </span>
-              ))}
-            </span>
-            {code ? (
-              <span data-slot="entity-picker-code" className="text-muted-foreground shrink-0 font-mono text-xs">
-                {code}
-              </span>
-            ) : null}
-          </span>
-          {sub ? (
-            // Highlighted too, so a row matched on its login or its email shows why.
-            <span data-slot="entity-picker-sub-label" className="text-muted-foreground truncate text-xs">
-              {highlightRuns(sub, state.query).map((run, i) => (
-                <span key={i} className={run.match ? 'font-semibold' : undefined}>
-                  {run.text}
-                </span>
-              ))}
-            </span>
-          ) : null}
-        </span>
-        {custom ? (
-          <span data-slot="entity-picker-secondary" className="text-muted-foreground shrink-0 text-xs">
-            {custom}
-          </span>
-        ) : secondaryField && !isEmptyValue(raw) ? (
-          <span
-            data-slot="entity-picker-secondary"
-            className={cn(
-              'text-muted-foreground flex shrink-0 items-center text-xs',
-              secondaryIsId && 'font-mono tabular-nums',
-            )}
-          >
-            <FieldValue
-              value={raw}
-              dataType={secondaryType(row)}
-              field={secondaryPlan.fields[row.type] ?? null}
-              statuses={secondaryPlan.statuses}
-              context={context}
-              siteUrl={site}
-              className="w-auto justify-end text-xs"
-            />
-          </span>
-        ) : null}
+        <PickerRow
+          row={row}
+          query={state.query}
+          thumbnail={thumbnail}
+          roundThumbnail={roundThumbnail}
+          showCode={showCode}
+          subLabelField={subLabelField}
+          subLabel={subLabelOf(row)}
+          secondaryField={secondaryField}
+          secondary={customSecondary(row)}
+          size={size}
+          context={context}
+          siteUrl={site}
+        />
       </ComboboxPrimitive.Item>
     );
   }

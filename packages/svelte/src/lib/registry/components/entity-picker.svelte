@@ -1,6 +1,7 @@
 <script lang="ts" module>
 	import type {
 		EntityRef,
+		FieldSpec,
 		FilterGroup,
 		PickerRow,
 		SearchFieldSpec,
@@ -68,12 +69,13 @@
 		 * function is called with the query, so a field is searched only when it suits it.
 		 */
 		searchFields?: SearchFieldSpec[] | ((query: string) => SearchFieldSpec[]);
-		/** Field shown right-aligned, drawn by its data type. Nothing is shown without it. */
-		secondaryField?: string;
+		/** Field shown right-aligned, drawn by its data type. A path, or a resolved column. */
+		secondaryField?: FieldSpec | null;
 		/** Right-aligned text of the caller's own making. Wins over `secondaryField`. */
 		secondary?: (row: PickerRow) => string;
-		/** Field shown under the label. Defaults to the type when several types are searched. */
-		subLabelField?: string;
+		/** Field shown under the label: a path, or a resolved column. */
+		subLabelField?: FieldSpec | null;
+		/** The muted line of the caller's own making. Wins over `subLabelField`. */
 		subLabel?: (row: PickerRow) => string;
 		/** Field holding the thumbnail URL. `false` hides the leading slot. */
 		thumbnail?: string | false;
@@ -112,16 +114,14 @@
 <script lang="ts">
 	import { tick } from 'svelte';
 	import type { HTMLAttributes } from 'svelte/elements';
-	import type { FieldSchema, StatusRecord } from '@sg-widgets/core';
 	import {
 		createEntitySearch,
 		entityKey,
-		highlightRuns,
 		holdsArmed,
-		isEmptyValue,
+		pathOf,
 		pickerKeyIntent,
 		placeholderName,
-		renderKindFor,
+		rowThumbnail,
 		scrollHighlightedIntoView,
 		withSelectedPinned
 	} from '@sg-widgets/core';
@@ -132,9 +132,7 @@
 	import X from '@lucide/svelte/icons/x';
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
 	import EntityChip from '$lib/registry/components/entity-chip.svelte';
-	import FieldValue from '$lib/registry/components/field-value.svelte';
-	import Thumbnail from '$lib/registry/components/thumbnail.svelte';
-	import UserAvatar from '$lib/registry/components/user-avatar.svelte';
+	import Row from '$lib/registry/components/picker-row.svelte';
 	import { cn, type WithElementRef } from '$lib/utils.js';
 
 	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>, HTMLDivElement> &
@@ -185,7 +183,6 @@
 	// The context's own services, so every widget on the page shares one schema read
 	// and one status table.
 	const schema = $derived(context.schema);
-	const statusTable = $derived(context.statuses);
 	const site = $derived(siteUrl ?? context.siteUrl);
 
 	// svelte-ignore state_referenced_locally
@@ -273,69 +270,16 @@
 	const interactive = $derived(!disabled && !readonly);
 	const showClear = $derived(clearable && Boolean(value) && interactive);
 	const selectedKey = $derived(value ? entityKey(value) : '');
-	/** An id is a code, and codes are the mono treatment of `docs/design-rules.md`. */
-	const secondaryIsId = $derived(secondaryField === 'id');
 
-	interface SecondaryPlan {
-		/** The secondary field's schema, per searched type. */
-		fields: Record<string, FieldSchema | undefined>;
-		/** `Status` rows by code, read only when the field is a status (probe 010). */
-		statuses: Record<string, StatusRecord> | null;
+	/** The caller's own sub-label. Absent, the row reads `subLabelField` itself. */
+	function subLabelOf(row: PickerRow): string | undefined {
+		return subLabel ? subLabel(row) : undefined;
 	}
 
-	/**
-	 * What the secondary column draws with: one field read per searched type through
-	 * the cached schema service. The read hangs off the props through a derived and
-	 * never off an effect with a "last seen" key.
-	 */
-	function loadSecondary(types: string[], name: string | undefined): SecondaryPlan {
-		const plan = $state<SecondaryPlan>({ fields: {}, statuses: null });
-		if (!name) return plan;
-		void Promise.all(types.map((type) => schema.field(type, name))).then(async (found) => {
-			plan.fields = Object.fromEntries(types.map((type, i) => [type, found[i]]));
-			if (found.some((field) => field && renderKindFor(field.dataType) === 'status')) {
-				plan.statuses = Object.fromEntries(await statusTable.byCode());
-			}
-		}, onError);
-		return plan;
-	}
-
-	const secondaryPlan = $derived(loadSecondary(entityTypes, secondaryField));
-
-	function thumbOf(row: PickerRow): string | null {
-		if (thumbnail === false) return null;
-		const raw = row.values[thumbnail ?? 'image'];
-		return typeof raw === 'string' ? raw : null;
-	}
-
-	function subLabelOf(row: PickerRow): string {
-		if (subLabel) return subLabel(row);
-		if (subLabelField) {
-			const raw = row.values[subLabelField];
-			return raw === null || raw === undefined ? '' : String(raw);
-		}
-		return '';
-	}
-
-	/** The programmatic name, when it says something the label does not. */
-	function codeOf(row: PickerRow): string {
-		if (!showCode) return '';
-		const raw = row.values['code'];
-		return typeof raw === 'string' && raw.length > 0 && raw !== row.name ? raw : '';
-	}
-
-	/** The id is on the row itself, not among the attributes a read returns. */
-	function secondaryValue(row: PickerRow): unknown {
-		if (!secondaryField) return null;
-		return secondaryField === 'id' ? row.id : row.values[secondaryField];
-	}
-
-	function secondaryType(row: PickerRow): string {
-		return secondaryPlan.fields[row.type]?.dataType ?? (secondaryIsId ? 'number' : 'text');
-	}
-
-	function isPerson(row: PickerRow): boolean {
-		return row.type === 'HumanUser' || row.type === 'ApiUser';
+	/** The caller's own secondary, and the type on a polymorphic list that names no field. */
+	function customSecondary(row: PickerRow): string | undefined {
+		if (secondary) return secondary(row);
+		return !pathOf(secondaryField) && polymorphic ? row.type : undefined;
 	}
 
 	/** A press anywhere in the field opens the list and puts the caret in the input. */
@@ -483,7 +427,7 @@
 				<span data-slot="entity-picker-value" class="flex min-w-0 items-center gap-1.5">
 					<EntityChip
 						entity={chipEntity}
-						thumbnail={selectedRow ? thumbOf(selectedRow) : null}
+						thumbnail={selectedRow ? rowThumbnail(selectedRow.values, { thumbnail }) : null}
 						size={PICKER_CHIP[size]}
 						{context}
 						siteUrl={site}
@@ -540,10 +484,6 @@
 					{:else}
 						{#each options as row (entityKey(row))}
 							{@const chosen = selectedKey === entityKey(row)}
-							{@const sub = subLabelOf(row)}
-							{@const code = codeOf(row)}
-							{@const custom = secondary ? secondary(row) : !secondaryField && polymorphic ? row.type : ''}
-							{@const raw = secondaryValue(row)}
 							<Combobox.Item
 								data-slot="entity-picker-option"
 								data-entity-type={row.type}
@@ -553,72 +493,20 @@
 								label={row.name}
 								class={cn(PICKER_ROW, hasSubLabel && 'items-start')}
 							>
-								{#if thumbnail !== false}
-									<span data-slot="entity-picker-leading" class="flex shrink-0 items-center">
-										{#if isPerson(row)}
-											<UserAvatar
-												name={row.name}
-												image={thumbOf(row)}
-												{size}
-												apiUser={row.type === 'ApiUser'}
-												inactive={row.values['sg_status_list'] === 'dis'}
-											/>
-										{:else}
-											<Thumbnail
-												src={thumbOf(row)}
-												aspect="square"
-												{size}
-												class={roundThumbnail ? 'rounded-full' : undefined}
-											/>
-										{/if}
-									</span>
-								{/if}
-								<span class="flex min-w-0 flex-1 flex-col">
-									<span data-slot="entity-picker-label" class="flex min-w-0 items-center gap-1.5" title={row.name}>
-										<span class="truncate"
-											>{#each highlightRuns(row.name, snap.query) as run, i (i)}<span
-													class={run.match ? 'font-semibold' : undefined}>{run.text}</span
-												>{/each}</span
-										>
-										{#if code}
-											<span
-												data-slot="entity-picker-code"
-												class="text-muted-foreground shrink-0 font-mono text-xs">{code}</span
-											>
-										{/if}
-									</span>
-									{#if sub}
-										<!-- Highlighted too, so a row matched on its login or its email shows why. -->
-										<span data-slot="entity-picker-sub-label" class="text-muted-foreground truncate text-xs"
-											>{#each highlightRuns(sub, snap.query) as run, i (i)}<span
-													class={run.match ? 'font-semibold' : undefined}>{run.text}</span
-												>{/each}</span
-										>
-									{/if}
-								</span>
-								{#if custom}
-									<span data-slot="entity-picker-secondary" class="text-muted-foreground shrink-0 text-xs"
-										>{custom}</span
-									>
-								{:else if secondaryField && !isEmptyValue(raw)}
-									<span
-										data-slot="entity-picker-secondary"
-										class={cn(
-											'text-muted-foreground flex shrink-0 items-center text-xs',
-											secondaryIsId && 'font-mono tabular-nums'
-										)}
-									>
-										<FieldValue
-											value={raw}
-											dataType={secondaryType(row)}
-											field={secondaryPlan.fields[row.type] ?? null}
-											statuses={secondaryPlan.statuses}
-											{context}
-											siteUrl={site}
-											class="w-auto justify-end text-xs"
-										/>
-									</span>
-								{/if}
+								<Row
+									{row}
+									query={snap.query}
+									{thumbnail}
+									{roundThumbnail}
+									{showCode}
+									{subLabelField}
+									subLabel={subLabelOf(row)}
+									{secondaryField}
+									secondary={customSecondary(row)}
+									{size}
+									{context}
+									siteUrl={site}
+								/>
 							</Combobox.Item>
 						{/each}
 						{#if snap.hasMore}

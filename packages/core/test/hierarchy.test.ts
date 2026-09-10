@@ -130,6 +130,22 @@ describe('hydrating a text search', () => {
     expect(hits[0]?.image).toMatch(/^https:/);
   });
 
+  it('carries every value a row anatomy asked for', async () => {
+    const c = client();
+    const rows = await c.textSearch('sh010_0010', { Shot: null });
+    const hits = await hydrate(c, rows, { fields: ['sg_cut_in', 'sg_sequence'] });
+    expect(hits[0]?.values['sg_cut_in']).toBe(1001);
+    // A relationship is unwrapped to its data, so a caller reads `{type, id, name}`.
+    expect(hits[0]?.values['sg_sequence']).toMatchObject({ type: 'Sequence' });
+  });
+
+  it('labels a row with the named field rather than the display-name chain', async () => {
+    const c = client();
+    const rows = await c.textSearch('sh010_0010', { Shot: null });
+    const hits = await hydrate(c, rows, { fields: ['description'], labelField: 'description' });
+    expect(hits[0]?.ref.name).toBe('Shot sh010_0010');
+  });
+
   it('reads once per type, not once per row', async () => {
     const c = createQueryCache(new MockClient(), { ttlMs: 0 });
     let searches = 0;

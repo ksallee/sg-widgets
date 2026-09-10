@@ -45,6 +45,19 @@
 		/>
 	</section>
 
+	<section class={group} data-demo="anatomy">
+		<h4 class={label}>The row props: a description under the label and a typed secondary</h4>
+		<GlobalSearch
+			{context}
+			entityTypes={['Shot']}
+			inline
+			subLabelField="description"
+			secondaryField="sg_status_list"
+			onSelect={(entity) => (picked = entity)}
+			placeholder="Search shots…"
+		/>
+	</section>
+
 	<p data-demo="picked" class="text-muted-foreground text-sm">
 		{#if picked}
 			Selected <span class="text-foreground font-medium">{picked.type} {picked.id}</span>

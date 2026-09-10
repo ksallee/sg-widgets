@@ -1,6 +1,13 @@
 import type * as React from 'react';
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
-import type { CollectionColumn, EntityRef, EntityRow, EntitySource, SgContext, StatusRecord } from '@sg-widgets/core';
+import type {
+  EntityRef,
+  EntityRow,
+  EntitySource,
+  FieldSpec,
+  SgContext,
+  StatusRecord,
+} from '@sg-widgets/core';
 import { describePaging, rowKey } from '@sg-widgets/core';
 import { ChevronLeft, ChevronRight, CircleAlert, Inbox } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -35,11 +42,11 @@ export interface EntityGridProps extends Omit<React.HTMLAttributes<HTMLDivElemen
   /** Field shown as the tile's name. Defaults to the type's own display name. */
   labelField?: string | null;
   /** The left of the tile's metadata line: a path, or a resolved column so it renders by type. */
-  subLabelField?: string | CollectionColumn | null;
+  subLabelField?: FieldSpec | null;
   /** The caller's own sub-label. Wins over `subLabelField`. */
   subLabel?: (row: EntityRow) => string;
   /** The right of the tile's metadata line: a path, or a resolved column so it renders by type. */
-  secondaryField?: string | CollectionColumn | null;
+  secondaryField?: FieldSpec | null;
   /** The caller's own text on the right of the metadata line. Wins over `secondaryField`. */
   secondary?: (row: EntityRow) => string;
   /** Show the row's `code` beside the name when the two differ. */

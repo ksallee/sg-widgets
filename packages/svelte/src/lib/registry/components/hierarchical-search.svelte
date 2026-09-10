@@ -1,5 +1,5 @@
 <script lang="ts" module>
-	import type { EntityRef, HierarchyNode, WireCondition } from '@sg-widgets/core';
+	import type { EntityRef, FieldSpec, HierarchyNode, PickerRow, WireCondition } from '@sg-widgets/core';
 
 	export type HierarchicalSearchSize = 'sm' | 'md' | 'lg';
 
@@ -23,6 +23,8 @@
 		crumbs: string[];
 		/** The row itself, when it is an entity rather than a type folder. */
 		ref: EntityRef | null;
+		/** The fields a search read for the row. Empty on a folder, which is not an entity. */
+		values: Record<string, unknown>;
 		/** Every row the path runs through, root first. */
 		path: EntityRef[];
 		/** The tree path to feed back to `hierarchyExpand`. */
@@ -56,8 +58,9 @@
 		breadcrumb,
 		hierarchyEntity,
 		hydrate,
-		matchRuns,
+		pathOf,
 		pathRefs,
+		rowFields,
 		scopeToProject
 	} from '@sg-widgets/core';
 	import Box from '@lucide/svelte/icons/box';
@@ -74,6 +77,7 @@
 	import * as Command from '$lib/components/ui/command/index.js';
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
+	import Row from '$lib/registry/components/picker-row.svelte';
 
 	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>, HTMLDivElement> & {
 		/** The widget context. Every read goes through it, so widgets on a page share one cache. */
@@ -82,6 +86,22 @@
 		rootPath?: string;
 		/** Types a search may end on. Browsing reaches every level whatever this says. */
 		entityTypes?: HierarchicalSearchTypes;
+		/** Field holding the thumbnail URL. `false` leaves every row on its type glyph. */
+		thumbnail?: string | false;
+		/** Field holding the row label. Defaults to the label the tree answers. */
+		labelField?: string;
+		/** The muted line under the label: a path, or a resolved column. */
+		subLabelField?: FieldSpec | null;
+		/** The muted line of the caller's own making. Wins over `subLabelField`. */
+		subLabel?: (row: HierarchicalSearchRow) => string;
+		/** The right-aligned value: a path, or a resolved column so it renders by type. */
+		secondaryField?: FieldSpec | null;
+		/** Right-aligned text of the caller's own making. Wins over `secondaryField`. */
+		secondary?: (row: HierarchicalSearchRow) => string;
+		/** Show the row's `code` beside the label when the two differ. */
+		showCode?: boolean;
+		/** Extra fields to request, so a caller's own sub-label or secondary can read them. */
+		fields?: string[];
 		onSelect?: (entity: EntityRef, path: EntityRef[]) => void;
 		placeholder?: string;
 		size?: HierarchicalSearchSize;
@@ -92,6 +112,14 @@
 		context,
 		rootPath = '/',
 		entityTypes = HIERARCHICAL_SEARCH_TYPES,
+		thumbnail = 'image',
+		labelField,
+		subLabelField = null,
+		subLabel,
+		secondaryField = null,
+		secondary,
+		showCode = false,
+		fields = [],
 		onSelect,
 		placeholder = 'Search the hierarchy…',
 		size = 'md',
@@ -141,6 +169,26 @@
 		return GLYPHS[row.ref.type] ?? Tag;
 	}
 
+	/** The row a list entry draws as: the reference it stands for and what a search read. */
+	function rowOf(item: HierarchicalSearchRow): PickerRow {
+		return {
+			type: item.ref?.type ?? '',
+			id: item.ref?.id ?? 0,
+			name: item.label,
+			values: item.values
+		};
+	}
+
+	/**
+	 * The muted line under the label. With no field and no function of the caller's,
+	 * it says what the row is: its type, or that it is a level rather than a row.
+	 */
+	function subLabelOf(item: HierarchicalSearchRow): string | undefined {
+		if (subLabel) return subLabel(item);
+		if (pathOf(subLabelField)) return undefined;
+		return item.selectable ? (item.ref?.type ?? '') : 'Group';
+	}
+
 	function browseRow(node: HierarchyNode, crumbs: string[]): HierarchicalSearchRow {
 		const ref = hierarchyEntity(node.ref);
 		const allowed = Object.keys(typeMap(entityTypes));
@@ -148,6 +196,7 @@
 			label: node.label,
 			crumbs,
 			ref: ref ? { ...ref, name: node.label } : null,
+			values: {},
 			path: pathRefs(node.path),
 			nodePath: node.path,
 			hasChildren: node.hasChildren,
@@ -189,7 +238,10 @@
 			const projectId = projectOf(rootPath);
 			if (projectId !== null) types = await scopeToProject(schema, types, projectId);
 			const found = await context.client.textSearch(text, types, { size: LEAF_LIMIT, number: 1 });
-			const hits = await hydrate(context.client, found);
+			const hits = await hydrate(context.client, found, {
+				fields: rowFields({ thumbnail, labelField, subLabelField, secondaryField, showCode, fields }),
+				labelField
+			});
 			const paths = await Promise.all(
 				hits.map((hit) =>
 					context.client
@@ -204,11 +256,14 @@
 				// A row the tree has no place for under this root is not a result.
 				if (!path || !hit) return [];
 				const crumbs = breadcrumb(path);
+				// The tree's own label names the row, unless the caller named a field.
+				const own = (labelField ? hit.ref.name : '') || (crumbs[crumbs.length - 1] as string);
 				return [
 					{
-						label: crumbs[crumbs.length - 1] as string,
+						label: own,
 						crumbs: crumbs.slice(0, -1),
 						ref: { ...hit.ref, name: path.label },
+						values: hit.values,
 						path: pathRefs(path.incrementalPath),
 						nodePath: path.incrementalPath[path.incrementalPath.length - 1] ?? rootPath,
 						hasChildren: false,
@@ -355,34 +410,21 @@
 							data-selectable={item.selectable ? 'true' : 'false'}
 							onSelect={() => activate(item)}
 						>
-							<span
-								class={cn(
-									'text-muted-foreground flex shrink-0 items-center justify-center',
-									LEAD[size]
-								)}
+							<Row
+								row={rowOf(item)}
+								{query}
+								crumbs={item.crumbs}
+								{thumbnail}
+								{showCode}
+								{subLabelField}
+								subLabel={subLabelOf(item)}
+								{secondaryField}
+								secondary={secondary ? secondary(item) : undefined}
+								{size}
+								{context}
 							>
-								<Glyph aria-hidden="true" class={GLYPH[size]} />
-							</span>
-							<span class={cn('flex min-w-0 flex-1 flex-col', TEXT[size])}>
-								<span
-									data-slot="search-breadcrumb"
-									class="truncate"
-									title={[...item.crumbs, item.label].join(' › ')}
-								>
-									{#each item.crumbs as crumb, i (i)}
-										<span class="text-muted-foreground">{crumb}</span>
-										<span aria-hidden="true" class="text-muted-foreground">{' › '}</span>
-									{/each}
-									<span class="font-medium">
-										{#each matchRuns(item.label, query) as part, i (i)}
-											{#if part.match}<span class="font-semibold">{part.text}</span>{:else}{part.text}{/if}
-										{/each}
-									</span>
-								</span>
-								<span class="text-muted-foreground truncate text-xs">
-									{item.selectable ? (item.ref?.type ?? '') : 'Group'}
-								</span>
-							</span>
+								{#snippet glyph()}<Glyph aria-hidden="true" class={GLYPH[size]} />{/snippet}
+							</Row>
 							{#if item.hasChildren && !searching}
 								<button
 									type="button"

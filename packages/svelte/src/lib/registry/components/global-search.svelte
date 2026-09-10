@@ -1,13 +1,13 @@
 <script lang="ts" module>
-	import type { EntityRef, SearchHit, WireCondition } from '@sg-widgets/core';
+	import type { EntityRef, FieldSpec, PickerRow, SearchHit, WireCondition } from '@sg-widgets/core';
 
 	export type GlobalSearchSize = 'sm' | 'md' | 'lg';
 
 	/** The trigger follows the input ladder of `docs/design-rules.md`. */
 	const BOX: Record<GlobalSearchSize, string> = { sm: 'h-8', md: 'h-9', lg: 'h-10' };
 	const GLYPH: Record<GlobalSearchSize, string> = { sm: 'size-4', md: 'size-4', lg: 'size-5' };
-	/** A row's leading slot sits one step down the leaf ladder. */
-	const LEAD: Record<GlobalSearchSize, 'sm' | 'md'> = { sm: 'sm', md: 'sm', lg: 'md' };
+	/** A chip inside a row sits one step down the leaf ladder. */
+	const CHIP: Record<GlobalSearchSize, 'sm' | 'md'> = { sm: 'sm', md: 'sm', lg: 'md' };
 
 	/** Types to search, either bare names or names with a filter each. */
 	export type GlobalSearchTypes = string[] | Record<string, WireCondition[] | null>;
@@ -27,8 +27,6 @@
 	/** The endpoint's cap and its default (probe 053). */
 	const PAGE_SIZE = 25;
 
-	const PEOPLE = ['HumanUser', 'ApiUser', 'ClientUser'];
-
 	/** The modifier the hotkey shows, from the platform the page is on. */
 	const META =
 		typeof navigator !== 'undefined' && /Mac|iPhone|iPad/i.test(navigator.platform || navigator.userAgent)
@@ -47,7 +45,7 @@
 <script lang="ts">
 	import type { HTMLAttributes } from 'svelte/elements';
 	import type { SgContext } from '@sg-widgets/core';
-	import { hydrate, matchRuns, scopeToProject } from '@sg-widgets/core';
+	import { hydrate, pathOf, placeholderName, rowFields, scopeToProject } from '@sg-widgets/core';
 	import type { Snippet } from 'svelte';
 	import Search from '@lucide/svelte/icons/search';
 	import TriangleAlert from '@lucide/svelte/icons/triangle-alert';
@@ -57,8 +55,7 @@
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
 	import EntityChip from '$lib/registry/components/entity-chip.svelte';
-	import Thumbnail from '$lib/registry/components/thumbnail.svelte';
-	import UserAvatar from '$lib/registry/components/user-avatar.svelte';
+	import Row from '$lib/registry/components/picker-row.svelte';
 
 	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>, HTMLDivElement> & {
 		/** The widget context. Every read goes through it, so widgets on a page share one cache. */
@@ -66,6 +63,22 @@
 		entityTypes?: GlobalSearchTypes;
 		/** Scope every searched type that has a `project` field to this project. */
 		projectId?: number | null;
+		/** Field holding the thumbnail URL. `false` hides the leading slot. */
+		thumbnail?: string | false;
+		/** Field holding the row label. Defaults to the display-name chain. */
+		labelField?: string;
+		/** The muted line under the label: a path, or a resolved column. */
+		subLabelField?: FieldSpec | null;
+		/** The muted line of the caller's own making. Wins over `subLabelField`. */
+		subLabel?: (hit: SearchHit) => string;
+		/** The right-aligned value: a path, or a resolved column so it renders by type. */
+		secondaryField?: FieldSpec | null;
+		/** Right-aligned text of the caller's own making. Wins over `secondaryField`. */
+		secondary?: (hit: SearchHit) => string;
+		/** Show the row's `code` beside the label when the two differ. */
+		showCode?: boolean;
+		/** Extra fields to request, so a caller's own sub-label or secondary can read them. */
+		fields?: string[];
 		/** Opens the palette on Cmd/Ctrl+K. Ignored on the inline variant. */
 		hotkey?: boolean;
 		/** Render as a combobox in the page instead of a dialog behind a trigger. */
@@ -92,6 +105,14 @@
 		context,
 		entityTypes = GLOBAL_SEARCH_TYPES,
 		projectId = null,
+		thumbnail = 'image',
+		labelField,
+		subLabelField = null,
+		subLabel,
+		secondaryField = null,
+		secondary,
+		showCode = false,
+		fields = [],
 		hotkey = false,
 		inline = false,
 		size = 'md',
@@ -181,7 +202,10 @@
 			let types = typeMap(entityTypes);
 			if (projectId !== null && projectId !== undefined) types = await scopeToProject(schema, types, projectId);
 			const rows = await context.client.textSearch(text, types, { size: PAGE_SIZE, number: nextPage });
-			const found = await hydrate(context.client, rows);
+			const found = await hydrate(context.client, rows, {
+				fields: rowFields({ thumbnail, labelField, subLabelField, secondaryField, showCode, fields }),
+				labelField
+			});
 			if (id !== requestId) return;
 			hits = nextPage === 1 ? found : [...hits, ...found];
 			page = nextPage;
@@ -233,7 +257,24 @@
 		setOpen(!open);
 	}
 
-	function subLabel(hit: SearchHit): string {
+	/** The row a hit draws as: the reference, its label and the values the second read answered. */
+	function rowOf(hit: SearchHit): PickerRow {
+		return {
+			type: hit.ref.type,
+			id: hit.ref.id,
+			name: hit.ref.name || placeholderName(hit.ref),
+			values: hit.values
+		};
+	}
+
+	/**
+	 * The muted line under the label. With no field and no function of the caller's,
+	 * it is where the row sits: its project, else the row `_text_search` also matched
+	 * the words against, else the type.
+	 */
+	function subLabelOf(hit: SearchHit): string | undefined {
+		if (subLabel) return subLabel(hit);
+		if (pathOf(subLabelField)) return undefined;
 		if (hit.project?.name) return hit.project.name;
 		if (hit.link) return `${displayNames[hit.link.type] ?? hit.link.type} ${hit.link.name}`;
 		return displayNames[hit.ref.type] ?? hit.ref.type;
@@ -252,21 +293,18 @@
 	Matching is the server's alone: the command list never filters.
 -->
 {#snippet row(hit: SearchHit)}
-	{@const name = hit.ref.name ?? `${hit.ref.type} #${hit.ref.id}`}
-	{@const sub = subLabel(hit)}
-	{#if PEOPLE.includes(hit.ref.type)}
-		<UserAvatar name={name} image={hit.image} size={LEAD[size]} color="auto" apiUser={hit.ref.type === 'ApiUser'} />
-	{:else}
-		<Thumbnail src={hit.image} size={LEAD[size]} />
-	{/if}
-	<span class="flex min-w-0 flex-1 flex-col">
-		<span class="truncate" title={name}>
-			{#each matchRuns(name, query) as part, i (i)}
-				{#if part.match}<span class="font-semibold">{part.text}</span>{:else}{part.text}{/if}
-			{/each}
-		</span>
-		<span class="text-muted-foreground truncate text-xs" title={sub}>{sub}</span>
-	</span>
+	<Row
+		row={rowOf(hit)}
+		{query}
+		{thumbnail}
+		{showCode}
+		{subLabelField}
+		subLabel={subLabelOf(hit)}
+		{secondaryField}
+		secondary={secondary ? secondary(hit) : undefined}
+		{size}
+		{context}
+	/>
 {/snippet}
 
 {#snippet body()}
@@ -307,7 +345,7 @@
 						value={`recent:${entity.type}:${entity.id}`}
 						onSelect={() => choose(entity)}
 					>
-						<EntityChip {entity} size={LEAD[size]} {context} />
+						<EntityChip {entity} size={CHIP[size]} {context} />
 						<span class="text-muted-foreground truncate text-xs">
 							{displayNames[entity.type] ?? entity.type}
 						</span>

@@ -1,16 +1,18 @@
 import type * as React from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
-import type { EntityRef, SgContext, TreeFieldPlan, TreeNode, TreeRow } from '@sg-widgets/core';
+import type { EntityRef, FieldSpec, SgContext, TreeFieldPlan, TreeNode, TreeRow } from '@sg-widgets/core';
 import {
   createTree,
   hierarchyLoader,
   hierarchySearcher,
   isEmptyValue,
   matchRuns,
+  pathOf,
   resolveTreeFields,
   TREE_STATUS_FIELDS,
 } from '@sg-widgets/core';
-import { Check, ChevronRight, CircleAlert, Inbox, Loader, Minus, Search } from 'lucide-react';
+import { ChevronRight, CircleAlert, Inbox, Loader, Search } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
@@ -55,11 +57,11 @@ export interface EntityTreeProps extends DivProps {
   /** Field shown as the row's label. Falls back to the label the tree answers. */
   labelField?: string;
   /** Field shown under the label. */
-  subLabelField?: string;
+  subLabelField?: FieldSpec | null;
   /** Muted line under the label, of the caller's own making. Wins over `subLabelField`. */
   subLabel?: (node: TreeNode) => string;
   /** Right-aligned field, drawn by its data type through FieldValue. */
-  secondaryField?: string;
+  secondaryField?: FieldSpec | null;
   /** Right-aligned text of the caller's own making. Wins over `secondaryField`. */
   secondary?: (node: TreeNode) => string;
   /** Show the schema name beside the label on a node that stands for a type. */
@@ -137,14 +139,16 @@ export function EntityTree({
   const schema = context.schema;
   const statusTable = context.statuses;
   const site = siteUrl ?? context.siteUrl;
+  const subPath = pathOf(subLabelField);
+  const secondaryPath = pathOf(secondaryField);
 
   /** What a level is read under: the status names, the thumbnail and whatever the row shows. */
   const requested = [
     ...TREE_STATUS_FIELDS,
     ...(thumbnail === false ? [] : [thumbnail]),
     ...(labelField ? [labelField] : []),
-    ...(subLabelField ? [subLabelField] : []),
-    ...(secondaryField && secondaryField !== 'id' ? [secondaryField] : []),
+    ...(subPath ? [subPath] : []),
+    ...(secondaryPath && secondaryPath !== 'id' ? [secondaryPath] : []),
     ...(fields ?? []),
   ].join(',');
 
@@ -195,7 +199,7 @@ export function EntityTree({
   useEffect(() => {
     let live = true;
     const types = typeKey.split(',').filter(Boolean);
-    void resolveTreeFields(schema, statusTable, types, secondaryField).then((found) => {
+    void resolveTreeFields(schema, statusTable, types, secondaryPath || undefined).then((found) => {
       if (live) setPlan(found);
     }, onError);
     return () => {
@@ -203,11 +207,11 @@ export function EntityTree({
     };
     // The callback is the caller's; the types on show and the secondary field are what move.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [schema, statusTable, typeKey, secondaryField]);
+  }, [schema, statusTable, typeKey, secondaryPath]);
 
   const hasSubLabel = Boolean(subLabelField || subLabel);
   /** An id is a code, and codes are the mono treatment of `docs/design-rules.md`. */
-  const secondaryIsId = secondaryField === 'id';
+  const secondaryIsId = secondaryPath === 'id';
 
   function labelOf(node: TreeNode): string {
     const explicit = labelField ? node.values[labelField] : undefined;
@@ -221,8 +225,8 @@ export function EntityTree({
 
   function subLabelOf(node: TreeNode): string {
     if (subLabel) return subLabel(node);
-    if (!subLabelField) return '';
-    const raw = node.values[subLabelField];
+    if (!subPath) return '';
+    const raw = node.values[subPath];
     return raw === null || raw === undefined ? '' : String(raw);
   }
 
@@ -239,13 +243,14 @@ export function EntityTree({
   }
 
   function secondaryValue(node: TreeNode): unknown {
-    if (!secondaryField) return null;
-    return secondaryField === 'id' ? (node.entity?.id ?? null) : node.values[secondaryField];
+    if (!secondaryPath) return null;
+    return secondaryIsId ? (node.entity?.id ?? null) : node.values[secondaryPath];
   }
 
   function secondaryType(node: TreeNode): string {
+    const declared = secondaryField && typeof secondaryField !== 'string' ? secondaryField.dataType : undefined;
     const field = node.entity ? plan.secondary[node.entity.type] : null;
-    return field?.dataType ?? (secondaryIsId ? 'number' : 'text');
+    return declared ?? field?.dataType ?? (secondaryIsId ? 'number' : 'text');
   }
 
   /* searching --------------------------------------------------------------- */
@@ -450,15 +455,15 @@ export function EntityTree({
                           engine.focus(node.path);
                           engine.toggleChecked(node.path);
                         }}
-                        className={cn(
-                          'flex shrink-0 items-center justify-center rounded-[4px] border transition-colors duration-150 [&>svg]:size-3.5',
-                          GLYPH[size],
-                          row.checked === 'unchecked'
-                            ? 'border-input'
-                            : 'border-primary bg-primary text-primary-foreground',
-                        )}
+                        className="flex shrink-0 items-center"
                       >
-                        {row.checked === 'checked' ? <Check /> : row.checked === 'mixed' ? <Minus /> : null}
+                        <Checkbox
+                          checked={row.checked === 'checked'}
+                          indeterminate={row.checked === 'mixed'}
+                          tabIndex={-1}
+                          aria-hidden="true"
+                          className="pointer-events-none"
+                        />
                       </span>
                     ) : null}
 
@@ -520,7 +525,7 @@ export function EntityTree({
                       <span data-slot="entity-tree-secondary" className="text-muted-foreground shrink-0 text-xs">
                         {custom}
                       </span>
-                    ) : secondaryField && !isEmptyValue(raw) ? (
+                    ) : secondaryPath && !isEmptyValue(raw) ? (
                       <span
                         data-slot="entity-tree-secondary"
                         className={cn(

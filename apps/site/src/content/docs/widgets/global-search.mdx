@@ -23,6 +23,14 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/global-search.
 | `context` | `SgContext` | required | The widget context. Every read goes through it, so widgets on a page share one cache. |
 | `entityTypes` | `string[] \| Record<string, WireCondition[] \| null>` | Asset, Shot, Sequence, Task, Version, HumanUser, Project | Types to search, with an optional filter each. |
 | `projectId` | `number \| null` | `null` | Scopes every searched type that has a `project` field. |
+| `thumbnail` | `string \| false` | `'image'` | Field holding the thumbnail URL. `false` hides the leading slot. |
+| `labelField` | `string` | display-name chain | Field holding the row label. |
+| `subLabelField` | `string \| CollectionColumn \| null` | `null` | The muted line under the label. A resolved column renders it by type. |
+| `subLabel` | `(hit) => string` | — | The muted line of your own. Wins over `subLabelField`. |
+| `secondaryField` | `string \| CollectionColumn \| null` | `null` | The right-aligned value, drawn by its data type. |
+| `secondary` | `(hit) => string` | — | Right-aligned text of your own. Wins over `secondaryField`. |
+| `showCode` | `boolean` | `false` | Shows the row's `code` beside the label when the two differ. |
+| `fields` | `string[]` | `[]` | Extra fields to request, so your own sub-label or secondary can read them. |
 | `hotkey` | `boolean` | `false` | Opens the palette on Cmd/Ctrl+K. |
 | `inline` | `boolean` | `false` | Renders a combobox in the page instead of a dialog. |
 | `open` | `boolean` | `false` | Whether the dialog is open. |
@@ -39,8 +47,10 @@ Every other attribute is spread onto the root: `id`, `aria-*`, `data-*`, key han
 Recents live in the caller. The widget hands back the new list and never writes anywhere, so where
 they are kept between sessions is the app's decision.
 
-A row shows a thumbnail, or an avatar for a person, the name with the matched words in bold, and the
-row's project as a sub-label. A row with no project shows the row it links to instead.
+A row is the shared picker row: a thumbnail, or an avatar for a person, the name with the matched
+words in bold, a muted sub-label and a right-aligned secondary drawn by its data type. With no
+`subLabelField` and no `subLabel`, the sub-label is the row's project; a row with no project shows
+the row it links to instead.
 
 Results are grouped by entity type, in the order the types were given, under the type's display name
 from the site schema.
@@ -80,8 +90,8 @@ more" asks for the next page and stops when a page comes back short (053_text_se
 006_pagination).
 
 Search results carry a name, the linked row and a status code, and nothing else: the endpoint has no
-`fields` parameter. The thumbnail and the project on each row are a second read of the page just
-returned (post_entity_text_search).
+`fields` parameter. The thumbnail, the project and whatever the row props name are a second read of
+the page just returned (post_entity_text_search).
 
 `projectId` adds a project condition only to types that have a `project` field. Project has none and
 neither does Step, and the condition would be a 400 rather than an empty result

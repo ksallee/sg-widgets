@@ -296,15 +296,22 @@ describe('fitChips', () => {
 describe('summariseSelection', () => {
   const codes = ['ip', 'apr', 'fin', 'hld', 'omt'];
 
-  it('draws every chip and wraps by default', () => {
+  it('keeps one line by default, which is ellipsis', () => {
     const plan = summariseSelection(codes, (c) => c);
+    expect(plan.shown).toEqual(['ip', 'apr', 'fin']);
+    expect(plan.overflow).toBe(2);
+    expect(plan.oneLine).toBe(true);
+  });
+
+  it('draws every chip and wraps under chips', () => {
+    const plan = summariseSelection(codes, (c) => c, { summary: 'chips' });
     expect(plan.shown).toEqual(codes);
     expect(plan.overflow).toBe(0);
     expect(plan.oneLine).toBe(false);
   });
 
   it('caps the chips at max and counts the rest', () => {
-    const plan = summariseSelection(codes, (c) => c, { max: 2 });
+    const plan = summariseSelection(codes, (c) => c, { summary: 'chips', max: 2 });
     expect(plan.shown).toEqual(['ip', 'apr']);
     expect(plan.overflow).toBe(3);
   });

@@ -4,6 +4,8 @@ import { HierarchicalSearch } from '@/registry/sg/components/hierarchical-search
 import { EntityChip } from '@/registry/sg/components/entity-chip';
 import { createDemoContext } from '../_shared/client';
 
+const TYPES = ['Shot', 'Asset', 'Sequence', 'Task'];
+
 export default function Demo() {
   const context = useMemo(() => createDemoContext(), []);
   const [picked, setPicked] = useState<{ leaf: EntityRef; path: EntityRef[] } | null>(null);
@@ -17,7 +19,8 @@ export default function Demo() {
         <HierarchicalSearch
           context={context}
           rootPath={`/Project/${context.projectId}`}
-          entityTypes={['Shot', 'Asset', 'Sequence', 'Task']}
+          entityTypes={TYPES}
+          secondaryField="sg_status_list"
           onSelect={(leaf, path) => setPicked({ leaf, path })}
         />
       </section>

@@ -18,7 +18,15 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import type { HTMLAttributes } from 'svelte/elements';
-	import type { CollectionColumn, EntityRef, EntityRow, EntitySource, SgContext, StatusRecord } from '@sg-widgets/core';
+	import type {
+		CollectionColumn,
+		EntityRef,
+		EntityRow,
+		EntitySource,
+		FieldSpec,
+		SgContext,
+		StatusRecord
+	} from '@sg-widgets/core';
 	import { cellValue, describePaging, displayNameOf, groupRows, rowKey, toColumn } from '@sg-widgets/core';
 	import ChevronLeft from '@lucide/svelte/icons/chevron-left';
 	import ChevronRight from '@lucide/svelte/icons/chevron-right';
@@ -43,17 +51,17 @@
 		/** Field shown as the row's label. Defaults to the type's own display name. */
 		labelField?: string | null;
 		/** The muted line under the label: a path, or a resolved column so it renders by type. */
-		subLabelField?: string | CollectionColumn | null;
+		subLabelField?: FieldSpec | null;
 		/** The caller's own sub-label. Wins over `subLabelField`. */
 		subLabel?: (row: EntityRow) => string;
 		/** The right-aligned value: a path, or a resolved column so it renders by type. */
-		secondaryField?: string | CollectionColumn | null;
+		secondaryField?: FieldSpec | null;
 		/** The caller's own right-aligned text. Wins over `secondaryField`. */
 		secondary?: (row: EntityRow) => string;
 		/** Show the row's `code` beside the label when the two differ. */
 		showCode?: boolean;
-		/** Extra fields drawn under the label. The source must already read them. */
-		fields?: CollectionColumn[];
+		/** Extra values drawn under the label. The source must already read their paths. */
+		details?: CollectionColumn[];
 		/** `Status` rows by code (probe 010). */
 		statuses?: Record<string, StatusRecord> | null;
 		/** The widget context. Values render with its preferences. An entity value links to the row's page when it carries a site. */
@@ -81,7 +89,7 @@
 		secondaryField = null,
 		secondary,
 		showCode = false,
-		fields = [],
+		details = [],
 		statuses = null,
 		context,
 		density = 'default',
@@ -288,7 +296,7 @@
 												/>
 											</span>
 										{/if}
-										{#each fields as column (column.path)}
+										{#each details as column (column.path)}
 											<span class="flex w-full min-w-0 items-center gap-1.5 text-xs">
 												<span class="text-muted-foreground shrink-0">{column.header}</span>
 												<FieldValue

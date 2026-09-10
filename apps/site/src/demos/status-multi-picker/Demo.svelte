@@ -13,7 +13,8 @@
 	let project = $state<string[]>(['Active', 'Bidding']);
 	let unknown = $state<string[]>(['zz_retired', 'rev']);
 
-	const MODES = ['icons', 'names', 'chips', 'ellipsis', 'count'] as const;
+	const MODES = ['chips', 'ellipsis', 'count'] as const;
+	const BADGES = ['both', 'icon', 'text'] as const;
 	const TWO = ['ip', 'apr'];
 	const FIVE = ['ip', 'apr', 'rev', 'fin', 'vwd'];
 
@@ -134,17 +135,38 @@
 					clearable={false}
 				/>
 			</div>
-			<div class={field} data-demo="summary-names-2">
-				<span class={caption}>names, two selected</span>
+			<div class={field} data-demo="badge-text-2">
+				<span class={caption}>text badges, two selected</span>
 				<StatusMultiPicker
 					{context}
 					entityType="Version"
 					{projectId}
 					value={TWO}
-					summary="names"
+					summary="chips"
+					badge="text"
 					clearable={false}
 				/>
 			</div>
+		</div>
+	</section>
+
+	<section class={group}>
+		<h4 class={label}>What one badge is drawn as, for five selected</h4>
+		<div class={stack}>
+			{#each BADGES as badge (badge)}
+				<div class={field} data-demo="badge-{badge}-5">
+					<span class={caption}>{badge}</span>
+					<StatusMultiPicker
+						{context}
+						entityType="Version"
+						{projectId}
+						value={FIVE}
+						summary="chips"
+						{badge}
+						clearable={false}
+					/>
+				</div>
+			{/each}
 		</div>
 	</section>
 

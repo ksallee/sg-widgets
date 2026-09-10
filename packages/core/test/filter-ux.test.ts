@@ -37,7 +37,14 @@ import {
   toSortString,
   validateCondition,
   valueArity,
+  conditionList,
+  relativeWindow,
+  timeUnitField,
   valueEditorFor,
+  withAddedListValue,
+  withListValue,
+  withoutListValue,
+  withRelativeWindow,
   withoutPaths,
 } from '../src/filter-ux.js';
 import type { FieldSchema } from '../src/schema.js';
@@ -320,6 +327,58 @@ describe('value editors', () => {
     expect(valueArity('in_last')).toBe('relative');
     expect(valueArity('in_calendar_day')).toBe('none');
     expect(valueArity('is')).toBe('one');
+  });
+
+  it('gives colour and web-link conditions their own editors', () => {
+    expect(valueEditorFor('color', 'is')).toBe('color');
+    expect(valueEditorFor('color', 'in')).toBe('color');
+    expect(valueEditorFor('url', 'is')).toBe('url');
+    // A name comparison is a plain string whatever the field holds.
+    expect(valueEditorFor('color', 'name_contains')).toBe('text');
+  });
+});
+
+describe('list values', () => {
+  it('reads a list condition and leaves anything else empty', () => {
+    expect(conditionList(['a', 'b'])).toEqual(['a', 'b']);
+    expect(conditionList('a')).toEqual([]);
+    expect(conditionList(null)).toEqual([]);
+  });
+
+  it('replaces, drops and adds one value at a time', () => {
+    expect(withListValue(['a', 'b'], 1, 'c')).toEqual(['a', 'c']);
+    expect(withListValue(['a', 'b'], 5, 'c')).toEqual(['a', 'b']);
+    expect(withoutListValue(['a', 'b', 'c'], 1)).toEqual(['a', 'c']);
+    expect(withAddedListValue(['a'])).toEqual(['a', '']);
+    expect(withAddedListValue(null)).toEqual(['']);
+  });
+
+  it('never edits the list in place', () => {
+    const values = ['a', 'b'];
+    expect(withListValue(values, 0, 'z')).not.toBe(values);
+    expect(values).toEqual(['a', 'b']);
+  });
+});
+
+describe('relative windows', () => {
+  it('reads the pair back, with a day as the unit it cannot read', () => {
+    expect(relativeWindow([3, 'MONTH'])).toEqual({ count: 3, unit: 'MONTH' });
+    expect(relativeWindow([2, 'FORTNIGHT'])).toEqual({ count: 2, unit: 'DAY' });
+    expect(relativeWindow(null)).toEqual({ count: null, unit: 'DAY' });
+    expect(relativeWindow(['', 'WEEK'])).toEqual({ count: null, unit: 'WEEK' });
+  });
+
+  it('replaces one half and sends a count of one for an unfilled window', () => {
+    expect(withRelativeWindow([3, 'MONTH'], { unit: 'WEEK' })).toEqual([3, 'WEEK']);
+    expect(withRelativeWindow([3, 'MONTH'], { count: 7 })).toEqual([7, 'MONTH']);
+    expect(withRelativeWindow(null, { unit: 'YEAR' })).toEqual([1, 'YEAR']);
+  });
+
+  it('offers the units as a list field', () => {
+    const unit = timeUnitField();
+    expect(unit.validValues).toEqual(['HOUR', 'DAY', 'WEEK', 'MONTH', 'YEAR']);
+    expect(unit.displayValues?.['WEEK']).toBe('weeks');
+    expect(unit.mandatory).toBe(true);
   });
 });
 

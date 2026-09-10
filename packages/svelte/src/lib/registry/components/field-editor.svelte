@@ -1,32 +1,72 @@
 <script lang="ts" module>
+	import type {
+		EditorKind,
+		EntityRef,
+		FieldSchema,
+		SgContext,
+		StatusRecord,
+		UrlValue,
+		UrlWriteValue
+	} from '@sg-widgets/core';
+	import { editorNeedsContext } from '@sg-widgets/core';
+
 	export type FieldEditorMode = 'display' | 'edit';
 	export type FieldEditorSize = 'sm' | 'md' | 'lg';
 
+	/** The popups an editor opens. Each is portalled out of the widget's own tree. */
+	const POPUP = '[data-slot="popover-content"],[data-slot="select-content"],[data-picker]';
+
 	/**
-	 * True while focus is still somewhere the edit session owns. A popover and a select
-	 * popup are portalled out of the widget, so containment alone is not enough.
+	 * True while focus is still somewhere the edit session owns. A popover, a select
+	 * popup and a picker list are portalled out of the widget, so containment alone is
+	 * not enough.
 	 */
 	function stillEditing(root: HTMLElement | null): boolean {
 		const active = document.activeElement;
 		if (!root || !(active instanceof HTMLElement)) return false;
 		if (root.contains(active)) return true;
-		return active.closest('[data-slot="popover-content"],[data-slot="select-content"]') !== null;
+		return active.closest(POPUP) !== null;
+	}
+
+	/** The facts a teardown path needs, taken when the session opens and never re-read. */
+	interface EditSession {
+		editable: boolean;
+		root: HTMLElement | null;
+	}
+
+	/**
+	 * Whether the type's editor can be drawn. A picker reads through the context and
+	 * needs the schema to say what it offers: a status its entity type, a link its valid
+	 * types. Without either the field stays on the display half.
+	 */
+	function canDraw(
+		kind: EditorKind,
+		dataType: string,
+		context: SgContext | undefined,
+		field: FieldSchema | null
+	): boolean {
+		if (kind === 'none') return false;
+		if (!editorNeedsContext(dataType)) return true;
+		if (context === undefined) return false;
+		return kind === 'status_list' ? Boolean(field?.entityType) : (field?.validTypes?.length ?? 0) > 0;
 	}
 </script>
 
 <script lang="ts">
-	import type { Snippet } from 'svelte';
+	import { onDestroy, type Snippet } from 'svelte';
 	import type { HTMLAttributes } from 'svelte/elements';
-	import type { FieldSchema, SgContext, StatusRecord, UrlValue, UrlWriteValue } from '@sg-widgets/core';
 	import { editorKindFor, preferencesOf } from '@sg-widgets/core';
 	import { cn, type WithElementRef } from '$lib/utils.js';
 	import CheckboxEditor from '$lib/registry/components/checkbox-editor.svelte';
 	import ColorEditor from '$lib/registry/components/color-editor.svelte';
 	import DateEditor from '$lib/registry/components/date-editor.svelte';
 	import DateTimeEditor from '$lib/registry/components/date-time-editor.svelte';
+	import EntityMultiPicker from '$lib/registry/components/entity-multi-picker.svelte';
+	import EntityPicker from '$lib/registry/components/entity-picker.svelte';
 	import FieldValue from '$lib/registry/components/field-value.svelte';
 	import ListSelect from '$lib/registry/components/list-select.svelte';
 	import NumberEditor from '$lib/registry/components/number-editor.svelte';
+	import StatusPicker from '$lib/registry/components/status-picker.svelte';
 	import TextEditor from '$lib/registry/components/text-editor.svelte';
 	import UrlEditor from '$lib/registry/components/url-editor.svelte';
 
@@ -54,7 +94,11 @@
 		precision?: number;
 		/** Shown before the value on a currency field. */
 		symbol?: string;
-		/** The project the schema was read with, for the hidden-value subtraction (probe 009). */
+		/**
+		 * The project the schema was read with. It subtracts a list field's hidden values
+		 * (probe 009), scopes a status picker to the codes the project allows, and scopes
+		 * an entity picker's search.
+		 */
 		projectId?: number;
 		/** IANA zone a typed wall-clock time is read in. Defaults to the context's, then to the runtime's. */
 		timeZone?: string;
@@ -117,15 +161,30 @@
 
 	const type = $derived(dataType ?? field?.dataType ?? 'text');
 	const kind = $derived(editorKindFor(String(type)));
-	// Status and entity fields are edited by the picker widgets, not here.
-	const canEdit = $derived(kind !== 'none' && !disabled && !readonly);
-	const editing = $derived(mode === 'edit' && kind !== 'none');
+	/** Types a link field may point at. An entity picker has nothing to search without them. */
+	const linkTypes = $derived(field?.validTypes ?? []);
+	const hasEditor = $derived(canDraw(kind, String(type), context, field));
+	const canEdit = $derived(hasEditor && !disabled && !readonly);
+	const editing = $derived(mode === 'edit' && hasEditor);
 
 	let display = $state<HTMLElement | null>(null);
 	let original = $state<unknown>(null);
 	// The editor below reports its parse error here. An edit session stays open while
 	// one stands, because invalid input emits nothing and would otherwise be dropped.
 	let liveError = $state<string | null>(null);
+
+	/**
+	 * The open session, and whether this component is still on the page. Both are plain
+	 * values: a commit takes the editor away, and everything that runs after it -- a
+	 * blur, a queued frame -- would otherwise read a derived belonging to an effect
+	 * that is already gone.
+	 */
+	let session: EditSession | null = null;
+	let alive = true;
+	onDestroy(() => {
+		alive = false;
+		session = null;
+	});
 
 	function noteError(next: string | null): void {
 		liveError = next;
@@ -141,18 +200,27 @@
 	function enter(): void {
 		if (!canEdit || mode === 'edit') return;
 		original = value;
+		session = { editable, root: ref };
 		setMode('edit');
 		// The control does not exist until the toggle has rendered.
 		requestAnimationFrame(() => {
+			if (!alive) return;
 			ref?.querySelector<HTMLElement>('input, textarea, [data-slot$="-trigger"]')?.focus({ preventScroll: true });
 		});
 	}
 
 	function leave(): void {
 		if (mode === 'display') return;
+		// Focus comes off the control before the control goes, so its own blur handler
+		// commits what it holds while the editor is still on the page.
+		const active = document.activeElement;
+		if (active instanceof HTMLElement && ref?.contains(active)) active.blur();
+		session = null;
 		liveError = null;
 		setMode('display');
-		requestAnimationFrame(() => display?.focus({ preventScroll: true }));
+		requestAnimationFrame(() => {
+			if (alive) display?.focus({ preventScroll: true });
+		});
 	}
 
 	function cancel(): void {
@@ -169,22 +237,41 @@
 	}
 
 	function onEditKeydown(event: KeyboardEvent): void {
-		if (!editable) return;
-		// Enter on a control that opens its own popup opens it; the session stays until the
-		// popup is done with it.
-		const onPopupTrigger = (event.target as HTMLElement | null)?.closest('[data-slot$="-trigger"]') != null;
+		if (session === null) return;
+		// Enter on a control that opens its own popup opens it, and Enter in a picker's
+		// search box chooses a row; the session stays until the popup is done with it.
+		const target = event.target as HTMLElement | null;
+		const inPopupControl = target?.closest('[data-slot$="-trigger"],[role="combobox"]') != null;
 		// The editor commits on the same Enter, and its handler runs first on the way up.
 		// The toggle waits a frame so that commit has settled before the control goes.
-		if (event.key === 'Enter' && !onPopupTrigger && liveError === null && !(multiline && kind === 'text')) {
-			requestAnimationFrame(leave);
+		if (event.key === 'Enter' && !inPopupControl && liveError === null && !(multiline && kind === 'text')) {
+			requestAnimationFrame(() => {
+				if (alive) leave();
+			});
 		}
 		if (event.key === 'Escape') cancel();
 	}
 
+	// A press outside the session commits and closes it.
+	$effect(() => {
+		if (!editing || !editable) return;
+		const onOutside = (event: PointerEvent): void => {
+			const target = event.target as Element | null;
+			if (target === null || ref?.contains(target) || target.closest(POPUP) !== null) return;
+			leave();
+		};
+		document.addEventListener('pointerdown', onOutside, true);
+		return () => document.removeEventListener('pointerdown', onOutside, true);
+	});
+
 	function onEditFocusOut(): void {
-		if (!editable) return;
+		// The snapshot, never the props: the commit this blur follows may already have
+		// taken the session away.
+		const open = session;
+		if (open === null || !open.editable) return;
 		requestAnimationFrame(() => {
-			if (liveError === null && !stillEditing(ref)) leave();
+			if (!alive || session !== open) return;
+			if (liveError === null && !stillEditing(open.root)) leave();
 		});
 	}
 
@@ -199,8 +286,9 @@
 
 	The data type picks the editor, and the pair behind this toggle is the same one a
 	caller can use directly: FieldValue on the display half, the type's own editor on
-	the other. A field whose type has no editor here -- a status, an entity link, a
-	calculated column -- never leaves the display half.
+	the other. A status, an entity link and a multi-entity link open their picker, which
+	reads through the context; without a context, or without the schema those pickers
+	need, the field stays on the display half, as a calculated column always does.
 -->
 <div
 	bind:this={ref}
@@ -314,7 +402,7 @@
 				onErrorChange={noteError}
 				{errorMessage}
 			/>
-		{:else}
+		{:else if kind === 'color'}
 			<ColorEditor
 				value={value as string | null}
 				onValueChange={emit}
@@ -326,6 +414,43 @@
 				{error}
 				onErrorChange={noteError}
 				{errorMessage}
+			/>
+		{:else if kind === 'status_list' && context}
+			<StatusPicker
+				{context}
+				entityType={field?.entityType ?? ''}
+				field={field?.name}
+				{projectId}
+				value={typeof value === 'string' ? value : undefined}
+				onValueChange={(next: string | undefined) => emit(next ?? null)}
+				{size}
+				{disabled}
+				{readonly}
+				{invalid}
+			/>
+		{:else if kind === 'entity' && context}
+			<EntityPicker
+				{context}
+				entityTypes={linkTypes}
+				{projectId}
+				value={(value ?? null) as EntityRef | null}
+				onValueChange={(next: EntityRef | null) => emit(next)}
+				{size}
+				{disabled}
+				{readonly}
+				{invalid}
+			/>
+		{:else if kind === 'multi_entity' && context}
+			<EntityMultiPicker
+				{context}
+				entityTypes={linkTypes}
+				{projectId}
+				value={Array.isArray(value) ? (value as EntityRef[]) : []}
+				onValueChange={(next: EntityRef[]) => emit([...next])}
+				{size}
+				{disabled}
+				{readonly}
+				{invalid}
 			/>
 		{/if}
 	{:else if editable && canEdit}

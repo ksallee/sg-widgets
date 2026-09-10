@@ -11,8 +11,9 @@
 
 	/**
 	 * A tree a person would build: a status list on the multi picker, two conditions
-	 * reached through links, a duration and a nested any-of. The duration is typed
-	 * `1h 30m` or `1:30` and goes out as the 90 minutes it stores.
+	 * reached through links, a duration and a nested any-of holding a list of values, a
+	 * colour and two relative windows. The duration is typed `1h 30m` or `1:30` and goes
+	 * out as the 90 minutes it stores.
 	 *
 	 * The link rows name the fixtures' own sequence and project, so a real site gets the
 	 * status row alone and the reviewer builds the rest against rows that exist.
@@ -27,6 +28,9 @@
 			condition('entity.Shot.sg_working_duration', 'greater_than', 90),
 			group('or', [
 				condition('code', 'contains', 'comp'),
+				condition('sg_version_type', 'in', ['Type A', 'Type B']),
+				condition('sg_bar_color', 'is', '253,94,99'),
+				condition('sg_first_frame', 'in', [1001, 1101]),
 				condition('created_at', 'in_last', [3, 'MONTH']),
 				condition('entity.Shot.sg_turnover_date', 'in_next', [2, 'WEEK'])
 			])

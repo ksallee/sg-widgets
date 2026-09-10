@@ -22,10 +22,8 @@
 		FilterNode,
 		NodePath,
 		Operator,
-		Scalar,
-		TimeUnit
+		Scalar
 	} from '@sg-widgets/core';
-	import { TIME_UNITS, timeUnitLabel } from '@sg-widgets/core';
 
 	/** What the field slot is given. Its job is to call `onSelect` with a dotted path. */
 	export interface FieldChooserArgs {
@@ -51,12 +49,6 @@
 		onChange: (value: ConditionValue) => void;
 	}
 
-	const UNITS = TIME_UNITS;
-
-	function unitLabel(unit: string): string {
-		return timeUnitLabel(unit as TimeUnit, 2);
-	}
-
 	/** The six types NumberEditor parses. `footage` is numeric to the API and reads as a plain number. */
 	const NUMERIC_EDITORS = ['number', 'float', 'percent', 'duration', 'timecode', 'currency'] as const;
 	type NumericEditor = (typeof NUMERIC_EDITORS)[number];
@@ -78,16 +70,6 @@
 	function codes(value: ConditionValue): string[] {
 		if (!Array.isArray(value)) return [];
 		return (value as Scalar[]).filter((v): v is string => typeof v === 'string');
-	}
-
-	function scalarText(value: Scalar | undefined): string {
-		if (value === null || value === undefined || typeof value === 'object') return '';
-		return String(value);
-	}
-
-	function parseScalar(kind: string, text: string): Scalar {
-		if (text === '') return '';
-		return kind === 'number' ? Number(text) : text;
 	}
 
 	/** `is` takes one entity hash and `in` a list of them; a list under `is` is a 400 (field_types/entity). */
@@ -112,48 +94,51 @@
 </script>
 
 <script lang="ts">
-	import ChevronDownIcon from '@lucide/svelte/icons/chevron-down';
 	import PlusIcon from '@lucide/svelte/icons/plus';
 	import XIcon from '@lucide/svelte/icons/x';
 	import type { HTMLAttributes } from 'svelte/elements';
-	import type { SgContext } from '@sg-widgets/core';
+	import type { SgContext, TimeUnit } from '@sg-widgets/core';
 	import {
 		appendAt,
 		applyPreset,
 		condition as makeCondition,
+		conditionArity,
+		conditionList,
 		defaultCondition,
 		emptyFilter,
 		group as makeGroup,
 		operatorMenu,
 		presetById,
 		presetIdOf,
+		relativeWindow,
 		removeAt,
 		replaceAt,
-		conditionArity,
-		valueEditorFor
+		timeUnitField,
+		valueEditorFor,
+		withAddedListValue,
+		withListValue,
+		withoutListValue,
+		withRelativeWindow
 	} from '@sg-widgets/core';
-	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
-	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
-	import * as Command from '$lib/components/ui/command/index.js';
-	import { Input } from '$lib/components/ui/input/index.js';
-	import * as InputGroup from '$lib/components/ui/input-group/index.js';
-	import * as Popover from '$lib/components/ui/popover/index.js';
 	import * as Select from '$lib/components/ui/select/index.js';
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
 	import * as ToggleGroup from '$lib/components/ui/toggle-group/index.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
 	import CheckboxEditor from '$lib/registry/components/checkbox-editor.svelte';
+	import ColorEditor from '$lib/registry/components/color-editor.svelte';
 	import DateEditor from '$lib/registry/components/date-editor.svelte';
 	import DateTimeEditor from '$lib/registry/components/date-time-editor.svelte';
 	import EntityMultiPicker from '$lib/registry/components/entity-multi-picker.svelte';
 	import EntityPicker from '$lib/registry/components/entity-picker.svelte';
 	import FieldPicker from '$lib/registry/components/field-picker.svelte';
+	import ListMultiSelect from '$lib/registry/components/list-multi-select.svelte';
 	import ListSelect from '$lib/registry/components/list-select.svelte';
 	import NumberEditor from '$lib/registry/components/number-editor.svelte';
 	import StatusMultiPicker from '$lib/registry/components/status-multi-picker.svelte';
 	import StatusPicker from '$lib/registry/components/status-picker.svelte';
 	import TextEditor from '$lib/registry/components/text-editor.svelte';
+	import UrlEditor from '$lib/registry/components/url-editor.svelte';
 
 	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>, HTMLDivElement> & {
 		/** Type the root of every field path is read on. */
@@ -332,24 +317,6 @@
 	</Select.Root>
 {/snippet}
 
-{#snippet pickerTrigger(label: string, count: number)}
-	<Popover.Trigger
-		{disabled}
-		data-slot="filter-value-trigger"
-		class={cn(
-			'border-border bg-background hover:bg-muted focus-visible:border-ring focus-visible:ring-ring/50 inline-flex w-full min-w-0 items-center justify-between gap-1.5 rounded-lg border px-2.5 text-sm outline-none focus-visible:ring-3 disabled:pointer-events-none disabled:opacity-50',
-			BOX[size]
-		)}
-	>
-		<span class={cn('min-w-0 truncate', count === 0 && 'text-muted-foreground')} title={label}>{label}</span>
-		{#if count > 0}
-			<Badge variant="secondary" class="shrink-0">{count}</Badge>
-		{:else}
-			<ChevronDownIcon class="text-muted-foreground size-4" />
-		{/if}
-	</Popover.Trigger>
-{/snippet}
-
 <!--
 	A value editor sized for a row. The typed types take the width their content needs and
 	the free width goes to the ones that hold a name: a date, a time and a number never
@@ -388,6 +355,26 @@
 			value={textValue(current)}
 			onValueChange={(next) => set(next ?? '')}
 		/>
+	{:else if kind === 'color'}
+		<ColorEditor
+			class="w-44 shrink-0"
+			size={INNER[size]}
+			hint={false}
+			{disabled}
+			field={{ displayName: label, mandatory: false }}
+			value={textValue(current)}
+			onValueChange={(next) => set(next ?? '')}
+		/>
+	{:else if kind === 'url'}
+		<!-- The row compares the link itself, so the editor's name half is left out of the value. -->
+		<UrlEditor
+			class="min-w-0 flex-1"
+			size={INNER[size]}
+			{disabled}
+			field={{ displayName: label, mandatory: false }}
+			value={textValue(current) ? { url: String(textValue(current)) } : null}
+			onValueChange={(next) => set(next?.url ?? '')}
+		/>
 	{:else}
 		<TextEditor
 			class="min-w-0 flex-1"
@@ -398,6 +385,46 @@
 			onValueChange={(next) => set(next ?? '')}
 		/>
 	{/if}
+{/snippet}
+
+<!--
+	A list of values, one to a line, each edited by its own data type's control and each
+	with the control that drops it. The arity is the operator's: `in` and `not_in` take a
+	JSON array, and a blank value is dropped on serialisation rather than sent.
+-->
+{#snippet listEditor(kind: string, dataType: string, label: string, current: ConditionValue, set: (v: ConditionValue) => void)}
+	{@const items = conditionList(current)}
+	<div class="flex min-w-0 flex-1 flex-col items-start gap-2" data-slot="filter-list">
+		{#each items as item, i (i)}
+			<div class="flex min-w-0 items-center gap-1.5" data-slot="filter-list-value" data-index={i}>
+				{@render scalarEditor(kind, dataType, label, item, (v) =>
+					set(withListValue(current, i, v) as ConditionValue)
+				)}
+				<Button
+					variant="ghost"
+					size={ICON[size]}
+					class="text-muted-foreground hover:text-foreground shrink-0"
+					{disabled}
+					aria-label="Remove value"
+					data-slot="filter-list-remove"
+					onclick={() => set(withoutListValue(current, i) as ConditionValue)}
+				>
+					<XIcon />
+				</Button>
+			</div>
+		{/each}
+		<Button
+			variant="ghost"
+			size={BTN[size]}
+			class="text-muted-foreground hover:text-foreground shrink-0"
+			{disabled}
+			data-slot="filter-list-add"
+			onclick={() => set(withAddedListValue(current) as ConditionValue)}
+		>
+			<PlusIcon />
+			Value
+		</Button>
+	</div>
 {/snippet}
 
 {#snippet entityValue(field: FieldSchema | null, arity: string, current: ConditionValue, set: (v: ConditionValue) => void)}
@@ -452,36 +479,31 @@
 		{:else if arity === 'none'}
 			<!-- `is empty` and the calendar presets pin their value; there is nothing to edit. -->
 		{:else if arity === 'relative'}
-			{@const pair = (Array.isArray(node.value) ? node.value : [1, 'DAY']) as [number, string]}
-			<!-- A window is one quantity: the count and its unit share a box. -->
-			<InputGroup.Root class={cn(BOX[size], 'w-40 shrink-0')}>
-				<InputGroup.Input
-					type="number"
-					min="1"
-					class="tabular-nums"
+			{@const window_ = relativeWindow(node.value)}
+			<!-- A window is a count and a unit: the number editor and the list a `list` field uses. -->
+			<div class="flex min-w-0 shrink-0 items-center gap-2" data-slot="filter-window">
+				<NumberEditor
+					class="w-16 shrink-0"
+					size={INNER[size]}
+					inline
 					{disabled}
-					aria-label="Count"
-					value={String(pair[0] ?? '')}
-					oninput={(e) => set([Number(e.currentTarget.value), pair[1]] as ConditionValue)}
+					dataType="number"
+					min={1}
+					field={{ displayName: 'Count', mandatory: true }}
+					value={window_.count}
+					onValueChange={(next) =>
+						set(withRelativeWindow(node.value, { count: next === null ? null : Number(next) }) as ConditionValue)}
 				/>
-				<InputGroup.Addon align="inline-end" class="py-0 pr-1">
-					<Select.Root
-						type="single"
-						value={String(pair[1])}
-						{disabled}
-						onValueChange={(unit) => set([pair[0], unit] as ConditionValue)}
-					>
-						<Select.Trigger size="sm" class="border-0 bg-transparent dark:bg-transparent">
-							{unitLabel(String(pair[1]))}
-						</Select.Trigger>
-						<Select.Content>
-							{#each UNITS as unit (unit)}
-								<Select.Item value={unit} label={unitLabel(unit)} />
-							{/each}
-						</Select.Content>
-					</Select.Root>
-				</InputGroup.Addon>
-			</InputGroup.Root>
+				<ListSelect
+					class="w-24 shrink-0"
+					size={INNER[size]}
+					{disabled}
+					field={timeUnitField()}
+					value={window_.unit}
+					onValueChange={(next) =>
+						set(withRelativeWindow(node.value, { unit: (next ?? 'DAY') as TimeUnit }) as ConditionValue)}
+				/>
+			</div>
 		{:else if kind === 'entity'}
 			{#if entityEditor}
 				<!-- Integration point: EntityMultiPicker plugs in here. -->
@@ -531,34 +553,15 @@
 				onValueChange={(next) => set(next ?? '')}
 			/>
 		{:else if kind === 'options' && arity === 'many'}
-			{@const picked = codes(node.value)}
-			<Popover.Root>
-				{@render pickerTrigger(
-					picked.length === 0
-						? 'Select values…'
-						: picked.map((c) => field?.displayValues?.[c] ?? c).join(', '),
-					picked.length
-				)}
-				<Popover.Content strategy="fixed" class="w-64 p-0" align="start">
-					<Command.Root>
-						<Command.Input placeholder="Search values…" />
-						<Command.List>
-							<Command.Empty>No value.</Command.Empty>
-							{#each field?.validValues ?? [] as code (code)}
-								<Command.Item
-									value="{field?.displayValues?.[code] ?? code} {code}"
-									data-option={code}
-									onSelect={() =>
-										set(picked.includes(code) ? picked.filter((c) => c !== code) : [...picked, code])}
-								>
-									<Checkbox checked={picked.includes(code)} tabindex={-1} aria-hidden="true" />
-									<span class="min-w-0 flex-1 truncate">{field?.displayValues?.[code] ?? code}</span>
-								</Command.Item>
-							{/each}
-						</Command.List>
-					</Command.Root>
-				</Popover.Content>
-			</Popover.Root>
+			<ListMultiSelect
+				class="min-w-0 flex-1"
+				size={INNER[size]}
+				{disabled}
+				{field}
+				placeholder="Select values…"
+				value={codes(node.value)}
+				onValueChange={(next) => set([...next])}
+			/>
 		{:else if kind === 'options'}
 			<ListSelect
 				class="min-w-0 flex-1"
@@ -578,23 +581,7 @@
 				{@render scalarEditor(kind, dataType, 'To', pair[1], (v) => set([pair[0], v] as ConditionValue))}
 			</div>
 		{:else if arity === 'many'}
-			{@const items = (Array.isArray(node.value) ? node.value : []) as Scalar[]}
-			<!-- A list of dates, numbers or strings has no per-value editor: one line, comma separated. -->
-			<Input
-				class={cn(BOX[size], 'min-w-0 flex-1')}
-				{disabled}
-				placeholder="value, value"
-				aria-label="Values"
-				value={items.map(scalarText).join(', ')}
-				oninput={(e) =>
-					set(
-						e.currentTarget.value
-							.split(',')
-							.map((part) => part.trim())
-							.filter(Boolean)
-							.map((part) => parseScalar(kind, part)) as ConditionValue
-					)}
-			/>
+			{@render listEditor(kind, dataType, field?.displayName ?? 'Value', node.value, set)}
 		{:else}
 			{@render scalarEditor(kind, dataType, field?.displayName ?? 'Value', node.value as Scalar, (v) => set(v))}
 		{/if}

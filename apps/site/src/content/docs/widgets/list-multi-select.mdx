@@ -1,0 +1,79 @@
+---
+title: ListMultiSelect
+description: Several values of a list field, chosen from its valid values with checkboxes.
+---
+
+import Demo from '../../../components/Demo.astro';
+
+Chooses several values of a list field, offering the vocabulary its schema declares.
+
+## Install
+
+```sh
+pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/list-multi-select.json
+pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/list-multi-select.json
+```
+
+<Demo name="list-multi-select" title="ListMultiSelect: valid values, labels, and a project's hidden values removed" />
+
+## Input
+
+| chosen | emitted |
+|---|---|
+| an unchecked entry | the list with that value added at the end |
+| a checked entry | the list with that value removed |
+
+The offered set is the field's valid values, minus its hidden values when a project id is given. A
+value already held that is outside that set keeps showing in the trigger.
+
+The trigger reads the chosen labels joined by commas, with the count in a badge at its end.
+
+## Props
+
+| prop | type | default | meaning |
+|---|---|---|---|
+| `value` | `string[]` | `[]` | The chosen values. Two-way in Svelte. |
+| `onValueChange` | `(value: string[]) => void` | — | Called on every change, with the whole list. |
+| `field` | `FieldSchema \| null` | `null` | Supplies the valid values, the labels and the hidden values. |
+| `projectId` | `number` | — | Given, the field's hidden values are removed from the list. |
+| `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Control height. |
+| `disabled` | `boolean` | `false` | |
+| `readonly` | `boolean` | `false` | |
+| `invalid` | `boolean` | `false` | |
+| `error` | `string \| null` | `null` | A message from the caller. |
+| `placeholder` | `string` | `'Select values'` | Shown while nothing is chosen. |
+| `searchPlaceholder` | `string` | `'Search values…'` | Placeholder of the search box. |
+| `emptyLabel` | `string` | `'No value.'` | Shown when the search matches nothing. |
+| `open` | `boolean` | `false` | Whether the popup is showing. Two-way in Svelte. |
+| `class` / `className` | `string` | — | Merged after the widget's own classes. |
+
+## Events
+
+`onValueChange` fires as soon as an entry is checked or unchecked. `onErrorChange` fires with `null`
+on that same change, so a message the caller set clears when the field is answered.
+
+`onOpenChange` fires when the popup opens or closes. Svelte also binds it with `bind:open`.
+
+## Slots
+
+`errorMessage` receives the message and renders it.
+
+## Keyboard
+
+| key | does |
+|---|---|
+| `Space`, `Enter` | Opens the list, with the cursor in the search box. |
+| typing | Narrows the list. |
+| arrows | Move the highlight. |
+| `Enter` | Checks or unchecks the highlighted entry. The list stays open. |
+| `Escape` | Closes the list. |
+
+## API behaviour
+
+A list field holds one bare string, so several values only appear in a filter, under `in` and
+`not_in`. A value outside `valid_values` is a 400 on write and the comparison is case-sensitive,
+down to a trailing space, so the schema's vocabulary is the whole set a picker may offer
+(field_types/list).
+
+Hidden values reach the schema only when it is read with a project id, and REST does not enforce
+them on write, so the subtraction is the client's (probe 009).

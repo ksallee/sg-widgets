@@ -74,8 +74,13 @@
 		{ key: 'status_list', field: schema('sg_status_list', 'Status', 'status_list'), value: 'ip' },
 		{
 			key: 'entity',
-			field: schema('entity', 'Link', 'entity'),
+			field: schema('entity', 'Link', 'entity', { validTypes: ['Shot'] }),
 			value: { type: 'Shot', id: 1234, name: 'sh010_0010' }
+		},
+		{
+			key: 'multi_entity',
+			field: schema('sg_shots', 'Shots', 'multi_entity', { validTypes: ['Shot'] }),
+			value: [{ type: 'Shot', id: 1234, name: 'sh010_0010' }]
 		}
 	];
 

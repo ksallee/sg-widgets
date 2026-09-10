@@ -134,6 +134,8 @@ const TINY_PNG_DATA_URL =
 const ASSET_TYPES = ['Character', 'Environment', 'Prop', 'Vehicle', 'FX', 'Matte Painting'];
 const SHOT_TYPES = ['VFX', '2D', 'Full CG', 'Trailer', 'Marketing', 'Look Dev'];
 const VERSION_TYPES = ['Type A', 'Type B', 'Type C'];
+/** Decimal `r,g,b`, the only form a colour field stores (field_types/color). */
+const BAR_COLORS = ['253,94,99', '110,180,200', '240,190,90', '90,200,160'];
 /** Project's own status field is a plain `list` with no Status row behind it (entity_types/Project). */
 const PROJECT_STATUSES = ['Active', 'Bidding', 'Complete', 'On Hold'];
 
@@ -246,6 +248,8 @@ const SPECS: Record<string, Record<string, FieldSpec>> = {
     client_approved_at: { displayName: 'Client Approved at', dataType: 'date_time' },
     image: { displayName: 'Thumbnail', dataType: 'image' },
     sg_uploaded_movie: { displayName: 'Uploaded Movie', dataType: 'url' },
+    // A colour is the decimal `r,g,b` the field stores, never hex (field_types/color).
+    sg_bar_color: { displayName: 'Bar Colour', dataType: 'color' },
     project: { displayName: 'Project', dataType: 'entity', mandatory: true, validTypes: ['Project'] },
     // The probed site links 99% of Versions through `entity` to a Shot and 1% to an Asset (005_link_usage).
     entity: { displayName: 'Link', dataType: 'entity', validTypes: ['Shot', 'Asset', 'Sequence'] },
@@ -799,6 +803,7 @@ function buildFixtures(seed: number, counts: { versions?: number } = {}): Fixtur
       client_approved_at: null,
       image: thumb(code),
       sg_uploaded_movie: null,
+      sg_bar_color: pick(rng, BAR_COLORS),
       project: target.values['project'] as EntityRef,
       entity: ref(target),
       sg_task: task ?? null,

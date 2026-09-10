@@ -16,27 +16,26 @@ import {
   appendAt,
   applyPreset,
   condition as makeCondition,
+  conditionArity,
+  conditionList,
   defaultCondition,
   emptyFilter,
   group as makeGroup,
   operatorMenu,
   presetById,
   presetIdOf,
+  relativeWindow,
   removeAt,
   replaceAt,
-  TIME_UNITS,
-  timeUnitLabel,
-  conditionArity,
+  timeUnitField,
   valueEditorFor,
+  withAddedListValue,
+  withListValue,
+  withoutListValue,
+  withRelativeWindow,
 } from '@sg-widgets/core';
-import { ChevronDownIcon, PlusIcon, XIcon } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { PlusIcon, XIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { Input } from '@/components/ui/input';
-import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   Select,
   SelectContent,
@@ -49,16 +48,19 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { cn } from '@/lib/utils';
 import { CheckboxEditor } from '@/registry/sg/components/checkbox-editor';
+import { ColorEditor } from '@/registry/sg/components/color-editor';
 import { DateEditor } from '@/registry/sg/components/date-editor';
 import { DateTimeEditor } from '@/registry/sg/components/date-time-editor';
 import { EntityMultiPicker } from '@/registry/sg/components/entity-multi-picker';
 import { EntityPicker } from '@/registry/sg/components/entity-picker';
 import { FieldPicker } from '@/registry/sg/components/field-picker';
+import { ListMultiSelect } from '@/registry/sg/components/list-multi-select';
 import { ListSelect } from '@/registry/sg/components/list-select';
 import { NumberEditor } from '@/registry/sg/components/number-editor';
 import { StatusMultiPicker } from '@/registry/sg/components/status-multi-picker';
 import { StatusPicker } from '@/registry/sg/components/status-picker';
 import { TextEditor } from '@/registry/sg/components/text-editor';
+import { UrlEditor } from '@/registry/sg/components/url-editor';
 
 /** What the field slot is given. Its job is to call `onSelect` with a dotted path. */
 export interface FieldChooserArgs {
@@ -84,12 +86,6 @@ export interface ValueEditorArgs {
   onChange: (value: ConditionValue) => void;
 }
 
-const UNITS = TIME_UNITS;
-
-function unitLabel(unit: string): string {
-  return timeUnitLabel(unit as TimeUnit, 2);
-}
-
 /** The six types NumberEditor parses. `footage` is numeric to the API and reads as a plain number. */
 const NUMERIC_EDITORS = ['number', 'float', 'percent', 'duration', 'timecode', 'currency'] as const;
 type NumericEditor = (typeof NUMERIC_EDITORS)[number];
@@ -111,16 +107,6 @@ function numberValue(value: Scalar | undefined): number | string | null {
 function codesOf(value: ConditionValue): string[] {
   if (!Array.isArray(value)) return [];
   return (value as Scalar[]).filter((v): v is string => typeof v === 'string');
-}
-
-function scalarText(value: Scalar | undefined): string {
-  if (value === null || value === undefined || typeof value === 'object') return '';
-  return String(value);
-}
-
-function parseScalar(kind: string, text: string): Scalar {
-  if (text === '') return '';
-  return kind === 'number' ? Number(text) : text;
 }
 
 /** `is` takes one entity hash and `in` a list of them; a list under `is` is a 400 (field_types/entity). */
@@ -515,40 +501,6 @@ function OperatorSlot({ ctx, path, node }: { ctx: EditorContext; path: NodePath;
   );
 }
 
-function PickerTrigger({
-  label,
-  count,
-  disabled,
-  size,
-}: {
-  label: string;
-  count: number;
-  disabled: boolean;
-  size: FilterEditorSize;
-}) {
-  return (
-    <PopoverTrigger
-      disabled={disabled}
-      data-slot="filter-value-trigger"
-      className={cn(
-        'border-border bg-background hover:bg-muted focus-visible:border-ring focus-visible:ring-ring/50 inline-flex w-full min-w-0 items-center justify-between gap-1.5 rounded-lg border px-2.5 text-sm outline-none focus-visible:ring-3 disabled:pointer-events-none disabled:opacity-50',
-        BOX[size],
-      )}
-    >
-      <span className={cn('min-w-0 truncate', count === 0 && 'text-muted-foreground')} title={label}>
-        {label}
-      </span>
-      {count > 0 ? (
-        <Badge variant="secondary" className="shrink-0">
-          {count}
-        </Badge>
-      ) : (
-        <ChevronDownIcon className="text-muted-foreground size-4" />
-      )}
-    </PopoverTrigger>
-  );
-}
-
 function ValueSlot({ ctx, path, node }: { ctx: EditorContext; path: NodePath; node: FilterCondition }) {
   const field = ctx.fieldOf(node.path);
   const dataType = field?.dataType ?? '';
@@ -611,7 +563,15 @@ function ValueSlot({ ctx, path, node }: { ctx: EditorContext; path: NodePath; no
           onValueChange={(next) => set(next ?? '')}
         />
       ) : kind === 'options' && arity === 'many' ? (
-        <OptionsMany field={field} value={node.value} disabled={disabled} size={ctx.size} onChange={set} />
+        <ListMultiSelect
+          className="min-w-0 flex-1"
+          size={INNER[ctx.size]}
+          disabled={disabled}
+          field={field}
+          placeholder="Select values…"
+          value={codesOf(node.value)}
+          onValueChange={(next) => set([...next])}
+        />
       ) : kind === 'options' ? (
         <ListSelect
           className="min-w-0 flex-1"
@@ -632,22 +592,14 @@ function ValueSlot({ ctx, path, node }: { ctx: EditorContext; path: NodePath; no
           onChange={set}
         />
       ) : arity === 'many' ? (
-        // A list of dates, numbers or strings has no per-value editor: one line, comma separated.
-        <Input
-          className={cn(BOX[ctx.size], 'min-w-0 flex-1')}
+        <ListValues
+          kind={kind}
+          dataType={dataType}
+          label={field?.displayName ?? 'Value'}
+          value={node.value}
           disabled={disabled}
-          placeholder="value, value"
-          aria-label="Values"
-          value={((Array.isArray(node.value) ? node.value : []) as Scalar[]).map(scalarText).join(', ')}
-          onChange={(e) =>
-            set(
-              e.currentTarget.value
-                .split(',')
-                .map((part) => part.trim())
-                .filter(Boolean)
-                .map((part) => parseScalar(kind, part)) as ConditionValue,
-            )
-          }
+          size={ctx.size}
+          onChange={set}
         />
       ) : (
         <ScalarEditor
@@ -728,6 +680,33 @@ function ScalarEditor({
       />
     );
   }
+  if (kind === 'color') {
+    return (
+      <ColorEditor
+        className="w-44 shrink-0"
+        size={INNER[size]}
+        hint={false}
+        disabled={disabled}
+        field={field}
+        value={textValue(value)}
+        onValueChange={(next) => onChange(next ?? '')}
+      />
+    );
+  }
+  if (kind === 'url') {
+    const href = textValue(value);
+    return (
+      // The row compares the link itself, so the editor's name half is left out of the value.
+      <UrlEditor
+        className="min-w-0 flex-1"
+        size={INNER[size]}
+        disabled={disabled}
+        field={field}
+        value={href ? { url: String(href) } : null}
+        onValueChange={(next) => onChange(next?.url ?? '')}
+      />
+    );
+  }
   return (
     <TextEditor
       className="min-w-0 flex-1"
@@ -737,6 +716,70 @@ function ScalarEditor({
       value={textValue(value)}
       onValueChange={(next) => onChange(next ?? '')}
     />
+  );
+}
+
+/**
+ * A list of values, one to a line, each edited by its own data type's control and each
+ * with the control that drops it. The arity is the operator's: `in` and `not_in` take a
+ * JSON array, and a blank value is dropped on serialisation rather than sent.
+ */
+function ListValues({
+  kind,
+  dataType,
+  label,
+  value,
+  disabled,
+  size,
+  onChange,
+}: {
+  kind: string;
+  dataType: string;
+  label: string;
+  value: ConditionValue;
+  disabled: boolean;
+  size: FilterEditorSize;
+  onChange: (v: ConditionValue) => void;
+}) {
+  const items = conditionList(value);
+  return (
+    <div className="flex min-w-0 flex-1 flex-col items-start gap-2" data-slot="filter-list">
+      {items.map((item, i) => (
+        <div className="flex min-w-0 items-center gap-1.5" data-slot="filter-list-value" data-index={i} key={i}>
+          <ScalarEditor
+            kind={kind}
+            dataType={dataType}
+            label={label}
+            value={item}
+            disabled={disabled}
+            size={size}
+            onChange={(v) => onChange(withListValue(value, i, v) as ConditionValue)}
+          />
+          <Button
+            variant="ghost"
+            size={ICON[size]}
+            className="text-muted-foreground hover:text-foreground shrink-0"
+            disabled={disabled}
+            aria-label="Remove value"
+            data-slot="filter-list-remove"
+            onClick={() => onChange(withoutListValue(value, i) as ConditionValue)}
+          >
+            <XIcon />
+          </Button>
+        </div>
+      ))}
+      <Button
+        variant="ghost"
+        size={BTN[size]}
+        className="text-muted-foreground hover:text-foreground shrink-0"
+        disabled={disabled}
+        data-slot="filter-list-add"
+        onClick={() => onChange(withAddedListValue(value) as ConditionValue)}
+      >
+        <PlusIcon />
+        Value
+      </Button>
+    </div>
   );
 }
 
@@ -751,38 +794,32 @@ function RelativeValue({
   size: FilterEditorSize;
   onChange: (v: ConditionValue) => void;
 }) {
-  const pair = (Array.isArray(value) ? value : [1, 'DAY']) as [number, string];
+  const window_ = relativeWindow(value);
   return (
-    // A window is one quantity: the count and its unit share a box.
-    <InputGroup className={cn(BOX[size], 'w-40 shrink-0')}>
-      <InputGroupInput
-        type="number"
-        min="1"
-        className="tabular-nums"
+    // A window is a count and a unit: the number editor and the list a `list` field uses.
+    <div className="flex min-w-0 shrink-0 items-center gap-2" data-slot="filter-window">
+      <NumberEditor
+        className="w-16 shrink-0"
+        size={INNER[size]}
+        inline
         disabled={disabled}
-        aria-label="Count"
-        value={String(pair[0] ?? '')}
-        onChange={(e) => onChange([Number(e.currentTarget.value), pair[1]] as ConditionValue)}
+        dataType="number"
+        min={1}
+        field={{ displayName: 'Count', mandatory: true }}
+        value={window_.count}
+        onValueChange={(next) =>
+          onChange(withRelativeWindow(value, { count: next === null ? null : Number(next) }) as ConditionValue)
+        }
       />
-      <InputGroupAddon align="inline-end" className="py-0 pr-1">
-        <Select
-          value={String(pair[1])}
-          disabled={disabled}
-          onValueChange={(unit) => onChange([pair[0], unit] as ConditionValue)}
-        >
-          <SelectTrigger size="sm" className="border-0 bg-transparent dark:bg-transparent">
-            {unitLabel(String(pair[1]))}
-          </SelectTrigger>
-          <SelectContent>
-            {UNITS.map((unit) => (
-              <SelectItem key={unit} value={unit}>
-                {unitLabel(unit)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </InputGroupAddon>
-    </InputGroup>
+      <ListSelect
+        className="w-24 shrink-0"
+        size={INNER[size]}
+        disabled={disabled}
+        field={timeUnitField()}
+        value={window_.unit}
+        onValueChange={(next) => onChange(withRelativeWindow(value, { unit: (next ?? 'DAY') as TimeUnit }) as ConditionValue)}
+      />
+    </div>
   );
 }
 
@@ -825,51 +862,6 @@ function TwoValues({
         onChange={(v) => onChange([pair[0], v] as ConditionValue)}
       />
     </div>
-  );
-}
-
-function OptionsMany({
-  field,
-  value,
-  disabled,
-  size,
-  onChange,
-}: {
-  field: FieldSchema | null;
-  value: ConditionValue;
-  disabled: boolean;
-  size: FilterEditorSize;
-  onChange: (v: ConditionValue) => void;
-}) {
-  const codes = codesOf(value);
-  return (
-    <Popover>
-      <PickerTrigger
-        disabled={disabled}
-        size={size}
-        label={codes.length === 0 ? 'Select values…' : codes.map((c) => field?.displayValues?.[c] ?? c).join(', ')}
-        count={codes.length}
-      />
-      <PopoverContent className="w-64 p-0" align="start">
-        <Command>
-          <CommandInput placeholder="Search values…" />
-          <CommandList>
-            <CommandEmpty>No value.</CommandEmpty>
-            {(field?.validValues ?? []).map((code) => (
-              <CommandItem
-                key={code}
-                value={`${field?.displayValues?.[code] ?? code} ${code}`}
-                data-option={code}
-                onSelect={() => onChange(codes.includes(code) ? codes.filter((c) => c !== code) : [...codes, code])}
-              >
-                <Checkbox checked={codes.includes(code)} tabIndex={-1} aria-hidden="true" />
-                <span className="min-w-0 flex-1 truncate">{field?.displayValues?.[code] ?? code}</span>
-              </CommandItem>
-            ))}
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
   );
 }
 

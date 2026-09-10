@@ -22,6 +22,7 @@ import {
   isTemporalType,
   operatorsFor,
   supportsOperator,
+  TIME_UNITS,
   VALUE_SHAPE,
 } from './field-types.js';
 import type { EntityRow } from './client.js';
@@ -513,11 +514,17 @@ export type ValueEditorKind =
   | 'date_time'
   | 'checkbox'
   | 'options'
-  | 'entity';
+  | 'entity'
+  | 'color'
+  | 'url';
 
 /**
  * Which editor a row draws. The operator picks the arity (one value, a list, a
  * range, a relative window) and the data type picks the editor inside it.
+ *
+ * A `url` field takes no filter at all, so no field list offers one; the kind is
+ * here for a tree that carries a path the schema no longer filters on
+ * (field_types/url).
  */
 export function valueEditorFor(dataType: string, operator: Operator): ValueEditorKind {
   const shape = VALUE_SHAPE[operator];
@@ -531,6 +538,8 @@ export function valueEditorFor(dataType: string, operator: Operator): ValueEdito
   if (dataType === 'list' || dataType === 'status_list') return 'options';
   if (isLinkType(dataType)) return 'entity';
   if (isNumericType(dataType)) return 'number';
+  if (dataType === 'color') return 'color';
+  if (dataType === 'url') return 'url';
   return 'text';
 }
 
@@ -554,6 +563,39 @@ export function valueArity(operator: Operator): 'none' | 'one' | 'many' | 'two' 
     default:
       return 'one';
   }
+}
+
+/* -------------------------------------------------------------------------- */
+/* list values                                                                */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * The values a list-shaped condition holds, as a row edits them. `in` and `not_in`
+ * take a JSON array, so anything else on the condition reads as no values yet.
+ */
+export function conditionList(value: ConditionValue): Scalar[] {
+  return Array.isArray(value) ? ([...value] as Scalar[]) : [];
+}
+
+/** The list with one value replaced. An index outside it leaves the list alone. */
+export function withListValue(value: ConditionValue, index: number, next: Scalar): Scalar[] {
+  const values = conditionList(value);
+  if (index < 0 || index >= values.length) return values;
+  values[index] = next;
+  return values;
+}
+
+/** The list with one value dropped. */
+export function withoutListValue(value: ConditionValue, index: number): Scalar[] {
+  return conditionList(value).filter((_, i) => i !== index);
+}
+
+/**
+ * The list with one more entry on the end, blank. A blank entry serialises to
+ * nothing: a row whose value is still unfilled is dropped rather than sent.
+ */
+export function withAddedListValue(value: ConditionValue): Scalar[] {
+  return [...conditionList(value), ''];
 }
 
 /* -------------------------------------------------------------------------- */
@@ -587,6 +629,43 @@ export function relativeFrom(operator: Operator, value: ConditionValue): Relativ
     unit: value[1] as TimeUnit,
     direction: operator === 'in_next' || operator === 'not_in_next' ? 'next' : 'last',
     negated: operator === 'not_in_last' || operator === 'not_in_next',
+  };
+}
+
+/** The count and the unit a relative row shows, with the default window for an unfilled one. */
+export function relativeWindow(value: ConditionValue): { count: number | null; unit: TimeUnit } {
+  const pair = Array.isArray(value) ? value : [];
+  const count = Number(pair[0]);
+  const unit = pair[1];
+  return {
+    count: Number.isFinite(count) && String(pair[0] ?? '') !== '' ? count : null,
+    unit: (TIME_UNITS as readonly string[]).includes(String(unit)) ? (unit as TimeUnit) : 'DAY',
+  };
+}
+
+/** The window with one half replaced. A missing count goes as 1, the smallest the API takes. */
+export function withRelativeWindow(
+  value: ConditionValue,
+  next: Partial<{ count: number | null; unit: TimeUnit }>,
+): [number, TimeUnit] {
+  const current = relativeWindow(value);
+  const merged = { ...current, ...next };
+  return [merged.count === null ? 1 : merged.count, merged.unit];
+}
+
+/**
+ * The time units as a field, so a relative row picks its unit with the same list
+ * control a `list` field uses. Mandatory: a window always has a unit.
+ */
+export function timeUnitField(displayName = 'Unit'): Pick<
+  FieldSchema,
+  'displayName' | 'mandatory' | 'validValues' | 'displayValues'
+> {
+  return {
+    displayName,
+    mandatory: true,
+    validValues: [...TIME_UNITS],
+    displayValues: Object.fromEntries(TIME_UNITS.map((unit) => [unit, timeUnitLabel(unit, 2)])),
   };
 }
 

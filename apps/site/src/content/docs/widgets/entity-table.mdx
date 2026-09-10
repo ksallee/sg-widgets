@@ -43,7 +43,10 @@ A source in `infinite` mode swaps the pager for a load-more row and a count of w
 | `source` | `EntitySource` | — | The rows, the filter, the sort and the page behind them. |
 | `columns` | `CollectionColumn[]` | — | Columns in display order, from `resolveColumns`. Two-way: hiding one writes the shorter list back. |
 | `statuses` | `Record<string, StatusRecord> \| null` | `null` | Status rows by code, for status cells. |
-| `context` | `SgContext` | — | The widget context. Cells render with its preferences, and an entity cell links to the row's page when it carries a site. |
+| `context` | `SgContext` | — | The widget context. Cells render with its preferences, a cell editor reads through it, and an entity cell links to the row's page when it carries a site. |
+| `projectId` | `number` | — | The project the columns were resolved with. Scopes a status, list or entity cell editor. |
+| `precision` | `number` | — | Decimals a float cell keeps. |
+| `symbol` | `string` | `'$'` | Shown before the value in a currency cell. |
 | `density` | `'compact' \| 'default'` | `'default'` | Compact halves the vertical cell padding. |
 | `selectable` | `boolean` | `false` | Draws a checkbox column. |
 | `groupBy` | `string \| null` | `null` | Collapses rows under headers of a shared value at this path. |
@@ -92,7 +95,10 @@ from its header menu removes it from the picker, and adding one there puts it ba
 ```
 
 An editor is handed `value`, `dataType`, `field`, `commit` and `cancel`, and owns its own keys.
-Without `editorFor`, an editable cell opens the type's own control from the field-editor item.
+Without `editorFor`, an editable cell opens the type's own control from the field-editor item: a
+status cell opens StatusPicker, an entity cell EntityPicker and a multi-entity cell
+EntityMultiPicker, each reading through `context`. The cell editor takes `projectId`, `precision`,
+`symbol` and the context's site preferences.
 
 ## Column menu
 
@@ -110,11 +116,13 @@ column list back through `columns`. Pinning sticks the column to the start of th
 | Enter on an editable cell | Opens the editor. |
 | Enter in an editor | Commits the value. |
 | Escape in an editor | Cancels and restores the value. |
+| a press outside an editor | Commits the value. |
 | Space on a checkbox | Toggles the row, or every loaded row from the header. |
 | Enter in the page number | Goes to that page. |
 
-A double-click on an editable cell opens the editor too. A header drags onto another to reorder, and
-its right edge drags to resize.
+A double-click on an editable cell opens the editor too. A press inside a popup the editor opened —
+a calendar, a status list, a picker's results — leaves the cell open. A header drags onto another to
+reorder, and its right edge drags to resize.
 
 ## API behaviour
 

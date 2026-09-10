@@ -352,6 +352,28 @@
       ]
     },
     {
+      "name": "list-multi-select",
+      "type": "registry:component",
+      "title": "List Multi Select",
+      "description": "Several values of a list field, chosen from its valid values with checkboxes.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte"
+      ],
+      "registryDependencies": [
+        "badge",
+        "checkbox",
+        "command",
+        "popover"
+      ],
+      "files": [
+        {
+          "path": "src/lib/registry/components/list-multi-select.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
       "name": "url-editor",
       "type": "registry:component",
       "title": "Url Editor",
@@ -407,7 +429,10 @@
         "local:date-time-editor",
         "local:list-select",
         "local:url-editor",
-        "local:color-editor"
+        "local:color-editor",
+        "local:status-picker",
+        "local:entity-picker",
+        "local:entity-multi-picker"
       ],
       "files": [
         {
@@ -426,27 +451,24 @@
         "@lucide/svelte"
       ],
       "registryDependencies": [
-        "badge",
         "button",
-        "checkbox",
-        "command",
-        "input",
-        "input-group",
-        "popover",
         "select",
         "skeleton",
         "toggle-group",
         "local:checkbox-editor",
+        "local:color-editor",
         "local:date-editor",
         "local:date-time-editor",
         "local:entity-multi-picker",
         "local:entity-picker",
         "local:field-picker",
+        "local:list-multi-select",
         "local:list-select",
         "local:number-editor",
         "local:status-multi-picker",
         "local:status-picker",
-        "local:text-editor"
+        "local:text-editor",
+        "local:url-editor"
       ],
       "files": [
         {

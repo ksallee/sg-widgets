@@ -55,20 +55,24 @@ The operator picks the arity and the field's data type picks the control inside 
 | `number`, `float`, `percent`, `duration`, `timecode`, `currency` | NumberEditor |
 | `date` | DateEditor |
 | `date_time` | DateTimeEditor |
-| `list` | ListSelect on one value, a checkbox list on is any of and is none of |
+| `list` | ListSelect on one value, ListMultiSelect on is any of and is none of |
 | `status_list` | StatusPicker on one value, StatusMultiPicker on is any of and is none of |
 | `checkbox` | CheckboxEditor |
+| `color` | ColorEditor |
+| `url` | UrlEditor |
 | `text`, and any field under name is, name contains, type is | TextEditor |
 | `entity`, `multi_entity` | EntityPicker on one value, EntityMultiPicker on is any of and is none of |
 
-Inside a row the date, date-time and number editors take their inline form: the width the
+Inside a row the date, date-time, number and colour editors take their inline form: the width the
 data type needs, and no zone line under a date-time. A date and a date-time are the same picker
 button here as anywhere else, with the calendar in its popover. Between draws both ends on one line.
 
 Arity comes first. An operator that carries its own value — is empty, is not empty, today, this week,
-last month — draws no editor. In the last and in the next draw a count and a unit. Between draws two
-of the data type's editor. Is any of and is none of on a date, a number or a text field draw one
-comma-separated line.
+last month — draws no editor. In the last and in the next draw a count in a NumberEditor and a unit
+in a ListSelect. Between draws two of the data type's editor. Is any of and is none of on a date, a
+number or a text field draw one value to a line, each in the data type's own editor, with a control
+that removes it and one that adds another; a blank value is dropped on serialisation rather than
+sent.
 
 A duration is typed as `1h 30m`, `1:30` or `90` and stored as the 90 minutes all three mean.
 
@@ -93,8 +97,9 @@ wants its own row or its own search.
 | `Arrow` keys | Move the cursor in an open menu or list; move between All and Any. |
 | `Right arrow` | Descends into the highlighted link in the field chooser. |
 | `Left arrow` | Goes back one level in the field chooser. |
-| `Enter` | Chooses the highlighted field, operator or value. |
+| `Enter` | Chooses the highlighted field, operator or value. In a multi-value list it checks the highlighted entry and the list stays open. |
 | `Escape` | Closes the open menu or popover. |
+| `Backspace` | In an entity picker's empty search box, arms the last chip; a second press removes it. |
 
 ## Operators
 
@@ -137,8 +142,12 @@ lowercase and nothing else, and no negation operator; nesting is safe to 265 lev
 
 `in_calendar_day`, `_week`, `_month` and `_year` take a signed offset from the current bucket, `0`
 being this one, not a count (field_types/date). `in_last` and `in_next` take `[count, UNIT]` with a
-positive integer and an uppercase unit out of `HOUR`, `DAY`, `WEEK`, `MONTH`, `YEAR`.
-`between` is inclusive at both ends and order-insensitive.
+positive integer and an uppercase unit out of `HOUR`, `DAY`, `WEEK`, `MONTH`, `YEAR`; a window with
+no count sends `1`, the smallest the API takes. `between` is inclusive at both ends and
+order-insensitive.
+
+A colour is the decimal `r,g,b` the field stores, with no spaces and no `#`; hex is rejected inside a
+filter as it is on write (field_types/color).
 
 An entity value is a `{type, id}` hash under `is` and a list of them under `in`; a list under `is` is
 a 400 (field_types/entity). A status or list value is the raw code, never the display label

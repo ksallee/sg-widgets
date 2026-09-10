@@ -12,7 +12,8 @@ const caption = 'text-muted-foreground text-xs';
 const narrow = 'max-w-80';
 const readout = 'text-muted-foreground font-mono text-xs tabular-nums';
 
-const MODES = ['icons', 'names', 'chips', 'ellipsis', 'count'] as const;
+const MODES = ['chips', 'ellipsis', 'count'] as const;
+const BADGES = ['both', 'icon', 'text'] as const;
 const TWO = ['ip', 'apr'];
 const FIVE = ['ip', 'apr', 'rev', 'fin', 'vwd'];
 
@@ -160,17 +161,38 @@ export default function StatusMultiPickerDemo() {
               clearable={false}
             />
           </div>
-          <div className={field} data-demo="summary-names-2">
-            <span className={caption}>names, two selected</span>
+          <div className={field} data-demo="badge-text-2">
+            <span className={caption}>text badges, two selected</span>
             <StatusMultiPicker
               context={context}
               entityType="Version"
               projectId={projectId}
               value={TWO}
-              summary="names"
+              summary="chips"
+              badge="text"
               clearable={false}
             />
           </div>
+        </div>
+      </section>
+
+      <section className={group}>
+        <h4 className={label}>What one badge is drawn as, for five selected</h4>
+        <div className={stack}>
+          {BADGES.map((badge) => (
+            <div className={field} key={badge} data-demo={`badge-${badge}-5`}>
+              <span className={caption}>{badge}</span>
+              <StatusMultiPicker
+                context={context}
+                entityType="Version"
+                projectId={projectId}
+                value={FIVE}
+                summary="chips"
+                badge={badge}
+                clearable={false}
+              />
+            </div>
+          ))}
         </div>
       </section>
 

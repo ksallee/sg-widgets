@@ -18,6 +18,7 @@
 			{context}
 			rootPath={`/Project/${context.projectId}`}
 			entityTypes={['Shot', 'Asset', 'Sequence', 'Task']}
+			secondaryField="sg_status_list"
 			onSelect={(leaf, path) => (picked = { leaf, path })}
 		/>
 	</section>

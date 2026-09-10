@@ -26,6 +26,14 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/context-select
 | `currentUser` | `EntityRef \| null` | `null` | Whose assigned tasks the second section lists. |
 | `recents` | `WorkContext[]` | `[]` | Contexts used before, newest first. |
 | `recentLimit` | `number` | `5` | How many recents survive a change. |
+| `thumbnail` | `string \| false` | `'image'` | Field holding a task row's thumbnail URL. A task with no picture falls back to its glyph. |
+| `labelField` | `string` | `'content'` | Field holding a task row's label. |
+| `subLabelField` | `string \| CollectionColumn \| null` | `null` | The muted line under the label. A resolved column renders it by type. |
+| `subLabel` | `(task) => string` | — | The muted line of your own. Wins over `subLabelField`. |
+| `secondaryField` | `string \| CollectionColumn \| null` | `'sg_status_list'` | The right-aligned value, drawn by its data type. |
+| `secondary` | `(task) => string` | — | Right-aligned text of your own. Wins over `secondaryField`. |
+| `showCode` | `boolean` | `false` | Shows the row's `code` beside the label when the two differ. |
+| `fields` | `string[]` | `[]` | Extra fields to request, so your own sub-label or secondary can read them. |
 | `open` | `boolean` | `false` | Whether the popover is open. |
 | `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Trigger heights 8, 9 and 10, and the chips inside it. |
 | `class` / `className` | `string` | — | Merged after the widget's own classes. |
@@ -41,6 +49,10 @@ tree scoped to the current project.
 
 Picking an assigned task sets all three parts at once: the task, the row it hangs off and its
 project. Picking from the tree reads the same three out of the path.
+
+An assigned task is the shared picker row, and the row props shape it. With no `subLabelField` and no
+`subLabel`, the sub-label is the row the task hangs off and its step. The row props reach the tree
+section too, so both lists read the same.
 
 ## Events
 

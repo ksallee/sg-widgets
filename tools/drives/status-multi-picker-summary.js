@@ -1,6 +1,6 @@
 // Read the closed control of the summary demos: every badge under `chips`, plain
-// icons with no remove control under `icons`, whole badges and a matching "+n" under
-// `ellipsis`, "5 selected" under `count`, and the cut `max={1}` makes.
+// icons with no remove control under `badge="icon"`, whole badges and a matching "+n"
+// under `ellipsis`, "5 selected" under `count`, and the cut `max={1}` makes.
 //
 //   pnpm qa --start --path /widgets/status-multi-picker/ --framework both --drive tools/drives/status-multi-picker-summary.js
 
@@ -38,9 +38,9 @@ for (const framework of ['svelte', 'react']) {
   const chips5 = { badges: badgeCount(chips5El), overflow: overflow(chips5El) };
   const ellipsisEl = value(pane, 'summary-ellipsis-5');
   const ellipsis = { badges: badgeCount(ellipsisEl), hidden: hiddenCount(ellipsisEl), overflow: overflow(ellipsisEl) };
-  const iconsEl = value(pane, 'summary-icons-5');
+  const iconsEl = value(pane, 'badge-icon-5');
   const icons = { badges: badgeCount(iconsEl), removes: $$('[data-slot="status-multi-picker-remove"]', iconsEl).length };
-  const names = value(pane, 'summary-names-2').textContent.trim();
+  const names = value(pane, 'badge-text-2').textContent.trim();
   const count = value(pane, 'summary-count-5').textContent.trim();
   const cappedEl = value(pane, 'max-one');
   const capped = { badges: badgeCount(cappedEl), overflow: overflow(cappedEl) };
@@ -65,7 +65,7 @@ for (const framework of ['svelte', 'react']) {
   }
   if (icons.badges !== 5) failures.push(`${framework}: ${icons.badges} icon badges for five selected, wanted 5`);
   if (icons.removes !== 0) failures.push(`${framework}: icons still carry ${icons.removes} remove controls`);
-  if (names !== 'In Progress, Approved') failures.push(`${framework}: names read "${names}"`);
+  if (names !== 'In ProgressApproved') failures.push(`${framework}: text badges read "${names}"`);
   if (count !== '5 selected') failures.push(`${framework}: count read "${count}", wanted "5 selected"`);
   if (capped.badges !== 1 || capped.overflow !== '+1') {
     failures.push(`${framework}: max={1} drew ${capped.badges} badges and "${capped.overflow}"`);
@@ -74,13 +74,13 @@ for (const framework of ['svelte', 'react']) {
 }
 
 // Put the summary demos in the viewport, so the screenshot shows what changed.
-$('[data-demo="summary-icons-5"]')?.scrollIntoView({ block: 'center' });
+$('[data-demo="badge-icon-5"]')?.scrollIntoView({ block: 'center' });
 await wait(150);
 
 return {
   verdict:
     failures.length === 0
-      ? 'PASS chips draw every badge, icons carry no remove, ellipsis fits whole badges and count reads "5 selected", in both frameworks'
+      ? 'PASS chips draw every badge, icon badges carry no remove, ellipsis fits whole badges and count reads "5 selected", in both frameworks'
       : `FAIL ${failures.join('; ')}`,
   seen,
 };

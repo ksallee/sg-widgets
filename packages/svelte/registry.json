@@ -660,6 +660,7 @@
         "local:field-value",
         "local:status-badge",
         "local:thumbnail",
+        "checkbox",
         "skeleton",
         "input"
       ],
@@ -682,9 +683,7 @@
       ],
       "registryDependencies": [
         "local:entity-chip",
-        "local:field-value",
-        "local:thumbnail",
-        "local:user-avatar",
+        "local:picker-row",
         "skeleton"
       ],
       "files": [
@@ -706,9 +705,7 @@
       ],
       "registryDependencies": [
         "local:entity-chip",
-        "local:field-value",
-        "local:thumbnail",
-        "local:user-avatar",
+        "local:picker-row",
         "checkbox",
         "skeleton"
       ],
@@ -778,8 +775,7 @@
       ],
       "registryDependencies": [
         "local:entity-chip",
-        "local:thumbnail",
-        "local:user-avatar",
+        "local:picker-row",
         "command",
         "dialog",
         "button",
@@ -803,6 +799,7 @@
         "@lucide/svelte"
       ],
       "registryDependencies": [
+        "local:picker-row",
         "command",
         "skeleton"
       ],
@@ -824,7 +821,7 @@
       ],
       "registryDependencies": [
         "local:entity-chip",
-        "local:status-badge",
+        "local:picker-row",
         "local:hierarchical-search",
         "popover",
         "skeleton"

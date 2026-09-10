@@ -167,13 +167,17 @@
 
 <span data-slot="picker-row-text" class={cn('flex min-w-0 flex-1 flex-col', TEXT[size])}>
 	<span data-slot="picker-row-label" class="flex min-w-0 items-center gap-1.5" {title}>
-		<span class={cn('truncate', crumbs.length > 0 && 'font-medium')}
-			>{#each crumbs as crumb, i (i)}<span class="text-muted-foreground font-normal">{crumb}</span><span
+		<span class="truncate"
+			>{#each crumbs as crumb, i (i)}<span class="text-muted-foreground">{crumb}</span><span
 					aria-hidden="true"
-					class="text-muted-foreground font-normal">{' › '}</span
-				>{/each}{#each highlightRuns(row.name, query) as run, i (i)}<span
-					class={run.match ? 'font-semibold' : undefined}>{run.text}</span
-				>{/each}</span
+					class="text-muted-foreground">{' › '}</span
+				>{/each}<span
+				data-slot="picker-row-name"
+				class={crumbs.length > 0 ? 'font-medium' : undefined}
+				>{#each highlightRuns(row.name, query) as run, i (i)}<span
+						class={run.match ? 'font-semibold' : undefined}>{run.text}</span
+					>{/each}</span
+			></span
 		>
 		{#if code}
 			<span data-slot="picker-row-code" class="text-muted-foreground shrink-0 font-mono text-xs">{code}</span>

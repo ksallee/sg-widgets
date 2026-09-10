@@ -56,8 +56,8 @@ for (const framework of ['svelte', 'react']) {
   }
 
   const listed = await until(() => (rows().length > 0 ? rows() : null));
-  const labels = (listed ?? []).map((row) => $('[data-slot="entity-picker-label"]', row)?.textContent.trim());
-  const thumbs = (listed ?? []).filter((row) => $('[data-slot="entity-picker-leading"] img', row)).length;
+  const labels = (listed ?? []).map((row) => $('[data-slot="picker-row-label"]', row)?.textContent.trim());
+  const thumbs = (listed ?? []).filter((row) => $('[data-slot="picker-row-leading"] img', row)).length;
   seen[framework] = { rows: labels.length, labels: labels.slice(0, 8), thumbs };
   if (labels.length === 0) failures.push(`${framework}: the site listed no shot`);
 

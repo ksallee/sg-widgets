@@ -1,12 +1,13 @@
 import { Fragment, useEffect, useMemo, useState } from 'react';
-import type { EntityRef, FieldSchema, SgContext, StatusRecord } from '@sg-widgets/core';
+import type { EntityRef, FieldSpec, PickerRow as PickerRowData, SgContext } from '@sg-widgets/core';
+import { pathOf, rowFields } from '@sg-widgets/core';
 import { ChevronDown, ListChecks, TriangleAlert } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { EntityChip } from '@/registry/sg/components/entity-chip';
 import { HierarchicalSearch } from '@/registry/sg/components/hierarchical-search';
-import { StatusBadge } from '@/registry/sg/components/status-badge';
+import { PickerRow } from '@/registry/sg/components/picker-row';
 
 /** What a widget or a publish needs to know about where the user is working. */
 export interface WorkContext {
@@ -23,7 +24,12 @@ export interface MyTask {
   entity: EntityRef | null;
   step: string;
   status: string;
+  /** Every field the read answered, so the row anatomy can draw from it. */
+  values: Record<string, unknown>;
 }
+
+/** A stable empty list, so the default never changes what an effect depends on. */
+const EMPTY_FIELDS: string[] = [];
 
 export const EMPTY_CONTEXT: WorkContext = { project: null, entity: null, task: null };
 
@@ -86,6 +92,22 @@ export interface ContextSelectorProps extends React.HTMLAttributes<HTMLDivElemen
   recentLimit?: number;
   onRecentsChange?: (recents: WorkContext[]) => void;
   onWorkContextChange?: (workContext: WorkContext) => void;
+  /** Field holding the thumbnail URL. `false` leaves every task row on its glyph. */
+  thumbnail?: string | false;
+  /** Field holding a task row's label. Defaults to the task's own name. */
+  labelField?: string;
+  /** The muted line under the label: a path, or a resolved column. */
+  subLabelField?: FieldSpec | null;
+  /** The muted line of the caller's own making. Wins over `subLabelField`. */
+  subLabel?: (task: MyTask) => string;
+  /** The right-aligned value: a path, or a resolved column so it renders by type. */
+  secondaryField?: FieldSpec | null;
+  /** Right-aligned text of the caller's own making. Wins over `secondaryField`. */
+  secondary?: (task: MyTask) => string;
+  /** Show the row's `code` beside the label when the two differ. */
+  showCode?: boolean;
+  /** Extra fields to request, so a caller's own sub-label or secondary can read them. */
+  fields?: string[];
   size?: ContextSelectorSize;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -107,6 +129,14 @@ export function ContextSelector({
   recentLimit = 5,
   onRecentsChange,
   onWorkContextChange,
+  thumbnail = 'image',
+  labelField,
+  subLabelField = null,
+  subLabel,
+  secondaryField = 'sg_status_list',
+  secondary,
+  showCode = false,
+  fields = EMPTY_FIELDS,
   size = 'md',
   open: openProp,
   onOpenChange,
@@ -114,8 +144,6 @@ export function ContextSelector({
   ref,
   ...rest
 }: ContextSelectorProps) {
-  const schema = context.schema;
-
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const open = openProp ?? uncontrolledOpen;
   const setOpen = (next: boolean): void => {
@@ -127,8 +155,6 @@ export function ContextSelector({
   /** True until the first read of the assigned tasks lands. */
   const [loading, setLoading] = useState(true);
   const [failure, setFailure] = useState<string | null>(null);
-  const [statuses, setStatuses] = useState<Record<string, StatusRecord>>({});
-  const [statusField, setStatusField] = useState<FieldSchema | null>(null);
 
   const rootPath = workContext.project ? `/Project/${workContext.project.id}` : '/';
   const chips = [workContext.project, workContext.entity, workContext.task].filter(
@@ -148,22 +174,6 @@ export function ContextSelector({
   }, [currentUser, tasks]);
 
   useEffect(() => {
-    let live = true;
-    void Promise.all([context.statuses.byCode(), schema.field('Task', 'sg_status_list')])
-      .then(([rows, field]) => {
-        if (!live) return;
-        setStatuses(Object.fromEntries(rows));
-        setStatusField(field ?? null);
-      })
-      .catch(() => {
-        // A badge falls back to the raw code, which is always readable.
-      });
-    return () => {
-      live = false;
-    };
-  }, [context.statuses, schema]);
-
-  useEffect(() => {
     if (!currentUser) return;
     let live = true;
     void context.client
@@ -174,19 +184,35 @@ export function ContextSelector({
           conditions: [['task_assignees', 'in', [{ type: currentUser.type, id: currentUser.id }]]],
         },
         // A Task is named by `content`: it has no `code` and no `name` (entity_types/Task).
-        fields: ['content', 'sg_status_list', 'project', 'entity', 'step'],
+        fields: rowFields({ thumbnail, labelField, subLabelField, secondaryField, showCode, fields }, [
+          'content',
+          'sg_status_list',
+          'project',
+          'entity',
+          'step',
+        ]),
         page: { size: 50 },
       })
       .then((result) => {
         if (!live) return;
         setTasks(
-          result.data.map((row) => ({
-            task: { type: 'Task', id: row.id, name: String(row.attributes['content'] ?? `Task #${row.id}`) },
-            project: (row.relationships['project']?.data as EntityRef | null) ?? null,
-            entity: (row.relationships['entity']?.data as EntityRef | null) ?? null,
-            step: (row.relationships['step']?.data as EntityRef | null)?.name ?? '',
-            status: String(row.attributes['sg_status_list'] ?? ''),
-          })),
+          result.data.map((row) => {
+            const values: Record<string, unknown> = { ...row.attributes };
+            for (const [name, link] of Object.entries(row.relationships)) values[name] = link?.data ?? null;
+            const named = labelField ? values[labelField] : undefined;
+            const label =
+              typeof named === 'string' && named.length > 0
+                ? named
+                : String(row.attributes['content'] ?? `Task #${row.id}`);
+            return {
+              task: { type: 'Task', id: row.id, name: label },
+              project: (row.relationships['project']?.data as EntityRef | null) ?? null,
+              entity: (row.relationships['entity']?.data as EntityRef | null) ?? null,
+              step: (row.relationships['step']?.data as EntityRef | null)?.name ?? '',
+              status: String(row.attributes['sg_status_list'] ?? ''),
+              values,
+            };
+          }),
         );
       })
       .catch((error: unknown) => {
@@ -200,7 +226,23 @@ export function ContextSelector({
     return () => {
       live = false;
     };
-  }, [context.client, currentUser]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [context.client, currentUser, thumbnail, labelField, subLabelField, secondaryField, showCode, fields]);
+
+  /** The row a task draws as: the reference and every field the read answered. */
+  function rowOf(task: MyTask): PickerRowData {
+    return { type: 'Task', id: task.task.id, name: task.task.name ?? '', values: task.values };
+  }
+
+  /**
+   * The muted line under the label. With no field and no function of the caller's,
+   * it is what the task hangs off and the step it belongs to.
+   */
+  function subLabelOf(task: MyTask): string | undefined {
+    if (subLabel) return subLabel(task);
+    if (pathOf(subLabelField)) return undefined;
+    return [task.entity?.name, task.step].filter(Boolean).join(' · ');
+  }
 
   function apply(next: WorkContext): void {
     onRecentsChange?.([next, ...recents.filter((r) => keyOf(r) !== keyOf(next))].slice(0, recentLimit));
@@ -287,21 +329,17 @@ export function ContextSelector({
                       data-entity-id={row.task.id}
                       onClick={() => apply({ project: row.project, entity: row.entity, task: row.task })}
                     >
-                      <ListChecks aria-hidden="true" className="text-muted-foreground size-4 shrink-0" />
-                      <span className="flex min-w-0 flex-1 flex-col">
-                        <span className="truncate" title={row.task.name}>
-                          {row.task.name}
-                        </span>
-                        <span className="text-muted-foreground truncate text-xs">
-                          {[row.entity?.name, row.step].filter(Boolean).join(' · ')}
-                        </span>
-                      </span>
-                      <StatusBadge
-                        code={row.status}
-                        status={statuses[row.status]}
-                        field={statusField}
-                        size={CHIP[size]}
-                        siteUrl={context.siteUrl}
+                      <PickerRow
+                        row={rowOf(row)}
+                        thumbnail={thumbnail}
+                        showCode={showCode}
+                        subLabelField={subLabelField}
+                        subLabel={subLabelOf(row)}
+                        secondaryField={secondaryField}
+                        secondary={secondary ? secondary(row) : undefined}
+                        size={size}
+                        context={context}
+                        glyph={<ListChecks aria-hidden="true" className="size-4" />}
                       />
                     </button>
                   ))}
@@ -316,6 +354,11 @@ export function ContextSelector({
               context={context}
               rootPath={rootPath}
               size={size}
+              thumbnail={thumbnail}
+              labelField={labelField}
+              subLabelField={subLabelField}
+              showCode={showCode}
+              fields={fields}
               onSelect={(leaf, path) => apply(contextFromPath(leaf, path))}
               placeholder="Search for a task or a shot…"
             />

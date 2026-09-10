@@ -178,20 +178,25 @@ export function PickerRow({
 
       <span data-slot="picker-row-text" className={cn('flex min-w-0 flex-1 flex-col', TEXT[size])}>
         <span data-slot="picker-row-label" className="flex min-w-0 items-center gap-1.5" title={title}>
-          <span className={cn('truncate', crumbs.length > 0 && 'font-medium')}>
+          <span className="truncate">
             {crumbs.map((crumb, i) => (
               <Fragment key={`crumb-${i}`}>
-                <span className="text-muted-foreground font-normal">{crumb}</span>
-                <span aria-hidden="true" className="text-muted-foreground font-normal">
+                <span className="text-muted-foreground">{crumb}</span>
+                <span aria-hidden="true" className="text-muted-foreground">
                   {' › '}
                 </span>
               </Fragment>
             ))}
-            {highlightRuns(row.name, query).map((run, i) => (
-              <span key={i} className={run.match ? 'font-semibold' : undefined}>
-                {run.text}
-              </span>
-            ))}
+            <span
+              data-slot="picker-row-name"
+              className={crumbs.length > 0 ? 'font-medium' : undefined}
+            >
+              {highlightRuns(row.name, query).map((run, i) => (
+                <span key={i} className={run.match ? 'font-semibold' : undefined}>
+                  {run.text}
+                </span>
+              ))}
+            </span>
           </span>
           {code ? (
             <span data-slot="picker-row-code" className="text-muted-foreground shrink-0 font-mono text-xs">

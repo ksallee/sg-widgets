@@ -1,7 +1,7 @@
 import type * as React from 'react';
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { EntityRef, SearchHit, SgContext, WireCondition } from '@sg-widgets/core';
-import { hydrate, matchRuns, scopeToProject } from '@sg-widgets/core';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { EntityRef, FieldSpec, PickerRow as PickerRowData, SearchHit, SgContext, WireCondition } from '@sg-widgets/core';
+import { hydrate, pathOf, placeholderName, rowFields, scopeToProject } from '@sg-widgets/core';
 import { Search, TriangleAlert } from 'lucide-react';
 import {
   Command,
@@ -16,8 +16,7 @@ import { Kbd } from '@/components/ui/kbd';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { EntityChip } from '@/registry/sg/components/entity-chip';
-import { Thumbnail } from '@/registry/sg/components/thumbnail';
-import { UserAvatar } from '@/registry/sg/components/user-avatar';
+import { PickerRow } from '@/registry/sg/components/picker-row';
 
 /** Types to search, either bare names or names with a filter each. */
 export type GlobalSearchTypes = string[] | Record<string, WireCondition[] | null>;
@@ -34,11 +33,11 @@ export const GLOBAL_SEARCH_TYPES = ['Asset', 'Shot', 'Sequence', 'Task', 'Versio
 
 /** Long enough that a typist does not fire a request a letter, short enough to feel live. */
 const DEBOUNCE_MS = 250;
+
+/** A stable empty list, so the default never changes what a memo depends on. */
+const EMPTY_FIELDS: string[] = [];
 /** The endpoint's cap and its default (probe 053). */
 const PAGE_SIZE = 25;
-
-const PEOPLE = ['HumanUser', 'ApiUser', 'ClientUser'];
-
 
 /** The modifier the hotkey shows, from the platform the page is on. */
 const META =
@@ -59,8 +58,8 @@ export type GlobalSearchSize = 'sm' | 'md' | 'lg';
 /** The trigger follows the input ladder of `docs/design-rules.md`. */
 const BOX: Record<GlobalSearchSize, string> = { sm: 'h-8', md: 'h-9', lg: 'h-10' };
 const GLYPH: Record<GlobalSearchSize, string> = { sm: 'size-4', md: 'size-4', lg: 'size-5' };
-/** A row's leading slot sits one step down the leaf ladder. */
-const LEAD: Record<GlobalSearchSize, 'sm' | 'md'> = { sm: 'sm', md: 'sm', lg: 'md' };
+/** A chip inside a row sits one step down the leaf ladder. */
+const CHIP: Record<GlobalSearchSize, 'sm' | 'md'> = { sm: 'sm', md: 'sm', lg: 'md' };
 
 export interface GlobalSearchProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onSelect'> {
   /** The root element. */
@@ -71,6 +70,22 @@ export interface GlobalSearchProps extends Omit<React.HTMLAttributes<HTMLDivElem
   entityTypes?: GlobalSearchTypes;
   /** Scope every searched type that has a `project` field to this project. */
   projectId?: number | null;
+  /** Field holding the thumbnail URL. `false` hides the leading slot. */
+  thumbnail?: string | false;
+  /** Field holding the row label. Defaults to the display-name chain. */
+  labelField?: string;
+  /** The muted line under the label: a path, or a resolved column. */
+  subLabelField?: FieldSpec | null;
+  /** The muted line of the caller's own making. Wins over `subLabelField`. */
+  subLabel?: (hit: SearchHit) => string;
+  /** The right-aligned value: a path, or a resolved column so it renders by type. */
+  secondaryField?: FieldSpec | null;
+  /** Right-aligned text of the caller's own making. Wins over `secondaryField`. */
+  secondary?: (hit: SearchHit) => string;
+  /** Show the row's `code` beside the label when the two differ. */
+  showCode?: boolean;
+  /** Extra fields to request, so a caller's own sub-label or secondary can read them. */
+  fields?: string[];
   /** Opens the palette on Cmd/Ctrl+K. Ignored on the inline variant. */
   hotkey?: boolean;
   /** Render as a combobox in the page instead of a dialog behind a trigger. */
@@ -105,6 +120,14 @@ export function GlobalSearch({
   context,
   entityTypes = GLOBAL_SEARCH_TYPES,
   projectId = null,
+  thumbnail = 'image',
+  labelField,
+  subLabelField = null,
+  subLabel,
+  secondaryField = null,
+  secondary,
+  showCode = false,
+  fields = EMPTY_FIELDS,
   hotkey = false,
   inline = false,
   size = 'md',
@@ -185,7 +208,10 @@ export function GlobalSearch({
         let types = typeMap(entityTypes);
         if (projectId !== null && projectId !== undefined) types = await scopeToProject(schema, types, projectId);
         const rows = await context.client.textSearch(text, types, { size: PAGE_SIZE, number: nextPage });
-        const found = await hydrate(context.client, rows);
+        const found = await hydrate(context.client, rows, {
+          fields: rowFields({ thumbnail, labelField, subLabelField, secondaryField, showCode, fields }),
+          labelField,
+        });
         if (id !== requestId.current) return;
         setHits((current) => (nextPage === 1 ? found : [...current, ...found]));
         setPage(nextPage);
@@ -200,7 +226,8 @@ export function GlobalSearch({
         if (id === requestId.current) setLoading(false);
       }
     },
-    [context.client, entityTypes, projectId, schema],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [context.client, entityTypes, projectId, schema, thumbnail, labelField, subLabelField, secondaryField, showCode, fields],
   );
 
   const setQuery = useCallback(
@@ -243,45 +270,43 @@ export function GlobalSearch({
     return () => window.removeEventListener('keydown', onKeydown);
   }, [hotkey, inline, open, setOpen]);
 
-  function subLabel(hit: SearchHit): string {
+  /** The row a hit draws as: the reference, its label and the values the second read answered. */
+  function rowOf(hit: SearchHit): PickerRowData {
+    return {
+      type: hit.ref.type,
+      id: hit.ref.id,
+      name: hit.ref.name || placeholderName(hit.ref),
+      values: hit.values,
+    };
+  }
+
+  /**
+   * The muted line under the label. With no field and no function of the caller's,
+   * it is where the row sits: its project, else the row `_text_search` also matched
+   * the words against, else the type.
+   */
+  function subLabelOf(hit: SearchHit): string | undefined {
+    if (subLabel) return subLabel(hit);
+    if (pathOf(subLabelField)) return undefined;
     if (hit.project?.name) return hit.project.name;
     if (hit.link) return `${displayNames[hit.link.type] ?? hit.link.type} ${hit.link.name}`;
     return displayNames[hit.ref.type] ?? hit.ref.type;
   }
 
   function row(hit: SearchHit) {
-    const name = hit.ref.name ?? `${hit.ref.type} #${hit.ref.id}`;
-    const sub = subLabel(hit);
     return (
-      <>
-        {PEOPLE.includes(hit.ref.type) ? (
-          <UserAvatar
-            name={name}
-            image={hit.image}
-            size={LEAD[size]}
-            color="auto"
-            apiUser={hit.ref.type === 'ApiUser'}
-          />
-        ) : (
-          <Thumbnail src={hit.image} size={LEAD[size]} />
-        )}
-        <span className="flex min-w-0 flex-1 flex-col">
-          <span className="truncate" title={name}>
-            {matchRuns(name, query).map((part, i) =>
-              part.match ? (
-                <span key={i} className="font-semibold">
-                  {part.text}
-                </span>
-              ) : (
-                <Fragment key={i}>{part.text}</Fragment>
-              ),
-            )}
-          </span>
-          <span className="text-muted-foreground truncate text-xs" title={sub}>
-            {sub}
-          </span>
-        </span>
-      </>
+      <PickerRow
+        row={rowOf(hit)}
+        query={query}
+        thumbnail={thumbnail}
+        showCode={showCode}
+        subLabelField={subLabelField}
+        subLabel={subLabelOf(hit)}
+        secondaryField={secondaryField}
+        secondary={secondary ? secondary(hit) : undefined}
+        size={size}
+        context={context}
+      />
     );
   }
 
@@ -325,7 +350,7 @@ export function GlobalSearch({
                 value={`recent:${entity.type}:${entity.id}`}
                 onSelect={() => choose(entity)}
               >
-                <EntityChip entity={entity} size={LEAD[size]} context={context} />
+                <EntityChip entity={entity} size={CHIP[size]} context={context} />
                 <span className="text-muted-foreground truncate text-xs">
                   {displayNames[entity.type] ?? entity.type}
                 </span>

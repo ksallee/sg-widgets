@@ -45,7 +45,7 @@ const [group, sub, secondary] = await resolveColumns(context.schema, 'Task', [
 | `secondaryField` | `string \| CollectionColumn \| null` | `null` | The right-aligned value at the end of the row. |
 | `secondary` | `(row) => string` | — | The caller's own right-aligned text. Wins over `secondaryField`. |
 | `showCode` | `boolean` | `false` | Show the row's `code` beside the label when the two differ. |
-| `fields` | `CollectionColumn[]` | `[]` | Extra fields drawn under the label. The source must already read them. |
+| `details` | `CollectionColumn[]` | `[]` | Extra values drawn under the label. The source must already read their paths. |
 | `statuses` | `Record<string, StatusRecord> \| null` | `null` | Status rows by code. |
 | `context` | `SgContext` | — | The widget context. Values render with its preferences, and an entity value links to the row's page when it carries a site. |
 | `density` | `'compact' \| 'default'` | `'default'` | Compact halves the vertical row padding. |

@@ -70,7 +70,7 @@ for (const framework of ['svelte', 'react']) {
     continue;
   }
   if (first.rows.length === 0) failures.push(`${framework}: an open picker showed no rows`);
-  const idle = first.rows.filter((row) => row.querySelector('[data-slot="entity-picker-secondary"]')).length;
+  const idle = first.rows.filter((row) => row.querySelector('[data-slot="picker-row-secondary"]')).length;
   const hashes = first.rows.filter((row) => row.textContent.includes('#')).length;
   if (idle !== 0) failures.push(`${framework}: ${idle} rows show a secondary by default`);
   if (hashes !== 0) failures.push(`${framework}: ${hashes} rows still show an id`);
@@ -96,7 +96,7 @@ for (const framework of ['svelte', 'react']) {
     failures.push(`${framework}: ${plain.error}`);
     continue;
   }
-  const secondaries = plain.rows.filter((row) => row.querySelector('[data-slot="entity-picker-secondary"]')).length;
+  const secondaries = plain.rows.filter((row) => row.querySelector('[data-slot="picker-row-secondary"]')).length;
   if (secondaries !== 0) failures.push(`${framework}: ${secondaries} searched rows show a secondary`);
   await close(plain.input);
 

@@ -1,6 +1,14 @@
 import type * as React from 'react';
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
-import type { CollectionColumn, EntityRef, EntityRow, EntitySource, SgContext, StatusRecord } from '@sg-widgets/core';
+import type {
+  CollectionColumn,
+  EntityRef,
+  EntityRow,
+  EntitySource,
+  FieldSpec,
+  SgContext,
+  StatusRecord,
+} from '@sg-widgets/core';
 import { cellValue, describePaging, displayNameOf, groupRows, rowKey, toColumn } from '@sg-widgets/core';
 import { ChevronLeft, ChevronRight, CircleAlert, Inbox } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -13,6 +21,9 @@ import { FieldValue } from '@/registry/sg/components/field-value';
 import { Thumbnail } from '@/registry/sg/components/thumbnail';
 
 export type GroupedListDensity = 'compact' | 'default';
+
+/** A stable empty list, so the default never changes what a memo depends on. */
+const EMPTY_DETAILS: CollectionColumn[] = [];
 export type GroupedListSize = 'sm' | 'md' | 'lg';
 
 /** The list-row padding of `docs/design-rules.md`; compact halves the vertical half. */
@@ -37,17 +48,17 @@ export interface GroupedListProps extends Omit<React.HTMLAttributes<HTMLDivEleme
   /** Field shown as the row's label. Defaults to the type's own display name. */
   labelField?: string | null;
   /** The muted line under the label: a path, or a resolved column so it renders by type. */
-  subLabelField?: string | CollectionColumn | null;
+  subLabelField?: FieldSpec | null;
   /** The caller's own sub-label. Wins over `subLabelField`. */
   subLabel?: (row: EntityRow) => string;
   /** The right-aligned value: a path, or a resolved column so it renders by type. */
-  secondaryField?: string | CollectionColumn | null;
+  secondaryField?: FieldSpec | null;
   /** The caller's own right-aligned text. Wins over `secondaryField`. */
   secondary?: (row: EntityRow) => string;
   /** Show the row's `code` beside the label when the two differ. */
   showCode?: boolean;
-  /** Extra fields drawn under the label. The source must already read them. */
-  fields?: CollectionColumn[];
+  /** Extra values drawn under the label. The source must already read their paths. */
+  details?: CollectionColumn[];
   /** `Status` rows by code (probe 010). */
   statuses?: Record<string, StatusRecord> | null;
   /** The widget context. Values render with its preferences. An entity value links to the row's page when it carries a site. */
@@ -90,7 +101,7 @@ export function GroupedList({
   secondaryField = null,
   secondary,
   showCode = false,
-  fields = [],
+  details = EMPTY_DETAILS,
   statuses = null,
   context,
   density = 'default',
@@ -296,7 +307,7 @@ export function GroupedList({
                                   />
                                 </span>
                               ) : null}
-                              {fields.map((column) => (
+                              {details.map((column) => (
                                 <span key={column.path} className="flex w-full min-w-0 items-center gap-1.5 text-xs">
                                   <span className="text-muted-foreground shrink-0">{column.header}</span>
                                   <FieldValue

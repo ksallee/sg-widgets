@@ -62,9 +62,9 @@ Each level's rows are read once per type over the ids the level returned, so `su
 | `expandDepth` | `number` | `3` | Levels a whole-branch expansion opens. |
 | `thumbnail` | `string \| false` | `false` | The image field to draw a thumbnail from. |
 | `labelField` | `string` | — | Field shown as the label, in place of the tree's own. |
-| `subLabelField` | `string` | — | Field shown under the label. |
+| `subLabelField` | `string \| CollectionColumn \| null` | `null` | Field shown under the label. A resolved column renders it by type. |
 | `subLabel` | `(node) => string` | — | Muted line under the label. Wins over `subLabelField`. |
-| `secondaryField` | `string` | — | Right-aligned field, drawn by its data type. |
+| `secondaryField` | `string \| CollectionColumn \| null` | `null` | Right-aligned field, drawn by its data type. A resolved column renders it by type. |
 | `secondary` | `(node) => string` | — | Right-aligned text. Wins over `secondaryField`. |
 | `showCode` | `boolean` | `false` | Show the schema name beside the label on a node that stands for a type. |
 | `fields` | `string[]` | `[]` | Extra fields to request, so a caller's own sub-label or secondary can read them. |

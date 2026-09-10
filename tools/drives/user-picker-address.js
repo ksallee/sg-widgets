@@ -31,8 +31,8 @@ function press(el) {
 
 const popover = () => $('[data-picker="entity"]');
 const rows = () => $$('[data-picker="entity"] [data-slot="entity-picker-option"]');
-const label = (row) => $('[data-slot="entity-picker-label"]', row)?.textContent.trim();
-const sub = (row) => $('[data-slot="entity-picker-sub-label"]', row)?.textContent.trim();
+const label = (row) => $('[data-slot="picker-row-label"]', row)?.textContent.trim();
+const sub = (row) => $('[data-slot="picker-row-sub-label"]', row)?.textContent.trim();
 
 async function search(pane, demoCase, query) {
   const input = $(`[data-demo-case="${demoCase}"] [data-slot="entity-picker-input"]`, pane);
@@ -74,7 +74,7 @@ for (const framework of ['svelte', 'react']) {
   // An address query matches the whole address, and the matched run is bold in the sub-label.
   const wide = await search(pane, 'by-address', 'ada.lovelace@');
   const bold = wide.rows.map((row) =>
-    [...(($('[data-slot="entity-picker-sub-label"]', row)?.children) ?? [])]
+    [...(($('[data-slot="picker-row-sub-label"]', row)?.children) ?? [])]
       .filter((span) => span.className.includes('font-semibold'))
       .map((span) => span.textContent)
       .join(''),

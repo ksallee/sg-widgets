@@ -32,7 +32,7 @@ for (const framework of ['svelte', 'react']) {
   /* 1. The project root opens on its two entity-type folders. */
   const top = await until(() => (items().length ? items() : null));
   if (!top) return fail(`${framework}: the tree did not open`);
-  const labels = top.map((i) => i.querySelector('[data-slot="search-breadcrumb"] .font-medium')?.textContent.trim());
+  const labels = top.map((i) => i.querySelector('[data-slot="picker-row-name"]')?.textContent.trim());
   if (labels.join('|') !== 'Assets|Shots') return fail(`${framework}: root children are ${labels.join('|')}`);
 
   /* 2. Right walks down a level, Left walks back up. */
@@ -53,17 +53,20 @@ for (const framework of ['svelte', 'react']) {
   }
   notes.push(`${framework}: browsed the project root, ${sequences.length} sequences one level down`);
 
-  /* 3. Searching answers breadcrumbs, and Enter emits the leaf with its path. */
-  type(input, 'sh010_0010 fx');
+  /* 3. Searching answers breadcrumbs, and Enter emits the leaf with its path.
+        `comp` is the task on that shot in the fixtures; `fx` sits on other shots. */
+  type(input, 'sh010_0010 comp');
   const results = await until(() => {
     const rows = items().filter((i) => i.dataset.entityType);
     return rows.length ? rows : null;
   });
   if (!results) return fail(`${framework}: no search results`);
-  const crumb = results[0].querySelector('[data-slot="search-breadcrumb"]');
+  const crumb = results[0].querySelector('[data-slot="picker-row-label"]');
   const trail = crumb.getAttribute('title');
   if (!trail.includes('›')) return fail(`${framework}: result is not a breadcrumb: "${trail}"`);
-  if (crumb.querySelectorAll('.font-medium').length !== 1) return fail(`${framework}: the leaf is not emphasised`);
+  if (crumb.querySelectorAll('[data-slot="picker-row-name"].font-medium').length !== 1) {
+    return fail(`${framework}: the leaf is not emphasised`);
+  }
   if (crumb.querySelectorAll('.font-semibold').length === 0) return fail(`${framework}: no highlighted runs`);
 
   press(input, 'ArrowDown');

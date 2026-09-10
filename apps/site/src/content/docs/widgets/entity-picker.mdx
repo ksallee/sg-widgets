@@ -25,9 +25,9 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/entity-picker.
 | `value` | `EntityRef \| null` | `null` | The chosen row. Two-way in Svelte. |
 | `labelField` | `string` | display-name chain | Field holding the row label. |
 | `searchFields` | `string[] \| ((query) => string[])` | `[]` | Fields matched on top of the display-name chain. A function is called with the query. |
-| `secondaryField` | `string` | — | Field shown right-aligned, drawn by its data type. |
+| `secondaryField` | `string \| CollectionColumn \| null` | `null` | Field shown right-aligned, drawn by its data type. A resolved column renders it by type. |
 | `secondary` | `(row) => string` | — | Right-aligned text of your own. Wins over `secondaryField`. |
-| `subLabelField` | `string` | — | Field shown under the label. |
+| `subLabelField` | `string \| CollectionColumn \| null` | `null` | Field shown under the label. A resolved column renders it by type. |
 | `subLabel` | `(row) => string` | the type, when several are searched | Computes the sub-label. |
 | `thumbnail` | `string \| false` | `'image'` | Field holding the thumbnail URL. `false` hides the leading slot. |
 | `roundThumbnail` | `boolean` | `false` | Draws the thumbnail as a circle. |

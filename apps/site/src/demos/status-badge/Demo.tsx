@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import type { FieldSchema, NativeStatus, StatusRecord } from '@sg-widgets/core';
 import { NATIVE_STATUSES, STOCK_ICON_KEYS } from '@sg-widgets/core';
 import { StatusBadge } from '@/registry/sg/components/status-badge';
-import { DemoClientProvider, useSgClient } from '../_shared/react';
+import { DemoContextProvider, useSgContext } from '../_shared/react';
 
 const group = 'flex flex-col gap-2';
 const label = 'text-muted-foreground text-xs font-medium tracking-wide uppercase';
@@ -41,13 +41,13 @@ interface Loaded {
 }
 
 function StatusBadges() {
-  const client = useSgClient();
+  const context = useSgContext();
   const [data, setData] = useState<Loaded | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let live = true;
-    Promise.all([client.statuses(), client.fields('Version')])
+    Promise.all([context.client.statuses(), context.client.fields('Version')])
       .then(([rows, fields]) => {
         if (!live) return;
         const statuses: Record<string, StatusRecord> = {};
@@ -58,7 +58,7 @@ function StatusBadges() {
     return () => {
       live = false;
     };
-  }, [client]);
+  }, [context]);
 
   if (error) return <p className="text-destructive text-sm">{error}</p>;
   if (!data) return <p className="text-muted-foreground text-sm">Loading statuses…</p>;
@@ -139,7 +139,7 @@ function StatusBadges() {
 
 export default function StatusBadgeDemo() {
   return (
-    <DemoClientProvider>
+    <DemoContextProvider>
       <div className="flex flex-col gap-4">
         <StatusBadges />
 
@@ -175,6 +175,6 @@ export default function StatusBadgeDemo() {
           </div>
         </section>
       </div>
-    </DemoClientProvider>
+    </DemoContextProvider>
   );
 }

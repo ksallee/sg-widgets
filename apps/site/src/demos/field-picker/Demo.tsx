@@ -1,7 +1,6 @@
-import { useMemo, useState } from 'react';
-import { createSchemaService } from '@sg-widgets/core';
+import { useState } from 'react';
 import { FieldPicker } from '@/registry/sg/components/field-picker';
-import { DemoClientProvider, useSgClient } from '../_shared/react';
+import { DemoContextProvider, useSgContext } from '../_shared/react';
 
 const label = 'text-muted-foreground text-xs';
 const path = 'text-muted-foreground font-mono text-xs';
@@ -13,8 +12,7 @@ const COMPUTED = [
 ];
 
 function Pickers() {
-  const client = useSgClient();
-  const schema = useMemo(() => createSchemaService(client), [client]);
+  const context = useSgContext();
   const [free, setFree] = useState('');
   const [dated, setDated] = useState('');
   const [preset, setPreset] = useState('entity.Shot.sg_turnover_date');
@@ -27,7 +25,7 @@ function Pickers() {
           Version, deep links on: Link asks which type, Project descends at once
         </span>
         <FieldPicker
-          schema={schema}
+          context={context}
           entityType="Version"
           deepLinks
           value={free}
@@ -41,7 +39,7 @@ function Pickers() {
           Restricted to dates: links stay on the list so a nested date is reachable
         </span>
         <FieldPicker
-          schema={schema}
+          context={context}
           entityType="Version"
           deepLinks
           dataTypes={DATES}
@@ -55,7 +53,7 @@ function Pickers() {
       <div className="flex flex-col gap-2" data-demo="preset">
         <span className={label}>A dotted value, shown as its friendly path</span>
         <FieldPicker
-          schema={schema}
+          context={context}
           entityType="Version"
           deepLinks
           value={preset}
@@ -69,7 +67,7 @@ function Pickers() {
           Filterable types only, with two computed columns and a hidden path
         </span>
         <FieldPicker
-          schema={schema}
+          context={context}
           entityType="Shot"
           filterableOnly
           hidePaths={HIDDEN}
@@ -82,11 +80,11 @@ function Pickers() {
 
       <div className="flex flex-col gap-2">
         <span className={label}>Sizes, read-only and invalid</span>
-        <FieldPicker schema={schema} entityType="Shot" value="code" size="sm" />
-        <FieldPicker schema={schema} entityType="Shot" value="sg_status_list" size="lg" />
-        <FieldPicker schema={schema} entityType="Shot" value="description" readonly />
-        <FieldPicker schema={schema} entityType="Shot" value="" invalid />
-        <FieldPicker schema={schema} entityType="Shot" value="sg_cut_in" disabled />
+        <FieldPicker context={context} entityType="Shot" value="code" size="sm" />
+        <FieldPicker context={context} entityType="Shot" value="sg_status_list" size="lg" />
+        <FieldPicker context={context} entityType="Shot" value="description" readonly />
+        <FieldPicker context={context} entityType="Shot" value="" invalid />
+        <FieldPicker context={context} entityType="Shot" value="sg_cut_in" disabled />
       </div>
     </div>
   );
@@ -94,8 +92,8 @@ function Pickers() {
 
 export default function FieldPickerDemo() {
   return (
-    <DemoClientProvider>
+    <DemoContextProvider>
       <Pickers />
-    </DemoClientProvider>
+    </DemoContextProvider>
   );
 }

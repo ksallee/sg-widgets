@@ -47,13 +47,14 @@ A field whose type has no editor stays on the display half whatever the mode say
 | `onModeChange` | `(mode) => void` | — | Called when the toggle moves. |
 | `editable` | `boolean` | `false` | Turns the display half into a control that opens the editor. |
 | `statuses` | `Record<string, StatusRecord> \| null` | `null` | Status rows by code, for the display half. |
-| `hoursPerDay` | `number` | — | The site's working day, for durations. |
-| `frameRate` | `number` | — | Frames per second, for timecodes. |
+| `context` | `SgContext` | — | The widget context: the site preferences, and what the display half reads. |
+| `hoursPerDay` | `number` | the context's | The site's working day, for durations. |
+| `locale` | `string` | the context's, then the runtime's | Passed to the display half. |
+| `timeZone` | `string` | the context's, then the runtime's | Zone a typed wall-clock time is read in. |
+| `frameRate` | `number` | the context's | Frames a second, for timecodes. |
 | `precision` | `number` | — | Decimals on a float. |
 | `symbol` | `string` | `'$'` | Shown before a currency value. |
 | `projectId` | `number` | — | Removes a list field's hidden values. |
-| `timeZone` | `string` | the runtime's | Zone a typed wall-clock time is read in. |
-| `locale` | `string` | the runtime's | Passed to the display half. |
 | `multiline` | `boolean` | `false` | A textarea on a text field. |
 | `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Control height. |
 | `disabled` | `boolean` | `false` | |

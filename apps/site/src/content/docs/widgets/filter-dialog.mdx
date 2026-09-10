@@ -25,8 +25,7 @@ anything.
 | prop | type | default | meaning |
 |---|---|---|---|
 | `entityType` | `string` | required | Type the editor reads its fields on. |
-| `client` | `SgClient` | required | Passed through to the editor. |
-| `schema` | `SchemaService` | one built from `client` | Passed through to the editor. |
+| `context` | `SgContext` | required | The widget context. Every read goes through it, so widgets on a page share one cache. |
 | `value` | `FilterGroup` | `emptyFilter()` | The applied tree. Two-way in Svelte through `bind:value`. |
 | `hidePaths` | `string[]` | `[]` | Passed through to the editor. |
 | `label` | `string` | — | Replaces both button labels. |

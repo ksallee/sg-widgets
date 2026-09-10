@@ -1,6 +1,6 @@
 import * as React from 'react';
-import type { FieldSchema, StatusRecord, UrlValue } from '@sg-widgets/core';
-import { editorKindFor } from '@sg-widgets/core';
+import type { FieldSchema, SgContext, StatusRecord, UrlValue } from '@sg-widgets/core';
+import { editorKindFor, preferencesOf } from '@sg-widgets/core';
 import { cn } from '@/lib/utils';
 import { CheckboxEditor } from '@/registry/sg/components/checkbox-editor';
 import { ColorEditor } from '@/registry/sg/components/color-editor';
@@ -40,9 +40,11 @@ export interface FieldEditorProps extends Omit<React.HTMLAttributes<HTMLDivEleme
   editable?: boolean;
   /** `Status` rows by code, for the display half (probe 010). */
   statuses?: Record<string, StatusRecord> | null;
-  /** The site's `hours_per_day` from `GET /preferences` (field_types/duration). */
+  /** The widget context: the site preferences, and what the display half reads. */
+  context?: SgContext;
+  /** The site's `hours_per_day` from `GET /preferences` (field_types/duration). Defaults to the context's. */
   hoursPerDay?: number;
-  /** Frames per second, for the `HH:MM:SS:FF` form (field_types/timecode). */
+  /** Frames per second, for the `HH:MM:SS:FF` form (field_types/timecode). Defaults to the context's. */
   frameRate?: number;
   /** Decimals on a float. */
   precision?: number;
@@ -50,8 +52,9 @@ export interface FieldEditorProps extends Omit<React.HTMLAttributes<HTMLDivEleme
   symbol?: string;
   /** The project the schema was read with, for the hidden-value subtraction (probe 009). */
   projectId?: number;
-  /** IANA zone a typed wall-clock time is read in. */
+  /** IANA zone a typed wall-clock time is read in. Defaults to the context's, then to the runtime's. */
   timeZone?: string;
+  /** Defaults to the context's. */
   locale?: string;
   /** A textarea instead of an input, on a text field. */
   multiline?: boolean;
@@ -84,6 +87,7 @@ export function FieldEditor({
   onModeChange,
   editable = false,
   statuses = null,
+  context,
   hoursPerDay,
   frameRate,
   precision,
@@ -104,6 +108,15 @@ export function FieldEditor({
   className,
   ...rest
 }: FieldEditorProps) {
+  // The site's preferences, with anything the caller named winning over them.
+  const prefs = {
+    ...preferencesOf(context),
+    ...(hoursPerDay === undefined ? {} : { hoursPerDay }),
+    ...(locale === undefined ? {} : { locale }),
+    ...(timeZone === undefined ? {} : { timeZone }),
+    ...(frameRate === undefined ? {} : { frameRate }),
+  };
+
   const type = dataType ?? field?.dataType ?? 'text';
   const kind = editorKindFor(String(type));
   // Status and entity fields are edited by the picker widgets, not here.
@@ -221,8 +234,8 @@ export function FieldEditor({
             onValueChange={emit}
             dataType={type as 'number'}
             precision={precision}
-            hoursPerDay={hoursPerDay}
-            frameRate={frameRate}
+            hoursPerDay={prefs.hoursPerDay}
+            frameRate={prefs.frameRate}
             symbol={symbol ?? '$'}
             onErrorChange={noteError}
             placeholder={placeholder}
@@ -241,7 +254,7 @@ export function FieldEditor({
           <DateTimeEditor
             value={value as string | null}
             onValueChange={emit}
-            timeZone={timeZone}
+            timeZone={prefs.timeZone}
             onErrorChange={noteError}
             {...shared}
           />
@@ -278,8 +291,11 @@ export function FieldEditor({
             dataType={String(type)}
             field={field}
             statuses={statuses}
-            hoursPerDay={hoursPerDay}
-            locale={locale}
+            context={context}
+            hoursPerDay={prefs.hoursPerDay}
+            locale={prefs.locale}
+            timeZone={prefs.timeZone}
+            frameRate={prefs.frameRate}
             precision={precision}
             currencySymbol={symbol ?? '$'}
             emptyLabel={emptyLabel}
@@ -291,8 +307,11 @@ export function FieldEditor({
           dataType={String(type)}
           field={field}
           statuses={statuses}
-          hoursPerDay={hoursPerDay}
-          locale={locale}
+          context={context}
+          hoursPerDay={prefs.hoursPerDay}
+          locale={prefs.locale}
+          timeZone={prefs.timeZone}
+          frameRate={prefs.frameRate}
           precision={precision}
           currencySymbol={symbol ?? '$'}
           emptyLabel={emptyLabel}

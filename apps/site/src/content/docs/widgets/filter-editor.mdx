@@ -29,8 +29,7 @@ nesting reads as one indent; the foot carries the add-condition and add-group co
 | prop | type | default | meaning |
 |---|---|---|---|
 | `entityType` | `string` | required | Type the root of every field path is read on. |
-| `client` | `SgClient` | required | Reads the schema and searches rows for entity values. |
-| `schema` | `SchemaService` | one built from `client` | Pass a shared service so two widgets asking for the same type cost one request. |
+| `context` | `SgContext` | required | The widget context. Every read goes through it, so widgets on a page share one cache. |
 | `value` | `FilterGroup` | `emptyFilter()` | The tree. Two-way in Svelte through `bind:value`. |
 | `hidePaths` | `string[]` | `[]` | Paths kept out of the field list. A pattern hides itself and everything under it. |
 | `projectId` | `number` | — | Scopes the status pickers to the codes one project allows. |

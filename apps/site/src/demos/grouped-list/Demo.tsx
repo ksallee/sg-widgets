@@ -4,7 +4,7 @@ import { cellValue, condition, createEntitySource, resolveColumns } from '@sg-wi
 import { GroupedList } from '@/registry/sg/components/grouped-list';
 import { StatusBadge } from '@/registry/sg/components/status-badge';
 import { createDemoContext } from '../_shared/client';
-import { DemoClientProvider } from '../_shared/react';
+import { DemoContextProvider } from '../_shared/react';
 
 const GROUP = 'step.Step.code';
 const SUB = 'sg_description';
@@ -66,7 +66,7 @@ export default function GroupedListDemo() {
   };
 
   return (
-    <DemoClientProvider client={context.client}>
+    <DemoContextProvider context={context}>
       <div className="flex w-full min-w-0 flex-col gap-3">
         <div className="flex flex-wrap items-center gap-2">
           <button type="button" className={toggle} aria-pressed={compact} onClick={() => setCompact(!compact)}>
@@ -90,6 +90,6 @@ export default function GroupedListDemo() {
           onSelectionChange={setSelected}
         />
       </div>
-    </DemoClientProvider>
+    </DemoContextProvider>
   );
 }

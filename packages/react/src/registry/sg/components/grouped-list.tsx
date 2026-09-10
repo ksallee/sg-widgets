@@ -50,7 +50,7 @@ export interface GroupedListProps extends Omit<React.HTMLAttributes<HTMLDivEleme
   fields?: CollectionColumn[];
   /** `Status` rows by code (probe 010). */
   statuses?: Record<string, StatusRecord> | null;
-  /** The widget context. An entity value links to the row's page when this carries a site. */
+  /** The widget context. Values render with its preferences. An entity value links to the row's page when it carries a site. */
   context?: SgContext;
   density?: GroupedListDensity;
   size?: GroupedListSize;

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import type {
   ConditionValue,
   EntityRef,
@@ -9,15 +9,13 @@ import type {
   NodePath,
   Operator,
   Scalar,
-  SchemaService,
-  SgClient,
+  SgContext,
   TimeUnit,
 } from '@sg-widgets/core';
 import {
   appendAt,
   applyPreset,
   condition as makeCondition,
-  createSchemaService,
   defaultCondition,
   emptyFilter,
   group as makeGroup,
@@ -161,8 +159,7 @@ const TOGGLE: Record<FilterEditorSize, 'sm' | 'default'> = { sm: 'sm', md: 'sm',
 
 interface EditorContext {
   entityType: string;
-  client: SgClient;
-  service: SchemaService;
+  context: SgContext;
   hidePaths: string[];
   projectId?: number;
   size: FilterEditorSize;
@@ -186,9 +183,8 @@ export interface FilterEditorProps extends Omit<React.HTMLAttributes<HTMLDivElem
 
   /** Type the root of every field path is read on. */
   entityType: string;
-  client: SgClient;
-  /** Share one across a page so two widgets asking for the same type cost one request. */
-  schema?: SchemaService;
+  /** The widget context. Every read goes through it, so widgets on a page share one cache. */
+  context: SgContext;
   value: FilterGroup;
   /** Paths to keep out of the field list, each hiding itself and everything under it. */
   hidePaths?: string[];
@@ -219,8 +215,7 @@ export interface FilterEditorProps extends Omit<React.HTMLAttributes<HTMLDivElem
  */
 export function FilterEditor({
   entityType,
-  client,
-  schema,
+  context,
   value = emptyFilter(),
   hidePaths = [],
   projectId,
@@ -234,20 +229,19 @@ export function FilterEditor({
   ref,
   ...rest
 }: FilterEditorProps) {
-  const service = useMemo(() => schema ?? createSchemaService(client), [schema, client]);
   const [fields, setFields] = useState<Record<string, FieldSchema>>({});
 
   // The schema service caches, so this reaches the network once per type however
   // often the tree is edited (probe 002).
   useEffect(() => {
     let live = true;
-    void service.fields(entityType).then((loaded) => {
+    void context.schema.fields(entityType).then((loaded) => {
       if (live) setFields(loaded);
     });
     return () => {
       live = false;
     };
-  }, [service, entityType]);
+  }, [context.schema, entityType]);
 
   /**
    * The leaf schema of every dotted path the tree holds, added once and kept.
@@ -261,7 +255,7 @@ export function FilterEditor({
       const at = `${entityType}|${path}`;
       let job = resolving.current.get(at);
       if (!job) {
-        job = service.resolvePath(entityType, path).then(
+        job = context.schema.resolvePath(entityType, path).then(
           (segments) => segments[segments.length - 1]?.field ?? null,
           // A path the schema no longer holds still has to be editable, so the row keeps it.
           () => null,
@@ -273,7 +267,7 @@ export function FilterEditor({
       }
       return job;
     },
-    [service, entityType],
+    [context.schema, entityType],
   );
 
   useEffect(() => {
@@ -292,8 +286,7 @@ export function FilterEditor({
 
   const ctx: EditorContext = {
     entityType,
-    client,
-    service,
+    context,
     hidePaths,
     projectId,
     size,
@@ -476,7 +469,7 @@ function FieldSlot({ ctx, path, node }: { ctx: EditorContext; path: NodePath; no
         })
       ) : (
         <FieldPicker
-          schema={ctx.service}
+          context={ctx.context}
           entityType={ctx.entityType}
           hidePaths={ctx.hidePaths}
           disabled={ctx.disabled}
@@ -597,7 +590,7 @@ function ValueSlot({ ctx, path, node }: { ctx: EditorContext; path: NodePath; no
         <StatusMultiPicker
           className="min-w-0 flex-1"
           size={INNER[ctx.size]}
-          client={ctx.client}
+          context={ctx.context}
           disabled={disabled}
           projectId={ctx.projectId}
           entityType={field?.entityType ?? ctx.entityType}
@@ -609,7 +602,7 @@ function ValueSlot({ ctx, path, node }: { ctx: EditorContext; path: NodePath; no
         <StatusPicker
           className="min-w-0 flex-1"
           size={INNER[ctx.size]}
-          client={ctx.client}
+          context={ctx.context}
           disabled={disabled}
           projectId={ctx.projectId}
           entityType={field?.entityType ?? ctx.entityType}
@@ -899,7 +892,7 @@ function EntityValue({
       <EntityMultiPicker
         className="min-w-0 flex-1"
         size={INNER[ctx.size]}
-        client={ctx.client}
+        context={ctx.context}
         disabled={ctx.disabled}
         projectId={ctx.projectId}
         entityTypes={types}
@@ -913,7 +906,7 @@ function EntityValue({
     <EntityPicker
       className="min-w-0 flex-1"
       size={INNER[ctx.size]}
-      client={ctx.client}
+      context={ctx.context}
       disabled={ctx.disabled}
       projectId={ctx.projectId}
       entityTypes={types}

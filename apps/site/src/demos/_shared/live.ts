@@ -18,7 +18,7 @@
  * browser from a session token the person approved through the App Session
  * Launcher (probe 052), kept in `localStorage` under `sg-demo:session`.
  */
-import { createSessionTokenAuth, createSgContext, RestClient, type QueryCache, type SgContext } from '@sg-widgets/core';
+import { createSessionTokenAuth, createSgContext, RestClient, type SgContext } from '@sg-widgets/core';
 
 const KEYS = {
   source: 'sg-demo:source',
@@ -226,10 +226,6 @@ export function isLive(): boolean {
 export function liveContext(): SgContext {
   if (!context) throw new Error('Live mode is not ready. Await prepareDemoSource() first.');
   return context;
-}
-
-export function liveClient(): QueryCache {
-  return liveContext().client;
 }
 
 /* The App Session Launcher, through this site's endpoints. */

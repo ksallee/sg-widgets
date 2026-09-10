@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { StatusPicker } from '@/registry/sg/components/status-picker';
-import { createDemoContext } from '../_shared/client';
+import { getDemoContext } from '../_shared/client';
 
 const group = 'flex flex-col gap-2';
 const label = 'text-muted-foreground text-xs font-medium tracking-wide uppercase';
@@ -9,9 +9,9 @@ const box = 'w-64';
 const readout = 'text-muted-foreground font-mono text-xs tabular-nums';
 
 export default function StatusPickerDemo() {
+  // The shared context: every picker on the page reads the Status table through it, once.
   // Live mode has one project, the toolbar's; the mock has 70 and 71.
-  const context = useMemo(() => createDemoContext(), []);
-  const client = context.client;
+  const context = getDemoContext();
   const projectId = context.projectId;
   const otherProjectId = context.projectFor(71);
   const [inProjectA, setInProjectA] = useState<string | undefined>('ip');
@@ -33,7 +33,7 @@ export default function StatusPickerDemo() {
         <div className={row}>
           <div className={box} data-demo="p70">
             <StatusPicker
-              client={client}
+              context={context}
               entityType="Version"
               projectId={projectId}
               value={inProjectA}
@@ -42,7 +42,7 @@ export default function StatusPickerDemo() {
           </div>
           <div className={box} data-demo="p71">
             <StatusPicker
-              client={client}
+              context={context}
               entityType="Version"
               projectId={otherProjectId}
               value={inProjectB}
@@ -57,7 +57,7 @@ export default function StatusPickerDemo() {
         <div className={row}>
           <div className={box} data-demo="both">
             <StatusPicker
-              client={client}
+              context={context}
               entityType="Version"
               projectIds={[projectId, otherProjectId]}
               value={shared}
@@ -73,7 +73,7 @@ export default function StatusPickerDemo() {
         <div className={row}>
           <div className={box} data-demo="project">
             <StatusPicker
-              client={client}
+              context={context}
               entityType="Project"
               value={project}
               onValueChange={setProject}
@@ -87,7 +87,7 @@ export default function StatusPickerDemo() {
         <div className={row}>
           <div className={box} data-demo="unknown">
             <StatusPicker
-              client={client}
+              context={context}
               entityType="Version"
               projectId={projectId}
               value={unknown}
@@ -96,7 +96,7 @@ export default function StatusPickerDemo() {
           </div>
           <div className={box}>
             <StatusPicker
-              client={client}
+              context={context}
               entityType="Version"
               projectId={projectId}
               value="ip"
@@ -112,7 +112,7 @@ export default function StatusPickerDemo() {
         <div className={row}>
           <div className={box} data-demo="switching">
             <StatusPicker
-              client={client}
+              context={context}
               entityType="Version"
               projectId={switchTo}
               value={switching}
@@ -134,13 +134,13 @@ export default function StatusPickerDemo() {
         <h4 className={label}>Disabled, read-only, invalid</h4>
         <div className={row}>
           <div className={box}>
-            <StatusPicker client={client} entityType="Version" projectId={projectId} value="apr" disabled />
+            <StatusPicker context={context} entityType="Version" projectId={projectId} value="apr" disabled />
           </div>
           <div className={box}>
-            <StatusPicker client={client} entityType="Version" projectId={projectId} value="apr" readonly />
+            <StatusPicker context={context} entityType="Version" projectId={projectId} value="apr" readonly />
           </div>
           <div className={box}>
-            <StatusPicker client={client} entityType="Version" projectId={projectId} value="apr" invalid />
+            <StatusPicker context={context} entityType="Version" projectId={projectId} value="apr" invalid />
           </div>
         </div>
       </section>
@@ -149,13 +149,13 @@ export default function StatusPickerDemo() {
         <h4 className={label}>Sizes</h4>
         <div className={row}>
           <div className={box}>
-            <StatusPicker client={client} entityType="Version" projectId={projectId} value="rev" size="sm" />
+            <StatusPicker context={context} entityType="Version" projectId={projectId} value="rev" size="sm" />
           </div>
           <div className={box}>
-            <StatusPicker client={client} entityType="Version" projectId={projectId} value="rev" size="md" />
+            <StatusPicker context={context} entityType="Version" projectId={projectId} value="rev" size="md" />
           </div>
           <div className={box}>
-            <StatusPicker client={client} entityType="Version" projectId={projectId} value="rev" size="lg" />
+            <StatusPicker context={context} entityType="Version" projectId={projectId} value="rev" size="lg" />
           </div>
         </div>
       </section>

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { UserAvatar } from '@/registry/sg/components/user-avatar';
-import { DemoClientProvider, useSgClient } from '../_shared/react';
+import { DemoContextProvider, useSgContext } from '../_shared/react';
 
 const group = 'flex flex-col gap-2';
 const label = 'text-muted-foreground text-xs font-medium tracking-wide uppercase';
@@ -14,7 +14,7 @@ interface Person {
 }
 
 function People() {
-  const client = useSgClient();
+  const context = useSgContext();
   const [people, setPeople] = useState<Person[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -22,7 +22,7 @@ function People() {
     let live = true;
     // People with a picture first, so a live site shows real avatars; the rest fill the row.
     const fields = ['name', 'image', 'sg_status_list'];
-    client
+    context.client
       .search('HumanUser', {
         filters: { logical_operator: 'and', conditions: [['image', 'is_not', null]] },
         fields,
@@ -30,7 +30,7 @@ function People() {
       })
       .then(async (withImage) => {
         if (withImage.data.length >= 6) return withImage;
-        const rest = await client.search('HumanUser', {
+        const rest = await context.client.search('HumanUser', {
           filters: { logical_operator: 'and', conditions: [['image', 'is', null]] },
           fields,
           page: { size: 6 - withImage.data.length },
@@ -53,7 +53,7 @@ function People() {
     return () => {
       live = false;
     };
-  }, [client]);
+  }, [context]);
 
   if (error) return <p className="text-destructive text-sm">{error}</p>;
   if (!people) return <p className="text-muted-foreground text-sm">Loading people…</p>;
@@ -83,7 +83,7 @@ function People() {
 
 export default function UserAvatarDemo() {
   return (
-    <DemoClientProvider>
+    <DemoContextProvider>
       <div className="flex flex-col gap-4">
         <People />
 
@@ -130,6 +130,6 @@ export default function UserAvatarDemo() {
           </div>
         </section>
       </div>
-    </DemoClientProvider>
+    </DemoContextProvider>
   );
 }

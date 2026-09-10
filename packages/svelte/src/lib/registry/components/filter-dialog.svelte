@@ -18,7 +18,7 @@
 	import FilterIcon from '@lucide/svelte/icons/list-filter';
 	import PencilIcon from '@lucide/svelte/icons/pencil';
 	import Trash2Icon from '@lucide/svelte/icons/trash-2';
-	import type { FilterGroup, SchemaService, SgClient } from '@sg-widgets/core';
+	import type { FilterGroup, SgContext } from '@sg-widgets/core';
 	import { countActiveConditions, emptyFilter, isEmptyFilter } from '@sg-widgets/core';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
@@ -31,8 +31,8 @@
 
 	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>, HTMLDivElement> & {
 		entityType: string;
-		client: SgClient;
-		schema?: SchemaService;
+		/** The widget context. Every read goes through it, so widgets on a page share one cache. */
+		context: SgContext;
 		value: FilterGroup;
 		hidePaths?: string[];
 		size?: FilterDialogSize;
@@ -52,8 +52,7 @@
 
 	let {
 		entityType,
-		client,
-		schema,
+		context,
 		value = $bindable(emptyFilter()),
 		hidePaths = [],
 		size = 'md',
@@ -141,8 +140,7 @@
 			</Dialog.Header>
 			<FilterEditor
 				{entityType}
-				{client}
-				{schema}
+				{context}
 				{hidePaths}
 				{size}
 				bind:value={draft}

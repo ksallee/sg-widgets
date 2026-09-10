@@ -5,7 +5,7 @@
 	import EntityTable from '$lib/registry/components/entity-table.svelte';
 	import FilterDialog from '$lib/registry/components/filter-dialog.svelte';
 	import { createDemoContext } from '../_shared/client';
-	import { setDemoClient } from '../_shared/svelte';
+	import { setDemoContext } from '../_shared/svelte';
 
 	const WIDTHS: Record<string, number> = {
 		code: 260,
@@ -21,7 +21,7 @@
 	const SHOWN = ['code', 'entity', 'sg_status_list', 'image', 'description', 'user'];
 
 	const context = createDemoContext({ counts: { versions: 320 } });
-	setDemoClient(context.client);
+	setDemoContext(context);
 
 	const source = createEntitySource({
 		client: context.client,
@@ -102,7 +102,7 @@
 					{#if picking}
 						<div class="w-64">
 							<ColumnPicker
-								schema={context.schema}
+								{context}
 								entityType="Version"
 								size="sm"
 								deepLinks={false}
@@ -118,8 +118,7 @@
 			{#snippet toolbarEnd()}
 				<FilterDialog
 					entityType="Version"
-					client={context.client}
-					schema={context.schema}
+					{context}
 					value={filter}
 					onChange={(next) => {
 						filter = next;

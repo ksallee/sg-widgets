@@ -2,12 +2,15 @@
 	import type { FieldSchema, NativeStatus, StatusRecord } from '@sg-widgets/core';
 	import { NATIVE_STATUSES, STOCK_ICON_KEYS } from '@sg-widgets/core';
 	import StatusBadge from '$lib/registry/components/status-badge.svelte';
-	import { setDemoClient } from '../_shared/svelte';
+	import { setDemoContext } from '../_shared/svelte';
 
-	const client = setDemoClient();
+	const context = setDemoContext();
 
 	async function load() {
-		const [rows, fields] = await Promise.all([client.statuses(), client.fields('Version')]);
+		const [rows, fields] = await Promise.all([
+			context.client.statuses(),
+			context.client.fields('Version')
+		]);
 		const statuses: Record<string, StatusRecord> = {};
 		for (const row of rows) statuses[row.code] = row;
 		return { statuses, field: fields['sg_status_list'] as FieldSchema };

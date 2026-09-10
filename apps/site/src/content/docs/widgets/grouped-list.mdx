@@ -17,6 +17,7 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/grouped-list.j
 <Demo name="grouped-list" title="Grouped List: Tasks by pipeline step, with a status glyph, a sub-label, a due date and a pager" />
 
 ```ts
+const context = createSgContext({ client });
 const source = createEntitySource({
   client: context.client,
   entityType: 'Task',
@@ -46,7 +47,7 @@ const [group, sub, secondary] = await resolveColumns(context.schema, 'Task', [
 | `showCode` | `boolean` | `false` | Show the row's `code` beside the label when the two differ. |
 | `fields` | `CollectionColumn[]` | `[]` | Extra fields drawn under the label. The source must already read them. |
 | `statuses` | `Record<string, StatusRecord> \| null` | `null` | Status rows by code. |
-| `context` | `SgContext` | — | An entity value links to the row's page when this carries a site. |
+| `context` | `SgContext` | — | The widget context. Values render with its preferences, and an entity value links to the row's page when it carries a site. |
 | `density` | `'compact' \| 'default'` | `'default'` | Compact halves the vertical row padding. |
 | `selectable` | `boolean` | `false` | Draws a checkbox on each row. |
 | `pageSizes` | `number[]` | `[25, 50, 100]` | Rows per page offered in the footer. |

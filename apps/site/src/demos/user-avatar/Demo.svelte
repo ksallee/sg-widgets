@@ -1,20 +1,20 @@
 <script lang="ts">
 	import UserAvatar from '$lib/registry/components/user-avatar.svelte';
-	import { setDemoClient } from '../_shared/svelte';
+	import { setDemoContext } from '../_shared/svelte';
 
-	const client = setDemoClient();
+	const context = setDemoContext();
 
 	// People with a picture first, so a live site shows real avatars; the rest fill the row.
 	async function load() {
 		const fields = ['name', 'image', 'sg_status_list'];
-		const withImage = await client.search('HumanUser', {
+		const withImage = await context.client.search('HumanUser', {
 			filters: { logical_operator: 'and', conditions: [['image', 'is_not', null]] },
 			fields,
 			page: { size: 6 }
 		});
 		const rest =
 			withImage.data.length < 6
-				? await client.search('HumanUser', {
+				? await context.client.search('HumanUser', {
 						filters: { logical_operator: 'and', conditions: [['image', 'is', null]] },
 						fields,
 						page: { size: 6 - withImage.data.length }

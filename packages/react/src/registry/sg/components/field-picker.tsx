@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useState, type KeyboardEvent } from 'react';
-import type { FieldHop, FieldOption, FieldSchema, SchemaService } from '@sg-widgets/core';
+import type { FieldHop, FieldOption, FieldSchema, SgContext } from '@sg-widgets/core';
 import {
   currentType,
   deriveFieldOptions,
@@ -98,8 +98,8 @@ export interface FieldPickerProps extends React.HTMLAttributes<HTMLDivElement> {
   /** The root element. */
   ref?: React.Ref<HTMLDivElement>;
 
-  /** Reads the schema. Build it once per app with `createSchemaService`. */
-  schema: SchemaService;
+  /** The widget context. The schema is read through it, once per page. */
+  context: SgContext;
   /** The type the path starts on. */
   entityType: string;
   /** The dotted path, `field` or `field.Type.field…`. Empty when nothing is chosen. */
@@ -153,7 +153,7 @@ export interface FieldPickerProps extends React.HTMLAttributes<HTMLDivElement> {
  * date behind a link.
  */
 export function FieldPicker({
-  schema,
+  context,
   entityType,
   value = '',
   onValueChange,
@@ -182,6 +182,8 @@ export function FieldPicker({
   ref,
   ...rest
 }: FieldPickerProps) {
+  // The context's own service, so every widget on the page shares one schema read.
+  const schema = context.schema;
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const open = openProp ?? uncontrolledOpen;
   const setOpen = (next: boolean): void => {

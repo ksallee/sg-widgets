@@ -1,6 +1,6 @@
 import type * as React from 'react';
-import type { EntityRef, SgContext } from '@sg-widgets/core';
-import { entityDetailUrl } from '@sg-widgets/core';
+import type { EntityRef, SgClient, SgContext } from '@sg-widgets/core';
+import { contextFromClient, entityDetailUrl } from '@sg-widgets/core';
 import {
   Box,
   Clapperboard,
@@ -70,6 +70,8 @@ export interface EntityChipProps extends Omit<React.HTMLAttributes<HTMLSpanEleme
   preview?: string[];
   /** The widget context, for the site url and for the hover card's read. */
   context?: SgContext;
+  /** A client, for an app with no context. One context is built per client and shared. */
+  client?: SgClient;
   onClick?: React.MouseEventHandler<HTMLButtonElement>;
   size?: EntityChipSize;
   removable?: boolean;
@@ -95,6 +97,7 @@ export function EntityChip({
   siteUrl,
   preview,
   context,
+  client,
   onClick,
   size = 'md',
   removable = false,
@@ -107,7 +110,9 @@ export function EntityChip({
   const label = named ? (entity.name as string) : `${entity.type} #${entity.id}`;
   const Glyph = GLYPHS[entity.type as keyof typeof GLYPHS] ?? Tag;
 
-  const site = siteUrl ?? context?.siteUrl ?? '';
+  // One context per client, so a chip handed a bare client shares the page's caches.
+  const ctx = context ?? (client ? contextFromClient(client) : undefined);
+  const site = siteUrl ?? ctx?.siteUrl ?? '';
   // The row's own page is on another origin, so it opens in a new tab; a url the
   // caller resolved belongs to the caller's app and stays in this one.
   const detail = href === undefined ? entityDetailUrl(site, entity) : null;
@@ -191,7 +196,7 @@ export function EntityChip({
     </span>
   );
 
-  if (!preview || preview.length === 0 || !context) return chip;
+  if (!preview || preview.length === 0 || !ctx) return chip;
 
   // The content mounts on open, so the card's read happens then and is cached on the context.
   return (
@@ -204,7 +209,7 @@ export function EntityChip({
         {chip}
       </HoverCardTrigger>
       <HoverCardContent className="w-72 p-3">
-        <EntityCard context={context} entity={entity} fields={preview} size="sm" siteUrl={siteUrl} />
+        <EntityCard context={ctx} entity={entity} fields={preview} size="sm" siteUrl={site} />
       </HoverCardContent>
     </HoverCard>
   );

@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import type { FilterGroup, SchemaService, SgClient } from '@sg-widgets/core';
+import type { FilterGroup, SgContext } from '@sg-widgets/core';
 import { countActiveConditions, emptyFilter, isEmptyFilter } from '@sg-widgets/core';
 import { ListFilterIcon, PencilIcon, Trash2Icon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -38,8 +38,8 @@ export interface FilterDialogProps
   ref?: React.Ref<HTMLDivElement>;
 
   entityType: string;
-  client: SgClient;
-  schema?: SchemaService;
+  /** The widget context. Every read goes through it, so widgets on a page share one cache. */
+  context: SgContext;
   value: FilterGroup;
   hidePaths?: string[];
   size?: FilterDialogSize;
@@ -67,8 +67,7 @@ export interface FilterDialogProps
  */
 export function FilterDialog({
   entityType,
-  client,
-  schema,
+  context,
   value = emptyFilter(),
   hidePaths = [],
   size = 'md',
@@ -154,8 +153,7 @@ export function FilterDialog({
           </DialogHeader>
           <FilterEditor
             entityType={entityType}
-            client={client}
-            schema={schema}
+            context={context}
             hidePaths={hidePaths}
             size={size}
             value={draft}

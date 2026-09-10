@@ -3,7 +3,7 @@ import type { CollectionColumn, StatusRecord } from '@sg-widgets/core';
 import { condition, createEntitySource, resolveColumns } from '@sg-widgets/core';
 import { EntityTable } from '@/registry/sg/components/entity-table';
 import { createDemoContext } from '../_shared/client';
-import { DemoClientProvider } from '../_shared/react';
+import { DemoContextProvider } from '../_shared/react';
 
 const COLUMNS = [
   { path: 'code', width: 260 },
@@ -50,7 +50,7 @@ export default function EntityTableInfiniteDemo() {
   if (!statuses) return <p className="text-muted-foreground text-sm">Loading the site…</p>;
 
   return (
-    <DemoClientProvider client={context.client}>
+    <DemoContextProvider context={context}>
       <EntityTable
         source={source}
         columns={columns}
@@ -60,6 +60,6 @@ export default function EntityTableInfiniteDemo() {
         showCode
         maxHeight="22rem"
       />
-    </DemoClientProvider>
+    </DemoContextProvider>
   );
 }

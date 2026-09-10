@@ -13,8 +13,8 @@
 	import GripVerticalIcon from '@lucide/svelte/icons/grip-vertical';
 	import XIcon from '@lucide/svelte/icons/x';
 	import type { HTMLAttributes } from 'svelte/elements';
-	import type { SchemaService, SgClient, SortKey } from '@sg-widgets/core';
-	import { createSchemaService, friendlyFieldPath, isSortable, toSortString } from '@sg-widgets/core';
+	import type { SgContext, SortKey } from '@sg-widgets/core';
+	import { friendlyFieldPath, isSortable, toSortString } from '@sg-widgets/core';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import * as Popover from '$lib/components/ui/popover/index.js';
@@ -26,8 +26,8 @@
 
 	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>, HTMLDivElement> & {
 		entityType: string;
-		client: SgClient;
-		schema?: SchemaService;
+		/** The widget context. Every read goes through it, so widgets on a page share one cache. */
+		context: SgContext;
 		value: SortKey[];
 		/** Paths to keep out of the field list, each hiding itself and everything under it. */
 		hidePaths?: string[];
@@ -43,8 +43,7 @@
 
 	let {
 		entityType,
-		client,
-		schema,
+		context,
 		value = $bindable([]),
 		hidePaths = [],
 		size = 'md',
@@ -64,8 +63,6 @@
 		onOpenChange?.(open);
 	}
 
-	const service = $derived(schema ?? createSchemaService(client));
-
 	/** The friendly label of every path in the list, resolved once and kept. */
 	let labels = $state<Record<string, string>>({});
 	const resolving = new Map<string, Promise<string>>();
@@ -75,7 +72,7 @@
 	function resolveLabel(path: string): void {
 		const at = `${entityType}|${path}`;
 		if (resolving.has(at)) return;
-		const job = service.resolvePath(entityType, path).then(friendlyFieldPath, () => path);
+		const job = context.schema.resolvePath(entityType, path).then(friendlyFieldPath, () => path);
 		resolving.set(at, job);
 		void job.then((label) => {
 			labels = { ...labels, [at]: label };
@@ -244,7 +241,7 @@
 			</div>
 			<Separator />
 			<FieldPicker
-				schema={service}
+				{context}
 				{entityType}
 				{hidePaths}
 				{disabled}

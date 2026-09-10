@@ -1,7 +1,7 @@
 import type * as React from 'react';
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { EntityRef, SearchHit, SgClient, WireCondition } from '@sg-widgets/core';
-import { createSchemaService, hydrate, matchRuns, scopeToProject } from '@sg-widgets/core';
+import type { EntityRef, SearchHit, SgContext, WireCondition } from '@sg-widgets/core';
+import { hydrate, matchRuns, scopeToProject } from '@sg-widgets/core';
 import { Search, TriangleAlert } from 'lucide-react';
 import {
   Command,
@@ -66,8 +66,8 @@ export interface GlobalSearchProps extends Omit<React.HTMLAttributes<HTMLDivElem
   /** The root element. */
   ref?: React.Ref<HTMLDivElement>;
 
-  /** Where rows come from. Wrap it in `createQueryCache` once for the whole app. */
-  client: SgClient;
+  /** The widget context. Every read goes through it, so widgets on a page share one cache. */
+  context: SgContext;
   entityTypes?: GlobalSearchTypes;
   /** Scope every searched type that has a `project` field to this project. */
   projectId?: number | null;
@@ -102,7 +102,7 @@ export interface GlobalSearchProps extends Omit<React.HTMLAttributes<HTMLDivElem
  * Matching is the server's alone: the command list never filters.
  */
 export function GlobalSearch({
-  client,
+  context,
   entityTypes = GLOBAL_SEARCH_TYPES,
   projectId = null,
   hotkey = false,
@@ -121,7 +121,7 @@ export function GlobalSearch({
   ref,
   ...rest
 }: GlobalSearchProps) {
-  const schema = useMemo(() => createSchemaService(client), [client]);
+  const schema = context.schema;
 
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const open = openProp ?? uncontrolledOpen;
@@ -184,8 +184,8 @@ export function GlobalSearch({
       try {
         let types = typeMap(entityTypes);
         if (projectId !== null && projectId !== undefined) types = await scopeToProject(schema, types, projectId);
-        const rows = await client.textSearch(text, types, { size: PAGE_SIZE, number: nextPage });
-        const found = await hydrate(client, rows);
+        const rows = await context.client.textSearch(text, types, { size: PAGE_SIZE, number: nextPage });
+        const found = await hydrate(context.client, rows);
         if (id !== requestId.current) return;
         setHits((current) => (nextPage === 1 ? found : [...current, ...found]));
         setPage(nextPage);
@@ -200,7 +200,7 @@ export function GlobalSearch({
         if (id === requestId.current) setLoading(false);
       }
     },
-    [client, entityTypes, projectId, schema],
+    [context.client, entityTypes, projectId, schema],
   );
 
   const setQuery = useCallback(
@@ -325,7 +325,7 @@ export function GlobalSearch({
                 value={`recent:${entity.type}:${entity.id}`}
                 onSelect={() => choose(entity)}
               >
-                <EntityChip entity={entity} size={LEAD[size]} />
+                <EntityChip entity={entity} size={LEAD[size]} context={context} />
                 <span className="text-muted-foreground truncate text-xs">
                   {displayNames[entity.type] ?? entity.type}
                 </span>

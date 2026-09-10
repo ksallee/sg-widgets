@@ -3,10 +3,8 @@
 	import ProjectPicker from '$lib/registry/components/project-picker.svelte';
 	import ProjectMultiPicker from '$lib/registry/components/project-multi-picker.svelte';
 	import { createDemoContext } from '../_shared/client';
-	import { setDemoClient } from '../_shared/svelte';
 
 	const context = createDemoContext();
-	const client = setDemoClient(context.client);
 
 	let one = $state<EntityRef | null>(null);
 	let several = $state<EntityRef[]>([]);
@@ -36,7 +34,7 @@
 		<h4 class={label}>One project</h4>
 		<div class={field}>
 			<span class={caption}>One project, clearable</span>
-			<ProjectPicker {client} bind:value={one} clearable />
+			<ProjectPicker {context} bind:value={one} clearable />
 		</div>
 	</section>
 
@@ -44,7 +42,7 @@
 		<h4 class={label}>Several, with checkbox rows</h4>
 		<div class={field}>
 			<span class={caption}>Several projects at once</span>
-			<ProjectMultiPicker {client} bind:value={several} clearable />
+			<ProjectMultiPicker {context} bind:value={several} clearable />
 		</div>
 	</section>
 
@@ -52,7 +50,7 @@
 		<h4 class={label}>Archived projects included</h4>
 		<div class={field}>
 			<span class={caption}>Archived projects included</span>
-			<ProjectPicker {client} includeArchived bind:value={archived} />
+			<ProjectPicker {context} includeArchived bind:value={archived} />
 		</div>
 	</section>
 
@@ -60,7 +58,7 @@
 		<h4 class={label}>Bare reference, resolved on mount</h4>
 		<div class={field}>
 			<span class={caption}>Type and id in, name resolved on mount</span>
-			<ProjectPicker {client} bind:value={bare} clearable />
+			<ProjectPicker {context} bind:value={bare} clearable />
 		</div>
 	</section>
 
@@ -70,20 +68,20 @@
 			{#each SIZES as { size, caption: sizeCaption } (size)}
 				<div class={field}>
 					<span class={caption}>{sizeCaption}</span>
-					<ProjectPicker {client} value={preset} {size} />
+					<ProjectPicker {context} value={preset} {size} />
 				</div>
 			{/each}
 			<div class={field}>
 				<span class={caption}>Disabled</span>
-				<ProjectPicker {client} value={preset} disabled />
+				<ProjectPicker {context} value={preset} disabled />
 			</div>
 			<div class={field}>
 				<span class={caption}>Read-only</span>
-				<ProjectPicker {client} value={preset} readonly />
+				<ProjectPicker {context} value={preset} readonly />
 			</div>
 			<div class={field}>
 				<span class={caption}>Invalid</span>
-				<ProjectPicker {client} value={preset} invalid />
+				<ProjectPicker {context} value={preset} invalid />
 			</div>
 		</div>
 	</section>

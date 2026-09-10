@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import type { EntityRef, TreeNode } from '@sg-widgets/core';
 import { EntityTree } from '@/registry/sg/components/entity-tree';
 import { createDemoContext } from '../_shared/client';
-import { DemoClientProvider } from '../_shared/react';
+import { DemoContextProvider } from '../_shared/react';
 
 const group = 'flex flex-col gap-2';
 const label = 'text-muted-foreground text-xs font-medium tracking-wide uppercase';
@@ -19,12 +19,12 @@ export default function EntityTreeDemo() {
   const searchPlaceholder = context.live ? 'Search' : 'Search, e.g. sh020_0030';
 
   return (
-    <DemoClientProvider client={context.client}>
+    <DemoContextProvider context={context}>
       <div className="flex w-full min-w-0 flex-col gap-4">
         <section className={group}>
           <h4 className={label}>A project, seeded open, searchable, with checkboxes</h4>
           <EntityTree
-            client={context.client}
+            context={context}
             rootPath={rootPath}
             seedPath={seedPath}
             checkable
@@ -44,13 +44,13 @@ export default function EntityTreeDemo() {
 
         <section className={group}>
           <h4 className={label}>A project whose shots sit under no sequence</h4>
-          <EntityTree client={context.client} rootPath={looseRoot} maxHeight="12rem" data-testid="loose-tree" />
+          <EntityTree context={context} rootPath={looseRoot} maxHeight="12rem" data-testid="loose-tree" />
         </section>
 
         <section className={group}>
           <h4 className={label}>The same tree with thumbnails</h4>
           <EntityTree
-            client={context.client}
+            context={context}
             rootPath={rootPath}
             thumbnail="image"
             subLabelField="description"
@@ -59,6 +59,6 @@ export default function EntityTreeDemo() {
           />
         </section>
       </div>
-    </DemoClientProvider>
+    </DemoContextProvider>
   );
 }

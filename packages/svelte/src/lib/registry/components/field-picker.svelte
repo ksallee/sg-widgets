@@ -20,7 +20,7 @@
 
 <script lang="ts">
 	import type { HTMLAttributes } from 'svelte/elements';
-	import type { FieldHop, FieldOption, FieldSchema, SchemaService } from '@sg-widgets/core';
+	import type { FieldHop, FieldOption, FieldSchema, SgContext } from '@sg-widgets/core';
 	import {
 		currentType,
 		deriveFieldOptions,
@@ -64,8 +64,8 @@
 	import { cn, type WithElementRef } from '$lib/utils.js';
 
 	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>, HTMLDivElement> & {
-		/** Reads the schema. Build it once per app with `createSchemaService`. */
-		schema: SchemaService;
+		/** The widget context. The schema is read through it, once per page. */
+		context: SgContext;
 		/** The type the path starts on. */
 		entityType: string;
 		/** The dotted path, `field` or `field.Type.field…`. Empty when nothing is chosen. */
@@ -108,7 +108,7 @@
 	};
 
 	let {
-		schema,
+		context,
 		entityType,
 		value = $bindable(''),
 		onValueChange,
@@ -137,6 +137,9 @@
 		ref = $bindable(null),
 		...rest
 	}: Props = $props();
+
+	// The context's own service, so every widget on the page shares one schema read.
+	const schema = $derived(context.schema);
 
 	const ICONS: Record<string, typeof Type> = {
 		braces: Braces,

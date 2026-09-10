@@ -7,7 +7,6 @@
 -->
 <script lang="ts">
 	import type { EntityRef } from '@sg-widgets/core';
-	import { createSchemaService } from '@sg-widgets/core';
 	import ContextSelector, {
 		type WorkContext
 	} from '$lib/registry/components/context-selector.svelte';
@@ -22,13 +21,12 @@
 	import UserMultiPicker from '$lib/registry/components/user-multi-picker.svelte';
 	import UserPicker from '$lib/registry/components/user-picker.svelte';
 	import { createDemoContext } from '../_shared/client';
-	import { setDemoClient } from '../_shared/svelte';
+	import { setDemoContext } from '../_shared/svelte';
 
 	type Size = 'sm' | 'md' | 'lg';
 
 	const context = createDemoContext();
-	const client = setDemoClient(context.client);
-	const schema = createSchemaService(client);
+	setDemoContext(context);
 	const projectId = context.projectId;
 	const project: EntityRef = context.live
 		? { type: 'Project', id: projectId }
@@ -59,7 +57,7 @@
 			data-qa-size={size}
 		>
 			<span class={caption}>entity-picker</span>
-			<EntityPicker {client} entityTypes={['Asset']} {size} value={filled ? ASSET : null} />
+			<EntityPicker {context} entityTypes={['Asset']} {size} value={filled ? ASSET : null} />
 		</div>
 
 		<div
@@ -69,7 +67,7 @@
 			data-qa-size={size}
 		>
 			<span class={caption}>entity-multi-picker</span>
-			<EntityMultiPicker {client} entityTypes={['Asset']} {size} value={filled ? [ASSET] : []} />
+			<EntityMultiPicker {context} entityTypes={['Asset']} {size} value={filled ? [ASSET] : []} />
 		</div>
 
 		<div
@@ -79,7 +77,7 @@
 			data-qa-size={size}
 		>
 			<span class={caption}>user-picker</span>
-			<UserPicker {client} {size} value={filled ? PERSON : null} />
+			<UserPicker {context} {size} value={filled ? PERSON : null} />
 		</div>
 
 		<div
@@ -89,7 +87,7 @@
 			data-qa-size={size}
 		>
 			<span class={caption}>user-multi-picker</span>
-			<UserMultiPicker {client} {size} value={filled ? [PERSON] : []} />
+			<UserMultiPicker {context} {size} value={filled ? [PERSON] : []} />
 		</div>
 
 		<div
@@ -99,7 +97,7 @@
 			data-qa-size={size}
 		>
 			<span class={caption}>project-picker</span>
-			<ProjectPicker {client} {size} value={filled ? project : null} />
+			<ProjectPicker {context} {size} value={filled ? project : null} />
 		</div>
 
 		<div
@@ -109,7 +107,7 @@
 			data-qa-size={size}
 		>
 			<span class={caption}>project-multi-picker</span>
-			<ProjectMultiPicker {client} {size} value={filled ? [project] : []} />
+			<ProjectMultiPicker {context} {size} value={filled ? [project] : []} />
 		</div>
 
 		<div
@@ -120,7 +118,7 @@
 		>
 			<span class={caption}>status-picker</span>
 			<StatusPicker
-				{client}
+				{context}
 				entityType="Version"
 				{projectId}
 				{size}
@@ -136,7 +134,7 @@
 		>
 			<span class={caption}>status-multi-picker</span>
 			<StatusMultiPicker
-				{client}
+				{context}
 				entityType="Version"
 				{projectId}
 				{size}
@@ -151,7 +149,7 @@
 			data-qa-size={size}
 		>
 			<span class={caption}>entity-type-picker</span>
-			<EntityTypePicker {schema} {size} value={filled ? 'Shot' : null} />
+			<EntityTypePicker {context} {size} value={filled ? 'Shot' : null} />
 		</div>
 
 		<div
@@ -161,7 +159,7 @@
 			data-qa-size={size}
 		>
 			<span class={caption}>entity-type-multi-picker</span>
-			<EntityTypePicker {schema} multiple {size} value={filled ? ['Shot', 'Asset'] : []} />
+			<EntityTypePicker {context} multiple {size} value={filled ? ['Shot', 'Asset'] : []} />
 		</div>
 
 		<div
@@ -171,7 +169,7 @@
 			data-qa-size={size}
 		>
 			<span class={caption}>field-picker</span>
-			<FieldPicker {schema} entityType="Version" {size} value={filled ? 'code' : ''} />
+			<FieldPicker {context} entityType="Version" {size} value={filled ? 'code' : ''} />
 		</div>
 
 		<div
@@ -182,9 +180,9 @@
 		>
 			<span class={caption}>context-selector</span>
 			<ContextSelector
-				{client}
+				{context}
 				{size}
-				context={filled ? FULL_WORK : EMPTY_WORK}
+				workContext={filled ? FULL_WORK : EMPTY_WORK}
 				currentUser={PERSON}
 			/>
 		</div>

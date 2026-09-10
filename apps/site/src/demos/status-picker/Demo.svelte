@@ -1,11 +1,10 @@
 <script lang="ts">
 	import StatusPicker from '$lib/registry/components/status-picker.svelte';
-	import { createDemoContext } from '../_shared/client';
-	import { setDemoClient } from '../_shared/svelte';
+	import { getDemoContext } from '../_shared/client';
 
+	// The shared context: every picker on the page reads the Status table through it, once.
 	// Live mode has one project, the toolbar's; the mock has 70 and 71.
-	const context = createDemoContext();
-	const client = setDemoClient(context.client);
+	const context = getDemoContext();
 	const projectId = context.projectId;
 	const otherProjectId = context.projectFor(71);
 
@@ -33,10 +32,10 @@
 		</h4>
 		<div class={row}>
 			<div class={box} data-demo="p70">
-				<StatusPicker {client} entityType="Version" {projectId} bind:value={inProjectA} />
+				<StatusPicker {context} entityType="Version" {projectId} bind:value={inProjectA} />
 			</div>
 			<div class={box} data-demo="p71">
-				<StatusPicker {client} entityType="Version" projectId={otherProjectId} bind:value={inProjectB} />
+				<StatusPicker {context} entityType="Version" projectId={otherProjectId} bind:value={inProjectB} />
 			</div>
 		</div>
 	</section>
@@ -45,7 +44,7 @@
 		<h4 class={label}>The statuses both projects offer</h4>
 		<div class={row}>
 			<div class={box} data-demo="both">
-				<StatusPicker {client} entityType="Version" projectIds={[projectId, otherProjectId]} bind:value={shared} />
+				<StatusPicker {context} entityType="Version" projectIds={[projectId, otherProjectId]} bind:value={shared} />
 			</div>
 			<span class={readout}>{shared ?? '—'}</span>
 		</div>
@@ -55,7 +54,7 @@
 		<h4 class={label}>Project, whose status field is a plain list with no icons</h4>
 		<div class={row}>
 			<div class={box} data-demo="project">
-				<StatusPicker {client} entityType="Project" bind:value={project} />
+				<StatusPicker {context} entityType="Project" bind:value={project} />
 			</div>
 		</div>
 	</section>
@@ -64,11 +63,11 @@
 		<h4 class={label}>A code the field does not carry, and the code instead of the label</h4>
 		<div class={row}>
 			<div class={box} data-demo="unknown">
-				<StatusPicker {client} entityType="Version" {projectId} bind:value={unknown} />
+				<StatusPicker {context} entityType="Version" {projectId} bind:value={unknown} />
 			</div>
 			<div class={box}>
 				<StatusPicker
-					{client}
+					{context}
 					entityType="Version"
 					{projectId}
 					value="ip"
@@ -83,7 +82,7 @@
 		<h4 class={label}>Switching project drops a status the new one hides</h4>
 		<div class={row}>
 			<div class={box} data-demo="switching">
-				<StatusPicker {client} entityType="Version" projectId={switchTo} bind:value={switching} />
+				<StatusPicker {context} entityType="Version" projectId={switchTo} bind:value={switching} />
 			</div>
 			<button
 				type="button"
@@ -100,13 +99,13 @@
 		<h4 class={label}>Disabled, read-only, invalid</h4>
 		<div class={row}>
 			<div class={box}>
-				<StatusPicker {client} entityType="Version" {projectId} value="apr" disabled />
+				<StatusPicker {context} entityType="Version" {projectId} value="apr" disabled />
 			</div>
 			<div class={box}>
-				<StatusPicker {client} entityType="Version" {projectId} value="apr" readonly />
+				<StatusPicker {context} entityType="Version" {projectId} value="apr" readonly />
 			</div>
 			<div class={box}>
-				<StatusPicker {client} entityType="Version" {projectId} value="apr" invalid />
+				<StatusPicker {context} entityType="Version" {projectId} value="apr" invalid />
 			</div>
 		</div>
 	</section>
@@ -115,13 +114,13 @@
 		<h4 class={label}>Sizes</h4>
 		<div class={row}>
 			<div class={box}>
-				<StatusPicker {client} entityType="Version" {projectId} value="rev" size="sm" />
+				<StatusPicker {context} entityType="Version" {projectId} value="rev" size="sm" />
 			</div>
 			<div class={box}>
-				<StatusPicker {client} entityType="Version" {projectId} value="rev" size="md" />
+				<StatusPicker {context} entityType="Version" {projectId} value="rev" size="md" />
 			</div>
 			<div class={box}>
-				<StatusPicker {client} entityType="Version" {projectId} value="rev" size="lg" />
+				<StatusPicker {context} entityType="Version" {projectId} value="rev" size="lg" />
 			</div>
 		</div>
 	</section>

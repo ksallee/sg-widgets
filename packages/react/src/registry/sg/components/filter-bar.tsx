@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import type {
   FacetValue,
   FieldSchema,
@@ -6,14 +6,12 @@ import type {
   FilterGroup,
   Operator,
   Scalar,
-  SchemaService,
-  SgClient,
+  SgContext,
   WireGroup,
 } from '@sg-widgets/core';
 import {
   conditionArity,
   conditionParts,
-  createSchemaService,
   describeCondition,
   emptyFilter,
   facetValues,
@@ -49,8 +47,8 @@ export interface FilterBarProps extends Omit<React.HTMLAttributes<HTMLDivElement
   ref?: React.Ref<HTMLDivElement>;
 
   entityType: string;
-  client: SgClient;
-  schema?: SchemaService;
+  /** The widget context. Every read goes through it, so widgets on a page share one cache. */
+  context: SgContext;
   /** Field names to offer as pills, in order. */
   facets: string[];
   value: FilterGroup;
@@ -85,8 +83,7 @@ export interface FilterBarProps extends Omit<React.HTMLAttributes<HTMLDivElement
  */
 export function FilterBar({
   entityType,
-  client,
-  schema,
+  context,
   facets,
   value = emptyFilter(),
   hidePaths = [],
@@ -100,20 +97,19 @@ export function FilterBar({
   ref,
   ...rest
 }: FilterBarProps) {
-  const service = useMemo(() => schema ?? createSchemaService(client), [schema, client]);
   const [fields, setFields] = useState<Record<string, FieldSchema>>({});
   const [tally, setTally] = useState<Record<string, FacetValue[]>>({});
   const [counting, setCounting] = useState(true);
 
   useEffect(() => {
     let live = true;
-    void service.fields(entityType).then((loaded) => {
+    void context.schema.fields(entityType).then((loaded) => {
       if (live) setFields(loaded);
     });
     return () => {
       live = false;
     };
-  }, [service, entityType]);
+  }, [context.schema, entityType]);
 
   // Counts are read against the filter with every facet's own condition stripped, so
   // ticking one value does not empty its neighbours. One read serves every pill.
@@ -135,7 +131,7 @@ export function FilterBar({
         }
         return out;
       }
-      const rows = await client.search(entityType, {
+      const rows = await context.client.search(entityType, {
         filters,
         fields: present.map((f) => f.name),
         page: { size: sampleSize },
@@ -154,7 +150,7 @@ export function FilterBar({
       live = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [client, entityType, fields, facets.join(','), scope, sampleSize, counts]);
+  }, [context.client, entityType, fields, facets.join(','), scope, sampleSize, counts]);
 
   const conditionOf = (name: string): FilterCondition | null => findCondition(value, name)?.condition ?? null;
 
@@ -360,8 +356,7 @@ export function FilterBar({
 
       <FilterDialog
         entityType={entityType}
-        client={client}
-        schema={schema}
+        context={context}
         hidePaths={hidePaths}
         disabled={disabled}
         size={size}

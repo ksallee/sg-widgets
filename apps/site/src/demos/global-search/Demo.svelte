@@ -2,10 +2,8 @@
 	import type { EntityRef } from '@sg-widgets/core';
 	import GlobalSearch from '$lib/registry/components/global-search.svelte';
 	import { createDemoContext } from '../_shared/client';
-	import { setDemoClient } from '../_shared/svelte';
 
 	const context = createDemoContext();
-	const client = setDemoClient(context.client);
 
 	const TYPES = ['Shot', 'Asset', 'Sequence', 'Task', 'Version', 'HumanUser', 'Project'];
 
@@ -25,7 +23,7 @@
 	<section class={group}>
 		<h4 class={label}>Palette, opened by the trigger or Cmd/Ctrl+K</h4>
 		<GlobalSearch
-			{client}
+			{context}
 			entityTypes={TYPES}
 			hotkey
 			{recents}
@@ -38,7 +36,7 @@
 	<section class={group}>
 		<h4 class={label}>Inline, scoped to one project</h4>
 		<GlobalSearch
-			{client}
+			{context}
 			entityTypes={TYPES}
 			projectId={context.projectId}
 			inline

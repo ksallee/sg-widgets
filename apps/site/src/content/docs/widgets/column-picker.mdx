@@ -21,7 +21,7 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/column-picker.
 
 | prop | type | default | meaning |
 |---|---|---|---|
-| `schema` | `SchemaService` | required | Reads the schema. Build it once per app with `createSchemaService`. |
+| `context` | `SgContext` | required | The widget context. The schema is read through it, once per page. |
 | `entityType` | `string` | required | The type every path starts on. |
 | `value` | `string[]` | `[]` | The chosen dotted paths, in the order they are shown. |
 | `onValueChange` | `(value: string[]) => void` | — | Receives the new array on every add, remove and move. |

@@ -4,7 +4,7 @@
 	import GroupedList from '$lib/registry/components/grouped-list.svelte';
 	import StatusBadge from '$lib/registry/components/status-badge.svelte';
 	import { createDemoContext } from '../_shared/client';
-	import { setDemoClient } from '../_shared/svelte';
+	import { setDemoContext } from '../_shared/svelte';
 
 	const GROUP = 'step.Step.code';
 	const SUB = 'sg_description';
@@ -12,7 +12,7 @@
 	const FIELDS = ['content', 'sg_status_list', GROUP, SUB, SECONDARY];
 
 	const context = createDemoContext();
-	setDemoClient(context.client);
+	setDemoContext(context);
 
 	const source = createEntitySource({
 		client: context.client,

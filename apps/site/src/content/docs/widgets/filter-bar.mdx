@@ -29,8 +29,7 @@ the dialog; a pill holding one reads its condition as text.
 | prop | type | default | meaning |
 |---|---|---|---|
 | `entityType` | `string` | required | Type the pills and the counts read on. |
-| `client` | `SgClient` | required | Reads the schema and the rows the counts are tallied from. |
-| `schema` | `SchemaService` | one built from `client` | Share one across a page. |
+| `context` | `SgContext` | required | The widget context. Every read goes through it, so widgets on a page share one cache. |
 | `facets` | `string[]` | required | Field names to offer as pills, in order. |
 | `value` | `FilterGroup` | `emptyFilter()` | The tree the pills write into. Two-way in Svelte through `bind:value`. |
 | `counts` | `(field, filters) => Promise<Record<string, number>>` | — | Counts per value for one facet. Wire it to a `_summarize` grouping call. |

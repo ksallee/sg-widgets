@@ -10,7 +10,6 @@ const label = 'text-muted-foreground text-xs font-medium tracking-wide uppercase
 
 export default function Demo() {
   const context = useMemo(() => createDemoContext(), []);
-  const client = context.client;
   /* Prefilled so the palette has something to show before a word is typed. */
   const [recents, setRecents] = useState<EntityRef[]>([
     { type: 'Shot', id: 862, name: 'sh010_0010' },
@@ -24,7 +23,7 @@ export default function Demo() {
       <section className={group}>
         <h4 className={label}>Palette, opened by the trigger or Cmd/Ctrl+K</h4>
         <GlobalSearch
-          client={client}
+          context={context}
           entityTypes={TYPES}
           hotkey
           recents={recents}
@@ -37,7 +36,7 @@ export default function Demo() {
       <section className={group}>
         <h4 className={label}>Inline, scoped to one project</h4>
         <GlobalSearch
-          client={client}
+          context={context}
           entityTypes={TYPES}
           projectId={context.projectId}
           inline

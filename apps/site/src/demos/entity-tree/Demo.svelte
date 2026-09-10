@@ -2,10 +2,10 @@
 	import type { EntityRef, TreeNode } from '@sg-widgets/core';
 	import EntityTree from '$lib/registry/components/entity-tree.svelte';
 	import { createDemoContext } from '../_shared/client';
-	import { setDemoClient } from '../_shared/svelte';
+	import { setDemoContext } from '../_shared/svelte';
 
 	const context = createDemoContext();
-	setDemoClient(context.client);
+	setDemoContext(context);
 
 	const rootPath = `/Project/${context.projectId}`;
 	const seedPath = context.live ? null : `${rootPath}/Shot/sg_sequence/Sequence/100/id/862`;
@@ -24,7 +24,7 @@
 	<section class={group}>
 		<h4 class={label}>A project, seeded open, searchable, with checkboxes</h4>
 		<EntityTree
-			client={context.client}
+			{context}
 			{rootPath}
 			{seedPath}
 			checkable
@@ -42,13 +42,13 @@
 
 	<section class={group}>
 		<h4 class={label}>A project whose shots sit under no sequence</h4>
-		<EntityTree client={context.client} rootPath={looseRoot} maxHeight="12rem" data-testid="loose-tree" />
+		<EntityTree {context} rootPath={looseRoot} maxHeight="12rem" data-testid="loose-tree" />
 	</section>
 
 	<section class={group}>
 		<h4 class={label}>The same tree with thumbnails</h4>
 		<EntityTree
-			client={context.client}
+			{context}
 			{rootPath}
 			thumbnail="image"
 			subLabelField="description"

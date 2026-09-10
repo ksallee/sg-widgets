@@ -21,7 +21,7 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/status-multi-p
 
 | prop | type | default | meaning |
 |---|---|---|---|
-| `client` | `SgClient` | required | The site to read from. Wrap it in `createQueryCache` so widgets on a page share one read. |
+| `context` | `SgContext` | required | The widget context. The options and the status table are read through it, once per page. |
 | `entityType` | `string` | required | The type whose status field is offered. |
 | `projectId` | `number` | — | Offer the codes this project allows. |
 | `projectIds` | `number[]` | — | Offer the codes every one of these projects allows. |
@@ -37,7 +37,7 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/status-multi-p
 | `showCode` | `boolean` | `false` | Shows the raw code instead of the label. The other one stays in the tooltip. |
 | `summary` | `'chips' \| 'ellipsis' \| 'count' \| 'icons' \| 'names'` | `'ellipsis'` | What the control shows for the selection. `both` is the old spelling of `chips`. |
 | `max` | `number` | `0` | Badges drawn before the rest becomes `+n`. `0` lets the row fit what it can, and `icons` draws twice as many. |
-| `siteUrl` | `string` | — | Passed to every badge, for a sprite cell outside the status icon set. |
+| `siteUrl` | `string` | the context's | Passed to every badge, for a sprite cell outside the status icon set. |
 | `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Heights 8, 9 and 10. |
 | `open` | `boolean` | `false` | Whether the popup is showing. Two-way in Svelte. |
 | `class` / `className` | `string` | — | Merged after the widget's own classes. |

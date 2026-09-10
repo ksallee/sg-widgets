@@ -20,7 +20,7 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/status-picker.
 
 | prop | type | default | meaning |
 |---|---|---|---|
-| `client` | `SgClient` | required | The site to read from. Wrap it in `createQueryCache` so widgets on a page share one read. |
+| `context` | `SgContext` | required | The widget context. The options and the status table are read through it, once per page. |
 | `entityType` | `string` | required | The type whose status field is offered. |
 | `projectId` | `number` | — | Offer the codes this project allows. |
 | `projectIds` | `number[]` | — | Offer the codes every one of these projects allows. |
@@ -33,7 +33,7 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/status-picker.
 | `disabled` | `boolean` | `false` | Greys the control and takes it out of the tab order. |
 | `invalid` | `boolean` | `false` | Sets `aria-invalid` and the destructive ring. |
 | `showCode` | `boolean` | `false` | Shows the raw code instead of the label. The other one stays in the tooltip. |
-| `siteUrl` | `string` | — | Passed to every badge, for a sprite cell outside the status icon set. |
+| `siteUrl` | `string` | the context's | Passed to every badge, for a sprite cell outside the status icon set. |
 | `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Heights 8, 9 and 10. |
 | `open` | `boolean` | `false` | Whether the popup is showing. Two-way in Svelte. |
 | `class` / `className` | `string` | — | Merged after the widget's own classes. |

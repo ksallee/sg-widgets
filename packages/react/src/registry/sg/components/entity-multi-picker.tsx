@@ -9,15 +9,13 @@ import type {
   PickerSummary,
   SchemaService,
   SearchFieldSpec,
-  SgClient,
+  SgContext,
   StatusRecord,
   StatusService,
   WireGroup,
 } from '@sg-widgets/core';
 import {
   createEntitySearch,
-  createSchemaService,
-  createStatusService,
   entityKey,
   highlightRuns,
   holdsArmed,
@@ -210,8 +208,8 @@ export interface EntityMultiPickerBaseProps
 
   /** Types to search. One for a homogeneous picker, several for a polymorphic one. */
   entityTypes: string[];
-  /** A cached client. Every read goes through it. */
-  client: SgClient;
+  /** The widget context. Every read goes through it, so widgets on a page share one cache. */
+  context: SgContext;
   /** Field holding the row label. Defaults to the display-name chain. */
   labelField?: string;
   /**
@@ -231,7 +229,7 @@ export interface EntityMultiPickerBaseProps
   roundThumbnail?: boolean;
   /** Show the row's `code` beside the label when the two differ. */
   showCode?: boolean;
-  /** The site the status sprite is served from, for a secondary that is a status. */
+  /** The site the status sprite is served from, for a secondary that is a status. Defaults to the context's. */
   siteUrl?: string;
   /** Extra fields to request, so a caller's own sub-label or secondary can be read. */
   fields?: string[];
@@ -284,7 +282,7 @@ export interface EntityMultiPickerProps extends EntityMultiPickerBaseProps {
  */
 export function EntityMultiPicker({
   entityTypes,
-  client,
+  context,
   value = [],
   onValueChange,
   labelField,
@@ -324,10 +322,11 @@ export function EntityMultiPicker({
   const errorRef = useRef(onError);
   errorRef.current = onError;
 
-  // One schema service for the widget. The controller shares it, so a type's fields
-  // are read once however many times they are asked for.
-  const schema = useMemo(() => createSchemaService(client), [client]);
-  const statusTable = useMemo(() => createStatusService(client), [client]);
+  // The context's own services, so every widget on the page shares one schema read
+  // and one status table.
+  const schema = context.schema;
+  const statusTable = context.statuses;
+  const site = siteUrl ?? context.siteUrl;
   const secondaryStore = useMemo(
     () =>
       secondaryPlanStore(schema, statusTable, entityTypes, secondaryField, (error) =>
@@ -339,7 +338,7 @@ export function EntityMultiPicker({
 
   const [search] = useState(() =>
     createEntitySearch({
-      client,
+      client: context.client,
       schema,
       entityTypes,
       labelField,
@@ -396,7 +395,7 @@ export function EntityMultiPicker({
 
   useEffect(() => {
     search.update({
-      client,
+      client: context.client,
       schema,
       entityTypes,
       labelField,
@@ -413,7 +412,7 @@ export function EntityMultiPicker({
       debounceMs,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, client, schema, shape]);
+  }, [search, context.client, schema, shape]);
 
   useEffect(() => () => search.dispose(), [search]);
 
@@ -722,7 +721,8 @@ export function EntityMultiPicker({
               dataType={secondaryType(row)}
               field={secondaryPlan.fields[row.type] ?? null}
               statuses={secondaryPlan.statuses}
-              siteUrl={siteUrl}
+              context={context}
+              siteUrl={site}
               className="w-auto justify-end text-xs"
             />
           </span>
@@ -825,6 +825,8 @@ export function EntityMultiPicker({
                       entity={chip.entity}
                       thumbnail={chip.thumbnail}
                       size={PICKER_CHIP[size]}
+                      context={context}
+                      siteUrl={site}
                       removable={interactive}
                       onRemove={() => emit(value.filter((other) => entityKey(other) !== entityKey(chip.ref)))}
                       data-chip=""

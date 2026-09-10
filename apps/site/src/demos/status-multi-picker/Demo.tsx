@@ -19,7 +19,6 @@ const FIVE = ['ip', 'apr', 'rev', 'fin', 'vwd'];
 export default function StatusMultiPickerDemo() {
   // Live mode has one project, the toolbar's; the mock has 70 and 71.
   const context = useMemo(() => createDemoContext(), []);
-  const client = context.client;
   const projectId = context.projectId;
   const otherProjectId = context.projectFor(71);
   const [inProjectA, setInProjectA] = useState<string[]>(['ip', 'apr']);
@@ -40,7 +39,7 @@ export default function StatusMultiPickerDemo() {
           <div className={field} data-demo="p70">
             <span className={caption}>Project {projectId}</span>
             <StatusMultiPicker
-              client={client}
+              context={context}
               entityType="Version"
               projectId={projectId}
               value={inProjectA}
@@ -50,7 +49,7 @@ export default function StatusMultiPickerDemo() {
           <div className={field} data-demo="p71">
             <span className={caption}>Project {otherProjectId}</span>
             <StatusMultiPicker
-              client={client}
+              context={context}
               entityType="Version"
               projectId={otherProjectId}
               value={inProjectB}
@@ -66,7 +65,7 @@ export default function StatusMultiPickerDemo() {
           <div className={field} data-demo="both">
             <span className={caption}>The intersection of both projects&apos; codes</span>
             <StatusMultiPicker
-              client={client}
+              context={context}
               entityType="Version"
               projectIds={[projectId, otherProjectId]}
               value={shared}
@@ -83,7 +82,7 @@ export default function StatusMultiPickerDemo() {
           <div className={field} data-demo="project">
             <span className={caption}>Project&apos;s own status field</span>
             <StatusMultiPicker
-              client={client}
+              context={context}
               entityType="Project"
               value={project}
               onValueChange={setProject}
@@ -98,7 +97,7 @@ export default function StatusMultiPickerDemo() {
           <div className={field} data-demo="unknown">
             <span className={caption}>A code the field does not carry</span>
             <StatusMultiPicker
-              client={client}
+              context={context}
               entityType="Version"
               projectId={projectId}
               value={unknown}
@@ -108,7 +107,7 @@ export default function StatusMultiPickerDemo() {
           <div className={field}>
             <span className={caption}>The code instead of the label</span>
             <StatusMultiPicker
-              client={client}
+              context={context}
               entityType="Version"
               projectId={projectId}
               value={['ip', 'fin']}
@@ -127,7 +126,7 @@ export default function StatusMultiPickerDemo() {
               <div className={field} data-demo={`summary-${mode}-5`}>
                 <span className={caption}>{mode}, full width</span>
                 <StatusMultiPicker
-                  client={client}
+                  context={context}
                   entityType="Version"
                   projectId={projectId}
                   value={FIVE}
@@ -139,7 +138,7 @@ export default function StatusMultiPickerDemo() {
                 <span className={caption}>{mode}, at most 20rem</span>
                 <div className={narrow}>
                   <StatusMultiPicker
-                    client={client}
+                    context={context}
                     entityType="Version"
                     projectId={projectId}
                     value={FIVE}
@@ -153,7 +152,7 @@ export default function StatusMultiPickerDemo() {
           <div className={field} data-demo="summary-chips-2">
             <span className={caption}>chips, two selected</span>
             <StatusMultiPicker
-              client={client}
+              context={context}
               entityType="Version"
               projectId={projectId}
               value={TWO}
@@ -164,7 +163,7 @@ export default function StatusMultiPickerDemo() {
           <div className={field} data-demo="summary-names-2">
             <span className={caption}>names, two selected</span>
             <StatusMultiPicker
-              client={client}
+              context={context}
               entityType="Version"
               projectId={projectId}
               value={TWO}
@@ -181,7 +180,7 @@ export default function StatusMultiPickerDemo() {
           <div className={field} data-demo="max-one">
             <span className={caption}>One badge at most, whatever the room</span>
             <StatusMultiPicker
-              client={client}
+              context={context}
               entityType="Version"
               projectId={projectId}
               value={TWO}
@@ -198,7 +197,7 @@ export default function StatusMultiPickerDemo() {
           <div className={field}>
             <span className={caption}>Disabled</span>
             <StatusMultiPicker
-              client={client}
+              context={context}
               entityType="Version"
               projectId={projectId}
               value={['apr', 'fin']}
@@ -208,7 +207,7 @@ export default function StatusMultiPickerDemo() {
           <div className={field}>
             <span className={caption}>Read-only</span>
             <StatusMultiPicker
-              client={client}
+              context={context}
               entityType="Version"
               projectId={projectId}
               value={['apr']}
@@ -218,7 +217,7 @@ export default function StatusMultiPickerDemo() {
           <div className={field}>
             <span className={caption}>Invalid</span>
             <StatusMultiPicker
-              client={client}
+              context={context}
               entityType="Version"
               projectId={projectId}
               value={['apr', 'fin']}
@@ -234,7 +233,7 @@ export default function StatusMultiPickerDemo() {
           <div className={field}>
             <span className={caption}>sm</span>
             <StatusMultiPicker
-              client={client}
+              context={context}
               entityType="Version"
               projectId={projectId}
               value={['rev']}
@@ -244,7 +243,7 @@ export default function StatusMultiPickerDemo() {
           <div className={field}>
             <span className={caption}>md</span>
             <StatusMultiPicker
-              client={client}
+              context={context}
               entityType="Version"
               projectId={projectId}
               value={['rev']}
@@ -254,7 +253,7 @@ export default function StatusMultiPickerDemo() {
           <div className={field}>
             <span className={caption}>lg</span>
             <StatusMultiPicker
-              client={client}
+              context={context}
               entityType="Version"
               projectId={projectId}
               value={['rev']}

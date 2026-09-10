@@ -1,6 +1,5 @@
 import { Fragment, useEffect, useMemo, useState } from 'react';
-import type { EntityRef, FieldSchema, SgClient, StatusRecord } from '@sg-widgets/core';
-import { createSchemaService } from '@sg-widgets/core';
+import type { EntityRef, FieldSchema, SgContext, StatusRecord } from '@sg-widgets/core';
 import { ChevronDown, ListChecks, TriangleAlert } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -76,16 +75,17 @@ export interface ContextSelectorProps extends React.HTMLAttributes<HTMLDivElemen
   /** The root element. */
   ref?: React.Ref<HTMLDivElement>;
 
-  /** Where rows come from. Wrap it in `createQueryCache` once for the whole app. */
-  client: SgClient;
-  context?: WorkContext;
+  /** The widget context. Every read goes through it, so widgets on a page share one cache. */
+  context: SgContext;
+  /** The project, the row and the task the user is working in. */
+  workContext?: WorkContext;
   /** The person whose tasks the middle section lists. */
   currentUser?: EntityRef | null;
   /** Contexts used before, newest first. Held by the caller. */
   recents?: WorkContext[];
   recentLimit?: number;
   onRecentsChange?: (recents: WorkContext[]) => void;
-  onContextChange?: (context: WorkContext) => void;
+  onWorkContextChange?: (workContext: WorkContext) => void;
   size?: ContextSelectorSize;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -100,13 +100,13 @@ export interface ContextSelectorProps extends React.HTMLAttributes<HTMLDivElemen
  * one `_search` on Task filtered by `task_assignees`, grouped under their project.
  */
 export function ContextSelector({
-  client,
-  context = EMPTY_CONTEXT,
+  context,
+  workContext = EMPTY_CONTEXT,
   currentUser = null,
   recents = [],
   recentLimit = 5,
   onRecentsChange,
-  onContextChange,
+  onWorkContextChange,
   size = 'md',
   open: openProp,
   onOpenChange,
@@ -114,7 +114,7 @@ export function ContextSelector({
   ref,
   ...rest
 }: ContextSelectorProps) {
-  const schema = useMemo(() => createSchemaService(client), [client]);
+  const schema = context.schema;
 
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const open = openProp ?? uncontrolledOpen;
@@ -130,8 +130,10 @@ export function ContextSelector({
   const [statuses, setStatuses] = useState<Record<string, StatusRecord>>({});
   const [statusField, setStatusField] = useState<FieldSchema | null>(null);
 
-  const rootPath = context.project ? `/Project/${context.project.id}` : '/';
-  const chips = [context.project, context.entity, context.task].filter((r): r is EntityRef => r !== null);
+  const rootPath = workContext.project ? `/Project/${workContext.project.id}` : '/';
+  const chips = [workContext.project, workContext.entity, workContext.task].filter(
+    (r): r is EntityRef => r !== null,
+  );
 
   /** Tasks under their project, in the order the projects first appear. */
   const byProject = useMemo(() => {
@@ -147,10 +149,10 @@ export function ContextSelector({
 
   useEffect(() => {
     let live = true;
-    void Promise.all([client.statuses(), schema.field('Task', 'sg_status_list')])
+    void Promise.all([context.statuses.byCode(), schema.field('Task', 'sg_status_list')])
       .then(([rows, field]) => {
         if (!live) return;
-        setStatuses(Object.fromEntries(rows.map((s) => [s.code, s])));
+        setStatuses(Object.fromEntries(rows));
         setStatusField(field ?? null);
       })
       .catch(() => {
@@ -159,12 +161,12 @@ export function ContextSelector({
     return () => {
       live = false;
     };
-  }, [client, schema]);
+  }, [context.statuses, schema]);
 
   useEffect(() => {
     if (!currentUser) return;
     let live = true;
-    void client
+    void context.client
       .search('Task', {
         // `task_assignees` is a multi_entity of Group and HumanUser (entity_types/Task).
         filters: {
@@ -198,11 +200,11 @@ export function ContextSelector({
     return () => {
       live = false;
     };
-  }, [client, currentUser]);
+  }, [context.client, currentUser]);
 
   function apply(next: WorkContext): void {
     onRecentsChange?.([next, ...recents.filter((r) => keyOf(r) !== keyOf(next))].slice(0, recentLimit));
-    onContextChange?.(next);
+    onWorkContextChange?.(next);
     setOpen(false);
   }
 
@@ -217,14 +219,14 @@ export function ContextSelector({
             'border-border bg-background hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring focus-visible:ring-offset-background flex w-full min-w-0 items-center gap-2 rounded-md border text-left outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2',
             BOX[size],
           )}
-          aria-label={`Context: ${label(context)}`}
+          aria-label={`Context: ${label(workContext)}`}
         >
           <span className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
             {chips.length === 0 ? (
               <span className="text-muted-foreground text-sm">No context</span>
             ) : (
               chips.map((chip) => (
-                <EntityChip key={`${chip.type}:${chip.id}`} entity={chip} size={CHIP[size]} />
+                <EntityChip key={`${chip.type}:${chip.id}`} entity={chip} size={CHIP[size]} context={context} />
               ))
             )}
           </span>
@@ -243,7 +245,7 @@ export function ContextSelector({
                     {[recent.project, recent.entity, recent.task]
                       .filter((r): r is EntityRef => r !== null)
                       .map((chip) => (
-                        <EntityChip key={`${chip.type}:${chip.id}`} entity={chip} size={CHIP[size]} />
+                        <EntityChip key={`${chip.type}:${chip.id}`} entity={chip} size={CHIP[size]} context={context} />
                       ))}
                   </span>
                 </button>
@@ -299,6 +301,7 @@ export function ContextSelector({
                         status={statuses[row.status]}
                         field={statusField}
                         size={CHIP[size]}
+                        siteUrl={context.siteUrl}
                       />
                     </button>
                   ))}
@@ -310,7 +313,7 @@ export function ContextSelector({
           <section data-slot="context-hierarchy" className="flex flex-col gap-2">
             <h4 className={heading}>Browse</h4>
             <HierarchicalSearch
-              client={client}
+              context={context}
               rootPath={rootPath}
               size={size}
               onSelect={(leaf, path) => apply(contextFromPath(leaf, path))}

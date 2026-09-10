@@ -21,8 +21,8 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/context-select
 
 | prop | type | default | meaning |
 |---|---|---|---|
-| `client` | `SgClient` | required | Where rows come from. Wrap it in `createQueryCache` once for the app. |
-| `context` | `WorkContext` | empty | The project, row and task on show. |
+| `context` | `SgContext` | required | The widget context. Every read goes through it, so widgets on a page share one cache. |
+| `workContext` | `WorkContext` | empty | The project, row and task on show. |
 | `currentUser` | `EntityRef \| null` | `null` | Whose assigned tasks the second section lists. |
 | `recents` | `WorkContext[]` | `[]` | Contexts used before, newest first. |
 | `recentLimit` | `number` | `5` | How many recents survive a change. |
@@ -46,7 +46,7 @@ project. Picking from the tree reads the same three out of the path.
 
 | event | payload | when |
 |---|---|---|
-| `onContextChange` | `WorkContext` | The project, entity or task changed. |
+| `onWorkContextChange` | `WorkContext` | The project, entity or task changed. |
 | `onRecentsChange` | `WorkContext[]` | The recents list changed, the newest first. |
 | `onOpenChange` | `boolean` | The popover opened or closed. Svelte also binds it with `bind:open`. |
 

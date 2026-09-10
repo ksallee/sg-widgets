@@ -29,7 +29,8 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/entity-chip.js
 | `href` | `string \| ((ref) => string \| null)` | the row's page on the site | Where the chip points. |
 | `siteUrl` | `string` | the context's | The site the row's own page lives on. |
 | `preview` | `string[]` | — | Field paths shown in a hover card. Needs a context. |
-| `context` | `SgContext` | — | Supplies the site url and reads the hover card's fields. |
+| `context` | `SgContext` | — | The widget context, for the site url and for the hover card's read. |
+| `client` | `SgClient` | — | A client, for an app with no context. One context is built per client and shared. |
 | `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Heights 6, 8 and 10 for the chip; the type scale for the others. |
 | `removable` | `boolean` | `false` | Shows the remove control. |
 | `removeLabel` | `string` | derived from the name | Accessible name for the remove control. |

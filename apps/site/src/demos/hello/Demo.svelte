@@ -3,14 +3,14 @@
 
   It exists to prove the harness end to end: the shadcn-svelte Button is imported
   through the `$lib` alias straight out of packages/svelte, its classes are generated
-  by the site's Tailwind build, and the button calls the demo client.
+  by the site's Tailwind build, and the button reads through the demo context.
 -->
 <script lang="ts">
 	import { Button } from '$lib/components/ui/button/index.js';
-	import { getSgClient, setDemoClient } from '../_shared/svelte';
+	import { getSgContext, setDemoContext } from '../_shared/svelte';
 
-	setDemoClient();
-	const client = getSgClient();
+	setDemoContext();
+	const context = getSgContext();
 
 	let output = $state<string | null>(null);
 	let busy = $state(false);
@@ -18,7 +18,7 @@
 	async function loadEntityTypes() {
 		busy = true;
 		try {
-			const types = await client.entityTypes();
+			const types = await context.client.entityTypes();
 			output = types.map((t) => t.displayName).join(' · ');
 		} finally {
 			busy = false;

@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { PointerEvent as ReactPointerEvent, ReactNode, RefObject } from 'react';
-import type { ChipRow, EntityTypeInfo, PickerSummary, SchemaService } from '@sg-widgets/core';
+import type { ChipRow, EntityTypeInfo, PickerSummary, SgContext } from '@sg-widgets/core';
 import {
   filterEntityTypes,
   holdsArmed,
@@ -140,8 +140,8 @@ export interface EntityTypePickerProps extends React.HTMLAttributes<HTMLDivEleme
   /** The root element. */
   ref?: React.Ref<HTMLDivElement>;
 
-  /** Reads the site's enabled types. Build it once per app with `createSchemaService`. */
-  schema: SchemaService;
+  /** The widget context. The site's enabled types are read through it, once per page. */
+  context: SgContext;
   /** A type code in single mode, an array of them in multi mode. */
   value?: string | string[] | null;
   multiple?: boolean;
@@ -180,7 +180,7 @@ export interface EntityTypePickerProps extends React.HTMLAttributes<HTMLDivEleme
  * Multi mode keeps the popup open and ticks the chosen rows.
  */
 export function EntityTypePicker({
-  schema,
+  context,
   value = null,
   multiple = false,
   onValueChange,
@@ -203,6 +203,8 @@ export function EntityTypePicker({
   ref,
   ...rest
 }: EntityTypePickerProps) {
+  // The context's own service, so every widget on the page shares one schema read.
+  const schema = context.schema;
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const open = openProp ?? uncontrolledOpen;
   const setOpen = (next: boolean): void => {

@@ -51,10 +51,9 @@
 
 <script lang="ts">
 	import type { HTMLAttributes } from 'svelte/elements';
-	import type { SgClient } from '@sg-widgets/core';
+	import type { SgContext } from '@sg-widgets/core';
 	import {
 		breadcrumb,
-		createSchemaService,
 		hierarchyEntity,
 		hydrate,
 		matchRuns,
@@ -77,8 +76,8 @@
 	import { cn, type WithElementRef } from '$lib/utils.js';
 
 	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>, HTMLDivElement> & {
-		/** Where rows come from. Wrap it in `createQueryCache` once for the whole app. */
-		client: SgClient;
+		/** The widget context. Every read goes through it, so widgets on a page share one cache. */
+		context: SgContext;
 		/** Where the tree starts, `/Project/<id>` for one project or `/` for the site. */
 		rootPath?: string;
 		/** Types a search may end on. Browsing reaches every level whatever this says. */
@@ -90,7 +89,7 @@
 	};
 
 	let {
-		client,
+		context,
 		rootPath = '/',
 		entityTypes = HIERARCHICAL_SEARCH_TYPES,
 		onSelect,
@@ -101,7 +100,7 @@
 		...rest
 	}: Props = $props();
 
-	const schema = $derived(createSchemaService(client));
+	const schema = $derived(context.schema);
 
 	let query = $state('');
 	let rows = $state<HierarchicalSearchRow[]>([]);
@@ -162,7 +161,7 @@
 		loading = true;
 		failure = null;
 		try {
-			const node = await client.hierarchyExpand(path);
+			const node = await context.client.hierarchyExpand(path);
 			if (id !== requestId) return;
 			here = path;
 			trail = crumbs;
@@ -189,11 +188,11 @@
 			let types = typeMap(entityTypes);
 			const projectId = projectOf(rootPath);
 			if (projectId !== null) types = await scopeToProject(schema, types, projectId);
-			const found = await client.textSearch(text, types, { size: LEAF_LIMIT, number: 1 });
-			const hits = await hydrate(client, found);
+			const found = await context.client.textSearch(text, types, { size: LEAF_LIMIT, number: 1 });
+			const hits = await hydrate(context.client, found);
 			const paths = await Promise.all(
 				hits.map((hit) =>
-					client
+					context.client
 						.hierarchySearch(rootPath, hit.ref)
 						.then((answers) => answers[0] ?? null)
 						.catch(() => null)

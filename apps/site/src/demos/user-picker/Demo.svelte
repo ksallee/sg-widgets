@@ -2,9 +2,9 @@
 	import type { EntityRef } from '@sg-widgets/core';
 	import UserPicker from '$lib/registry/components/user-picker.svelte';
 	import UserMultiPicker from '$lib/registry/components/user-multi-picker.svelte';
-	import { setDemoClient } from '../_shared/svelte';
+	import { getDemoContext } from '../_shared/client';
 
-	const client = setDemoClient();
+	const context = getDemoContext();
 
 	let one = $state<EntityRef | null>(null);
 	let people = $state<EntityRef[]>([]);
@@ -33,7 +33,7 @@
 		<h4 class={label}>One person or script</h4>
 		<div class={field}>
 			<span class={caption}>One person or script, clearable</span>
-			<UserPicker {client} bind:value={one} clearable />
+			<UserPicker {context} bind:value={one} clearable />
 		</div>
 	</section>
 
@@ -41,7 +41,7 @@
 		<h4 class={label}>Several, with checkbox rows</h4>
 		<div class={field}>
 			<span class={caption}>Several people at once</span>
-			<UserMultiPicker {client} bind:value={people} clearable />
+			<UserMultiPicker {context} bind:value={people} clearable />
 		</div>
 	</section>
 
@@ -50,7 +50,7 @@
 		<div class={field}>
 			<span class={caption}>Matched on the name, the address or the login</span>
 			<UserPicker
-				{client}
+				{context}
 				bind:value={byAddress}
 				placeholder="Try ada, ada.lo or @example.studio…"
 			/>
@@ -61,7 +61,7 @@
 		<h4 class={label}>People only</h4>
 		<div class={field}>
 			<span class={caption}>People only, no script users</span>
-			<UserPicker {client} includeApiUsers={false} bind:value={peopleOnly} />
+			<UserPicker {context} includeApiUsers={false} bind:value={peopleOnly} />
 		</div>
 	</section>
 
@@ -69,7 +69,7 @@
 		<h4 class={label}>Inactive people included</h4>
 		<div class={field}>
 			<span class={caption}>Inactive people included</span>
-			<UserPicker {client} includeInactive bind:value={withInactive} />
+			<UserPicker {context} includeInactive bind:value={withInactive} />
 		</div>
 	</section>
 
@@ -77,7 +77,7 @@
 		<h4 class={label}>Bare reference, resolved on mount</h4>
 		<div class={field}>
 			<span class={caption}>Type and id in, name resolved on mount</span>
-			<UserMultiPicker {client} bind:value={bare} clearable />
+			<UserMultiPicker {context} bind:value={bare} clearable />
 		</div>
 	</section>
 
@@ -87,20 +87,20 @@
 			{#each SIZES as { size, caption: sizeCaption } (size)}
 				<div class={field}>
 					<span class={caption}>{sizeCaption}</span>
-					<UserPicker {client} value={preset} {size} />
+					<UserPicker {context} value={preset} {size} />
 				</div>
 			{/each}
 			<div class={field}>
 				<span class={caption}>Disabled</span>
-				<UserPicker {client} value={preset} disabled />
+				<UserPicker {context} value={preset} disabled />
 			</div>
 			<div class={field}>
 				<span class={caption}>Read-only</span>
-				<UserPicker {client} value={preset} readonly />
+				<UserPicker {context} value={preset} readonly />
 			</div>
 			<div class={field}>
 				<span class={caption}>Invalid</span>
-				<UserPicker {client} value={preset} invalid />
+				<UserPicker {context} value={preset} invalid />
 			</div>
 		</div>
 	</section>

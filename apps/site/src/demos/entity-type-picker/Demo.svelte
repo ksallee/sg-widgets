@@ -1,9 +1,8 @@
 <script lang="ts">
-	import { createSchemaService } from '@sg-widgets/core';
 	import EntityTypePicker from '$lib/registry/components/entity-type-picker.svelte';
-	import { setDemoClient } from '../_shared/svelte';
+	import { getDemoContext } from '../_shared/client';
 
-	const schema = createSchemaService(setDemoClient());
+	const context = getDemoContext();
 
 	let one = $state<string | null>('Shot');
 	let many = $state<string[]>(['Version']);
@@ -25,7 +24,7 @@
 	<div class={field} data-demo="single">
 		<span class={label}>Single, allow list: the six production types</span>
 		<EntityTypePicker
-			{schema}
+			{context}
 			value={one}
 			onValueChange={(next) => (one = next as string | null)}
 			allow={PRODUCTION}
@@ -36,7 +35,7 @@
 	<div class={field} data-demo="multi">
 		<span class={label}>Multi, deny list: everything but the two user types</span>
 		<EntityTypePicker
-			{schema}
+			{context}
 			multiple
 			value={many}
 			onValueChange={(next) => (many = (next as string[] | null) ?? [])}
@@ -53,7 +52,7 @@
 				<div class={field} data-demo-summary={summary}>
 					<span class={label}>{summary}, full width</span>
 					<EntityTypePicker
-						{schema}
+						{context}
 						multiple
 						value={PRODUCTION}
 						{summary}
@@ -65,7 +64,7 @@
 					<span class={label}>{summary}, at most 20rem</span>
 					<div class={narrow}>
 						<EntityTypePicker
-							{schema}
+							{context}
 							multiple
 							value={PRODUCTION}
 							{summary}
@@ -83,11 +82,11 @@
 		<div class={stack}>
 			<div class={field}>
 				<span class={label}>With the code</span>
-				<EntityTypePicker {schema} value="Version" allow={PRODUCTION} />
+				<EntityTypePicker {context} value="Version" allow={PRODUCTION} />
 			</div>
 			<div class={field}>
 				<span class={label}>Without it</span>
-				<EntityTypePicker {schema} value="Version" allow={PRODUCTION} showCode={false} />
+				<EntityTypePicker {context} value="Version" allow={PRODUCTION} showCode={false} />
 			</div>
 		</div>
 	</div>
@@ -97,23 +96,23 @@
 		<div class={stack}>
 			<div class={field}>
 				<span class={label}>sm</span>
-				<EntityTypePicker {schema} value="Shot" size="sm" allow={PRODUCTION} />
+				<EntityTypePicker {context} value="Shot" size="sm" allow={PRODUCTION} />
 			</div>
 			<div class={field}>
 				<span class={label}>lg</span>
-				<EntityTypePicker {schema} value="Asset" size="lg" allow={PRODUCTION} />
+				<EntityTypePicker {context} value="Asset" size="lg" allow={PRODUCTION} />
 			</div>
 			<div class={field}>
 				<span class={label}>Read-only</span>
-				<EntityTypePicker {schema} value="Task" readonly />
+				<EntityTypePicker {context} value="Task" readonly />
 			</div>
 			<div class={field}>
 				<span class={label}>Invalid</span>
-				<EntityTypePicker {schema} value={null} invalid />
+				<EntityTypePicker {context} value={null} invalid />
 			</div>
 			<div class={field}>
 				<span class={label}>Disabled</span>
-				<EntityTypePicker {schema} value="Version" disabled />
+				<EntityTypePicker {context} value="Version" disabled />
 			</div>
 		</div>
 	</div>

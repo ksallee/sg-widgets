@@ -5,17 +5,21 @@ import type {
   EntityCardModel,
   EntityRef,
   EntityRow,
+  FieldTextOptions,
+  SgClient,
   SgContext,
   StatusRecord,
 } from '@sg-widgets/core';
 import {
   cellValue,
+  contextFromClient,
   describeEntityCard,
   entityDetailUrl,
   fieldText,
   imageState,
   isEmptyValue,
   loadEntityCard,
+  preferencesOf,
   renderKindFor,
   urlLink,
 } from '@sg-widgets/core';
@@ -73,8 +77,10 @@ function pathOf(spec: string | CollectionColumn | null | undefined): string {
 }
 
 export interface EntityCardProps extends Omit<HTMLAttributes<HTMLDivElement>, 'children'> {
-  /** The cached client, the schema service and the site url the card reads through. */
-  context: SgContext;
+  /** The cached client, the schema service, the site url and the preferences the card reads through. */
+  context?: SgContext;
+  /** A client, for an app with no context. One context is built per client and shared. */
+  client?: SgClient;
   /** The row to show. Given, nothing is read. */
   row?: EntityRow | null;
   /** The row to read, when no `row` is given. */
@@ -107,9 +113,13 @@ export interface EntityCardProps extends Omit<HTMLAttributes<HTMLDivElement>, 'c
   actions?: ReactNode;
   /** The web app the row lives on. Defaults to the context's. */
   siteUrl?: string;
-  /** The site's `hours_per_day` from `GET /preferences`; durations then render in days. */
+  /** The site's `hours_per_day` from `GET /preferences`; durations then render in days. Defaults to the context's. */
   hoursPerDay?: number;
   locale?: string;
+  /** IANA zone a `date_time` is shown in. Defaults to the context's. */
+  timeZone?: string;
+  /** Frames a second, for a timecode. Defaults to the context's. */
+  frameRate?: number;
   /** What a field with no value shows. */
   emptyLabel?: string;
 }
@@ -157,6 +167,7 @@ function refsOf(value: unknown): EntityRef[] {
  */
 export function EntityCard({
   context,
+  client,
   row = null,
   entity = null,
   fields = [],
@@ -177,10 +188,22 @@ export function EntityCard({
   siteUrl,
   hoursPerDay,
   locale,
+  timeZone,
+  frameRate,
   emptyLabel = 'empty',
   className,
   ...rest
 }: EntityCardProps) {
+  // One context per client, so a card handed a bare client shares the page's caches.
+  const ctx = context ?? (client ? contextFromClient(client) : undefined);
+  // The site's preferences, with anything the caller named winning over them.
+  const prefs: FieldTextOptions = {
+    ...preferencesOf(ctx),
+    ...(hoursPerDay === undefined ? {} : { hoursPerDay }),
+    ...(locale === undefined ? {} : { locale }),
+    ...(timeZone === undefined ? {} : { timeZone }),
+    ...(frameRate === undefined ? {} : { frameRate }),
+  };
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   const [error, setError] = useState<string | null>(null);
   const subPath = pathOf(subLabelField);
@@ -195,13 +218,17 @@ export function EntityCard({
     let current = true;
     setLoaded(null);
     setError(null);
+    if (!ctx) {
+      setError('An entity card needs a context or a client.');
+      return;
+    }
     const options = { fields: paths, imagePath };
     const model = row
-      ? describeEntityCard(context, row, options)
+      ? describeEntityCard(ctx, row, options)
       : entity
-        ? loadEntityCard(context, entity, options)
+        ? loadEntityCard(ctx, entity, options)
         : Promise.reject(new Error('An entity card needs a row or a reference.'));
-    Promise.all([model, statuses ? Promise.resolve(null) : context.statuses.byCode()])
+    Promise.all([model, statuses ? Promise.resolve(null) : ctx.statuses.byCode()])
       .then(([card, table]) => {
         if (current) setLoaded({ card, statuses: statuses ?? Object.fromEntries(table ?? []) });
       })
@@ -212,9 +239,9 @@ export function EntityCard({
       current = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [context, row, entity?.type, entity?.id, wanted, imagePath, statuses]);
+  }, [ctx, row, entity?.type, entity?.id, wanted, imagePath, statuses]);
 
-  const site = siteUrl ?? context.siteUrl;
+  const site = siteUrl ?? ctx?.siteUrl ?? '';
   const card = loaded?.card ?? null;
   const table = loaded?.statuses ?? {};
   const Glyph = card ? (GLYPHS[card.entity.type as keyof typeof GLYPHS] ?? Tag) : Tag;
@@ -222,8 +249,7 @@ export function EntityCard({
 
   function textOf(column: EntityCardColumn): string {
     return fieldText(column.value, column.dataType, {
-      ...(hoursPerDay === undefined ? {} : { hoursPerDay }),
-      ...(locale === undefined ? {} : { locale }),
+      ...prefs,
       ...(column.field?.displayValues === undefined ? {} : { displayValues: column.field.displayValues }),
     });
   }

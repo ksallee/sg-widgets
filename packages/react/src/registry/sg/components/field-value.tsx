@@ -1,16 +1,20 @@
 import type * as React from 'react';
-import type { EntityRef, FieldSchema, SgContext, StatusRecord, UrlLinkInfo } from '@sg-widgets/core';
+import type {
+  EntityRef,
+  FieldSchema,
+  FieldTextOptions,
+  SgClient,
+  SgContext,
+  StatusRecord,
+  UrlLinkInfo,
+} from '@sg-widgets/core';
 import {
   COLOR_SENTINEL,
-  formatDate,
-  formatDateTime,
-  formatDuration,
-  formatCurrency,
-  formatFloat,
-  formatPercent,
-  formatTimecode,
+  contextFromClient,
+  fieldText,
   isEmptyValue,
   parseBgColor,
+  preferencesOf,
   renderKindFor,
   rgbToCss,
   urlLink,
@@ -30,17 +34,23 @@ export interface FieldValueProps extends Omit<React.HTMLAttributes<HTMLSpanEleme
   field?: Pick<FieldSchema, 'displayValues'> | null;
   /** `Status` rows by code, for the status name and icon (probe 010). */
   statuses?: Record<string, StatusRecord> | null;
-  /** The site the stock sprite is served from, and the site a linked row is addressed on. */
+  /** The site the stock sprite is served from, and the site a linked row is addressed on. Defaults to the context's. */
   siteUrl?: string;
   /** How an entity or multi_entity value draws: a chip, a link or bare text. */
   entityVariant?: EntityChipVariant;
   /** Field paths shown in a hover card on a linked row. Needs a context. */
   preview?: string[];
-  /** The widget context, for the site url and the hover card's read. */
+  /** The widget context: the site url, the site preferences and the hover card's read. */
   context?: SgContext;
-  /** The site's `hours_per_day` from `GET /preferences`; durations then render in days (field_types/duration). */
+  /** A client, for an app with no context. One context is built per client and shared. */
+  client?: SgClient;
+  /** The site's `hours_per_day` from `GET /preferences`; durations then render in days (field_types/duration). Defaults to the context's. */
   hoursPerDay?: number;
   locale?: string;
+  /** IANA zone a `date_time` is shown in. Defaults to the context's, then to the runtime's. */
+  timeZone?: string;
+  /** Frames a second; a timecode then carries its frame digits (field_types/timecode). Defaults to the context's. */
+  frameRate?: number;
   /** Decimals shown on a float, zeros kept. Default shows what the API sent, trailing zeros dropped. */
   precision?: number;
   /** Shown before a currency value. */
@@ -69,32 +79,41 @@ export function FieldValue({
   entityVariant = 'chip',
   preview,
   context,
+  client,
   hoursPerDay,
   locale,
+  timeZone,
+  frameRate,
   precision,
   currencySymbol,
-    localHref,
+  localHref,
   emptyLabel = 'empty',
   className,
   ...rest
 }: FieldValueProps) {
+  // One context per client, so a value handed a bare client shares the page's caches.
+  const ctx = context ?? (client ? contextFromClient(client) : undefined);
+  const site = siteUrl ?? ctx?.siteUrl;
   const kind = renderKindFor(dataType);
   // A checkbox is two-state and never null, so it is the one kind whose "empty"
   // value is a real one (field_types/checkbox).
   const empty = kind !== 'checkbox' && (kind === 'empty' || isEmptyValue(value));
-  const dateOptions = locale === undefined ? {} : { locale };
+  // The site's preferences, with anything the caller named winning over them.
+  const options: FieldTextOptions = {
+    ...preferencesOf(ctx),
+    ...(hoursPerDay === undefined ? {} : { hoursPerDay }),
+    ...(locale === undefined ? {} : { locale }),
+    ...(timeZone === undefined ? {} : { timeZone }),
+    ...(frameRate === undefined ? {} : { frameRate }),
+    ...(precision === undefined ? {} : { decimals: precision }),
+    ...(currencySymbol === undefined ? {} : { currencySymbol }),
+  };
   const rawLink = kind === 'url' ? urlLink(value) : null;
   // A local link opens through `file:`; an app that opens paths its own way rewrites the href.
   const link = rawLink && rawLink.local && localHref ? { ...rawLink, href: localHref(rawLink) } : rawLink;
   const rgb = kind === 'color' ? parseBgColor(String(value)) : null;
   const text =
-    kind === 'number'
-      ? formatNumber(value, dataType, hoursPerDay, precision, currencySymbol, locale)
-      : kind === 'date'
-        ? formatDate(String(value), dateOptions)
-        : kind === 'datetime'
-          ? formatDateTime(String(value), dateOptions)
-          : String(value);
+    kind === 'number' || kind === 'date' || kind === 'datetime' ? fieldText(value, dataType, options) : String(value);
   /** Single-line renderings carry the full value in a `title`, per the design rules. */
   const titleText =
     empty || kind === 'entity' || kind === 'multi_entity' || kind === 'image' || kind === 'checkbox'
@@ -120,9 +139,9 @@ export function FieldValue({
           entity={value as EntityRef}
           size="sm"
           variant={entityVariant}
-          siteUrl={siteUrl}
+          siteUrl={site}
           preview={preview}
-          context={context}
+          context={ctx}
         />
       ) : kind === 'multi_entity' ? (
         <span className="flex min-w-0 flex-wrap items-center gap-2">
@@ -132,9 +151,9 @@ export function FieldValue({
               entity={entity}
               size="sm"
               variant={entityVariant}
-              siteUrl={siteUrl}
+              siteUrl={site}
               preview={preview}
-              context={context}
+              context={ctx}
             />
           ))}
         </span>
@@ -144,7 +163,7 @@ export function FieldValue({
           status={statuses?.[String(value)] ?? null}
           field={field}
           size="sm"
-          siteUrl={siteUrl}
+          siteUrl={site}
         />
       ) : kind === 'image' ? (
         <Thumbnail src={String(value)} size="sm" alt="" />
@@ -202,20 +221,3 @@ export function FieldValue({
   );
 }
 
-/** The numeric family shares one render kind; the exact format comes from the data type. */
-function formatNumber(value: unknown, dataType: string, hoursPerDay: number | undefined, precision: number | undefined, symbol: string | undefined, locale: string | undefined): string {
-  switch (dataType) {
-    case 'duration':
-      return formatDuration(Number(value), hoursPerDay === undefined ? {} : { hoursPerDay });
-    case 'percent':
-      return formatPercent(value as number);
-    case 'timecode':
-      return formatTimecode(Number(value));
-    case 'currency':
-      return formatCurrency(value as string, { ...(symbol === undefined ? {} : { symbol }), ...(precision === undefined ? {} : { decimals: precision }), ...(locale === undefined ? {} : { locale }) });
-    case 'float':
-      return formatFloat(value as string, precision === undefined ? {} : { decimals: precision });
-    default:
-      return String(value);
-  }
-}

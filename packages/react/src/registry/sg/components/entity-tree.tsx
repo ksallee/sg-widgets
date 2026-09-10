@@ -1,9 +1,7 @@
 import type * as React from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
-import type { EntityRef, SgClient, TreeFieldPlan, TreeNode, TreeRow } from '@sg-widgets/core';
+import type { EntityRef, SgContext, TreeFieldPlan, TreeNode, TreeRow } from '@sg-widgets/core';
 import {
-  createSchemaService,
-  createStatusService,
   createTree,
   hierarchyLoader,
   hierarchySearcher,
@@ -35,8 +33,8 @@ const GLYPH: Record<EntityTreeSize, string> = { sm: 'size-3.5', md: 'size-4', lg
 const LEAF: Record<EntityTreeSize, 'sm' | 'md'> = { sm: 'sm', md: 'sm', lg: 'md' };
 
 export interface EntityTreeProps extends DivProps {
-  /** Reads one level per call. Wrap it in a query cache so a reopened node costs nothing. */
-  client: SgClient;
+  /** The widget context. Every read goes through it, so widgets on a page share one cache. */
+  context: SgContext;
   /** Where the tree starts, `/Project/<id>`. */
   rootPath: string;
   /** Opens the tree down to this path on mount, one level per call. */
@@ -68,7 +66,7 @@ export interface EntityTreeProps extends DivProps {
   showCode?: boolean;
   /** Extra fields to request, so a caller's own sub-label or secondary can read them. */
   fields?: string[];
-  /** The site the status sprite is served from. */
+  /** The site the status sprite is served from. Defaults to the context's. */
   siteUrl?: string;
   label?: string;
   maxHeight?: string;
@@ -105,7 +103,7 @@ function checkedAttr(state: TreeRow['checked']): 'true' | 'false' | 'mixed' {
  * words found and dims the rest (post_entity_text_search, post_hierarchy_search).
  */
 export function EntityTree({
-  client,
+  context,
   rootPath,
   seedPath = null,
   checkable = false,
@@ -134,8 +132,11 @@ export function EntityTree({
   className,
   ...rest
 }: EntityTreeProps) {
-  const schema = useMemo(() => createSchemaService(client), [client]);
-  const statusTable = useMemo(() => createStatusService(client), [client]);
+  // The context's own services, so every widget on the page shares one schema read
+  // and one status table.
+  const schema = context.schema;
+  const statusTable = context.statuses;
+  const site = siteUrl ?? context.siteUrl;
 
   /** What a level is read under: the status names, the thumbnail and whatever the row shows. */
   const requested = [
@@ -153,10 +154,10 @@ export function EntityTree({
         rootPath,
         selection,
         expandDepth,
-        loader: hierarchyLoader(client, { fields: requested.split(',') }),
-        searcher: hierarchySearcher(client, rootPath, { schema }),
+        loader: hierarchyLoader(context.client, { fields: requested.split(',') }),
+        searcher: hierarchySearcher(context.client, rootPath, { schema }),
       }),
-    [client, rootPath, selection, expandDepth, requested, schema],
+    [context.client, rootPath, selection, expandDepth, requested, schema],
   );
 
   const snap = useSyncExternalStore(engine.subscribe, engine.snapshot, engine.snapshot);
@@ -510,7 +511,7 @@ export function EntityTree({
                         field={node.entity ? (plan.status[node.entity.type] ?? null) : null}
                         variant="icon"
                         size={LEAF[size]}
-                        siteUrl={siteUrl}
+                        siteUrl={site}
                         className="shrink-0"
                       />
                     ) : null}
@@ -532,7 +533,8 @@ export function EntityTree({
                           dataType={secondaryType(node)}
                           field={node.entity ? (plan.secondary[node.entity.type] ?? null) : null}
                           statuses={plan.statuses}
-                          siteUrl={siteUrl}
+                          siteUrl={site}
+                          context={context}
                           className="w-auto justify-end text-xs"
                         />
                       </span>

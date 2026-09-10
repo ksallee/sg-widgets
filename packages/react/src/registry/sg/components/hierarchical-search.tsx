@@ -1,9 +1,8 @@
 import type * as React from 'react';
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { EntityRef, HierarchyNode, SgClient, WireCondition } from '@sg-widgets/core';
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
+import type { EntityRef, HierarchyNode, SgContext, WireCondition } from '@sg-widgets/core';
 import {
   breadcrumb,
-  createSchemaService,
   hierarchyEntity,
   hydrate,
   matchRuns,
@@ -98,8 +97,8 @@ export interface HierarchicalSearchProps
   /** The root element. */
   ref?: React.Ref<HTMLDivElement>;
 
-  /** Where rows come from. Wrap it in `createQueryCache` once for the whole app. */
-  client: SgClient;
+  /** The widget context. Every read goes through it, so widgets on a page share one cache. */
+  context: SgContext;
   /** Where the tree starts, `/Project/<id>` for one project or `/` for the site. */
   rootPath?: string;
   /** Types a search may end on. Browsing reaches every level whatever this says. */
@@ -122,7 +121,7 @@ export interface HierarchicalSearchProps
  * because the tree follows the site's own navigation configuration.
  */
 export function HierarchicalSearch({
-  client,
+  context,
   rootPath = '/',
   entityTypes = HIERARCHICAL_SEARCH_TYPES,
   onSelect,
@@ -132,7 +131,7 @@ export function HierarchicalSearch({
   ref,
   ...rest
 }: HierarchicalSearchProps) {
-  const schema = useMemo(() => createSchemaService(client), [client]);
+  const schema = context.schema;
 
   const [query, setQueryState] = useState('');
   const [rows, setRows] = useState<HierarchicalSearchRow[]>([]);
@@ -172,7 +171,7 @@ export function HierarchicalSearch({
       setLoading(true);
       setFailure(null);
       try {
-        const node = await client.hierarchyExpand(path);
+        const node = await context.client.hierarchyExpand(path);
         if (id !== requestId.current) return;
         setHere(path);
         setTrail(crumbs);
@@ -185,7 +184,7 @@ export function HierarchicalSearch({
         if (id === requestId.current) setLoading(false);
       }
     },
-    [browseRow, client],
+    [browseRow, context.client],
   );
 
   /**
@@ -202,11 +201,11 @@ export function HierarchicalSearch({
         let types = typeMap(entityTypes);
         const projectId = projectOf(rootPath);
         if (projectId !== null) types = await scopeToProject(schema, types, projectId);
-        const found = await client.textSearch(text, types, { size: LEAF_LIMIT, number: 1 });
-        const hits = await hydrate(client, found);
+        const found = await context.client.textSearch(text, types, { size: LEAF_LIMIT, number: 1 });
+        const hits = await hydrate(context.client, found);
         const paths = await Promise.all(
           hits.map((hit) =>
-            client
+            context.client
               .hierarchySearch(rootPath, hit.ref)
               .then((answers) => answers[0] ?? null)
               .catch(() => null),
@@ -240,7 +239,7 @@ export function HierarchicalSearch({
         if (id === requestId.current) setLoading(false);
       }
     },
-    [client, entityTypes, rootPath, schema],
+    [context.client, entityTypes, rootPath, schema],
   );
 
   const setQuery = useCallback(
@@ -312,7 +311,7 @@ export function HierarchicalSearch({
     void browse(rootPath, []);
     // Only a new root reopens the tree; drilling calls `browse` itself.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rootPath, client]);
+  }, [rootPath, context.client]);
 
   return (
     <div ref={ref} data-slot="hierarchical-search" className={cn('w-full', className)} {...rest}>

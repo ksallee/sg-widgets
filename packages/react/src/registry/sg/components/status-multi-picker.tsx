@@ -1,9 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import type { PointerEvent as ReactPointerEvent, ReactNode, RefObject } from 'react';
-import type { ChipRow, PickerSummary, SgClient, StatusOption, StatusRecord } from '@sg-widgets/core';
+import type { ChipRow, PickerSummary, SgContext, StatusOption, StatusRecord } from '@sg-widgets/core';
 import {
-  createSchemaService,
-  createStatusService,
   holdsArmed,
   matchesTokens,
   pickerKeyIntent,
@@ -146,8 +144,8 @@ export interface StatusMultiPickerProps extends React.HTMLAttributes<HTMLDivElem
   /** The root element. */
   ref?: React.Ref<HTMLDivElement>;
 
-  /** The site to read from. Wrap it in `createQueryCache` so widgets on a page share one read. */
-  client: SgClient;
+  /** The widget context. The options and the status table are read through it, once per page. */
+  context: SgContext;
   entityType: string;
   /** Offer the codes this project allows. */
   projectId?: number;
@@ -171,7 +169,7 @@ export interface StatusMultiPickerProps extends React.HTMLAttributes<HTMLDivElem
   summary?: StatusMultiPickerSummary;
   /** Badges drawn before the rest becomes `+n`. `0` lets the row fit what it can. */
   max?: number;
-  /** The site the stock sprite is served from, passed to every badge. */
+  /** The site the stock sprite is served from, passed to every badge. Defaults to the context's. */
   siteUrl?: string;
   size?: StatusMultiPickerSize;
   /** Whether the popup is showing. */
@@ -191,16 +189,18 @@ const LOADING: Loaded = { loading: true, error: null, options: [], statuses: new
 
 /**
  * One load, as a store. The read starts in a memo over the props and goes through the
- * cache the client carries, so it is never an effect re-firing on a "last seen" key.
+ * context's cache, so it is never an effect re-firing on a "last seen" key.
  */
 function statusOptionStore(
-  client: SgClient,
+  context: SgContext,
   entityType: string,
   projectKey: string,
   field: string | undefined,
 ) {
-  const schema = createSchemaService(client);
-  const statuses = createStatusService(client);
+  // The context's own services, so every widget on the page shares one schema read
+  // and one status table.
+  const schema = context.schema;
+  const statuses = context.statuses;
   const ids = projectKey === '' ? [] : projectKey.split(',').map(Number);
   const [first] = ids;
   const options =
@@ -251,7 +251,7 @@ function statusOptionStore(
  * (field_types/status_list).
  */
 export function StatusMultiPicker({
-  client,
+  context,
   entityType,
   projectId,
   projectIds,
@@ -276,10 +276,13 @@ export function StatusMultiPicker({
   ref,
   ...rest
 }: StatusMultiPickerProps) {
+  const site = siteUrl ?? context.siteUrl;
   const projectKey = (projectIds ?? (projectId === undefined ? [] : [projectId])).join(',');
   const store = useMemo(
-    () => statusOptionStore(client, entityType, projectKey, field),
-    [client, entityType, projectKey, field],
+    () => statusOptionStore(context, entityType, projectKey, field),
+    // The services are what the store reads through, and they outlive a context copy.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [context.schema, context.statuses, entityType, projectKey, field],
   );
   const query = useSyncExternalStore(store.subscribe, store.snapshot, store.snapshot);
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
@@ -408,7 +411,7 @@ export function StatusMultiPicker({
       variant={variant}
       size={BADGE[size]}
       label={showCode ? 'code' : 'name'}
-      siteUrl={siteUrl}
+      siteUrl={site}
       className="min-w-0"
     />
   );

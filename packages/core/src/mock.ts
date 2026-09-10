@@ -26,8 +26,8 @@ import type {
 import { SgApiError } from './client.js';
 import type { EntityRef, TextSearchFilter, WireCondition, WireGroup } from './filter.js';
 import { toFilterArray } from './filter.js';
-import type { Operator } from './field-types.js';
-import { isFilterable, isLinkType, isNumericType, NEGATING_OPERATORS, operatorsFor } from './field-types.js';
+import type { Operator, TimeUnit } from './field-types.js';
+import { isFilterable, isLinkType, isNumericType, NEGATING_OPERATORS, operatorsFor, TIME_UNITS } from './field-types.js';
 import type { FieldSchema } from './schema.js';
 import { displayNameOf } from './schema.js';
 import type { StatusIcon, StatusRecord } from './status.js';
@@ -55,6 +55,12 @@ export interface MockClientOptions {
   failNext?: MockFailure | null;
   /** How many rows of the scaled types to generate. Default 60 Versions. */
   counts?: { versions?: number };
+  /**
+   * What `in_last`, `in_next` and `in_calendar_*` resolve against: an ISO string,
+   * epoch milliseconds, or a function read on every call. Default: the current time.
+   * Fixture dates are offsets from `MOCK_NOW`, so pin it there to filter them.
+   */
+  now?: string | number | (() => number);
 }
 
 /* -------------------------------------------------------------------------- */
@@ -371,7 +377,11 @@ function mulberry32(seed: number): () => number {
   };
 }
 
+/** The mock site's today. Every fixture date is an offset in days from it. */
 const EPOCH = Date.UTC(2026, 0, 5);
+
+/** Midday on the mock site's today, for a caller pinning `now` so relative-date filters land on the fixtures. */
+export const MOCK_NOW = `${new Date(EPOCH + 12 * 3_600_000).toISOString().slice(0, 19)}Z`;
 
 function isoDate(dayOffset: number): string {
   return new Date(EPOCH + dayOffset * 86_400_000).toISOString().slice(0, 10);
@@ -812,11 +822,13 @@ function buildFixtures(seed: number, counts: { versions?: number } = {}): Fixtur
 export class MockClient implements SgClient {
   private readonly fixtures: Fixtures;
   private readonly latencyMs: number;
+  private readonly clock: () => number;
   private pendingFailure: MockFailure | null;
 
   constructor(options: MockClientOptions = {}) {
     this.fixtures = buildFixtures(options.seed ?? 1, options.counts ?? {});
     this.latencyMs = options.latencyMs ?? 0;
+    this.clock = toClock(options.now);
     this.pendingFailure = options.failNext ?? null;
   }
 
@@ -1456,9 +1468,10 @@ export class MockClient implements SgClient {
     // `name_is`, `name_contains` and `name_not_contains` read the target's cached_display_name,
     // which a stored `{type, id}` link does not carry, so decorate before comparing.
     const values = operator.startsWith('name_') ? raw.map((v) => this.decorate(v)) : raw;
+    const now = this.clock();
     // A dotted path that reaches several rows matches if any of them does.
-    if (values.length > 1) return values.some((v) => evaluate(dataType, operator, v ?? null, expected));
-    return evaluate(dataType, operator, values.length === 0 ? null : (values[0] ?? null), expected);
+    if (values.length > 1) return values.some((v) => evaluate(dataType, operator, v ?? null, expected, now));
+    return evaluate(dataType, operator, values.length === 0 ? null : (values[0] ?? null), expected, now);
   }
 
   /* ---------------------------------------------------------------------- */
@@ -1555,13 +1568,147 @@ function sortCompare(a: unknown, b: unknown): number {
   return compare(a, b) ?? 0;
 }
 
+/* -------------------------------------------------------------------------- */
+/* the clock, and the date operators read off it                              */
+/* -------------------------------------------------------------------------- */
+
+const HOUR_MS = 3_600_000;
+const DAY_MS = 86_400_000;
+
+function toClock(now: MockClientOptions['now']): () => number {
+  if (typeof now === 'function') return now;
+  if (typeof now === 'number') return () => now;
+  if (typeof now === 'string') {
+    const fixed = Date.parse(now);
+    if (Number.isNaN(fixed)) throw new TypeError(`MockClient: 'now' is not a date: ${now}`);
+    return () => fixed;
+  }
+  return () => Date.now();
+}
+
+const RELATIVE_OPERATORS: ReadonlySet<Operator> = new Set(['in_last', 'not_in_last', 'in_next', 'not_in_next']);
+const CALENDAR_OPERATORS: ReadonlySet<Operator> = new Set([
+  'in_calendar_day', 'in_calendar_week', 'in_calendar_month', 'in_calendar_year',
+]);
+
+/** A value list the way the API prints one back in an error. */
+function printList(values: readonly unknown[]): string {
+  return `[${values.map((v) => JSON.stringify(v)).join(', ')}]`;
+}
+
+/** `[count, UNIT]`, with the three 400s the API answers for a malformed one (field_types/date). */
+function relativeValue(operator: Operator, expected: unknown): [number, TimeUnit] {
+  const parts = Array.isArray(expected) ? expected : [expected];
+  if (parts.length !== 2) {
+    throw new SgApiError(400, null, `API read() '${operator}' 'relation' expects a 2-element array: ${printList(parts)}`);
+  }
+  const [count, unit] = parts as [unknown, unknown];
+  if (!TIME_UNITS.includes(unit as TimeUnit)) {
+    throw new SgApiError(
+      400,
+      null,
+      `API read() '${operator}' 'relation' doesn't support the '${String(unit)}' time unit: ${printList(parts)}  Valid time units: ${printList(TIME_UNITS)}`,
+    );
+  }
+  if (typeof count !== 'number' || !Number.isInteger(count) || count <= 0) {
+    // The API's own wording, missing word included.
+    throw new SgApiError(400, null, `API read() '${operator}' 'relation' expects at a positive Integer time unit`);
+  }
+  return [count, unit as TimeUnit];
+}
+
+/** Shift a UTC instant by whole months, clamping a day the target month does not have. */
+function shiftMonths(t: number, months: number): number {
+  const d = new Date(t);
+  const day = d.getUTCDate();
+  const last = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + months + 1, 0)).getUTCDate();
+  return Date.UTC(
+    d.getUTCFullYear(),
+    d.getUTCMonth() + months,
+    Math.min(day, last),
+    d.getUTCHours(),
+    d.getUTCMinutes(),
+    d.getUTCSeconds(),
+    d.getUTCMilliseconds(),
+  );
+}
+
+/** The window `[count, UNIT]` names: back to `now`, or forward from it. */
+function relativeWindow(now: number, count: number, unit: TimeUnit, forward: boolean): [number, number] {
+  const sign = forward ? 1 : -1;
+  const edge =
+    unit === 'HOUR' ? now + sign * count * HOUR_MS
+    : unit === 'DAY' ? now + sign * count * DAY_MS
+    : unit === 'WEEK' ? now + sign * count * 7 * DAY_MS
+    : unit === 'MONTH' ? shiftMonths(now, sign * count)
+    : shiftMonths(now, sign * count * 12);
+  return forward ? [now, edge] : [edge, now];
+}
+
+/**
+ * The UTC calendar bucket `offset` from the one holding `now`, inclusive at both ends.
+ * A week runs Monday to Sunday: the corpus pins the buckets to UTC but not the first day.
+ */
+function calendarWindow(now: number, operator: Operator, offset: number): [number, number] {
+  const d = new Date(now);
+  const year = d.getUTCFullYear();
+  const month = d.getUTCMonth();
+  if (operator === 'in_calendar_year') return [Date.UTC(year + offset, 0, 1), Date.UTC(year + offset + 1, 0, 1) - 1];
+  if (operator === 'in_calendar_month') return [Date.UTC(year, month + offset, 1), Date.UTC(year, month + offset + 1, 1) - 1];
+  const midnight = Date.UTC(year, month, d.getUTCDate());
+  if (operator === 'in_calendar_day') {
+    const start = midnight + offset * DAY_MS;
+    return [start, start + DAY_MS - 1];
+  }
+  const start = midnight - ((d.getUTCDay() + 6) % 7) * DAY_MS + offset * 7 * DAY_MS;
+  return [start, start + 7 * DAY_MS - 1];
+}
+
+/**
+ * The inclusive span a stored value covers. A `date` has no time of day and stands for its whole
+ * UTC day, which is why a window shorter than a day still matches today (field_types/date).
+ */
+function span(dataType: string, value: unknown): [number, number] | null {
+  if (typeof value !== 'string') return null;
+  const t = Date.parse(value);
+  if (Number.isNaN(t)) return null;
+  return dataType === 'date' ? [t, t + DAY_MS - 1] : [t, t];
+}
+
+function within(dataType: string, actual: unknown, window: [number, number]): boolean {
+  const covered = span(dataType, actual);
+  return covered !== null && covered[0] <= window[1] && covered[1] >= window[0];
+}
+
+/** A relative or calendar date operator, resolved against the clock. */
+function matchTemporal(dataType: string, operator: Operator, actual: unknown, expected: unknown, now: number): boolean {
+  if (RELATIVE_OPERATORS.has(operator)) {
+    // Validated before the row is read: a malformed value 400s whatever the rows hold.
+    const [count, unit] = relativeValue(operator, expected);
+    const negating = NEGATING_OPERATORS.has(operator);
+    // `not_in_last` and `not_in_next` match a row with no date at all (field_types/date).
+    if (isNullish(actual)) return negating;
+    const forward = operator === 'in_next' || operator === 'not_in_next';
+    const hit = within(dataType, actual, relativeWindow(now, count, unit, forward));
+    return negating ? !hit : hit;
+  }
+  // A signed offset from the current bucket, 0 being this one, taken bare or as a one-element array.
+  const offset = Number(Array.isArray(expected) ? expected[0] : expected);
+  // A non-integer offset is not measured: nothing matches, rather than a 400 the API may not answer.
+  if (!Number.isInteger(offset)) return false;
+  return within(dataType, actual, calendarWindow(now, operator, offset));
+}
+
 function namesOf(actual: unknown): string[] {
   return refsOf(actual)
     .map((r) => (typeof r.name === 'string' ? r.name : ''))
     .filter(Boolean);
 }
 
-function evaluate(dataType: string, operator: Operator, actual: unknown, expected: unknown): boolean {
+function evaluate(dataType: string, operator: Operator, actual: unknown, expected: unknown, now: number): boolean {
+  if (RELATIVE_OPERATORS.has(operator) || CALENDAR_OPERATORS.has(operator)) {
+    return matchTemporal(dataType, operator, actual, expected, now);
+  }
   // Every negating operator also matches rows where the field is null: `is_not X` is not the
   // complement of `is X` on this API (field_types/date, field_types/number, field_types/entity).
   if (NEGATING_OPERATORS.has(operator) && isNullish(actual)) return true;
@@ -1610,9 +1757,8 @@ function evaluate(dataType: string, operator: Operator, actual: unknown, expecte
     case 'name_not_contains':
       return !namesOf(actual).some((n) => n.toLowerCase().includes(String(expected).toLowerCase()));
     default:
-      // The relative and calendar date operators are not modelled: they need a clock, and a widget
-      // that wants them can serialise them and hit a real site.
-      throw new SgApiError(400, null, `MockClient does not implement the '${operator}' relation.`);
+      // The date operators are handled above; every other operator in the vocabulary has a case.
+      return false;
   }
 }
 

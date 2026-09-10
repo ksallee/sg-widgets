@@ -24,7 +24,8 @@ function initial(live: boolean): FilterGroup {
     condition('entity.Shot.sg_working_duration', 'greater_than', 90),
     group('or', [
       condition('code', 'contains', 'comp'),
-      condition('created_at', 'greater_than', '2025-01-01T00:00:00Z'),
+      condition('created_at', 'in_last', [3, 'MONTH']),
+      condition('entity.Shot.sg_turnover_date', 'in_next', [2, 'WEEK']),
     ]),
   ]);
 }

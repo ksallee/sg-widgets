@@ -19,6 +19,7 @@ import {
   createQueryCache,
   createSgContext,
   MockClient,
+  MOCK_NOW,
   type MockClientOptions,
   type SgClient,
   type SgContext,
@@ -28,12 +29,19 @@ import { demoProject, isLive, liveClient, liveContext } from './live';
 /** The project the mock fixtures are built around. */
 const MOCK_PROJECT_ID = 70;
 
+/**
+ * The options every mock client on this site is built with. The clock is pinned to the
+ * day the fixtures are dated around, so a relative or calendar date filter lands on rows
+ * and answers the same thing on every run.
+ */
+const MOCK: MockClientOptions = { seed: 1, latencyMs: 150, now: MOCK_NOW };
+
 let singleton: SgClient | undefined;
 
 /** The one client every demo on this site shares. */
 export function getDemoClient(): SgClient {
   if (isLive()) return liveClient();
-  singleton ??= createQueryCache(new MockClient({ seed: 1, latencyMs: 150 }));
+  singleton ??= createQueryCache(new MockClient(MOCK));
   return singleton;
 }
 
@@ -61,7 +69,7 @@ function scoped(context: SgContext, live: boolean): DemoContext {
  */
 export function createDemoContext(options: MockClientOptions = {}): DemoContext {
   if (isLive()) return scoped(liveContext(), true);
-  return scoped(createSgContext({ client: new MockClient({ seed: 1, latencyMs: 150, ...options }) }), false);
+  return scoped(createSgContext({ client: new MockClient({ ...MOCK, ...options }) }), false);
 }
 
 /**
@@ -71,6 +79,6 @@ export function createDemoContext(options: MockClientOptions = {}): DemoContext 
  * an armed failure is a fixture, not something to ask a site for.
  */
 export function createDemoClient(options: MockClientOptions = {}): { mock: MockClient; client: SgClient } {
-  const mock = new MockClient({ seed: 1, latencyMs: 150, ...options });
+  const mock = new MockClient({ ...MOCK, ...options });
   return { mock, client: createQueryCache(mock) };
 }

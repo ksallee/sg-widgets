@@ -87,6 +87,8 @@ export interface TreeRow {
   selected: boolean;
   /** True on the one node that owns the tab stop. */
   focused: boolean;
+  /** True when the caller disabled the node: the cursor skips it and it never selects. */
+  disabled: boolean;
   /** True when the search placed this row, or its label holds every word. */
   match: boolean;
 }
@@ -107,6 +109,8 @@ export interface TreeState {
   /** Paths whose box is fully checked, branches included. */
   checked: string[];
   selected: string[];
+  /** Paths that are open, in visible order. */
+  expanded: string[];
 }
 
 /** A keyboard event, reduced to what the model reads. */
@@ -134,6 +138,8 @@ export interface TreeOptions {
   searchTypes?: readonly string[];
   /** How many levels `expandAll` opens under a node. Default 3. */
   expandDepth?: number;
+  /** True for a node the cursor skips and selection refuses. */
+  disabled?: (node: TreeNode) => boolean;
   /** How long a type-ahead buffer survives, in milliseconds. Default 800. */
   typeAheadMs?: number;
   /** The clock type-ahead measures on. */
@@ -171,6 +177,10 @@ export interface TreeEngine {
   expandAll(path: string, depth?: number): Promise<void>;
   /** Move the focus cursor. A path outside the visible list is ignored. */
   focus(path: string): void;
+  /** Open exactly these paths, reading whatever level is not loaded, and shut the rest. */
+  setExpanded(paths: readonly string[]): Promise<void>;
+  /** Select exactly these paths. A path outside the tree is dropped. */
+  setSelected(paths: readonly string[]): void;
   setChecked(path: string, on: boolean): void;
   toggleChecked(path: string): void;
   /** The rows the checked nodes stand for, in visible order. */
@@ -261,11 +271,13 @@ export function createTree(options: TreeOptions): TreeEngine {
   function build(): TreeState {
     const rows: TreeRow[] = [];
     const marked: string[] = [];
+    const open: string[] = [];
     const walk = (path: string): void => {
       const node = nodes.get(path);
       if (!node) return;
       const match = matches.has(path);
       if (match) marked.push(path);
+      if (expanded.has(path)) open.push(path);
       rows.push({
         node,
         expanded: expanded.has(path),
@@ -273,6 +285,7 @@ export function createTree(options: TreeOptions): TreeEngine {
         checked: checkStateOf(path),
         selected: selected.has(path),
         focused: cursor === path,
+        disabled: isDisabled(path),
         match,
       });
       if (expanded.has(path)) for (const child of levels.get(path) ?? []) walk(child);
@@ -288,7 +301,14 @@ export function createTree(options: TreeOptions): TreeEngine {
       matches: marked,
       checked: [...checked],
       selected: [...selected],
+      expanded: open,
     };
+  }
+
+  /** True when the caller disabled the node the path stands for. */
+  function isDisabled(path: string): boolean {
+    const node = nodes.get(path);
+    return node !== undefined && options.disabled?.(node) === true;
   }
 
   function visiblePaths(): string[] {
@@ -411,14 +431,31 @@ export function createTree(options: TreeOptions): TreeEngine {
 
   /* the cursor ------------------------------------------------------------ */
 
+  /** The cursor lands on an enabled row or stays put, so a disabled node is never focused. */
   function moveTo(index: number): void {
     const paths = visiblePaths();
     if (paths.length === 0) return;
     const clamped = Math.max(0, Math.min(index, paths.length - 1));
-    const next = paths[clamped];
+    const step = clamped >= paths.indexOf(cursor ?? '') ? 1 : -1;
+    let at = clamped;
+    while (at >= 0 && at < paths.length && isDisabled(paths[at] as string)) at += step;
+    const next = paths[at];
     if (next === undefined || next === cursor) return;
     cursor = next;
     emit();
+  }
+
+  /** Move one enabled row up or down. */
+  function moveBy(step: number): void {
+    const paths = visiblePaths();
+    const at = paths.indexOf(cursor ?? '');
+    for (let next = at + step; next >= 0 && next < paths.length; next += step) {
+      const path = paths[next] as string;
+      if (isDisabled(path)) continue;
+      cursor = path;
+      emit();
+      return;
+    }
   }
 
   /** The next visible node whose label starts with the buffer, wrapping past the cursor. */
@@ -436,6 +473,7 @@ export function createTree(options: TreeOptions): TreeEngine {
     const offset = repeated ? 1 : 0;
     for (let step = 0; step < paths.length; step += 1) {
       const path = paths[(from + offset + step) % paths.length] as string;
+      if (isDisabled(path)) continue;
       if (nodes.get(path)?.label.toLowerCase().startsWith(needle)) {
         cursor = path;
         emit();
@@ -572,13 +610,34 @@ export function createTree(options: TreeOptions): TreeEngine {
     },
 
     focus(path: string): void {
-      if (!nodes.has(path) || cursor === path) return;
+      if (!nodes.has(path) || cursor === path || isDisabled(path)) return;
       cursor = path;
       emit();
     },
 
+    async setExpanded(paths: readonly string[]): Promise<void> {
+      const wanted = new Set(paths);
+      // The root holds the list together: shutting it would empty the tree.
+      wanted.add(rootPath);
+      for (const path of [...expanded]) if (!wanted.has(path)) expanded.delete(path);
+      emit();
+      // Shallowest first: a deeper path is only a node once the level above it has been
+      // read, so opening in order is what makes a whole branch reachable in one call.
+      const order = [...wanted].sort((a, b) => a.split('/').length - b.split('/').length);
+      for (const path of order) if (nodes.has(path)) await engine.expand(path);
+    },
+
+    setSelected(paths: readonly string[]): void {
+      const wanted = paths.filter((path) => nodes.has(path) && !isDisabled(path));
+      const only = selectionMode === 'multiple' ? wanted : wanted.slice(0, 1);
+      if (selectionMode === 'none') return;
+      selected.clear();
+      for (const path of only) selected.add(path);
+      emit();
+    },
+
     setChecked(path: string, on: boolean): void {
-      if (!nodes.has(path)) return;
+      if (!nodes.has(path) || isDisabled(path)) return;
       spread(path, on);
       settleAncestors(path);
       emit();
@@ -601,7 +660,7 @@ export function createTree(options: TreeOptions): TreeEngine {
     },
 
     select(path: string, selectOptions: TreeSelectOptions = {}): void {
-      if (selectionMode === 'none' || !nodes.has(path)) return;
+      if (selectionMode === 'none' || !nodes.has(path) || isDisabled(path)) return;
       if (selectionMode === 'multiple' && selectOptions.additive) {
         if (!selected.delete(path)) selected.add(path);
       } else if (selectionMode === 'multiple') {
@@ -677,10 +736,10 @@ export function createTree(options: TreeOptions): TreeEngine {
       const node = path === undefined ? undefined : nodes.get(path);
       switch (event.key) {
         case 'ArrowDown':
-          moveTo(index + 1);
+          moveBy(1);
           return true;
         case 'ArrowUp':
-          moveTo(index - 1);
+          moveBy(-1);
           return true;
         case 'ArrowRight':
           if (!node) return false;

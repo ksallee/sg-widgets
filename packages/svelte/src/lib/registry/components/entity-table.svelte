@@ -1,6 +1,6 @@
 <script lang="ts" module>
 	import type { Component } from 'svelte';
-	import type { CollectionColumn, FieldSchema } from '@sg-widgets/core';
+	import type { CollectionColumn, EntityRow, FieldSchema } from '@sg-widgets/core';
 
 	export type EntityTableDensity = 'compact' | 'default';
 	export type EntityTableSize = 'sm' | 'md' | 'lg';
@@ -30,18 +30,73 @@
 	const TEXT: Record<EntityTableSize, string> = { sm: 'text-xs', md: 'text-sm', lg: 'text-base' };
 	const HEAD: Record<EntityTableSize, string> = { sm: 'h-9', md: 'h-10', lg: 'h-11' };
 
+	/** What a `row` snippet is handed. It draws the cells of one row, not the row's box. */
+	export interface EntityTableRowContext {
+		row: EntityRow;
+		/** The row's id, as `getRowId` derives it. */
+		id: string;
+		index: number;
+		selected: boolean;
+		disabled: boolean;
+		columns: CollectionColumn[];
+	}
+
+	/** What a `cell` snippet is handed. It draws a cell's contents, not the cell. */
+	export interface EntityTableCellContext {
+		row: EntityRow;
+		id: string;
+		column: CollectionColumn;
+		value: unknown;
+		disabled: boolean;
+	}
+
+	/** What a `groupHeader` snippet is handed. It draws the header's contents. */
+	export interface EntityTableGroupContext {
+		/** The value the run shares. */
+		value: unknown;
+		column: CollectionColumn | null;
+		/** Rows loaded under this header. */
+		count: number;
+		expanded: boolean;
+		id: string;
+	}
+
 	/** The select column's id, which is never a field path. */
 	const SELECT = '__select';
+
+	/** Said on every editable cell, because nothing else on it says an edit is possible. */
+	const EDIT_HINT = 'Double-click or press Enter to edit';
 
 	/** The popups a cell editor opens. Each is portalled out of the table's own tree. */
 	const EDITOR_POPUP = '[data-slot="popover-content"],[data-slot="select-content"],[data-picker]';
 </script>
 
 <script lang="ts">
-	import type { Snippet } from 'svelte';
+	import { untrack, type Snippet } from 'svelte';
 	import type { HTMLAttributes } from 'svelte/elements';
-	import type { EntityRef, EntityRow, EntitySource, SgContext, SortSpec, StatusRecord } from '@sg-widgets/core';
-	import { cellValue, describePaging, isEditableType, preferencesOf, rowKey } from '@sg-widgets/core';
+	import type {
+		EntityRef,
+		EntitySource,
+		RowDisabledFn,
+		RowIdFn,
+		SgContext,
+		SortSpec,
+		SourceFilters,
+		StatusRecord
+	} from '@sg-widgets/core';
+	import {
+		cellValue,
+		describePaging,
+		idsForRefs,
+		isEditableType,
+		preferencesOf,
+		rowIdOf,
+		rowIsDisabled,
+		sameFilters,
+		sameIds,
+		sameRefs,
+		sameSort
+	} from '@sg-widgets/core';
 	import {
 		columnGroupingFeature,
 		columnOrderingFeature,
@@ -99,9 +154,24 @@
 		size?: EntityTableSize;
 		/** Draws a checkbox column and reports the selection. */
 		selectable?: boolean;
+		/** The selected rows, two-way. */
+		selection?: EntityRef[];
 		onSelectionChange?: (rows: EntityRef[]) => void;
+		/** How a row is keyed, in the DOM and in the selection. Default `Type:id`. */
+		getRowId?: RowIdFn;
+		/** True for a row that cannot be selected, edited or reached by the keyboard. */
+		isRowDisabled?: RowDisabledFn;
 		/** Collapse rows under headers of a shared value at this path. */
 		groupBy?: string | null;
+		/** Ids of the group headers that are shut, two-way. */
+		collapsed?: string[];
+		onCollapsedChange?: (ids: string[]) => void;
+		/** The source's sort, two-way, so a SortPicker drops into the toolbar. */
+		sort?: SortSpec[];
+		onSortChange?: (sort: SortSpec[]) => void;
+		/** The source's filter, two-way, so a FilterBar drops into the toolbar. */
+		filters?: SourceFilters;
+		onFiltersChange?: (filters: SourceFilters) => void;
 		/** Opens an editor on a double-click or Enter in an editable cell. */
 		editable?: boolean;
 		editorFor?: EditorFor;
@@ -118,6 +188,12 @@
 		toolbarStart?: Snippet;
 		/** Right region of the toolbar above the table. */
 		toolbarEnd?: Snippet;
+		/** Draws the cells of one row. Without it, the columns draw themselves. */
+		row?: Snippet<[EntityTableRowContext]>;
+		/** Draws one cell's contents. Ignored where `row` is given. */
+		cell?: Snippet<[EntityTableCellContext]>;
+		/** Draws a group header's contents. */
+		groupHeader?: Snippet<[EntityTableGroupContext]>;
 	};
 
 	let {
@@ -132,8 +208,17 @@
 		density = 'default',
 		size = 'md',
 		selectable = false,
+		selection = $bindable([]),
 		onSelectionChange,
+		getRowId,
+		isRowDisabled,
 		groupBy = null,
+		collapsed = $bindable([]),
+		onCollapsedChange,
+		sort = $bindable(),
+		onSortChange,
+		filters = $bindable(),
+		onFiltersChange,
 		editable = false,
 		editorFor,
 		showCode = false,
@@ -143,6 +228,9 @@
 		emptyLabel = 'No rows',
 		toolbarStart,
 		toolbarEnd,
+		row: rowSnippet,
+		cell: cellSnippet,
+		groupHeader,
 		class: className,
 		ref = $bindable(null),
 		...rest
@@ -169,11 +257,14 @@
 	// way the site reads them.
 	const prefs = $derived(preferencesOf(context));
 	const rows = $derived(snapshot.rows);
-	const sort = $derived(snapshot.sort);
+	const sortKeys = $derived(snapshot.sort);
 	const paging = $derived(describePaging(snapshot));
 	const rowHeight = $derived(ROW_HEIGHT[density]);
 	const cellClass = $derived(cn(CELL[density], TEXT[size]));
 	const byPath = $derived(new Map(columns.map((column) => [column.path, column])));
+
+	const rowId = (row: EntityRow): string => rowIdOf(row, getRowId);
+	const rowDisabled = (row: EntityRow): boolean => rowIsDisabled(row, isRowDisabled);
 
 	let editing = $state<{ key: string; path: string } | null>(null);
 	let draft = $state<unknown>(null);
@@ -227,26 +318,84 @@
 		// the caller put it.
 		groupedColumnMode: false,
 		initialState: { expanded: true },
-		getRowId: (row: EntityRow) => rowKey(row),
+		getRowId: (row: EntityRow) => rowIdOf(row, getRowId),
 		columnResizeMode: 'onChange',
 		get enableRowSelection() {
-			return selectable;
+			// A disabled row refuses its own box and is left out of the header's select-all.
+			return selectable && ((row: { original: EntityRow }) => !rowIsDisabled(row.original, isRowDisabled));
 		}
 	});
 
-	const selection = $derived(table.atoms.rowSelection.get());
+	const picked = $derived(table.atoms.rowSelection.get());
 	const order = $derived(table.atoms.columnOrder.get());
 	const pinning = $derived(table.atoms.columnPinning.get());
 	const sizing = $derived(table.atoms.columnSizing.get());
 	const expansion = $derived(table.atoms.expanded.get());
+
+	/*
+	 * Two-way state.
+	 *
+	 * Each pair is one effect out of the table and one into it, and each reads the other
+	 * side untracked, so a change travels once and the two never write to each other.
+	 */
 	$effect(() => {
-		void selection;
-		onSelectionChange?.(
-			table
-				.getSelectedRowModel()
-				.flatRows.filter((row) => !row.getIsGrouped())
-				.map((row) => ({ type: row.original.type, id: row.original.id }))
-		);
+		void picked;
+		const refs = table
+			.getSelectedRowModel()
+			.flatRows.filter((row) => !row.getIsGrouped())
+			.map((row) => ({ type: row.original.type, id: row.original.id }));
+		if (sameRefs(refs, untrack(() => selection ?? []))) return;
+		selection = refs;
+		onSelectionChange?.(refs);
+	});
+	$effect(() => {
+		const wanted = idsForRefs(rows, selection ?? [], getRowId);
+		untrack(() => {
+			if (sameIds(wanted, Object.keys(table.atoms.rowSelection.get()))) return;
+			table.setRowSelection(Object.fromEntries(wanted.map((id) => [id, true])));
+		});
+	});
+
+	/** The group headers, which the two-way `collapsed` names by id. */
+	const groupHeaders = $derived.by(() => {
+		void expansion;
+		return table.getRowModel().flatRows.filter((row) => row.getIsGrouped());
+	});
+	$effect(() => {
+		const shut = groupHeaders.filter((row) => !row.getIsExpanded()).map((row) => row.id);
+		if (sameIds(shut, untrack(() => collapsed ?? []))) return;
+		collapsed = shut;
+		onCollapsedChange?.(shut);
+	});
+	$effect(() => {
+		const shut = new Set(collapsed ?? []);
+		untrack(() => {
+			for (const row of groupHeaders) if (row.getIsExpanded() === shut.has(row.id)) row.toggleExpanded(!shut.has(row.id));
+		});
+	});
+
+	$effect(() => {
+		const wanted = sort;
+		if (wanted === undefined || sameSort(wanted, untrack(() => snapshot.sort))) return;
+		void source.setSort([...wanted]);
+	});
+	$effect(() => {
+		const current = snapshot.sort;
+		if (sameSort(current, untrack(() => sort ?? []))) return;
+		sort = [...current];
+		onSortChange?.(sort);
+	});
+
+	$effect(() => {
+		const wanted = filters;
+		if (wanted === undefined || sameFilters(wanted, untrack(() => snapshot.filters))) return;
+		void source.setFilters(wanted);
+	});
+	$effect(() => {
+		const current = snapshot.filters;
+		if (sameFilters(current, untrack(() => filters ?? null))) return;
+		filters = current;
+		onFiltersChange?.(current);
 	});
 
 	/**
@@ -290,7 +439,7 @@
 		return table.getTotalSize();
 	});
 	const allSelected = $derived.by(() => {
-		void selection;
+		void picked;
 		return { all: table.getIsAllRowsSelected(), some: table.getIsSomeRowsSelected() };
 	});
 
@@ -367,16 +516,18 @@
 
 	/** The rows on screen, read once, for the same reason the layout is. */
 	const items = $derived.by(() => {
-		void selection;
+		void picked;
 		void expansion;
-		return window_.slice.map((row) => {
+		return window_.slice.map((row, index) => {
 			const grouped = row.getIsGrouped();
 			return {
 				row,
 				id: row.id,
+				index,
 				grouped,
 				expanded: grouped && row.getIsExpanded(),
 				selected: !grouped && row.getIsSelected(),
+				disabled: !grouped && rowDisabled(row.original),
 				count: grouped ? leafCount(row) : 0,
 				groupColumnId: row.groupingColumnId ?? '',
 				groupValue: row.groupingValue,
@@ -388,7 +539,7 @@
 	/* sorting -------------------------------------------------------------- */
 
 	function sortOf(path: string): SortSpec | undefined {
-		return sort.find((key: SortSpec) => key.path === path);
+		return sortKeys.find((key: SortSpec) => key.path === path);
 	}
 
 	/** The group path stays the first sort key: a split group is not a group. */
@@ -425,19 +576,20 @@
 
 	/* inline edit ---------------------------------------------------------- */
 
-	function canEditColumn(column: CollectionColumn): boolean {
-		return editable && column.editable && (Boolean(editorFor?.(column.dataType)) || isEditableType(column.dataType));
+	function canEditColumn(column: CollectionColumn, row: EntityRow): boolean {
+		if (!editable || !column.editable || rowDisabled(row)) return false;
+		return Boolean(editorFor?.(column.dataType)) || isEditableType(column.dataType);
 	}
 
-	function openEditor(key: string, column: CollectionColumn, value: unknown): void {
-		if (!canEditColumn(column)) return;
+	function openEditor(key: string, column: CollectionColumn, row: EntityRow, value: unknown): void {
+		if (!canEditColumn(column, row)) return;
 		cellError = null;
 		draft = value;
 		editing = { key, path: column.path };
 	}
 
 	async function commit(row: EntityRow, column: CollectionColumn, value: unknown): Promise<void> {
-		const key = rowKey(row);
+		const key = rowId(row);
 		const before = cellValue(row, column.path);
 		editing = null;
 		if (value === before) return;
@@ -456,7 +608,7 @@
 		// up, after the commit has already closed it, and must not open it again.
 		if (event.key !== 'Enter' || editing || (event.target as HTMLElement).dataset['slot'] !== 'table-cell') return;
 		event.preventDefault();
-		openEditor(rowKey(row), column, cellValue(row, column.path));
+		openEditor(rowId(row), column, row, cellValue(row, column.path));
 	}
 
 	/**
@@ -496,7 +648,7 @@
 			);
 			if (target === null || cell?.contains(target) || target.closest(EDITOR_POPUP) !== null) return;
 			releaseEditor();
-			const row = rows.find((candidate) => rowKey(candidate) === open.key);
+			const row = rows.find((candidate) => rowId(candidate) === open.key);
 			const column = byPath.get(open.path);
 			if (row && column) void commit(row, column, draft);
 			else editing = null;
@@ -747,16 +899,26 @@
 												item.expanded && 'rotate-90'
 											)}
 										/>
-										<span class="truncate">
-											<FieldValue
-												value={item.groupValue}
-												dataType={groupColumn?.dataType ?? 'text'}
-												field={groupColumn?.field}
-												{statuses}
-												{context}
-											/>
-										</span>
-										<span class="text-muted-foreground font-mono text-xs tabular-nums">{item.count}</span>
+										{#if groupHeader}
+											{@render groupHeader({
+												value: item.groupValue,
+												column: groupColumn ?? null,
+												count: item.count,
+												expanded: item.expanded,
+												id: item.id
+											})}
+										{:else}
+											<span class="truncate">
+												<FieldValue
+													value={item.groupValue}
+													dataType={groupColumn?.dataType ?? 'text'}
+													field={groupColumn?.field}
+													{statuses}
+													{context}
+												/>
+											</span>
+											<span class="text-muted-foreground font-mono text-xs tabular-nums">{item.count}</span>
+										{/if}
 									</button>
 								</Table.Cell>
 							</Table.Row>
@@ -764,100 +926,122 @@
 							{@const row = item.data}
 							{@const key = item.id}
 							{@const selected = item.selected}
+							{@const disabled = item.disabled}
 							<Table.Row
 								data-row-key={key}
 								data-state={selected ? 'selected' : undefined}
-								class={selected ? 'bg-accent text-accent-foreground' : 'bg-background'}
+								data-disabled={disabled ? 'true' : undefined}
+								aria-disabled={disabled ? 'true' : undefined}
+								class={cn(
+									selected ? 'bg-accent text-accent-foreground' : 'bg-background',
+									disabled && 'pointer-events-none opacity-50'
+								)}
 								style={virtualized ? `height:${rowHeight}px` : undefined}
 							>
-								{#each layout as entry (entry.id)}
-									{@const pinned = entry.pinned}
-									{#if entry.id === SELECT}
-										<Table.Cell
-											data-pinned={pinned ? 'start' : undefined}
-											style={entry.style}
-											class={cn(cellClass, 'bg-inherit text-center')}
-										>
-											<Checkbox
-												aria-label="Select row"
-												checked={selected}
-												onCheckedChange={(value) => item.row.toggleSelected(value === true)}
-											/>
-										</Table.Cell>
-									{:else}
-										{@const column = byPath.get(entry.id)}
-										{#if column}
-											{@const canEdit = canEditColumn(column)}
-											{@const Editor = editorFor?.(column.dataType) ?? null}
+								{#if rowSnippet}
+									{@render rowSnippet({ row, id: key, index: item.index, selected, disabled, columns })}
+								{:else}
+									{#each layout as entry (entry.id)}
+										{@const pinned = entry.pinned}
+										{#if entry.id === SELECT}
 											<Table.Cell
-												data-column={column.path}
 												data-pinned={pinned ? 'start' : undefined}
 												style={entry.style}
-												tabindex={canEdit ? 0 : undefined}
-												ondblclick={() => openEditor(key, column, cellValue(row, column.path))}
-												onkeydown={(event) => canEdit && onCellKeydown(event, row, column)}
-												class={cn(
-													cellClass,
-													'focus-visible:ring-ring focus-visible:ring-offset-background bg-inherit overflow-hidden outline-none focus-visible:ring-2 focus-visible:ring-inset',
-													column.align === 'right' && 'text-right',
-													canEdit && 'cursor-text'
-												)}
+												class={cn(cellClass, 'bg-inherit text-center')}
 											>
-												{#if isEditing(key, column.path)}
-													{#if Editor}
-														<Editor
+												<Checkbox
+													aria-label="Select row"
+													checked={selected}
+													{disabled}
+													onCheckedChange={(value) => item.row.toggleSelected(value === true)}
+												/>
+											</Table.Cell>
+										{:else}
+											{@const column = byPath.get(entry.id)}
+											{#if column}
+												{@const canEdit = canEditColumn(column, row)}
+												{@const Editor = editorFor?.(column.dataType) ?? null}
+												<Table.Cell
+													data-column={column.path}
+													data-pinned={pinned ? 'start' : undefined}
+													style={entry.style}
+													tabindex={canEdit ? 0 : undefined}
+													title={canEdit ? EDIT_HINT : undefined}
+													data-editable={canEdit ? 'true' : undefined}
+													ondblclick={() => openEditor(key, column, row, cellValue(row, column.path))}
+													onkeydown={(event) => canEdit && onCellKeydown(event, row, column)}
+													class={cn(
+														cellClass,
+														'focus-visible:ring-ring focus-visible:ring-offset-background bg-inherit overflow-hidden outline-none focus-visible:ring-2 focus-visible:ring-inset',
+														column.align === 'right' && 'text-right',
+														// Nothing else on a cell says it can be edited, so hover and focus say it.
+														canEdit && 'hover:bg-accent/50 focus-visible:bg-accent/50 cursor-text transition-colors duration-150'
+													)}
+												>
+													{#if isEditing(key, column.path)}
+														{#if Editor}
+															<Editor
+																value={cellValue(row, column.path)}
+																dataType={column.dataType}
+																field={column.field}
+																commit={(value) => void commit(row, column, value)}
+																cancel={() => (editing = null)}
+															/>
+														{:else}
+															<!-- The default editor is the type's own control from the field-editor item. -->
+															<div
+																data-slot="entity-table-editor"
+																role="presentation"
+																onkeydown={(event) => editorKeydown(event, row, column)}
+																{@attach (el: HTMLElement) =>
+																	el.querySelector<HTMLElement>('input,textarea,button')?.focus({ preventScroll: true })}
+															>
+																<FieldEditor
+																	value={draft}
+																	onValueChange={(next) => (draft = next)}
+																	dataType={column.dataType}
+																	field={column.field}
+																	{statuses}
+																	{context}
+																	{projectId}
+																	{precision}
+																	symbol={symbol ?? '$'}
+																	hoursPerDay={prefs.hoursPerDay}
+																	locale={prefs.locale}
+																	timeZone={prefs.timeZone}
+																	frameRate={prefs.frameRate}
+																	mode="edit"
+																	size="sm"
+																/>
+															</div>
+														{/if}
+													{:else if cellSnippet}
+														{@render cellSnippet({
+															row,
+															id: key,
+															column,
+															value: cellValue(row, column.path),
+															disabled
+														})}
+													{:else}
+														<FieldValue
 															value={cellValue(row, column.path)}
 															dataType={column.dataType}
 															field={column.field}
-															commit={(value) => void commit(row, column, value)}
-															cancel={() => (editing = null)}
+															{statuses}
+															{context}
 														/>
-													{:else}
-														<!-- The default editor is the type's own control from the field-editor item. -->
-														<div
-															data-slot="entity-table-editor"
-															role="presentation"
-															onkeydown={(event) => editorKeydown(event, row, column)}
-															{@attach (el: HTMLElement) =>
-																el.querySelector<HTMLElement>('input,textarea,button')?.focus({ preventScroll: true })}
-														>
-															<FieldEditor
-																value={draft}
-																onValueChange={(next) => (draft = next)}
-																dataType={column.dataType}
-																field={column.field}
-																{statuses}
-																{context}
-																{projectId}
-																{precision}
-																symbol={symbol ?? '$'}
-																hoursPerDay={prefs.hoursPerDay}
-																locale={prefs.locale}
-																timeZone={prefs.timeZone}
-																frameRate={prefs.frameRate}
-																mode="edit"
-																size="sm"
-															/>
-														</div>
+														{#if cellError && cellError.key === key && cellError.path === column.path}
+															<span class="text-destructive block truncate text-xs" title={cellError.message}>
+																{cellError.message}
+															</span>
+														{/if}
 													{/if}
-												{:else}
-													<FieldValue
-														value={cellValue(row, column.path)}
-														dataType={column.dataType}
-														field={column.field}
-														{statuses}
-														{context}
-													/>
-													{#if cellError && cellError.key === key && cellError.path === column.path}
-														<span class="text-destructive block truncate text-xs" title={cellError.message}>
-															{cellError.message}
-														</span>
-													{/if}
-												{/if}
-											</Table.Cell>
+												</Table.Cell>
+											{/if}
 										{/if}
-									{/if}
-								{/each}
+									{/each}
+								{/if}
 							</Table.Row>
 						{/if}
 					{/each}

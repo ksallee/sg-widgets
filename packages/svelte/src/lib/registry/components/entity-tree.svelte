@@ -1,7 +1,21 @@
 <script lang="ts" module>
-	import type { TreeCheckState } from '@sg-widgets/core';
+	import type { TreeCheckState, TreeNode } from '@sg-widgets/core';
 
 	export type EntityTreeSize = 'sm' | 'md' | 'lg';
+
+	/** What a `row` snippet is handed. It draws a row's contents, not its chevron or its box. */
+	export interface EntityTreeRowContext {
+		node: TreeNode;
+		/** The node's path, which is what a tree keys a row on. */
+		id: string;
+		level: number;
+		expanded: boolean;
+		selected: boolean;
+		disabled: boolean;
+		/** True when the search placed this row, or its label holds every word. */
+		match: boolean;
+	}
+
 	export type EntityTreeDensity = 'compact' | 'default';
 
 	/** The list-row padding of `docs/design-rules.md`; compact halves the vertical half. */
@@ -22,8 +36,9 @@
 </script>
 
 <script lang="ts">
+	import { untrack, type Snippet } from 'svelte';
 	import type { HTMLAttributes } from 'svelte/elements';
-	import type { EntityRef, FieldSpec, SgContext, TreeFieldPlan, TreeNode, TreeRow } from '@sg-widgets/core';
+	import type { EntityRef, FieldSpec, SgContext, TreeFieldPlan, TreeRow, TreeSelectionMode } from '@sg-widgets/core';
 	import {
 		createTree,
 		hierarchyLoader,
@@ -32,6 +47,7 @@
 		matchRuns,
 		pathOf,
 		resolveTreeFields,
+		sameIds,
 		TREE_STATUS_FIELDS
 	} from '@sg-widgets/core';
 	import ChevronRight from '@lucide/svelte/icons/chevron-right';
@@ -56,10 +72,25 @@
 		seedPath?: string | string[] | null;
 		/** Draws a checkbox per node and reports the checked rows. */
 		checkable?: boolean;
-		selection?: 'none' | 'single' | 'multiple';
+		/** How many nodes may be selected at once. */
+		selectionMode?: TreeSelectionMode;
+		/** Paths of the selected nodes, two-way. */
+		selection?: string[];
+		onSelectionChange?: (paths: string[]) => void;
+		/** Paths of the open nodes, two-way. */
+		expanded?: string[];
+		onExpandedChange?: (paths: string[]) => void;
+		/** True for a node the arrows skip and the selection refuses. */
+		isRowDisabled?: (node: TreeNode) => boolean;
 		onCheckedChange?: (rows: EntityRef[]) => void;
 		onSelect?: (node: TreeNode) => void;
 		onError?: (error: Error) => void;
+		/** Draws a row's contents: everything after the chevron and the checkbox. */
+		row?: Snippet<[EntityTreeRowContext]>;
+		/** Region above the tree. */
+		header?: Snippet;
+		/** Region below the tree. */
+		footer?: Snippet;
 		/** Shows an input that searches the project and opens the tree onto the hits. */
 		searchable?: boolean;
 		searchPlaceholder?: string;
@@ -96,10 +127,18 @@
 		rootPath,
 		seedPath = null,
 		checkable = false,
-		selection = 'single',
+		selectionMode = 'single',
+		selection = $bindable([]),
+		onSelectionChange,
+		expanded = $bindable(),
+		onExpandedChange,
+		isRowDisabled,
 		onCheckedChange,
 		onSelect,
 		onError,
+		row: rowSnippet,
+		header,
+		footer,
 		searchable = false,
 		searchPlaceholder = 'Search',
 		expandDepth = 3,
@@ -142,8 +181,9 @@
 	const engine = $derived(
 		createTree({
 			rootPath,
-			selection,
+			selection: selectionMode,
 			expandDepth,
+			disabled: isRowDisabled,
 			loader: hierarchyLoader(context.client, { fields: requested }),
 			searcher: hierarchySearcher(context.client, rootPath, { schema })
 		})
@@ -172,6 +212,35 @@
 	$effect(() => {
 		void checkedKey;
 		onCheckedChange?.(engine.checkedRefs());
+	});
+
+	/*
+	 * Two-way state.
+	 *
+	 * Each pair is one effect out of the engine and one into it, each reading the other
+	 * side untracked, so a change travels once and the two never write to each other.
+	 */
+	$effect(() => {
+		const open = snap.expanded;
+		if (sameIds(open, untrack(() => expanded ?? []))) return;
+		expanded = [...open];
+		onExpandedChange?.(expanded);
+	});
+	$effect(() => {
+		const wanted = expanded;
+		if (wanted === undefined || sameIds(wanted, untrack(() => snap.expanded))) return;
+		void engine.setExpanded(wanted);
+	});
+	$effect(() => {
+		const chosen = snap.selected;
+		if (sameIds(chosen, untrack(() => selection ?? []))) return;
+		selection = [...chosen];
+		onSelectionChange?.(selection);
+	});
+	$effect(() => {
+		const wanted = selection;
+		if (wanted === undefined || sameIds(wanted, untrack(() => snap.selected))) return;
+		engine.setSelected(wanted);
 	});
 
 	/* what a row draws with -------------------------------------------------- */
@@ -326,6 +395,12 @@
 	the words found and dims the rest (post_entity_text_search, post_hierarchy_search).
 -->
 <div bind:this={ref} data-slot="entity-tree" class={cn('flex w-full min-w-0 flex-col gap-2', className)} {...rest}>
+	{#if header}
+		<div data-slot="entity-tree-header" class="flex w-full min-w-0 flex-wrap items-center gap-2">
+			{@render header()}
+		</div>
+	{/if}
+
 	{#if searchable}
 		<div class="relative flex items-center">
 			<Input
@@ -379,7 +454,7 @@
 			<ul
 				role="tree"
 				aria-label={label}
-				aria-multiselectable={selection === 'multiple' ? true : undefined}
+								aria-multiselectable={selectionMode === 'multiple' ? true : undefined}
 				data-slot="entity-tree-list"
 				style="--tree-indent:1rem"
 				class="flex flex-col"
@@ -393,6 +468,7 @@
 					{@const status = statusOf(node)}
 					{@const custom = secondary ? secondary(node) : ''}
 					{@const raw = secondaryValue(node)}
+					{@const disabled = row.disabled}
 					<li
 						role="none"
 						data-slot="entity-tree-item"
@@ -407,12 +483,14 @@
 							data-level={node.level}
 							data-state={node.hasChildren ? (row.expanded ? 'open' : 'closed') : undefined}
 							data-selected={row.selected ? 'true' : undefined}
+							data-disabled={disabled ? 'true' : undefined}
+							aria-disabled={disabled ? 'true' : undefined}
 							aria-level={node.level + 1}
 							aria-expanded={node.hasChildren ? row.expanded : undefined}
 							aria-selected={row.selected}
 							aria-checked={checkable ? checkedAttr(row.checked) : undefined}
 							aria-busy={row.loading ? true : undefined}
-							tabindex={row.focused ? 0 : -1}
+							tabindex={row.focused && !disabled ? 0 : -1}
 							onclick={() => activate(row)}
 							class={cn(
 								'focus-visible:ring-ring focus-visible:ring-offset-background flex min-w-0 cursor-default gap-1.5 rounded-md outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2',
@@ -420,7 +498,8 @@
 								TEXT[size],
 								hasSubLabel ? 'items-start' : 'items-center',
 								dimming && !row.match && 'text-muted-foreground',
-								row.selected ? 'bg-accent text-accent-foreground' : 'hover:bg-muted/50'
+								row.selected ? 'bg-accent text-accent-foreground' : 'hover:bg-muted/50',
+								disabled && 'pointer-events-none opacity-50'
 							)}
 						>
 							{#if node.hasChildren}
@@ -474,67 +553,79 @@
 								</span>
 							{/if}
 
-							{#if thumbnail !== false}
-								<span class={cn('flex shrink-0 items-center', LEAD[size])}>
-									{#if thumbOf(node)}
-										<Thumbnail src={thumbOf(node)} aspect="square" size={LEAF[size]} />
-									{/if}
-								</span>
-							{/if}
-
-							<span class="flex min-w-0 flex-1 flex-col">
-								<span class="flex min-w-0 items-center gap-1.5">
-									<span data-slot="entity-tree-label" class="truncate" title={name}>
-										{#each matchRuns(name, snap.search) as part, i (i)}
-											{#if part.match}<span class="font-semibold">{part.text}</span>{:else}{part.text}{/if}
-										{/each}
+							{#if rowSnippet}
+								{@render rowSnippet({
+									node,
+									id: node.path,
+									level: node.level,
+									expanded: row.expanded,
+									selected: row.selected,
+									disabled,
+									match: row.match
+								})}
+							{:else}
+								{#if thumbnail !== false}
+									<span class={cn('flex shrink-0 items-center', LEAD[size])}>
+										{#if thumbOf(node)}
+											<Thumbnail src={thumbOf(node)} aspect="square" size={LEAF[size]} />
+										{/if}
 									</span>
-									{#if code}
-										<span data-slot="entity-tree-code" class="text-muted-foreground shrink-0 font-mono text-xs"
-											>{code}</span
+								{/if}
+
+								<span class="flex min-w-0 flex-1 flex-col">
+									<span class="flex min-w-0 items-center gap-1.5">
+										<span data-slot="entity-tree-label" class="truncate" title={name}>
+											{#each matchRuns(name, snap.search) as part, i (i)}
+												{#if part.match}<span class="font-semibold">{part.text}</span>{:else}{part.text}{/if}
+											{/each}
+										</span>
+										{#if code}
+											<span data-slot="entity-tree-code" class="text-muted-foreground shrink-0 font-mono text-xs"
+												>{code}</span
+											>
+										{/if}
+									</span>
+									{#if sub}
+										<span data-slot="entity-tree-sub-label" class="text-muted-foreground truncate text-xs" title={sub}
+											>{sub}</span
 										>
 									{/if}
 								</span>
-								{#if sub}
-									<span data-slot="entity-tree-sub-label" class="text-muted-foreground truncate text-xs" title={sub}
-										>{sub}</span
-									>
-								{/if}
-							</span>
 
-							{#if status}
-								<!-- A tree row is dense, so the status is its icon; the name stays in the badge for a reader. -->
-								<StatusBadge
-									code={status}
-									status={plan.statuses?.[status] ?? null}
-									field={node.entity ? (plan.status[node.entity.type] ?? null) : null}
-									variant="icon"
-									size={LEAF[size]}
-									siteUrl={site}
-									class="shrink-0"
-								/>
-							{/if}
-
-							{#if custom}
-								<span data-slot="entity-tree-secondary" class="text-muted-foreground shrink-0 text-xs">{custom}</span>
-							{:else if secondaryPath && !isEmptyValue(raw)}
-								<span
-									data-slot="entity-tree-secondary"
-									class={cn(
-										'text-muted-foreground flex shrink-0 items-center text-xs',
-										secondaryIsId && 'font-mono tabular-nums'
-									)}
-								>
-									<FieldValue
-										value={raw}
-										dataType={secondaryType(node)}
-										field={node.entity ? (plan.secondary[node.entity.type] ?? null) : null}
-										statuses={plan.statuses}
+								{#if status}
+									<!-- A tree row is dense, so the status is its icon; the name stays in the badge for a reader. -->
+									<StatusBadge
+										code={status}
+										status={plan.statuses?.[status] ?? null}
+										field={node.entity ? (plan.status[node.entity.type] ?? null) : null}
+										variant="icon"
+										size={LEAF[size]}
 										siteUrl={site}
-										{context}
-										class="w-auto justify-end text-xs"
+										class="shrink-0"
 									/>
-								</span>
+								{/if}
+
+								{#if custom}
+									<span data-slot="entity-tree-secondary" class="text-muted-foreground shrink-0 text-xs">{custom}</span>
+								{:else if secondaryPath && !isEmptyValue(raw)}
+									<span
+										data-slot="entity-tree-secondary"
+										class={cn(
+											'text-muted-foreground flex shrink-0 items-center text-xs',
+											secondaryIsId && 'font-mono tabular-nums'
+										)}
+									>
+										<FieldValue
+											value={raw}
+											dataType={secondaryType(node)}
+											field={node.entity ? (plan.secondary[node.entity.type] ?? null) : null}
+											statuses={plan.statuses}
+											siteUrl={site}
+											{context}
+											class="w-auto justify-end text-xs"
+										/>
+									</span>
+								{/if}
 							{/if}
 						</div>
 					</li>
@@ -542,4 +633,10 @@
 			</ul>
 		{/if}
 	</div>
+
+	{#if footer}
+		<div data-slot="entity-tree-footer" class="flex w-full min-w-0 flex-wrap items-center gap-2">
+			{@render footer()}
+		</div>
+	{/if}
 </div>

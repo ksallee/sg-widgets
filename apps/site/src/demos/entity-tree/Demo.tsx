@@ -6,11 +6,16 @@ import { DemoContextProvider } from '../_shared/react';
 
 const group = 'flex flex-col gap-2';
 const label = 'text-muted-foreground text-xs font-medium tracking-wide uppercase';
+const toggle =
+  'inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-background px-2 text-sm ' +
+  'text-muted-foreground outline-none transition-colors duration-150 hover:bg-accent hover:text-accent-foreground ' +
+  'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background';
 
 export default function EntityTreeDemo() {
   const context = useMemo(() => createDemoContext(), []);
   const [picked, setPicked] = useState<TreeNode | null>(null);
   const [checked, setChecked] = useState<EntityRef[]>([]);
+  const [expanded, setExpanded] = useState<string[]>([]);
 
   const rootPath = `/Project/${context.projectId}`;
   const seedPath = context.live ? null : `${rootPath}/Shot/sg_sequence/Sequence/100/id/862`;
@@ -23,6 +28,21 @@ export default function EntityTreeDemo() {
       <div className="flex w-full min-w-0 flex-col gap-4">
         <section className={group}>
           <h4 className={label}>A project, seeded open, searchable, with checkboxes</h4>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              className={toggle}
+              data-testid="open-assets"
+              onClick={() =>
+                setExpanded((was) => (was.includes(`${rootPath}/Asset`) ? was : [...was, `${rootPath}/Asset`]))
+              }
+            >
+              Open Assets
+            </button>
+            <span className="text-muted-foreground text-xs tabular-nums" data-testid="expanded-count">
+              {expanded.length} open
+            </span>
+          </div>
           <EntityTree
             context={context}
             rootPath={rootPath}
@@ -31,6 +51,8 @@ export default function EntityTreeDemo() {
             searchable
             searchPlaceholder={searchPlaceholder}
             showCode
+            expanded={expanded}
+            onExpandedChange={setExpanded}
             onSelect={setPicked}
             onCheckedChange={setChecked}
           />

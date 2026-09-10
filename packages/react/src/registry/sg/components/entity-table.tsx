@@ -6,11 +6,26 @@ import type {
   EntityRow,
   EntitySource,
   FieldSchema,
+  RowDisabledFn,
+  RowIdFn,
   SgContext,
   SortSpec,
+  SourceFilters,
   StatusRecord,
 } from '@sg-widgets/core';
-import { cellValue, describePaging, isEditableType, preferencesOf, rowKey } from '@sg-widgets/core';
+import {
+  cellValue,
+  describePaging,
+  idsForRefs,
+  isEditableType,
+  preferencesOf,
+  rowIdOf,
+  rowIsDisabled,
+  sameFilters,
+  sameIds,
+  sameRefs,
+  sameSort,
+} from '@sg-widgets/core';
 import {
   columnGroupingFeature,
   columnOrderingFeature,
@@ -90,6 +105,47 @@ const EDITOR_POPUP = '[data-slot="popover-content"],[data-slot="select-content"]
 /** The select column's id, which is never a field path. */
 const SELECT = '__select';
 
+/** Said on every editable cell, because nothing else on it says an edit is possible. */
+const EDIT_HINT = 'Double-click or press Enter to edit';
+
+/** What a `row` render prop is handed. It draws the cells of one row, not the row's box. */
+export interface EntityTableRowContext {
+  row: EntityRow;
+  /** The row's id, as `getRowId` derives it. */
+  id: string;
+  index: number;
+  selected: boolean;
+  disabled: boolean;
+  columns: CollectionColumn[];
+}
+
+/** What a `cell` render prop is handed. It draws a cell's contents, not the cell. */
+export interface EntityTableCellContext {
+  row: EntityRow;
+  id: string;
+  column: CollectionColumn;
+  value: unknown;
+  disabled: boolean;
+}
+
+/** What a `groupHeader` render prop is handed. It draws the header's contents. */
+export interface EntityTableGroupContext {
+  /** The value the run shares. */
+  value: unknown;
+  column: CollectionColumn | null;
+  /** Rows loaded under this header. */
+  count: number;
+  expanded: boolean;
+  id: string;
+}
+
+/** The latest value, for an effect that must read it without depending on it. */
+function useLatest<T>(value: T): { current: T } {
+  const ref = useRef(value);
+  ref.current = value;
+  return ref;
+}
+
 export interface EntityTableProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'children'> {
   /** The rows, the filter, the sort and the page behind them. Created with core's `createEntitySource`. */
   source: EntitySource;
@@ -110,9 +166,24 @@ export interface EntityTableProps extends Omit<React.HTMLAttributes<HTMLDivEleme
   size?: EntityTableSize;
   /** Draws a checkbox column and reports the selection. */
   selectable?: boolean;
+  /** The selected rows. Controlled, with the table's own selection as the fallback. */
+  selection?: EntityRef[];
   onSelectionChange?: (rows: EntityRef[]) => void;
+  /** How a row is keyed, in the DOM and in the selection. Default `Type:id`. */
+  getRowId?: RowIdFn;
+  /** True for a row that cannot be selected, edited or reached by the keyboard. */
+  isRowDisabled?: RowDisabledFn;
   /** Collapse rows under headers of a shared value at this path. */
   groupBy?: string | null;
+  /** Ids of the group headers that are shut. Controlled, with the table's own as the fallback. */
+  collapsed?: string[];
+  onCollapsedChange?: (ids: string[]) => void;
+  /** The source's sort, so a SortPicker drops into the toolbar. */
+  sort?: SortSpec[];
+  onSortChange?: (sort: SortSpec[]) => void;
+  /** The source's filter, so a FilterBar drops into the toolbar. */
+  filters?: SourceFilters;
+  onFiltersChange?: (filters: SourceFilters) => void;
   /** Opens an editor on a double-click or Enter in an editable cell. */
   editable?: boolean;
   editorFor?: EditorFor;
@@ -129,6 +200,12 @@ export interface EntityTableProps extends Omit<React.HTMLAttributes<HTMLDivEleme
   toolbarStart?: React.ReactNode;
   /** Right region of the toolbar above the table. */
   toolbarEnd?: React.ReactNode;
+  /** Draws the cells of one row. Without it, the columns draw themselves. */
+  row?: (context: EntityTableRowContext) => React.ReactNode;
+  /** Draws one cell's contents. Ignored where `row` is given. */
+  cell?: (context: EntityTableCellContext) => React.ReactNode;
+  /** Draws a group header's contents. */
+  groupHeader?: (context: EntityTableGroupContext) => React.ReactNode;
 }
 
 // Sorting and paging are the server's, so neither feature is registered: this table
@@ -180,8 +257,17 @@ export function EntityTable({
   density = 'default',
   size = 'md',
   selectable = false,
+  selection: selectionProp,
   onSelectionChange,
+  getRowId,
+  isRowDisabled,
   groupBy = null,
+  collapsed: collapsedProp,
+  onCollapsedChange,
+  sort: sortProp,
+  onSortChange,
+  filters: filtersProp,
+  onFiltersChange,
   editable = false,
   editorFor,
   showCode = false,
@@ -191,6 +277,9 @@ export function EntityTable({
   emptyLabel = 'No rows',
   toolbarStart,
   toolbarEnd,
+  row: rowRender,
+  cell: cellRender,
+  groupHeader,
   className,
   ...rest
 }: EntityTableProps) {
@@ -221,6 +310,9 @@ export function EntityTable({
   const rowHeight = ROW_HEIGHT[density];
   const cellClass = cn(CELL[density], TEXT[size]);
   const byPath = useMemo(() => new Map(columns.map((column) => [column.path, column])), [columns]);
+
+  const rowId = (row: EntityRow): string => rowIdOf(row, getRowId);
+  const rowDisabled = (row: EntityRow): boolean => rowIsDisabled(row, isRowDisabled);
 
   const root = useRef<HTMLDivElement>(null);
   const [editing, setEditing] = useState<{ key: string; path: string } | null>(null);
@@ -261,22 +353,82 @@ export function EntityTable({
     // the caller put it.
     groupedColumnMode: false,
     initialState: { expanded: true },
-    getRowId: (row: EntityRow) => rowKey(row),
+    getRowId: (row: EntityRow) => rowIdOf(row, getRowId),
     columnResizeMode: 'onChange',
-    enableRowSelection: selectable,
+    // A disabled row refuses its own box and is left out of the header's select-all.
+    enableRowSelection: selectable && ((row: { original: EntityRow }) => !rowIsDisabled(row.original, isRowDisabled)),
   });
 
-  const selection = table.state.rowSelection;
+  /*
+   * Controlled state, each with the table's own as the fallback.
+   *
+   * Each pair is one effect out of the table and one into it, and each reads the other
+   * side off a ref, so a change travels once and the two never write to each other.
+   */
+  const [ownSelection, setOwnSelection] = useState<EntityRef[]>([]);
+  const selection = selectionProp ?? ownSelection;
+  const selectionLatest = useLatest(selection);
+  const picked = table.state.rowSelection;
   useEffect(() => {
-    onSelectionChange?.(
-      table
-        .getSelectedRowModel()
-        .flatRows.filter((row) => !row.getIsGrouped())
-        .map((row) => ({ type: row.original.type, id: row.original.id })),
-    );
+    const refs = table
+      .getSelectedRowModel()
+      .flatRows.filter((row) => !row.getIsGrouped())
+      .map((row) => ({ type: row.original.type, id: row.original.id }));
+    if (sameRefs(refs, selectionLatest.current)) return;
+    setOwnSelection(refs);
+    onSelectionChange?.(refs);
     // The table instance is stable; the selection is what moves.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selection]);
+  }, [picked]);
+  useEffect(() => {
+    const wanted = idsForRefs(rows, selection, getRowId);
+    if (sameIds(wanted, Object.keys(table.state.rowSelection))) return;
+    table.setRowSelection(Object.fromEntries(wanted.map((id) => [id, true])));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selection, rows]);
+
+  const [ownCollapsed, setOwnCollapsed] = useState<string[]>([]);
+  const collapsed = collapsedProp ?? ownCollapsed;
+  const collapsedLatest = useLatest(collapsed);
+  const expansion = table.state.expanded;
+  const groupHeaders = table.getRowModel().flatRows.filter((row) => row.getIsGrouped());
+  const groupHeadersLatest = useLatest(groupHeaders);
+  useEffect(() => {
+    const shut = groupHeadersLatest.current.filter((row) => !row.getIsExpanded()).map((row) => row.id);
+    if (sameIds(shut, collapsedLatest.current)) return;
+    setOwnCollapsed(shut);
+    onCollapsedChange?.(shut);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [expansion]);
+  useEffect(() => {
+    const shut = new Set(collapsed);
+    for (const row of groupHeadersLatest.current) {
+      if (row.getIsExpanded() === shut.has(row.id)) row.toggleExpanded(!shut.has(row.id));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [collapsed]);
+
+  const sortLatest = useLatest(sortProp);
+  useEffect(() => {
+    if (sortProp === undefined || sameSort(sortProp, source.sort)) return;
+    void source.setSort([...sortProp]);
+  }, [source, sortProp]);
+  useEffect(() => {
+    if (sortLatest.current !== undefined && sameSort(snapshot.sort, sortLatest.current)) return;
+    onSortChange?.([...snapshot.sort]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [snapshot.sort]);
+
+  const filtersLatest = useLatest(filtersProp);
+  useEffect(() => {
+    if (filtersProp === undefined || sameFilters(filtersProp, source.filters)) return;
+    void source.setFilters(filtersProp);
+  }, [source, filtersProp]);
+  useEffect(() => {
+    if (filtersLatest.current !== undefined && sameFilters(snapshot.filters, filtersLatest.current)) return;
+    onFiltersChange?.(snapshot.filters);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [snapshot.filters]);
 
   /** Leaf columns in render order: pinned to the start first, the rest as ordered. */
   const rank = (id: string, pinned: false | 'start' | 'end'): number =>
@@ -358,12 +510,13 @@ export function EntityTable({
 
   /* inline edit ---------------------------------------------------------- */
 
-  function canEditColumn(column: CollectionColumn): boolean {
-    return editable && column.editable && (Boolean(editorFor?.(column.dataType)) || isEditableType(column.dataType));
+  function canEditColumn(column: CollectionColumn, row: EntityRow): boolean {
+    if (!editable || !column.editable || rowDisabled(row)) return false;
+    return Boolean(editorFor?.(column.dataType)) || isEditableType(column.dataType);
   }
 
-  function openEditor(key: string, column: CollectionColumn, value: unknown): void {
-    if (!canEditColumn(column)) return;
+  function openEditor(key: string, column: CollectionColumn, row: EntityRow, value: unknown): void {
+    if (!canEditColumn(column, row)) return;
     setCellError(null);
     draft.current = value;
     setDraftValue(value);
@@ -371,7 +524,7 @@ export function EntityTable({
   }
 
   async function commit(row: EntityRow, column: CollectionColumn, value: unknown): Promise<void> {
-    const key = rowKey(row);
+    const key = rowId(row);
     const before = cellValue(row, column.path);
     setEditing(null);
     if (value === before) return;
@@ -390,7 +543,7 @@ export function EntityTable({
     // up, after the commit has already closed it, and must not open it again.
     if (event.key !== 'Enter' || editing || (event.target as HTMLElement).dataset['slot'] !== 'table-cell') return;
     event.preventDefault();
-    openEditor(rowKey(row), column, cellValue(row, column.path));
+    openEditor(rowId(row), column, row, cellValue(row, column.path));
   }
 
   /**
@@ -432,7 +585,7 @@ export function EntityTable({
     );
     if (target === null || cell?.contains(target) || target.closest(EDITOR_POPUP) !== null) return;
     releaseEditor();
-    const row = rows.find((candidate) => rowKey(candidate) === open.key);
+    const row = rows.find((candidate) => rowId(candidate) === open.key);
     const column = byPath.get(open.path);
     if (row && column) void commit(row, column, draft.current);
     else setEditing(null);
@@ -658,7 +811,7 @@ export function EntityTable({
             ) : (
               <>
                 {window_.before > 0 ? <tr aria-hidden="true" style={{ height: `${window_.before}px` }} /> : null}
-                {window_.slice.map((modelRow) => {
+                {window_.slice.map((modelRow, index) => {
                   if (modelRow.getIsGrouped()) {
                     const groupColumn = byPath.get(modelRow.groupingColumnId ?? '');
                     return (
@@ -685,18 +838,30 @@ export function EntityTable({
                                 modelRow.getIsExpanded() && 'rotate-90',
                               )}
                             />
-                            <span className="truncate">
-                              <FieldValue
-                                value={modelRow.groupingValue}
-                                dataType={groupColumn?.dataType ?? 'text'}
-                                field={groupColumn?.field}
-                                statuses={statuses}
-                                context={context}
-                              />
-                            </span>
-                            <span className="text-muted-foreground font-mono text-xs tabular-nums">
-                              {leafCount(modelRow)}
-                            </span>
+                            {groupHeader ? (
+                              groupHeader({
+                                value: modelRow.groupingValue,
+                                column: groupColumn ?? null,
+                                count: leafCount(modelRow),
+                                expanded: modelRow.getIsExpanded(),
+                                id: modelRow.id,
+                              })
+                            ) : (
+                              <>
+                                <span className="truncate">
+                                  <FieldValue
+                                    value={modelRow.groupingValue}
+                                    dataType={groupColumn?.dataType ?? 'text'}
+                                    field={groupColumn?.field}
+                                    statuses={statuses}
+                                    context={context}
+                                  />
+                                </span>
+                                <span className="text-muted-foreground font-mono text-xs tabular-nums">
+                                  {leafCount(modelRow)}
+                                </span>
+                              </>
+                            )}
                           </button>
                         </TableCell>
                       </TableRow>
@@ -705,110 +870,124 @@ export function EntityTable({
                   const row = modelRow.original;
                   const key = modelRow.id;
                   const selected = modelRow.getIsSelected();
+                  const disabled = rowDisabled(row);
                   return (
                     <TableRow
                       key={key}
                       data-row-key={key}
                       data-state={selected ? 'selected' : undefined}
-                      className={selected ? 'bg-accent text-accent-foreground' : 'bg-background'}
+                      data-disabled={disabled ? 'true' : undefined}
+                      aria-disabled={disabled ? 'true' : undefined}
+                      className={cn(
+                        selected ? 'bg-accent text-accent-foreground' : 'bg-background',
+                        disabled && 'pointer-events-none opacity-50',
+                      )}
                       style={virtualized ? { height: `${rowHeight}px` } : undefined}
                     >
-                      {leafColumns.map((leaf) => {
-                        const pinned = leaf.getIsPinned() === 'start';
-                        if (leaf.id === SELECT) {
+                      {rowRender
+                        ? rowRender({ row, id: key, index, selected, disabled, columns })
+                        : leafColumns.map((leaf) => {
+                          const pinned = leaf.getIsPinned() === 'start';
+                          if (leaf.id === SELECT) {
+                            return (
+                              <TableCell
+                                key={leaf.id}
+                                data-pinned={pinned ? 'start' : undefined}
+                                style={pinStyle(leaf)}
+                                className={cn(cellClass, 'bg-inherit text-center')}
+                              >
+                                <Checkbox
+                                  aria-label="Select row"
+                                  checked={selected}
+                                  disabled={disabled}
+                                  onCheckedChange={(value) => modelRow.toggleSelected(value === true)}
+                                />
+                              </TableCell>
+                            );
+                          }
+                          const column = byPath.get(leaf.id);
+                          if (!column) return null;
+                          const canEdit = canEditColumn(column, row);
+                          const Editor = editorFor?.(column.dataType) ?? null;
                           return (
                             <TableCell
                               key={leaf.id}
+                              data-column={column.path}
                               data-pinned={pinned ? 'start' : undefined}
+                              data-editable={canEdit ? 'true' : undefined}
                               style={pinStyle(leaf)}
-                              className={cn(cellClass, 'bg-inherit text-center')}
+                              tabIndex={canEdit ? 0 : undefined}
+                              title={canEdit ? EDIT_HINT : undefined}
+                              onDoubleClick={() => openEditor(key, column, row, cellValue(row, column.path))}
+                              onKeyDown={(event) => canEdit && onCellKeyDown(event, row, column)}
+                              className={cn(
+                                cellClass,
+                                'focus-visible:ring-ring focus-visible:ring-offset-background bg-inherit overflow-hidden outline-none focus-visible:ring-2 focus-visible:ring-inset',
+                                column.align === 'right' && 'text-right',
+                                // Nothing else on a cell says it can be edited, so hover and focus say it.
+                                canEdit && 'hover:bg-accent/50 focus-visible:bg-accent/50 cursor-text transition-colors duration-150',
+                              )}
                             >
-                              <Checkbox
-                                aria-label="Select row"
-                                checked={selected}
-                                onCheckedChange={(value) => modelRow.toggleSelected(value === true)}
-                              />
-                            </TableCell>
-                          );
-                        }
-                        const column = byPath.get(leaf.id);
-                        if (!column) return null;
-                        const canEdit = canEditColumn(column);
-                        const Editor = editorFor?.(column.dataType) ?? null;
-                        return (
-                          <TableCell
-                            key={leaf.id}
-                            data-column={column.path}
-                            data-pinned={pinned ? 'start' : undefined}
-                            style={pinStyle(leaf)}
-                            tabIndex={canEdit ? 0 : undefined}
-                            onDoubleClick={() => openEditor(key, column, cellValue(row, column.path))}
-                            onKeyDown={(event) => canEdit && onCellKeyDown(event, row, column)}
-                            className={cn(
-                              cellClass,
-                              'focus-visible:ring-ring focus-visible:ring-offset-background bg-inherit overflow-hidden outline-none focus-visible:ring-2 focus-visible:ring-inset',
-                              column.align === 'right' && 'text-right',
-                              canEdit && 'cursor-text',
-                            )}
-                          >
-                            {isEditing(key, column.path) ? (
-                              Editor ? (
-                                <Editor
-                                  value={cellValue(row, column.path)}
-                                  dataType={column.dataType}
-                                  field={column.field}
-                                  commit={(value) => void commit(row, column, value)}
-                                  cancel={() => setEditing(null)}
-                                />
+                              {isEditing(key, column.path) ? (
+                                Editor ? (
+                                  <Editor
+                                    value={cellValue(row, column.path)}
+                                    dataType={column.dataType}
+                                    field={column.field}
+                                    commit={(value) => void commit(row, column, value)}
+                                    cancel={() => setEditing(null)}
+                                  />
+                                ) : (
+                                  // The default editor is the type's own control from the field-editor item.
+                                  <div
+                                    data-slot="entity-table-editor"
+                                    role="presentation"
+                                    ref={focusEditor}
+                                    onKeyDown={(event) => editorKeyDown(event, row, column)}
+                                  >
+                                    <FieldEditor
+                                      value={draftValue}
+                                      onValueChange={(next) => {
+                                        draft.current = next;
+                                        setDraftValue(next);
+                                      }}
+                                      dataType={column.dataType}
+                                      field={column.field}
+                                      statuses={statuses}
+                                      context={context}
+                                      projectId={projectId}
+                                      precision={precision}
+                                      symbol={symbol ?? '$'}
+                                      hoursPerDay={prefs.hoursPerDay}
+                                      locale={prefs.locale}
+                                      timeZone={prefs.timeZone}
+                                      frameRate={prefs.frameRate}
+                                      mode="edit"
+                                      size="sm"
+                                    />
+                                  </div>
+                                )
+                              ) : cellRender ? (
+                                cellRender({ row, id: key, column, value: cellValue(row, column.path), disabled })
                               ) : (
-                                // The default editor is the type's own control from the field-editor item.
-                                <div
-                                  data-slot="entity-table-editor"
-                                  role="presentation"
-                                  ref={focusEditor}
-                                  onKeyDown={(event) => editorKeyDown(event, row, column)}
-                                >
-                                  <FieldEditor
-                                    value={draftValue}
-                                    onValueChange={(next) => {
-                                      draft.current = next;
-                                      setDraftValue(next);
-                                    }}
+                                <>
+                                  <FieldValue
+                                    value={cellValue(row, column.path)}
                                     dataType={column.dataType}
                                     field={column.field}
                                     statuses={statuses}
                                     context={context}
-                                    projectId={projectId}
-                                    precision={precision}
-                                    symbol={symbol ?? '$'}
-                                    hoursPerDay={prefs.hoursPerDay}
-                                    locale={prefs.locale}
-                                    timeZone={prefs.timeZone}
-                                    frameRate={prefs.frameRate}
-                                    mode="edit"
-                                    size="sm"
                                   />
-                                </div>
-                              )
-                            ) : (
-                              <>
-                                <FieldValue
-                                  value={cellValue(row, column.path)}
-                                  dataType={column.dataType}
-                                  field={column.field}
-                                  statuses={statuses}
-                                  context={context}
-                                />
-                                {cellError && cellError.key === key && cellError.path === column.path ? (
-                                  <span className="text-destructive block truncate text-xs" title={cellError.message}>
-                                    {cellError.message}
-                                  </span>
-                                ) : null}
-                              </>
-                            )}
-                          </TableCell>
-                        );
-                      })}
+                                  {cellError && cellError.key === key && cellError.path === column.path ? (
+                                    <span className="text-destructive block truncate text-xs" title={cellError.message}>
+                                      {cellError.message}
+                                    </span>
+                                  ) : null}
+                                </>
+                              )}
+                            </TableCell>
+                          );
+                          })}
                     </TableRow>
                   );
                 })}

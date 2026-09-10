@@ -50,8 +50,15 @@ const [group, sub, secondary] = await resolveColumns(context.schema, 'Task', [
 | `context` | `SgContext` | — | The widget context. Values render with its preferences, and an entity value links to the row's page when it carries a site. |
 | `density` | `'compact' \| 'default'` | `'default'` | Compact halves the vertical row padding. |
 | `selectable` | `boolean` | `false` | Draws a checkbox on each row. |
+| `selection` | `EntityRef[]` | `[]` | The selected rows, two-way. Names loaded rows only. |
+| `getRowId` | `(row) => string` | — | How a row is keyed, in the DOM and in the selection. Default `Type:id`. |
+| `isRowDisabled` | `(row) => boolean` | — | True for a row that cannot be selected or reached by Tab. |
+| `collapsed` | `string[]` | `[]` | Keys of the groups that are shut, two-way. |
+| `sort` | `SortSpec[]` | — | The source's sort, two-way, so a SortPicker drops into `header`. |
+| `filters` | `FilterNode \| WireGroup \| null` | — | The source's filter, two-way, so a FilterBar drops into `header`. |
 | `pageSizes` | `number[]` | `[25, 50, 100]` | Rows per page offered in the footer. |
 | `maxHeight` | `string` | `'28rem'` | Height of the scrolling body. |
+| `virtualizeAfter` | `number` | `100` | Rows and headers above which the list draws only the lines on screen. |
 | `emptyLabel` | `string` | `'No rows'` | Shown when the read returned nothing. |
 | `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Row text and thumbnail. A compact row takes the step below. |
 | `class` / `className` | `string` | — | Merged after the widget's own classes. |
@@ -62,12 +69,19 @@ const [group, sub, secondary] = await resolveColumns(context.schema, 'Task', [
 |---|---|---|
 | `onSelectionChange` | `EntityRef[]` | The selection changed. |
 | `onSelect` | `EntityRow` | A row was activated, when `selectable` is off. |
+| `onCollapsedChange` | `string[]` | A group was opened or shut. |
+| `onSortChange` | `SortSpec[]` | The source's sort changed. |
+| `onFiltersChange` | `FilterNode \| WireGroup \| null` | The source's filter changed. |
 
 ## Slots
 
 | slot | receives | meaning |
 |---|---|---|
 | `leading` | `EntityRow` | Fixed-size slot at the start of the row, when `thumbnail` is not the one wanted: an avatar, a status glyph. |
+| `row` | `{ row, id, index, selected, disabled }` | Draws a row's contents. The list keeps the row's box. |
+| `groupHeader` | `{ value, column, count, collapsed, id }` | Draws a group header's contents, after its chevron. |
+| `header` | — | Region above the list. |
+| `footer` | — | Region below the footer. |
 
 ## Keyboard
 
@@ -77,6 +91,8 @@ const [group, sub, secondary] = await resolveColumns(context.schema, 'Task', [
 | Enter, Space on a header | Collapses or expands the group. |
 | Enter, Space on a row | Selects it, or emits the select event. |
 | Enter in the page number | Goes to that page. |
+
+A disabled row is skipped by Tab: its checkbox and its own control take no keys and no click.
 
 ## API behaviour
 

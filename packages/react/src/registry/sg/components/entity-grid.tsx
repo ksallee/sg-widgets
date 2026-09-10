@@ -5,10 +5,24 @@ import type {
   EntityRow,
   EntitySource,
   FieldSpec,
+  RowDisabledFn,
+  RowIdFn,
   SgContext,
+  SortSpec,
+  SourceFilters,
   StatusRecord,
 } from '@sg-widgets/core';
-import { describePaging, rowKey } from '@sg-widgets/core';
+import {
+  describePaging,
+  firstEnabledIndex,
+  nextEnabledIndex,
+  rowIdOf,
+  rowIsDisabled,
+  rowKey,
+  sameFilters,
+  sameSort,
+} from '@sg-widgets/core';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { ChevronLeft, ChevronRight, CircleAlert, Inbox } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -29,8 +43,29 @@ export type EntityGridDensity = 'compact' | 'default';
 
 /** The gap between tiles; compact halves it, as it halves a row's padding elsewhere. */
 const GAP: Record<EntityGridDensity, string> = { compact: 'gap-1.5', default: 'gap-3' };
+const GAP_PX: Record<EntityGridDensity, number> = { compact: 6, default: 12 };
 
-const TILE_SELECTOR = '[data-slot="entity-card"][data-variant="tile"]';
+/** Tile heights, so a virtualised grid can be measured before it is drawn. */
+const TILE_HEIGHT: Record<EntityGridSize, number> = { sm: 148, md: 190, lg: 232 };
+
+/** What a `card` render prop is handed. It draws one grid cell in place of the tile. */
+export interface EntityGridCardContext {
+  row: EntityRow;
+  /** The row's id, as `getRowId` derives it. */
+  id: string;
+  index: number;
+  selected: boolean;
+  disabled: boolean;
+  /** True on the tile that owns the grid's one tab stop. */
+  active: boolean;
+}
+
+/** The latest value, for an effect that must read it without depending on it. */
+function useLatest<T>(value: T): { current: T } {
+  const ref = useRef(value);
+  ref.current = value;
+  return ref;
+}
 
 export interface EntityGridProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'children' | 'onSelect'> {
   /** The rows and the paging behind them. Created with core's `createEntitySource`. */
@@ -56,13 +91,33 @@ export interface EntityGridProps extends Omit<React.HTMLAttributes<HTMLDivElemen
   size?: EntityGridSize;
   density?: EntityGridDensity;
   selectable?: boolean;
+  /** The selected rows. Controlled, with the grid's own selection as the fallback. */
+  selection?: EntityRef[];
   onSelectionChange?: (rows: EntityRef[]) => void;
   onSelect?: (row: EntityRow) => void;
+  /** How a row is keyed, in the DOM and in the selection. Default `Type:id`. */
+  getRowId?: RowIdFn;
+  /** True for a row the arrows skip and the selection refuses. */
+  isRowDisabled?: RowDisabledFn;
+  /** The source's sort, so a SortPicker drops into the header. */
+  sort?: SortSpec[];
+  onSortChange?: (sort: SortSpec[]) => void;
+  /** The source's filter, so a FilterBar drops into the header. */
+  filters?: SourceFilters;
+  onFiltersChange?: (filters: SourceFilters) => void;
   /** Rows per page offered in the footer. `pages` mode only. */
   pageSizes?: number[];
   /** Height of the scrolling body. In `infinite` mode, reaching its end asks for the next page. */
   maxHeight?: string;
+  /** Rows above which the grid is virtualised. */
+  virtualizeAfter?: number;
   emptyLabel?: string;
+  /** Draws one grid cell. Without it, the row is an EntityCard tile. */
+  card?: (context: EntityGridCardContext) => React.ReactNode;
+  /** Region above the grid. */
+  header?: React.ReactNode;
+  /** Region below the footer. */
+  footer?: React.ReactNode;
 }
 
 const stateClass = 'text-muted-foreground flex items-center justify-center gap-2 py-10 text-sm';
@@ -100,11 +155,22 @@ export function EntityGrid({
   size = 'md',
   density = 'default',
   selectable = false,
+  selection: selectionProp,
   onSelectionChange,
   onSelect,
+  getRowId,
+  isRowDisabled,
+  sort: sortProp,
+  onSortChange,
+  filters: filtersProp,
+  onFiltersChange,
   pageSizes = [25, 50, 100],
   maxHeight = '32rem',
+  virtualizeAfter = 100,
   emptyLabel = 'No rows',
+  card,
+  header,
+  footer,
   className,
   ...rest
 }: EntityGridProps) {
@@ -122,18 +188,55 @@ export function EntityGrid({
   // `false` still draws the media block; a path no row carries is the placeholder.
   const imagePath = thumbnail === false ? '' : thumbnail;
 
-  const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [pageDraft, setPageDraft] = useState('');
-  useEffect(() => {
-    onSelectionChange?.(rows.filter((row) => selected[rowKey(row)]).map((row) => ({ type: row.type, id: row.id })));
-    // The callback is the caller's; the selection and the rows are what move.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selected, rows]);
+  const rowId = (row: EntityRow): string => rowIdOf(row, getRowId);
+  const disabledAt = (index: number): boolean => {
+    const row = rows[index];
+    return row === undefined || rowIsDisabled(row, isRowDisabled);
+  };
+
+  const [ownSelection, setOwnSelection] = useState<EntityRef[]>([]);
+  const selection = selectionProp ?? ownSelection;
+  /** The selection as keys, so a row asks whether it is in it in constant time. */
+  const chosenKeys = new Set(selection.map(rowKey));
 
   function toggle(row: EntityRow): void {
+    if (rowIsDisabled(row, isRowDisabled)) return;
     const key = rowKey(row);
-    setSelected((was) => ({ ...was, [key]: !was[key] }));
+    const next = chosenKeys.has(key)
+      ? selection.filter((ref) => rowKey(ref) !== key)
+      : [...selection, { type: row.type, id: row.id }];
+    setOwnSelection(next);
+    onSelectionChange?.(next);
   }
+
+  /*
+   * The source's sort and filter, mirrored out as props so a toolbar control drops in.
+   *
+   * Each pair is one effect into the source and one out of it, and the out one reads the
+   * prop off a ref, so a change travels once and the two never write to each other.
+   */
+  const sortLatest = useLatest(sortProp);
+  useEffect(() => {
+    if (sortProp === undefined || sameSort(sortProp, source.sort)) return;
+    void source.setSort([...sortProp]);
+  }, [source, sortProp]);
+  useEffect(() => {
+    if (sortLatest.current !== undefined && sameSort(snapshot.sort, sortLatest.current)) return;
+    onSortChange?.([...snapshot.sort]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [snapshot.sort]);
+
+  const filtersLatest = useLatest(filtersProp);
+  useEffect(() => {
+    if (filtersProp === undefined || sameFilters(filtersProp, source.filters)) return;
+    void source.setFilters(filtersProp);
+  }, [source, filtersProp]);
+  useEffect(() => {
+    if (filtersLatest.current !== undefined && sameFilters(snapshot.filters, filtersLatest.current)) return;
+    onFiltersChange?.(snapshot.filters);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [snapshot.filters]);
 
   function goToPage(value: string): void {
     const wanted = Number(value);
@@ -146,12 +249,9 @@ export function EntityGrid({
 
   const listRef = useRef<HTMLDivElement | null>(null);
   const [cursor, setCursor] = useState(0);
-  const active = Math.min(cursor, Math.max(rows.length - 1, 0));
-
-  function tiles(): HTMLElement[] {
-    const list = listRef.current;
-    return list ? [...list.querySelectorAll<HTMLElement>(TILE_SELECTOR)] : [];
-  }
+  /** The one tab stop, which never lands on a disabled row. */
+  const active =
+    rows.length === 0 ? -1 : firstEnabledIndex(rows.length, Math.min(cursor, rows.length - 1), 1, disabledAt);
 
   /** How many tiles a row holds, read off the track list `auto-fill` resolved to. */
   function columnCount(): number {
@@ -162,46 +262,53 @@ export function EntityGrid({
   }
 
   function focusTile(index: number): void {
-    const all = tiles();
-    const next = Math.max(0, Math.min(index, all.length - 1));
-    const el = all[next];
-    if (!el) return;
+    const next = Math.max(0, Math.min(index, rows.length - 1));
     setCursor(next);
-    el.focus({ preventScroll: true });
-    el.scrollIntoView({ block: 'nearest' });
+    const put = (): void => {
+      const el = listRef.current?.querySelector<HTMLElement>(`[data-index="${next}"]`);
+      if (!el) return;
+      el.focus({ preventScroll: true });
+      el.scrollIntoView({ block: 'nearest' });
+    };
+    // A tile outside the virtual window has to be drawn before it can take focus.
+    if (virtualized) {
+      virtualizer.scrollToIndex(Math.floor(next / Math.max(1, cols)));
+      requestAnimationFrame(put);
+    } else put();
   }
 
   function onKeyDown(event: React.KeyboardEvent<HTMLDivElement>): void {
     const target = event.target as HTMLElement | null;
     // Chrome inside a tile, the checkbox, keeps its own keys.
-    if (!target || target !== target.closest(TILE_SELECTOR)) return;
-    const index = tiles().indexOf(target);
-    if (index < 0) return;
+    if (!target || target !== target.closest('[data-index]')) return;
+    const index = Number(target.dataset['index']);
+    if (!Number.isInteger(index)) return;
     const row = rows[index];
+    const step = columnCount();
     switch (event.key) {
       case 'ArrowRight':
-        focusTile(index + 1);
+        focusTile(nextEnabledIndex(rows.length, index, 1, disabledAt));
         break;
       case 'ArrowLeft':
-        focusTile(index - 1);
+        focusTile(nextEnabledIndex(rows.length, index, -1, disabledAt));
         break;
       case 'ArrowDown':
-        focusTile(index + columnCount());
+        focusTile(nextEnabledIndex(rows.length, index, step, disabledAt));
         break;
       case 'ArrowUp':
-        focusTile(index - columnCount());
+        focusTile(nextEnabledIndex(rows.length, index, -step, disabledAt));
         break;
       case 'Home':
-        focusTile(0);
+        focusTile(firstEnabledIndex(rows.length, 0, 1, disabledAt));
         break;
       case 'End':
-        focusTile(tiles().length - 1);
+        focusTile(firstEnabledIndex(rows.length, rows.length - 1, -1, disabledAt));
         break;
       case ' ':
         if (selectable && row) toggle(row);
         break;
       case 'Enter':
-        if (row) onSelect?.(row);
+        if (row && !disabledAt(index)) onSelect?.(row);
         break;
       default:
         return;
@@ -236,10 +343,59 @@ export function EntityGrid({
     return () => observer.disconnect();
   }, [source, mode, rows.length]);
 
+  /* virtual rows --------------------------------------------------------- */
+
+  /** Tiles across, so a virtualised grid walks rows of tiles and not tiles. */
+  const [cols, setCols] = useState(1);
+  const virtualized = rows.length > virtualizeAfter;
+  const lineHeight = TILE_HEIGHT[size] + GAP_PX[density];
+
+  useEffect(() => {
+    const list = listRef.current;
+    if (!list) return;
+    const measure = (): void => {
+      setCols(
+        Math.max(1, getComputedStyle(list).gridTemplateColumns.split(' ').filter((track) => track.length > 0).length),
+      );
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(list);
+    return () => observer.disconnect();
+  }, [rows.length, size, density]);
+
+  const virtualizer = useVirtualizer({
+    count: virtualized ? Math.ceil(rows.length / Math.max(1, cols)) : 0,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: () => lineHeight,
+    overscan: 4,
+  });
+
+  const lines = virtualizer.getVirtualItems();
+  const firstLine = lines[0];
+  const lastLine = lines[lines.length - 1];
+  const across = Math.max(1, cols);
+  const window_ = !virtualized
+    ? { before: 0, after: 0, from: 0, slice: rows }
+    : !firstLine || !lastLine
+      ? { before: 0, after: 0, from: 0, slice: rows.slice(0, across * 4) }
+      : {
+          before: firstLine.start,
+          after: virtualizer.getTotalSize() - lastLine.end,
+          from: firstLine.index * across,
+          slice: rows.slice(firstLine.index * across, (lastLine.index + 1) * across),
+        };
+
   const columns = { gridTemplateColumns: `repeat(auto-fill,minmax(${TILE[size]}px,1fr))` };
 
   return (
     <div data-slot="entity-grid" className={cn('flex w-full min-w-0 flex-col gap-2', className)} {...rest}>
+      {header ? (
+        <div data-slot="entity-grid-header" className="flex w-full min-w-0 flex-wrap items-center gap-2">
+          {header}
+        </div>
+      ) : null}
+
       <div
         ref={scrollRef}
         data-slot="entity-grid-scroll"
@@ -278,8 +434,34 @@ export function EntityGrid({
               style={columns}
               onKeyDown={onKeyDown}
             >
-              {rows.map((row, index) => {
-                const key = rowKey(row);
+              {window_.before > 0 ? (
+                <div aria-hidden="true" style={{ gridColumn: '1/-1', height: `${window_.before}px` }} />
+              ) : null}
+              {window_.slice.map((row, offset) => {
+                const index = window_.from + offset;
+                const key = rowId(row);
+                const chosen = chosenKeys.has(rowKey(row));
+                const disabled = disabledAt(index);
+                if (card) {
+                  return (
+                    <div
+                      key={key}
+                      data-slot="entity-grid-card"
+                      role="option"
+                      aria-selected={chosen}
+                      aria-disabled={disabled ? 'true' : undefined}
+                      data-disabled={disabled ? 'true' : undefined}
+                      tabIndex={index === active ? 0 : -1}
+                      data-row-key={key}
+                      data-index={index}
+                      className={cn('min-w-0 outline-none', disabled && 'pointer-events-none opacity-50')}
+                      onFocus={() => setCursor(index)}
+                      onClick={(event) => onTileClick(event, row)}
+                    >
+                      {card({ row, id: key, index, selected: chosen, disabled, active: index === active })}
+                    </div>
+                  );
+                }
                 return (
                   <EntityCard
                     key={key}
@@ -296,17 +478,24 @@ export function EntityGrid({
                     statuses={statuses}
                     selectable={selectable}
                     size={size}
-                    selected={selected[key] === true}
+                    selected={chosen}
                     onSelectedChange={() => toggle(row)}
                     role="option"
-                    aria-selected={selected[key] === true}
+                    aria-selected={chosen}
+                    aria-disabled={disabled ? 'true' : undefined}
+                    data-disabled={disabled ? 'true' : undefined}
                     tabIndex={index === active ? 0 : -1}
                     data-row-key={key}
+                    data-index={index}
+                    className={disabled ? 'pointer-events-none opacity-50' : undefined}
                     onFocus={() => setCursor(index)}
                     onClick={(event) => onTileClick(event, row)}
                   />
                 );
               })}
+              {window_.after > 0 ? (
+                <div aria-hidden="true" style={{ gridColumn: '1/-1', height: `${window_.after}px` }} />
+              ) : null}
             </div>
             {paging.mode === 'infinite' ? <div ref={sentinelRef} aria-hidden="true" className="h-4" /> : null}
           </>
@@ -385,6 +574,12 @@ export function EntityGrid({
           </>
         )}
       </div>
+
+      {footer ? (
+        <div data-slot="entity-grid-footer-region" className="flex w-full min-w-0 flex-wrap items-center gap-2">
+          {footer}
+        </div>
+      ) : null}
     </div>
   );
 }

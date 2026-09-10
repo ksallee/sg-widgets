@@ -1,6 +1,14 @@
 import type * as React from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
-import type { EntityRef, FieldSpec, SgContext, TreeFieldPlan, TreeNode, TreeRow } from '@sg-widgets/core';
+import type {
+  EntityRef,
+  FieldSpec,
+  SgContext,
+  TreeFieldPlan,
+  TreeNode,
+  TreeRow,
+  TreeSelectionMode,
+} from '@sg-widgets/core';
 import {
   createTree,
   hierarchyLoader,
@@ -9,6 +17,7 @@ import {
   matchRuns,
   pathOf,
   resolveTreeFields,
+  sameIds,
   TREE_STATUS_FIELDS,
 } from '@sg-widgets/core';
 import { ChevronRight, CircleAlert, Inbox, Loader, Search } from 'lucide-react';
@@ -34,6 +43,26 @@ const GLYPH: Record<EntityTreeSize, string> = { sm: 'size-3.5', md: 'size-4', lg
 /** A leaf inside a row sits one step down the ladder. */
 const LEAF: Record<EntityTreeSize, 'sm' | 'md'> = { sm: 'sm', md: 'sm', lg: 'md' };
 
+/** What a `row` render prop is handed. It draws a row's contents, not its chevron or its box. */
+export interface EntityTreeRowContext {
+  node: TreeNode;
+  /** The node's path, which is what a tree keys a row on. */
+  id: string;
+  level: number;
+  expanded: boolean;
+  selected: boolean;
+  disabled: boolean;
+  /** True when the search placed this row, or its label holds every word. */
+  match: boolean;
+}
+
+/** The latest value, for an effect that must read it without depending on it. */
+function useLatest<T>(value: T): { current: T } {
+  const ref = useRef(value);
+  ref.current = value;
+  return ref;
+}
+
 export interface EntityTreeProps extends DivProps {
   /** The widget context. Every read goes through it, so widgets on a page share one cache. */
   context: SgContext;
@@ -43,10 +72,25 @@ export interface EntityTreeProps extends DivProps {
   seedPath?: string | string[] | null;
   /** Draws a checkbox per node and reports the checked rows. */
   checkable?: boolean;
-  selection?: 'none' | 'single' | 'multiple';
+  /** How many nodes may be selected at once. */
+  selectionMode?: TreeSelectionMode;
+  /** Paths of the selected nodes. Controlled, with the tree's own as the fallback. */
+  selection?: string[];
+  onSelectionChange?: (paths: string[]) => void;
+  /** Paths of the open nodes. Controlled, with the tree's own as the fallback. */
+  expanded?: string[];
+  onExpandedChange?: (paths: string[]) => void;
+  /** True for a node the arrows skip and the selection refuses. */
+  isRowDisabled?: (node: TreeNode) => boolean;
   onCheckedChange?: (rows: EntityRef[]) => void;
   onSelect?: (node: TreeNode) => void;
   onError?: (error: Error) => void;
+  /** Draws a row's contents: everything after the chevron and the checkbox. */
+  row?: (context: EntityTreeRowContext) => React.ReactNode;
+  /** Region above the tree. */
+  header?: React.ReactNode;
+  /** Region below the tree. */
+  footer?: React.ReactNode;
   /** Shows an input that searches the project and opens the tree onto the hits. */
   searchable?: boolean;
   searchPlaceholder?: string;
@@ -109,10 +153,18 @@ export function EntityTree({
   rootPath,
   seedPath = null,
   checkable = false,
-  selection = 'single',
+  selectionMode = 'single',
+  selection: selectionProp,
+  onSelectionChange,
+  expanded: expandedProp,
+  onExpandedChange,
+  isRowDisabled,
   onCheckedChange,
   onSelect,
   onError,
+  row: rowRender,
+  header,
+  footer,
   searchable = false,
   searchPlaceholder = 'Search',
   expandDepth = 3,
@@ -156,12 +208,15 @@ export function EntityTree({
     () =>
       createTree({
         rootPath,
-        selection,
+        selection: selectionMode,
         expandDepth,
+        disabled: isRowDisabled,
         loader: hierarchyLoader(context.client, { fields: requested.split(',') }),
         searcher: hierarchySearcher(context.client, rootPath, { schema }),
       }),
-    [context.client, rootPath, selection, expandDepth, requested, schema],
+    // The predicate is the caller's; the tree is rebuilt when what it reads moves.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [context.client, rootPath, selectionMode, expandDepth, requested, schema],
   );
 
   const snap = useSyncExternalStore(engine.subscribe, engine.snapshot, engine.snapshot);
@@ -188,6 +243,40 @@ export function EntityTree({
     // The callback is the caller's; the checked set is what moves.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [engine, checkedKey]);
+
+  /*
+   * Controlled state, each with the tree's own as the fallback.
+   *
+   * Each pair is one effect out of the engine and one into it, and each reads the other
+   * side off a ref, so a change travels once and the two never write to each other.
+   */
+  const [ownExpanded, setOwnExpanded] = useState<string[]>([]);
+  const expanded = expandedProp ?? ownExpanded;
+  const expandedLatest = useLatest(expanded);
+  useEffect(() => {
+    if (sameIds(snap.expanded, expandedLatest.current)) return;
+    setOwnExpanded([...snap.expanded]);
+    onExpandedChange?.([...snap.expanded]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [snap.expanded]);
+  useEffect(() => {
+    if (expandedProp === undefined || sameIds(expandedProp, engine.snapshot().expanded)) return;
+    void engine.setExpanded(expandedProp);
+  }, [engine, expandedProp]);
+
+  const [ownSelection, setOwnSelection] = useState<string[]>([]);
+  const selection = selectionProp ?? ownSelection;
+  const selectionLatest = useLatest(selection);
+  useEffect(() => {
+    if (sameIds(snap.selected, selectionLatest.current)) return;
+    setOwnSelection([...snap.selected]);
+    onSelectionChange?.([...snap.selected]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [snap.selected]);
+  useEffect(() => {
+    if (selectionProp === undefined || sameIds(selectionProp, engine.snapshot().selected)) return;
+    engine.setSelected(selectionProp);
+  }, [engine, selectionProp]);
 
   /* what a row draws with -------------------------------------------------- */
 
@@ -323,6 +412,12 @@ export function EntityTree({
       className={cn('flex w-full min-w-0 flex-col gap-2', className)}
       {...rest}
     >
+      {header ? (
+        <div data-slot="entity-tree-header" className="flex w-full min-w-0 flex-wrap items-center gap-2">
+          {header}
+        </div>
+      ) : null}
+
       {searchable ? (
         <div className="relative flex items-center">
           <Input
@@ -375,7 +470,7 @@ export function EntityTree({
           <ul
             role="tree"
             aria-label={label}
-            aria-multiselectable={selection === 'multiple' ? true : undefined}
+            aria-multiselectable={selectionMode === 'multiple' ? true : undefined}
             data-slot="entity-tree-list"
             style={{ '--tree-indent': '1rem' } as React.CSSProperties}
             className="flex flex-col"
@@ -404,12 +499,14 @@ export function EntityTree({
                     data-level={node.level}
                     data-state={node.hasChildren ? (row.expanded ? 'open' : 'closed') : undefined}
                     data-selected={row.selected ? 'true' : undefined}
+                    data-disabled={row.disabled ? 'true' : undefined}
+                    aria-disabled={row.disabled ? 'true' : undefined}
                     aria-level={node.level + 1}
                     aria-expanded={node.hasChildren ? row.expanded : undefined}
                     aria-selected={row.selected}
                     aria-checked={checkable ? checkedAttr(row.checked) : undefined}
                     aria-busy={row.loading ? true : undefined}
-                    tabIndex={row.focused ? 0 : -1}
+                    tabIndex={row.focused && !row.disabled ? 0 : -1}
                     onClick={() => activate(row)}
                     className={cn(
                       'focus-visible:ring-ring focus-visible:ring-offset-background flex min-w-0 cursor-default gap-1.5 rounded-md outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2',
@@ -418,6 +515,7 @@ export function EntityTree({
                       hasSubLabel ? 'items-start' : 'items-center',
                       dimming && !row.match && 'text-muted-foreground',
                       row.selected ? 'bg-accent text-accent-foreground' : 'hover:bg-muted/50',
+                      row.disabled && 'pointer-events-none opacity-50',
                     )}
                   >
                     {node.hasChildren ? (
@@ -469,6 +567,18 @@ export function EntityTree({
                       </span>
                     ) : null}
 
+                    {rowRender ? (
+                      rowRender({
+                        node,
+                        id: node.path,
+                        level: node.level,
+                        expanded: row.expanded,
+                        selected: row.selected,
+                        disabled: row.disabled,
+                        match: row.match,
+                      })
+                    ) : (
+                      <>
                     {thumbnail !== false ? (
                       <span className={cn('flex shrink-0 items-center', LEAD[size])}>
                         {thumbOf(node) ? (
@@ -546,6 +656,8 @@ export function EntityTree({
                         />
                       </span>
                     ) : null}
+                      </>
+                    )}
                   </div>
                 </li>
               );
@@ -553,6 +665,12 @@ export function EntityTree({
           </ul>
         )}
       </div>
+
+      {footer ? (
+        <div data-slot="entity-tree-footer" className="flex w-full min-w-0 flex-wrap items-center gap-2">
+          {footer}
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -127,7 +127,8 @@ export function serializeSort(sort: readonly SortSpec[]): string | undefined {
   return keys.length > 0 ? keys.join(',') : undefined;
 }
 
-function toWire(filters: SourceFilters): WireGroup | null {
+/** A filter in the one shape a read carries, whichever spelling the caller holds. */
+export function toWireGroup(filters: SourceFilters): WireGroup | null {
   if (!filters) return null;
   if ('kind' in filters) return toApi3Hash(filters);
   return filters;
@@ -148,7 +149,7 @@ export function createEntitySource(options: EntitySourceOptions): EntitySource {
     error: null,
     hasMore: false,
     total: null,
-    filters: toWire(options.filters ?? null),
+    filters: toWireGroup(options.filters ?? null),
     sort: [...(options.sort ?? [])],
     mode: options.mode ?? 'infinite',
     page: Math.max(1, options.page ?? 1),
@@ -285,7 +286,7 @@ export function createEntitySource(options: EntitySourceOptions): EntitySource {
     },
 
     setFilters(filters: SourceFilters): Promise<void> {
-      set({ filters: toWire(filters) });
+      set({ filters: toWireGroup(filters) });
       return source.load();
     },
 

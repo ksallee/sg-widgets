@@ -56,7 +56,10 @@ Each level's rows are read once per type over the ids the level returned, so `su
 | `rootPath` | `string` | — | Where the tree starts, `/Project/<id>`. |
 | `seedPath` | `string \| string[] \| null` | `null` | Opens the tree down to this path, or to the last entry of an incremental path. |
 | `checkable` | `boolean` | `false` | Draws a checkbox per node and reports the checked rows. |
-| `selection` | `'none' \| 'single' \| 'multiple'` | `'single'` | How many nodes may be selected at once. |
+| `selectionMode` | `'none' \| 'single' \| 'multiple'` | `'single'` | How many nodes may be selected at once. |
+| `selection` | `string[]` | `[]` | Paths of the selected nodes, two-way. |
+| `expanded` | `string[]` | — | Paths of the open nodes, two-way. Setting it opens exactly those, reading whatever level is not loaded. |
+| `isRowDisabled` | `(node) => boolean` | — | True for a node the arrows skip and the selection refuses. |
 | `searchable` | `boolean` | `false` | Shows an input that searches the project and opens the tree onto the hits. |
 | `searchPlaceholder` | `string` | `'Search'` | Placeholder and label of that input. |
 | `expandDepth` | `number` | `3` | Levels a whole-branch expansion opens. |
@@ -82,12 +85,18 @@ Each level's rows are read once per type over the ids the level returned, so `su
 | event | payload | when |
 |---|---|---|
 | `onSelect` | `TreeNode` | A node with nothing under it was chosen. |
+| `onSelectionChange` | `string[]` | The selected paths changed. |
+| `onExpandedChange` | `string[]` | The open paths changed. |
 | `onCheckedChange` | `EntityRef[]` | The checked set changed. Only nodes that stand for a row are reported. |
 | `onError` | `Error` | A read failed. |
 
 ## Slots
 
-None.
+| slot | receives | meaning |
+|---|---|---|
+| `row` | `{ node, id, level, expanded, selected, disabled, match }` | Draws a row's contents: everything after the chevron and the checkbox. |
+| `header` | — | Region above the search input. |
+| `footer` | — | Region below the tree. |
 
 ## Keyboard
 
@@ -107,6 +116,9 @@ The tree keeps one tab stop. Focus follows the cursor, and the row it sits on is
 | * | Opens every branch at the focus level, `expandDepth` levels deep. |
 | Escape | In the search input, clears it. |
 | a–z, 0–9 | Moves to the next node whose label starts with what was typed. The same letter again walks the matches. |
+
+A disabled node takes no keys and no click: the arrows and type-ahead step over it, and the cursor
+never lands on it.
 
 ## API behaviour
 

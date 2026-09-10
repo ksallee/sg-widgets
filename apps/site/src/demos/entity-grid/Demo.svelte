@@ -1,7 +1,8 @@
 <script lang="ts">
 	import type { CollectionColumn, EntityRef, EntityRow } from '@sg-widgets/core';
-	import { condition, createEntitySource, resolveColumns } from '@sg-widgets/core';
+	import { cellValue, condition, createEntitySource, displayNameOf, resolveColumns } from '@sg-widgets/core';
 	import EntityGrid from '$lib/registry/components/entity-grid.svelte';
+	import Thumbnail from '$lib/registry/components/thumbnail.svelte';
 	import { createDemoContext } from '../_shared/client';
 
 	const ARTIST = 'user';
@@ -33,6 +34,9 @@
 	let size = $state<'sm' | 'md' | 'lg'>('md');
 	let selected = $state<EntityRef[]>([]);
 	let opened = $state<EntityRow | null>(null);
+
+	/** The demo holds every third row back, to show what a disabled row does. */
+	const isRowDisabled = (row: EntityRow): boolean => row.id % 3 === 0;
 
 	async function load(): Promise<CollectionColumn> {
 		const [artist] = await resolveColumns(context.schema, 'Version', [ARTIST]);
@@ -94,6 +98,28 @@
 		<section class={group} data-testid="grid-no-image">
 			<h4 class={label}>No image</h4>
 			<EntityGrid source={short} {context} thumbnail={false} secondaryField={artist} size="sm" maxHeight="18rem" />
+		</section>
+
+		<section class={group} data-testid="grid-disabled">
+			<h4 class={label}>Every third row disabled</h4>
+			<EntityGrid source={short} {context} secondaryField={artist} size="sm" selectable maxHeight="18rem" {isRowDisabled} />
+		</section>
+
+		<section class={group} data-testid="grid-card">
+			<h4 class={label}>A card of the caller's own</h4>
+			<EntityGrid source={short} {context} size="sm" maxHeight="18rem">
+				{#snippet card({ row })}
+					<article
+						class="border-border bg-card flex h-full flex-col gap-2 rounded-md border p-3 transition-colors duration-150 hover:bg-accent/50"
+					>
+						<Thumbnail src={cellValue(row, 'image') as string | null} alt="" size="lg" class="w-full" />
+						<span class="truncate text-sm font-medium" title={displayNameOf(row.attributes, String(row.id))}>
+							{displayNameOf(row.attributes, String(row.id))}
+						</span>
+						<span class="text-muted-foreground font-mono text-xs tabular-nums">{row.type} {row.id}</span>
+					</article>
+				{/snippet}
+			</EntityGrid>
 		</section>
 	</div>
 {:catch error}

@@ -18,7 +18,7 @@ pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/entity-grid.json
 pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/entity-grid.json
 ```
 
-<Demo name="entity-grid" title="Entity Grid: Versions at three tile sizes, a selectable grid and one with no picture" />
+<Demo name="entity-grid" title="Entity Grid: Versions at three tile sizes, a selectable grid, one with no picture, one with every third row disabled, and one drawing a card of the caller's own" />
 
 ```ts
 const context = createSgContext({ client });
@@ -50,8 +50,14 @@ list; the metadata line needs whatever `subLabelField` and `secondaryField` name
 | `statuses` | `Record<string, StatusRecord> \| null` | `null` | Status rows by code. Read through the context when not given. |
 | `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Tile size and column minimum: 160, 224 or 288 pixels. |
 | `selectable` | `boolean` | `false` | Draws a checkbox on each tile. |
+| `selection` | `EntityRef[]` | `[]` | The selected rows, two-way. Names loaded rows only. |
+| `getRowId` | `(row) => string` | — | How a row is keyed, in the DOM and in the selection. Default `Type:id`. |
+| `isRowDisabled` | `(row) => boolean` | — | True for a row the arrows skip and the selection refuses. |
+| `sort` | `SortSpec[]` | — | The source's sort, two-way, so a SortPicker drops into `header`. |
+| `filters` | `FilterNode \| WireGroup \| null` | — | The source's filter, two-way, so a FilterBar drops into `header`. |
 | `pageSizes` | `number[]` | `[25, 50, 100]` | Rows per page offered in the footer. |
 | `maxHeight` | `string` | `'32rem'` | Height of the scrolling body. |
+| `virtualizeAfter` | `number` | `100` | Rows above which the grid draws only the tiles on screen. |
 | `emptyLabel` | `string` | `'No rows'` | Shown when the read returned nothing. |
 | `density` | `'compact' \| 'default'` | `'default'` | Compact halves the gap between tiles. |
 | `class` / `className` | `string` | — | Merged after the widget's own classes. |
@@ -64,10 +70,16 @@ Nothing is on the metadata line by default, and the row's id is never on it.
 |---|---|---|
 | `onSelectionChange` | `EntityRef[]` | The selection changed. |
 | `onSelect` | `EntityRow` | A tile was activated, by click or by Enter. |
+| `onSortChange` | `SortSpec[]` | The source's sort changed. |
+| `onFiltersChange` | `FilterNode \| WireGroup \| null` | The source's filter changed. |
 
 ## Slots
 
-None.
+| slot | receives | meaning |
+|---|---|---|
+| `card` | `{ row, id, index, selected, disabled, active }` | Draws one grid cell. The grid keeps the cell's box, its tab stop and its keys. |
+| `header` | — | Region above the grid. |
+| `footer` | — | Region below the footer. |
 
 ## Keyboard
 
@@ -82,6 +94,8 @@ The grid is one tab stop: Tab moves into the tile the cursor is on, and the arro
 | Space | Selects the tile, when the grid is selectable. |
 | Enter | Emits the select event. |
 | Enter in the page number | Goes to that page. |
+
+A disabled row takes no keys and no click: the arrows step over it and the cursor never lands on it.
 
 ## Anatomy
 

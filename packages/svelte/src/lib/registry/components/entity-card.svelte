@@ -29,17 +29,21 @@
 		EntityCardModel,
 		EntityRef,
 		EntityRow,
+		FieldTextOptions,
+		SgClient,
 		SgContext,
 		StatusRecord
 	} from '@sg-widgets/core';
 	import {
 		cellValue,
+		contextFromClient,
 		describeEntityCard,
 		entityDetailUrl,
 		fieldText,
 		imageState,
 		isEmptyValue,
 		loadEntityCard,
+		preferencesOf,
 		renderKindFor,
 		urlLink
 	} from '@sg-widgets/core';
@@ -61,8 +65,10 @@
 	import Thumbnail from '$lib/registry/components/thumbnail.svelte';
 
 	type Props = WithElementRef<Omit<HTMLAttributes<HTMLDivElement>, 'children'>, HTMLDivElement> & {
-		/** The cached client, the schema service and the site url the card reads through. */
-		context: SgContext;
+		/** The cached client, the schema service, the site url and the preferences the card reads through. */
+		context?: SgContext;
+		/** A client, for an app with no context. One context is built per client and shared. */
+		client?: SgClient;
 		/** The row to show. Given, nothing is read. */
 		row?: EntityRow | null;
 		/** The row to read, when no `row` is given. */
@@ -95,15 +101,20 @@
 		actions?: Snippet;
 		/** The web app the row lives on. Defaults to the context's. */
 		siteUrl?: string;
-		/** The site's `hours_per_day` from `GET /preferences`; durations then render in days. */
+		/** The site's `hours_per_day` from `GET /preferences`; durations then render in days. Defaults to the context's. */
 		hoursPerDay?: number;
 		locale?: string;
+		/** IANA zone a `date_time` is shown in. Defaults to the context's. */
+		timeZone?: string;
+		/** Frames a second, for a timecode. Defaults to the context's. */
+		frameRate?: number;
 		/** What a field with no value shows. */
 		emptyLabel?: string;
 	};
 
 	let {
 		context,
+		client,
 		row = null,
 		entity = null,
 		fields = [],
@@ -124,11 +135,24 @@
 		siteUrl,
 		hoursPerDay,
 		locale,
+		timeZone,
+		frameRate,
 		emptyLabel = 'empty',
 		class: className,
 		ref = $bindable(null),
 		...rest
 	}: Props = $props();
+
+	// One context per client, so a card handed a bare client shares the page's caches.
+	const ctx = $derived(context ?? (client ? contextFromClient(client) : undefined));
+	// The site's preferences, with anything the caller named winning over them.
+	const prefs = $derived<FieldTextOptions>({
+		...preferencesOf(ctx),
+		...(hoursPerDay === undefined ? {} : { hoursPerDay }),
+		...(locale === undefined ? {} : { locale }),
+		...(timeZone === undefined ? {} : { timeZone }),
+		...(frameRate === undefined ? {} : { frameRate })
+	});
 
 	interface Loaded {
 		card: EntityCardModel;
@@ -156,14 +180,15 @@
 		wanted: string[],
 		table: Record<string, StatusRecord> | null
 	): Promise<Loaded> {
+		if (!ctx) throw new Error('An entity card needs a context or a client.');
 		const options = { fields: wanted, imagePath };
 		const card = source.row
-			? await describeEntityCard(context, source.row, options)
+			? await describeEntityCard(ctx, source.row, options)
 			: source.entity
-				? await loadEntityCard(context, source.entity, options)
+				? await loadEntityCard(ctx, source.entity, options)
 				: null;
 		if (!card) throw new Error('An entity card needs a row or a reference.');
-		return { card, statuses: table ?? Object.fromEntries(await context.statuses.byCode()) };
+		return { card, statuses: table ?? Object.fromEntries(await ctx.statuses.byCode()) };
 	}
 
 	const subPath = $derived(pathOf(subLabelField));
@@ -177,7 +202,7 @@
 	// The read hangs off the props through a derived, so a new row or a new path
 	// list is a new promise and no effect has to guard against the last one.
 	const loaded = $derived(build({ row, entity }, paths, statuses));
-	const site = $derived(siteUrl ?? context.siteUrl);
+	const site = $derived(siteUrl ?? ctx?.siteUrl ?? '');
 	const stateClass = 'text-muted-foreground flex items-center justify-center gap-2 py-6 text-sm';
 	const linkClass =
 		'focus-visible:ring-ring focus-visible:ring-offset-background truncate underline-offset-2 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-offset-2';
@@ -193,8 +218,7 @@
 
 	function textOf(column: EntityCardColumn): string {
 		return fieldText(column.value, column.dataType, {
-			...(hoursPerDay === undefined ? {} : { hoursPerDay }),
-			...(locale === undefined ? {} : { locale }),
+			...prefs,
 			...(column.field?.displayValues === undefined ? {} : { displayValues: column.field.displayValues })
 		});
 	}

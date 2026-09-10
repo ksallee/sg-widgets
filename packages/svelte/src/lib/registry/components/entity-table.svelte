@@ -84,7 +84,7 @@
 		onColumnsChange?: (columns: CollectionColumn[]) => void;
 		/** `Status` rows by code, for status cells (probe 010). */
 		statuses?: Record<string, StatusRecord> | null;
-		/** The widget context. An entity cell links to the row's page when this carries a site. */
+		/** The widget context. Cells render with its preferences. An entity cell links to the row's page when it carries a site. */
 		context?: SgContext;
 		density?: EntityTableDensity;
 		size?: EntityTableSize;
@@ -779,6 +779,7 @@
 																dataType={column.dataType}
 																field={column.field}
 																{statuses}
+																{context}
 																mode="edit"
 																size="sm"
 															/>

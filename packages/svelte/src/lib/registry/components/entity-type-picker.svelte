@@ -60,7 +60,7 @@
 <script lang="ts">
 	import { tick } from 'svelte';
 	import type { HTMLAttributes } from 'svelte/elements';
-	import type { EntityTypeInfo, SchemaService } from '@sg-widgets/core';
+	import type { EntityTypeInfo, SgContext } from '@sg-widgets/core';
 	import {
 		filterEntityTypes,
 		holdsArmed,
@@ -80,8 +80,8 @@
 	import { cn, type WithElementRef } from '$lib/utils.js';
 
 	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>, HTMLDivElement> & {
-		/** Reads the site's enabled types. Build it once per app with `createSchemaService`. */
-		schema: SchemaService;
+		/** The widget context. The site's enabled types are read through it, once per page. */
+		context: SgContext;
 		/** A type code in single mode, an array of them in multi mode. */
 		value?: string | string[] | null;
 		multiple?: boolean;
@@ -111,7 +111,7 @@
 	};
 
 	let {
-		schema,
+		context,
 		value = $bindable(null),
 		multiple = false,
 		onValueChange,
@@ -134,6 +134,10 @@
 		ref = $bindable(null),
 		...rest
 	}: Props = $props();
+
+	// The context's own service, so every widget on the page shares one schema read.
+	const schema = $derived(context.schema);
+
 	let controlEl = $state<HTMLElement | null>(null);
 	let listEl = $state<HTMLElement | null>(null);
 	let inputEl = $state<HTMLInputElement | null>(null);

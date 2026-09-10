@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import type { ReactNode } from 'react';
-import type { SgClient, StatusOption, StatusRecord } from '@sg-widgets/core';
-import { createSchemaService, createStatusService } from '@sg-widgets/core';
+import type { SgContext, StatusOption, StatusRecord } from '@sg-widgets/core';
 import { SearchX, TriangleAlert, X } from 'lucide-react';
 import {
   Select,
@@ -42,8 +41,8 @@ export interface StatusPickerProps extends React.HTMLAttributes<HTMLDivElement> 
   /** The root element. */
   ref?: React.Ref<HTMLDivElement>;
 
-  /** The site to read from. Wrap it in `createQueryCache` so widgets on a page share one read. */
-  client: SgClient;
+  /** The widget context. The options and the status table are read through it, once per page. */
+  context: SgContext;
   entityType: string;
   /** Offer the codes this project allows. */
   projectId?: number;
@@ -62,7 +61,7 @@ export interface StatusPickerProps extends React.HTMLAttributes<HTMLDivElement> 
   invalid?: boolean;
   /** Show the raw code instead of the label. The other one stays in the tooltip. */
   showCode?: boolean;
-  /** The site the stock sprite is served from, passed to every badge. */
+  /** The site the stock sprite is served from, passed to every badge. Defaults to the context's. */
   siteUrl?: string;
   size?: StatusPickerSize;
   /** Whether the popup is showing. */
@@ -82,16 +81,18 @@ const LOADING: Loaded = { loading: true, error: null, options: [], statuses: new
 
 /**
  * One load, as a store. The read starts in a memo over the props and goes through the
- * cache the client carries, so it is never an effect re-firing on a "last seen" key.
+ * context's cache, so it is never an effect re-firing on a "last seen" key.
  */
 function statusOptionStore(
-  client: SgClient,
+  context: SgContext,
   entityType: string,
   projectKey: string,
   field: string | undefined,
 ) {
-  const schema = createSchemaService(client);
-  const statuses = createStatusService(client);
+  // The context's own services, so every widget on the page shares one schema read
+  // and one status table.
+  const schema = context.schema;
+  const statuses = context.statuses;
   const ids = projectKey === '' ? [] : projectKey.split(',').map(Number);
   const [first] = ids;
   const options =
@@ -139,7 +140,7 @@ function statusOptionStore(
  * selected code, the picker clears it and emits once.
  */
 export function StatusPicker({
-  client,
+  context,
   entityType,
   projectId,
   projectIds,
@@ -168,10 +169,11 @@ export function StatusPicker({
     onOpenChange?.(next);
   };
 
+  const site = siteUrl ?? context.siteUrl;
   const projectKey = (projectIds ?? (projectId === undefined ? [] : [projectId])).join(',');
   const store = useMemo(
-    () => statusOptionStore(client, entityType, projectKey, field),
-    [client, entityType, projectKey, field],
+    () => statusOptionStore(context, entityType, projectKey, field),
+    [context, entityType, projectKey, field],
   );
   const query = useSyncExternalStore(store.subscribe, store.snapshot, store.snapshot);
 
@@ -207,7 +209,7 @@ export function StatusPicker({
       field={badgeField}
       size={BADGE[size]}
       label={showCode ? 'code' : 'name'}
-      siteUrl={siteUrl}
+      siteUrl={site}
       className="min-w-0"
     />
   );

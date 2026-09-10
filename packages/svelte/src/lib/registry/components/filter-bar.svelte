@@ -21,15 +21,13 @@
 		FilterCondition,
 		FilterGroup,
 		Operator,
-		SchemaService,
 		Scalar,
-		SgClient,
+		SgContext,
 		WireGroup
 	} from '@sg-widgets/core';
 	import {
 		conditionArity,
 		conditionParts,
-		createSchemaService,
 		describeCondition,
 		emptyFilter,
 		facetValues,
@@ -50,8 +48,8 @@
 
 	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>, HTMLDivElement> & {
 		entityType: string;
-		client: SgClient;
-		schema?: SchemaService;
+		/** The widget context. Every read goes through it, so widgets on a page share one cache. */
+		context: SgContext;
 		/** Field names to offer as pills, in order. */
 		facets: string[];
 		value: FilterGroup;
@@ -73,8 +71,7 @@
 
 	let {
 		entityType,
-		client,
-		schema,
+		context,
 		facets,
 		value = $bindable(emptyFilter()),
 		hidePaths = [],
@@ -89,12 +86,11 @@
 		...rest
 	}: Props = $props();
 
-	const service = $derived(schema ?? createSchemaService(client));
 	let fields = $state<Record<string, FieldSchema>>({});
 
 	$effect(() => {
 		let live = true;
-		void service.fields(entityType).then((loaded) => {
+		void context.schema.fields(entityType).then((loaded) => {
 			if (live) fields = loaded;
 		});
 		return () => {
@@ -124,7 +120,7 @@
 			}
 			return out;
 		}
-		const rows = await client.search(entityType, {
+		const rows = await context.client.search(entityType, {
 			filters,
 			fields: present.map((f) => f.name),
 			page: { size: sampleSize }
@@ -345,8 +341,7 @@
 
 	<FilterDialog
 		{entityType}
-		{client}
-		{schema}
+		{context}
 		{hidePaths}
 		{disabled}
 		{size}

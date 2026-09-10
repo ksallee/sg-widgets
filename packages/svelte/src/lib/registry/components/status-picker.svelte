@@ -26,8 +26,7 @@
 
 <script lang="ts">
 	import type { HTMLAttributes } from 'svelte/elements';
-	import type { SgClient, StatusOption, StatusRecord } from '@sg-widgets/core';
-	import { createSchemaService, createStatusService } from '@sg-widgets/core';
+	import type { SgContext, StatusOption, StatusRecord } from '@sg-widgets/core';
 	import SearchX from '@lucide/svelte/icons/search-x';
 	import TriangleAlert from '@lucide/svelte/icons/triangle-alert';
 	import X from '@lucide/svelte/icons/x';
@@ -37,8 +36,8 @@
 	import StatusBadge from '$lib/registry/components/status-badge.svelte';
 
 	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>, HTMLDivElement> & {
-		/** The site to read from. Wrap it in `createQueryCache` so widgets on a page share one read. */
-		client: SgClient;
+		/** The widget context. The options and the status table are read through it, once per page. */
+		context: SgContext;
 		entityType: string;
 		/** Offer the codes this project allows. */
 		projectId?: number;
@@ -57,7 +56,7 @@
 		invalid?: boolean;
 		/** Show the raw code instead of the label. The other one stays in the tooltip. */
 		showCode?: boolean;
-		/** The site the stock sprite is served from, passed to every badge. */
+		/** The site the stock sprite is served from, passed to every badge. Defaults to the context's. */
 		siteUrl?: string;
 		size?: StatusPickerSize;
 		/** Whether the popup is showing, two-way. */
@@ -67,7 +66,7 @@
 	};
 
 	let {
-		client,
+		context,
 		entityType,
 		projectId = undefined,
 		projectIds = undefined,
@@ -90,9 +89,11 @@
 		...rest
 	}: Props = $props();
 
-	// Built from the prop rather than at init, so a client swapped in reloads.
-	const schema = $derived(createSchemaService(client));
-	const statusTable = $derived(createStatusService(client));
+	// The context's own services, so every widget on the page shares one schema read
+	// and one status table.
+	const schema = $derived(context.schema);
+	const statusTable = $derived(context.statuses);
+	const site = $derived(siteUrl ?? context.siteUrl);
 
 	interface Loaded {
 		loading: boolean;
@@ -111,7 +112,7 @@
 
 	/**
 	 * One load, as reactive state. The read hangs off the props through a derived and
-	 * goes through the cache the client carries, so it is never an effect re-firing on
+	 * goes through the context's cache, so it is never an effect re-firing on
 	 * a "last seen" key.
 	 */
 	function load(type: string, ids: number[], name: string | undefined): Loaded {
@@ -193,7 +194,7 @@
 		field={badgeField}
 		size={BADGE[size]}
 		label={showCode ? 'code' : 'name'}
-		{siteUrl}
+		siteUrl={site}
 		class="min-w-0"
 	/>
 {/snippet}

@@ -116,12 +116,11 @@
 	import PlusIcon from '@lucide/svelte/icons/plus';
 	import XIcon from '@lucide/svelte/icons/x';
 	import type { HTMLAttributes } from 'svelte/elements';
-	import type { SchemaService, SgClient } from '@sg-widgets/core';
+	import type { SgContext } from '@sg-widgets/core';
 	import {
 		appendAt,
 		applyPreset,
 		condition as makeCondition,
-		createSchemaService,
 		defaultCondition,
 		emptyFilter,
 		group as makeGroup,
@@ -159,9 +158,8 @@
 	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>, HTMLDivElement> & {
 		/** Type the root of every field path is read on. */
 		entityType: string;
-		client: SgClient;
-		/** Share one across a page so two widgets asking for the same type cost one request. */
-		schema?: SchemaService;
+		/** The widget context. Every read goes through it, so widgets on a page share one cache. */
+		context: SgContext;
 		value: FilterGroup;
 		/** Paths to keep out of the field list, each hiding itself and everything under it. */
 		hidePaths?: string[];
@@ -178,8 +176,7 @@
 
 	let {
 		entityType,
-		client,
-		schema,
+		context,
 		value = $bindable(emptyFilter()),
 		hidePaths = [],
 		projectId,
@@ -194,14 +191,13 @@
 		...rest
 	}: Props = $props();
 
-	const service = $derived(schema ?? createSchemaService(client));
 	let fields = $state<Record<string, FieldSchema>>({});
 
 	// The schema service caches, so this reaches the network once per type however
 	// often the tree is edited (probe 002).
 	$effect(() => {
 		let live = true;
-		void service.fields(entityType).then((loaded) => {
+		void context.schema.fields(entityType).then((loaded) => {
 			if (live) fields = loaded;
 		});
 		return () => {
@@ -224,7 +220,7 @@
 		const key = leafKey(path);
 		let job = resolving.get(key);
 		if (!job) {
-			job = service.resolvePath(entityType, path).then(
+			job = context.schema.resolvePath(entityType, path).then(
 				(segments) => segments[segments.length - 1]?.field ?? null,
 				// A path the schema no longer holds still has to be editable, so the row keeps it.
 				() => null
@@ -294,7 +290,7 @@
 			})}
 		{:else}
 			<FieldPicker
-				schema={service}
+				{context}
 				{entityType}
 				{hidePaths}
 				{disabled}
@@ -410,7 +406,7 @@
 		<EntityMultiPicker
 			class="min-w-0 flex-1"
 			size={INNER[size]}
-			{client}
+			{context}
 			{disabled}
 			{projectId}
 			entityTypes={types}
@@ -422,7 +418,7 @@
 		<EntityPicker
 			class="min-w-0 flex-1"
 			size={INNER[size]}
-			{client}
+			{context}
 			{disabled}
 			{projectId}
 			entityTypes={types}
@@ -514,7 +510,7 @@
 			<StatusMultiPicker
 				class="min-w-0 flex-1"
 				size={INNER[size]}
-				{client}
+				{context}
 				{disabled}
 				{projectId}
 				entityType={field?.entityType ?? entityType}
@@ -526,7 +522,7 @@
 			<StatusPicker
 				class="min-w-0 flex-1"
 				size={INNER[size]}
-				{client}
+				{context}
 				{disabled}
 				{projectId}
 				entityType={field?.entityType ?? entityType}

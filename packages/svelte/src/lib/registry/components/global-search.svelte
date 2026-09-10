@@ -46,8 +46,8 @@
 
 <script lang="ts">
 	import type { HTMLAttributes } from 'svelte/elements';
-	import type { SgClient } from '@sg-widgets/core';
-	import { createSchemaService, hydrate, matchRuns, scopeToProject } from '@sg-widgets/core';
+	import type { SgContext } from '@sg-widgets/core';
+	import { hydrate, matchRuns, scopeToProject } from '@sg-widgets/core';
 	import type { Snippet } from 'svelte';
 	import Search from '@lucide/svelte/icons/search';
 	import TriangleAlert from '@lucide/svelte/icons/triangle-alert';
@@ -61,8 +61,8 @@
 	import UserAvatar from '$lib/registry/components/user-avatar.svelte';
 
 	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>, HTMLDivElement> & {
-		/** Where rows come from. Wrap it in `createQueryCache` once for the whole app. */
-		client: SgClient;
+		/** The widget context. Every read goes through it, so widgets on a page share one cache. */
+		context: SgContext;
 		entityTypes?: GlobalSearchTypes;
 		/** Scope every searched type that has a `project` field to this project. */
 		projectId?: number | null;
@@ -89,7 +89,7 @@
 	};
 
 	let {
-		client,
+		context,
 		entityTypes = GLOBAL_SEARCH_TYPES,
 		projectId = null,
 		hotkey = false,
@@ -109,7 +109,7 @@
 		...rest
 	}: Props = $props();
 
-	const schema = $derived(createSchemaService(client));
+	const schema = $derived(context.schema);
 
 	let query = $state('');
 	let hits = $state<SearchHit[]>([]);
@@ -180,8 +180,8 @@
 		try {
 			let types = typeMap(entityTypes);
 			if (projectId !== null && projectId !== undefined) types = await scopeToProject(schema, types, projectId);
-			const rows = await client.textSearch(text, types, { size: PAGE_SIZE, number: nextPage });
-			const found = await hydrate(client, rows);
+			const rows = await context.client.textSearch(text, types, { size: PAGE_SIZE, number: nextPage });
+			const found = await hydrate(context.client, rows);
 			if (id !== requestId) return;
 			hits = nextPage === 1 ? found : [...hits, ...found];
 			page = nextPage;
@@ -307,7 +307,7 @@
 						value={`recent:${entity.type}:${entity.id}`}
 						onSelect={() => choose(entity)}
 					>
-						<EntityChip {entity} size={LEAD[size]} />
+						<EntityChip {entity} size={LEAD[size]} {context} />
 						<span class="text-muted-foreground truncate text-xs">
 							{displayNames[entity.type] ?? entity.type}
 						</span>

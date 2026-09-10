@@ -23,8 +23,8 @@
 
 <script lang="ts">
 	import type { HTMLAttributes, MouseEventHandler } from 'svelte/elements';
-	import type { EntityRef, SgContext } from '@sg-widgets/core';
-	import { entityDetailUrl } from '@sg-widgets/core';
+	import type { EntityRef, SgClient, SgContext } from '@sg-widgets/core';
+	import { contextFromClient, entityDetailUrl } from '@sg-widgets/core';
 	import Box from '@lucide/svelte/icons/box';
 	import Clapperboard from '@lucide/svelte/icons/clapperboard';
 	import FileBox from '@lucide/svelte/icons/file-box';
@@ -55,6 +55,8 @@
 		preview?: string[];
 		/** The widget context, for the site url and for the hover card's read. */
 		context?: SgContext;
+		/** A client, for an app with no context. One context is built per client and shared. */
+		client?: SgClient;
 		onclick?: MouseEventHandler<HTMLButtonElement>;
 		size?: EntityChipSize;
 		removable?: boolean;
@@ -71,6 +73,7 @@
 		siteUrl,
 		preview,
 		context,
+		client,
 		onclick,
 		size = 'md',
 		removable = false,
@@ -101,7 +104,9 @@
 	const label = $derived(named ? (entity.name as string) : `${entity.type} #${entity.id}`);
 	const Glyph = $derived(GLYPHS[entity.type] ?? Tag);
 
-	const site = $derived(siteUrl ?? context?.siteUrl ?? '');
+	// One context per client, so a chip handed a bare client shares the page's caches.
+	const ctx = $derived(context ?? (client ? contextFromClient(client) : undefined));
+	const site = $derived(siteUrl ?? ctx?.siteUrl ?? '');
 	// The row's own page is on another origin, so it opens in a new tab; a url the
 	// caller resolved belongs to the caller's app and stays in this one.
 	const detail = $derived(href === undefined ? entityDetailUrl(site, entity) : null);
@@ -197,7 +202,7 @@
 	</span>
 {/snippet}
 
-{#if preview && preview.length > 0 && context}
+{#if preview && preview.length > 0 && ctx}
 	<!-- The content mounts on open, so the card's read happens then and is cached on the context. -->
 	<HoverCard.Root openDelay={200} closeDelay={100}>
 		<HoverCard.Trigger>
@@ -212,7 +217,7 @@
 			{/snippet}
 		</HoverCard.Trigger>
 		<HoverCard.Content class="w-72 p-3">
-			<EntityCard {context} {entity} fields={preview} size="sm" {siteUrl} />
+			<EntityCard context={ctx} {entity} fields={preview} size="sm" siteUrl={site} />
 		</HoverCard.Content>
 	</HoverCard.Root>
 {:else}

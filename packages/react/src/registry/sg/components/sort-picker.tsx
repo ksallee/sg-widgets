@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
-import type { SchemaService, SgClient, SortKey } from '@sg-widgets/core';
-import { createSchemaService, friendlyFieldPath, isSortable, toSortString } from '@sg-widgets/core';
+import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 'react';
+import type { SgContext, SortKey } from '@sg-widgets/core';
+import { friendlyFieldPath, isSortable, toSortString } from '@sg-widgets/core';
 import {
   ArrowDownIcon,
   ArrowUpDownIcon,
@@ -28,8 +28,8 @@ export interface SortPickerProps extends Omit<React.HTMLAttributes<HTMLDivElemen
   ref?: React.Ref<HTMLDivElement>;
 
   entityType: string;
-  client: SgClient;
-  schema?: SchemaService;
+  /** The widget context. Every read goes through it, so widgets on a page share one cache. */
+  context: SgContext;
   value: SortKey[];
   /** Paths to keep out of the field list, each hiding itself and everything under it. */
   hidePaths?: string[];
@@ -58,8 +58,7 @@ export interface SortPickerProps extends Omit<React.HTMLAttributes<HTMLDivElemen
  */
 export function SortPicker({
   entityType,
-  client,
-  schema,
+  context,
   value = [],
   hidePaths = [],
   size = 'md',
@@ -77,7 +76,6 @@ export function SortPicker({
     setUncontrolledOpen(next);
     onOpenChange?.(next);
   };
-  const service = useMemo(() => schema ?? createSchemaService(client), [schema, client]);
 
   /** The friendly label of every path in the list, resolved once and kept. */
   const [labels, setLabels] = useState<Record<string, string>>({});
@@ -87,13 +85,13 @@ export function SortPicker({
     (path: string) => {
       const at = `${entityType}|${path}`;
       if (resolving.current.has(at)) return;
-      const job = service.resolvePath(entityType, path).then(friendlyFieldPath, () => path);
+      const job = context.schema.resolvePath(entityType, path).then(friendlyFieldPath, () => path);
       resolving.current.set(at, job);
       void job.then((label) => {
         setLabels((held) => ({ ...held, [at]: label }));
       });
     },
-    [service, entityType],
+    [context, entityType],
   );
 
   useEffect(() => {
@@ -242,7 +240,7 @@ export function SortPicker({
           </div>
           <Separator />
           <FieldPicker
-            schema={service}
+            context={context}
             entityType={entityType}
             hidePaths={hidePaths}
             disabled={disabled}

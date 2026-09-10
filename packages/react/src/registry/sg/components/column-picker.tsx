@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useRef, useState, type KeyboardEvent } from 'react';
-import type { FieldHop, FieldOption, FieldSchema, SchemaService } from '@sg-widgets/core';
+import type { FieldHop, FieldOption, FieldSchema, SgContext } from '@sg-widgets/core';
 import {
   currentType,
   deriveFieldOptions,
@@ -101,8 +101,8 @@ export interface ColumnPickerProps extends React.HTMLAttributes<HTMLDivElement> 
   /** The root element. */
   ref?: React.Ref<HTMLDivElement>;
 
-  /** Reads the schema. Build it once per app with `createSchemaService`. */
-  schema: SchemaService;
+  /** The widget context. The schema is read through it, once per page. */
+  context: SgContext;
   /** The type every path starts on. */
   entityType: string;
   /** The chosen dotted paths, in the order they are shown. */
@@ -158,7 +158,7 @@ export interface ColumnPickerProps extends React.HTMLAttributes<HTMLDivElement> 
  * still reaches a date behind a link.
  */
 export function ColumnPicker({
-  schema,
+  context,
   entityType,
   value = [],
   onValueChange,
@@ -186,6 +186,8 @@ export function ColumnPicker({
   ref,
   ...rest
 }: ColumnPickerProps) {
+  // The context's own service, so every widget on the page shares one schema read.
+  const schema = context.schema;
   /** The field picker's own value, cleared as soon as the path is appended. */
   const [adding, setAdding] = useState('');
   const [search, setSearch] = useState('');
@@ -645,7 +647,7 @@ export function ColumnPicker({
 
   const picker = (
     <FieldPicker
-      schema={schema}
+      context={context}
       entityType={entityType}
       deepLinks={deepLinks}
       maxDepth={maxDepth}

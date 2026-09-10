@@ -17,7 +17,7 @@
 
 <script lang="ts">
 	import type { HTMLAttributes } from 'svelte/elements';
-	import type { FieldHop, FieldOption, FieldSchema, SchemaService } from '@sg-widgets/core';
+	import type { FieldHop, FieldOption, FieldSchema, SgContext } from '@sg-widgets/core';
 	import {
 		currentType,
 		deriveFieldOptions,
@@ -67,8 +67,8 @@
 	import { createSortable } from '$lib/registry/components/sortable.svelte.js';
 
 	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>, HTMLDivElement> & {
-		/** Reads the schema. Build it once per app with `createSchemaService`. */
-		schema: SchemaService;
+		/** The widget context. The schema is read through it, once per page. */
+		context: SgContext;
 		/** The type every path starts on. */
 		entityType: string;
 		/** The chosen dotted paths, in the order they are shown. */
@@ -110,7 +110,7 @@
 	};
 
 	let {
-		schema,
+		context,
 		entityType,
 		value = $bindable([]),
 		onValueChange,
@@ -138,6 +138,9 @@
 		ref = $bindable(null),
 		...rest
 	}: Props = $props();
+
+	// The context's own service, so every widget on the page shares one schema read.
+	const schema = $derived(context.schema);
 
 	const ICONS: Record<string, typeof Type> = {
 		braces: Braces,
@@ -615,7 +618,7 @@
 
 {#snippet picker()}
 	<FieldPicker
-		{schema}
+		{context}
 		{entityType}
 		{deepLinks}
 		{maxDepth}

@@ -63,8 +63,7 @@
 
 <script lang="ts">
 	import type { HTMLAttributes } from 'svelte/elements';
-	import type { FieldSchema, SgClient, StatusRecord } from '@sg-widgets/core';
-	import { createSchemaService } from '@sg-widgets/core';
+	import type { FieldSchema, SgContext, StatusRecord } from '@sg-widgets/core';
 	import ChevronDown from '@lucide/svelte/icons/chevron-down';
 	import ListChecks from '@lucide/svelte/icons/list-checks';
 	import TriangleAlert from '@lucide/svelte/icons/triangle-alert';
@@ -76,16 +75,17 @@
 	import StatusBadge from '$lib/registry/components/status-badge.svelte';
 
 	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>, HTMLDivElement> & {
-		/** Where rows come from. Wrap it in `createQueryCache` once for the whole app. */
-		client: SgClient;
-		context?: WorkContext;
+		/** The widget context. Every read goes through it, so widgets on a page share one cache. */
+		context: SgContext;
+		/** The project, the row and the task the user is working in. */
+		workContext?: WorkContext;
 		/** The person whose tasks the middle section lists. */
 		currentUser?: EntityRef | null;
 		/** Contexts used before, newest first. Held by the caller. */
 		recents?: WorkContext[];
 		recentLimit?: number;
 		onRecentsChange?: (recents: WorkContext[]) => void;
-		onContextChange?: (context: WorkContext) => void;
+		onWorkContextChange?: (workContext: WorkContext) => void;
 		size?: ContextSelectorSize;
 		/** Whether the popover is showing, two-way. */
 		open?: boolean;
@@ -94,13 +94,13 @@
 	};
 
 	let {
-		client,
-		context = EMPTY_CONTEXT,
+		context,
+		workContext = EMPTY_CONTEXT,
 		currentUser = null,
 		recents = [],
 		recentLimit = 5,
 		onRecentsChange,
-		onContextChange,
+		onWorkContextChange,
 		size = 'md',
 		open = $bindable(false),
 		onOpenChange,
@@ -109,7 +109,7 @@
 		...rest
 	}: Props = $props();
 
-	const schema = $derived(createSchemaService(client));
+	const schema = $derived(context.schema);
 
 	let tasks = $state<MyTask[]>([]);
 	/** True until the first read of the assigned tasks lands. */
@@ -118,9 +118,9 @@
 	let statuses = $state<Record<string, StatusRecord>>({});
 	let statusField = $state<FieldSchema | null>(null);
 
-	const rootPath = $derived(context.project ? `/Project/${context.project.id}` : '/');
+	const rootPath = $derived(workContext.project ? `/Project/${workContext.project.id}` : '/');
 	const chips = $derived(
-		[context.project, context.entity, context.task].filter((r): r is EntityRef => r !== null)
+		[workContext.project, workContext.entity, workContext.task].filter((r): r is EntityRef => r !== null)
 	);
 	/** Tasks under their project, in the order the projects first appear. */
 	const byProject = $derived.by(() => {
@@ -136,10 +136,10 @@
 
 	$effect(() => {
 		let live = true;
-		void Promise.all([client.statuses(), schema.field('Task', 'sg_status_list')])
+		void Promise.all([context.statuses.byCode(), schema.field('Task', 'sg_status_list')])
 			.then(([rows, field]) => {
 				if (!live) return;
-				statuses = Object.fromEntries(rows.map((s) => [s.code, s]));
+				statuses = Object.fromEntries(rows);
 				statusField = field ?? null;
 			})
 			.catch(() => {
@@ -154,7 +154,7 @@
 		const user = currentUser;
 		if (!user) return;
 		let live = true;
-		void client
+		void context.client
 			.search('Task', {
 				// `task_assignees` is a multi_entity of Group and HumanUser (entity_types/Task).
 				filters: { logical_operator: 'and', conditions: [['task_assignees', 'in', [{ type: user.type, id: user.id }]]] },
@@ -193,7 +193,7 @@
 
 	function apply(next: WorkContext): void {
 		onRecentsChange?.([next, ...recents.filter((r) => keyOf(r) !== keyOf(next))].slice(0, recentLimit));
-		onContextChange?.(next);
+		onWorkContextChange?.(next);
 		setOpen(false);
 	}
 
@@ -219,14 +219,14 @@
 				'border-border bg-background hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring focus-visible:ring-offset-background flex w-full min-w-0 items-center gap-2 rounded-md border text-left outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2',
 				BOX[size]
 			)}
-			aria-label={`Context: ${label(context)}`}
+			aria-label={`Context: ${label(workContext)}`}
 		>
 			<span class="flex min-w-0 flex-1 flex-wrap items-center gap-2">
 				{#if chips.length === 0}
 					<span class="text-muted-foreground text-sm">No context</span>
 				{:else}
 					{#each chips as chip (`${chip.type}:${chip.id}`)}
-						<EntityChip entity={chip} size={CHIP[size]} />
+						<EntityChip entity={chip} size={CHIP[size]} {context} />
 					{/each}
 				{/if}
 			</span>
@@ -249,7 +249,7 @@
 						<button type="button" class={rowClass} onclick={() => apply(recent)}>
 							<span class="flex min-w-0 flex-1 flex-wrap items-center gap-2">
 								{#each [recent.project, recent.entity, recent.task].filter((r) => r !== null) as chip (`${chip.type}:${chip.id}`)}
-									<EntityChip entity={chip} size={CHIP[size]} />
+									<EntityChip entity={chip} size={CHIP[size]} {context} />
 								{/each}
 							</span>
 						</button>
@@ -301,6 +301,7 @@
 									status={statuses[row.status]}
 									field={statusField}
 									size={CHIP[size]}
+									siteUrl={context.siteUrl}
 								/>
 							</button>
 						{/each}
@@ -311,7 +312,7 @@
 			<section data-slot="context-hierarchy" class="flex flex-col gap-2">
 				<h4 class={heading}>Browse</h4>
 				<HierarchicalSearch
-					{client}
+					{context}
 					{rootPath}
 					{size}
 					onSelect={(leaf, path) => apply(contextFromPath(leaf, path))}

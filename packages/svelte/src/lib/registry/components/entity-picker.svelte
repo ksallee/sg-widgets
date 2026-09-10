@@ -4,7 +4,7 @@
 		FilterGroup,
 		PickerRow,
 		SearchFieldSpec,
-		SgClient,
+		SgContext,
 		WireGroup
 	} from '@sg-widgets/core';
 
@@ -59,8 +59,8 @@
 	export interface EntityPickerBaseProps {
 		/** Types to search. One for a homogeneous picker, several for a polymorphic one. */
 		entityTypes: string[];
-		/** A cached client. Every read goes through it. */
-		client: SgClient;
+		/** The widget context. Every read goes through it, so widgets on a page share one cache. */
+		context: SgContext;
 		/** Field holding the row label. Defaults to the display-name chain. */
 		labelField?: string;
 		/**
@@ -80,7 +80,7 @@
 		roundThumbnail?: boolean;
 		/** Show the row's `code` beside the label when the two differ. */
 		showCode?: boolean;
-		/** The site the status sprite is served from, for a secondary that is a status. */
+		/** The site the status sprite is served from, for a secondary that is a status. Defaults to the context's. */
 		siteUrl?: string;
 		/** Extra fields to request, so a caller's own sub-label or secondary can be read. */
 		fields?: string[];
@@ -115,8 +115,6 @@
 	import type { FieldSchema, StatusRecord } from '@sg-widgets/core';
 	import {
 		createEntitySearch,
-		createSchemaService,
-		createStatusService,
 		entityKey,
 		highlightRuns,
 		holdsArmed,
@@ -148,7 +146,7 @@
 
 	let {
 		entityTypes,
-		client,
+		context,
 		value = $bindable(null),
 		labelField,
 		searchFields,
@@ -184,14 +182,15 @@
 		...rest
 	}: Props = $props();
 
-	// One schema service for the widget, built from the prop so a client swapped in
-	// reloads. The controller shares it, so a type's fields are read once.
-	const schema = $derived(createSchemaService(client));
-	const statusTable = $derived(createStatusService(client));
+	// The context's own services, so every widget on the page shares one schema read
+	// and one status table.
+	const schema = $derived(context.schema);
+	const statusTable = $derived(context.statuses);
+	const site = $derived(siteUrl ?? context.siteUrl);
 
 	// svelte-ignore state_referenced_locally
 	const search = createEntitySearch({
-		client,
+		client: context.client,
 		schema,
 		entityTypes,
 		labelField,
@@ -224,7 +223,7 @@
 
 	$effect(() => {
 		search.update({
-			client,
+			client: context.client,
 			schema,
 			entityTypes,
 			labelField,
@@ -486,6 +485,8 @@
 						entity={chipEntity}
 						thumbnail={selectedRow ? thumbOf(selectedRow) : null}
 						size={PICKER_CHIP[size]}
+						{context}
+						siteUrl={site}
 						data-armed={armed ? 'true' : undefined}
 						class={armed ? PICKER_ARMED : undefined}
 					/>
@@ -612,7 +613,8 @@
 											dataType={secondaryType(row)}
 											field={secondaryPlan.fields[row.type] ?? null}
 											statuses={secondaryPlan.statuses}
-											{siteUrl}
+											{context}
+											siteUrl={site}
 											class="w-auto justify-end text-xs"
 										/>
 									</span>

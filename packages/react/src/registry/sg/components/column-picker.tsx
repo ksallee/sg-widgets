@@ -6,7 +6,10 @@ import {
   friendlyFieldPath,
   iconNameFor,
   moveFieldPath,
+  NO_MATCH_LABEL,
+  NOTHING_CHOSEN_LABEL,
   searchFieldOptions,
+  stateLine,
   toggleFieldPath,
 } from '@sg-widgets/core';
 import {
@@ -53,6 +56,7 @@ import {
 } from '@/components/ui/command';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import { StateLine } from '@/registry/sg/components/state-line';
 import { FieldPicker } from '@/registry/sg/components/field-picker';
 import { useSortable } from '@/registry/sg/components/sortable';
 
@@ -133,7 +137,14 @@ export interface ColumnPickerProps extends React.HTMLAttributes<HTMLDivElement> 
   /** Placeholder of the field picker. */
   placeholder?: string;
   searchPlaceholder?: string;
+  /** Shown when nothing is chosen. */
   emptyLabel?: string;
+  /** Shown when the search over the fields on offer matches nothing. */
+  noMatchLabel?: string;
+  /** The accessible name of the skeletons a read stands behind. */
+  loadingLabel?: string;
+  /** Shown in place of what the failed read said. */
+  errorLabel?: string;
   availableLabel?: string;
   chosenLabel?: string;
   readonly?: boolean;
@@ -175,7 +186,10 @@ export function ColumnPicker({
   showCount = false,
   placeholder = 'Add a column',
   searchPlaceholder = 'Search fields…',
-  emptyLabel = 'No columns yet.',
+  emptyLabel = NOTHING_CHOSEN_LABEL,
+  noMatchLabel = NO_MATCH_LABEL,
+  loadingLabel,
+  errorLabel,
   availableLabel = 'Available',
   chosenLabel = 'Columns',
   readonly = false,
@@ -458,20 +472,16 @@ export function ColumnPicker({
         />
         <CommandList>
           {failure ? (
-            <div
-              data-slot="column-picker-error"
-              className="text-destructive flex items-center justify-center gap-1.5 py-6 text-center text-sm"
-            >
-              <TriangleAlert aria-hidden="true" className="size-4 shrink-0" />
-              <span className="truncate">{failure}</span>
-            </div>
+            <StateLine
+              state="error"
+              slotName="column-picker-error"
+              icon={TriangleAlert}
+              label={stateLine('error', { errorLabel }, failure)}
+            />
           ) : choosing ? (
             <>
               <CommandEmpty>
-                <span className="text-muted-foreground inline-flex items-center gap-1.5">
-                  <SearchX aria-hidden="true" className="size-4 shrink-0" />
-                  No type matches.
-                </span>
+                <StateLine state="empty" icon={SearchX} label={noMatchLabel} pad="none" />
               </CommandEmpty>
               {targets.map((target) => (
                 <CommandItem
@@ -488,7 +498,12 @@ export function ColumnPicker({
               ))}
             </>
           ) : fields === null ? (
-            <div data-slot="column-picker-loading" className="flex flex-col gap-2 p-1">
+            <div
+              data-slot="column-picker-loading"
+              className="flex flex-col gap-2 p-1"
+              aria-busy="true"
+              aria-label={stateLine('loading', { loadingLabel })}
+            >
               {[0, 1, 2].map((row) => (
                 <Skeleton key={row} className="h-8 w-full" />
               ))}
@@ -496,10 +511,7 @@ export function ColumnPicker({
           ) : (
             <>
               <CommandEmpty>
-                <span className="text-muted-foreground inline-flex items-center gap-1.5">
-                  <SearchX aria-hidden="true" className="size-4 shrink-0" />
-                  No field matches.
-                </span>
+                <StateLine state="empty" icon={SearchX} label={noMatchLabel} pad="none" />
               </CommandEmpty>
               {rows.map((row) => {
                 const Glyph = ICONS[iconNameFor(row.dataType)] ?? FileText;
@@ -559,13 +571,12 @@ export function ColumnPicker({
   const chosen = (
     <>
       {value.length === 0 ? (
-        <p
-          data-slot="column-picker-empty"
-          className="text-muted-foreground flex items-center justify-center gap-1.5 py-6 text-center text-sm"
-        >
-          <Columns3 aria-hidden="true" className="size-4 shrink-0" />
-          {emptyLabel}
-        </p>
+        <StateLine
+          state="empty"
+          slotName="column-picker-empty"
+          icon={Columns3}
+          label={emptyLabel}
+        />
       ) : (
         <>
           <ol

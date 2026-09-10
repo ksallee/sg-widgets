@@ -1,7 +1,15 @@
 import type * as React from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { EntityRef, FieldSpec, PickerRow as PickerRowData, SearchHit, SgContext, WireCondition } from '@sg-widgets/core';
-import { hydrate, pathOf, placeholderName, rowFields, scopeToProject } from '@sg-widgets/core';
+import {
+  hydrate,
+  NO_MATCH_LABEL,
+  pathOf,
+  placeholderName,
+  rowFields,
+  scopeToProject,
+  stateLine,
+} from '@sg-widgets/core';
 import { Search, TriangleAlert } from 'lucide-react';
 import {
   Command,
@@ -17,6 +25,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { EntityChip } from '@/registry/sg/components/entity-chip';
 import { PickerRow } from '@/registry/sg/components/picker-row';
+import { StateLine } from '@/registry/sg/components/state-line';
 
 /** Types to search, either bare names or names with a filter each. */
 export type GlobalSearchTypes = string[] | Record<string, WireCondition[] | null>;
@@ -100,6 +109,12 @@ export interface GlobalSearchProps extends Omit<React.HTMLAttributes<HTMLDivElem
   onRecentsChange?: (recents: EntityRef[]) => void;
   onSelect?: (entity: EntityRef) => void;
   placeholder?: string;
+  /** Shown when the query matches nothing. */
+  emptyLabel?: string;
+  /** The accessible name of the skeletons a read stands behind. */
+  loadingLabel?: string;
+  /** Shown in place of what the failed read said. */
+  errorLabel?: string;
   /** Text on the trigger. */
   label?: string;
   className?: string;
@@ -138,6 +153,9 @@ export function GlobalSearch({
   onRecentsChange,
   onSelect,
   placeholder = 'Search…',
+  emptyLabel = NO_MATCH_LABEL,
+  loadingLabel,
+  errorLabel,
   label = 'Search',
   className,
   trigger,
@@ -315,15 +333,19 @@ export function GlobalSearch({
       <CommandInput value={query} placeholder={placeholder} onValueChange={setQuery} />
       <CommandList data-sg-search-list>
         {failure !== null ? (
-          <div
-            data-slot="search-error"
-            className="text-muted-foreground flex items-center justify-center gap-1.5 py-6 text-sm"
-          >
-            <TriangleAlert aria-hidden="true" className="size-4" />
-            <span className="truncate">{failure}</span>
-          </div>
+          <StateLine
+            state="error"
+            slotName="search-error"
+            icon={TriangleAlert}
+            label={stateLine('error', { errorLabel }, failure)}
+          />
         ) : loading && hits.length === 0 ? (
-          <div data-slot="search-loading" className="flex flex-col gap-2 p-1" aria-busy="true">
+          <div
+            data-slot="search-loading"
+            className="flex flex-col gap-2 p-1"
+            aria-busy="true"
+            aria-label={stateLine('loading', { loadingLabel })}
+          >
             {[0, 1, 2].map((line) => (
               <div key={line} className="flex items-center gap-2 px-2 py-1.5">
                 <Skeleton className="h-6 w-10 shrink-0" />
@@ -335,13 +357,7 @@ export function GlobalSearch({
             ))}
           </div>
         ) : empty ? (
-          <div
-            data-slot="search-empty"
-            className="text-muted-foreground flex items-center justify-center gap-1.5 py-6 text-sm"
-          >
-            <Search aria-hidden="true" className="size-4" />
-            <span>Nothing matches every word</span>
-          </div>
+          <StateLine state="empty" slotName="search-empty" icon={Search} label={emptyLabel} />
         ) : showRecents ? (
           <CommandGroup heading="Recent">
             {recents.map((entity) => (

@@ -68,7 +68,6 @@ export function UserPicker({
   fields = [],
   searchFields = [],
   placeholder = 'Search for a person',
-  emptyLabel = 'No person matches.',
   ...rest
 }: UserPickerProps) {
   return (
@@ -79,7 +78,6 @@ export function UserPicker({
       filters={userFilters(includeInactive, filters)}
       subLabel={userSubLabel}
       placeholder={placeholder}
-      emptyLabel={emptyLabel}
       {...rest}
     />
   );
@@ -104,7 +102,6 @@ export function UserMultiPicker({
   fields = [],
   searchFields = [],
   placeholder = 'Search for people',
-  emptyLabel = 'No person matches.',
   ...rest
 }: UserMultiPickerProps) {
   return (
@@ -115,7 +112,6 @@ export function UserMultiPicker({
       filters={userFilters(includeInactive, filters)}
       subLabel={userSubLabel}
       placeholder={placeholder}
-      emptyLabel={emptyLabel}
       {...rest}
     />
   );

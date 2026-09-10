@@ -15,9 +15,12 @@ import {
   hierarchySearcher,
   isEmptyValue,
   matchRuns,
+  NO_MATCH_LABEL,
+  NO_ROWS_LABEL,
   pathOf,
   resolveTreeFields,
   sameIds,
+  stateLine,
   TREE_STATUS_FIELDS,
 } from '@sg-widgets/core';
 import { ChevronRight, CircleAlert, Inbox, Loader, Search } from 'lucide-react';
@@ -26,6 +29,7 @@ import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { FieldValue } from '@/registry/sg/components/field-value';
+import { StateLine } from '@/registry/sg/components/state-line';
 import { StatusBadge } from '@/registry/sg/components/status-badge';
 import { Thumbnail } from '@/registry/sg/components/thumbnail';
 
@@ -116,13 +120,18 @@ export interface EntityTreeProps extends DivProps {
   siteUrl?: string;
   label?: string;
   maxHeight?: string;
+  /** Shown when the root holds nothing. */
   emptyLabel?: string;
+  /** Shown when the query matches nothing. */
   noMatchLabel?: string;
+  /** The accessible name of the skeletons a read stands behind. */
+  loadingLabel?: string;
+  /** Shown in place of what the failed read said. */
+  errorLabel?: string;
   size?: EntityTreeSize;
   density?: EntityTreeDensity;
 }
 
-const stateClass = 'text-muted-foreground flex items-center justify-center gap-2 py-10 text-sm';
 const EMPTY_PLAN: TreeFieldPlan = { status: {}, secondary: {}, statuses: null };
 const DEBOUNCE_MS = 250;
 
@@ -179,8 +188,10 @@ export function EntityTree({
   siteUrl,
   label = 'Project hierarchy',
   maxHeight = '24rem',
-  emptyLabel = 'Nothing under this project',
-  noMatchLabel = 'Nothing matches every word',
+  emptyLabel = NO_ROWS_LABEL,
+  noMatchLabel = NO_MATCH_LABEL,
+  loadingLabel,
+  errorLabel,
   size = 'md',
   density = 'default',
   className,
@@ -446,26 +457,32 @@ export function EntityTree({
         className="border-border w-full overflow-auto rounded-md border p-1"
       >
         {snap.status === 'error' ? (
-          <p className={cn(stateClass, 'text-destructive')}>
-            <CircleAlert aria-hidden="true" className="size-4 shrink-0" />
-            {snap.error?.message}
-          </p>
+          <StateLine
+            state="error"
+            pad="table"
+            icon={CircleAlert}
+            label={stateLine('error', { errorLabel }, snap.error?.message)}
+          />
         ) : snap.status === 'loading' || snap.status === 'idle' ? (
-          <div className="flex flex-col gap-2 p-1">
+          <div
+            className="flex flex-col gap-2 p-1"
+            aria-busy="true"
+            aria-label={stateLine('loading', { loadingLabel })}
+          >
             {Array.from({ length: 5 }, (_, index) => (
               <Skeleton key={index} className="h-6 w-full" />
             ))}
           </div>
         ) : snap.rows.length === 0 ? (
-          <p className={stateClass}>
-            <Inbox aria-hidden="true" className="size-4 shrink-0" />
-            {emptyLabel}
-          </p>
+          <StateLine state="empty" pad="table" icon={Inbox} label={emptyLabel} />
         ) : noMatch ? (
-          <p data-slot="entity-tree-no-match" className={stateClass}>
-            <Search aria-hidden="true" className="size-4 shrink-0" />
-            {noMatchLabel}
-          </p>
+          <StateLine
+            state="empty"
+            slotName="entity-tree-no-match"
+            pad="table"
+            icon={Search}
+            label={noMatchLabel}
+          />
         ) : (
           <ul
             role="tree"

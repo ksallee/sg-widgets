@@ -22,6 +22,7 @@ import {
   isEditableType,
   loadsOnArrowDown,
   nextEnabledIndex,
+  NO_ROWS_LABEL,
   preferencesOf,
   rowIdOf,
   rowIsDisabled,
@@ -31,6 +32,7 @@ import {
   sameSort,
   shouldLoadNext,
   sourceModeFor,
+  stateLine,
 } from '@sg-widgets/core';
 import {
   columnGroupingFeature,
@@ -51,7 +53,6 @@ import {
   ArrowLeftToLine,
   ArrowUp,
   ArrowUpDown,
-  ChevronLeft,
   ChevronRight,
   ChevronsUpDown,
   CircleAlert,
@@ -69,13 +70,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
+import { CollectionFooter } from '@/registry/sg/components/collection-footer';
 import { FieldEditor } from '@/registry/sg/components/field-editor';
 import { FieldValue } from '@/registry/sg/components/field-value';
+import { StateLine } from '@/registry/sg/components/state-line';
 
 export type EntityTableDensity = 'compact' | 'default';
 export type EntityTableSize = 'sm' | 'md' | 'lg';
@@ -203,7 +204,12 @@ export interface EntityTableProps extends Omit<React.HTMLAttributes<HTMLDivEleme
   maxHeight?: string;
   /** Rows above which the body is virtualised. */
   virtualizeAfter?: number;
+  /** Shown when the read returned nothing. */
   emptyLabel?: string;
+  /** The accessible name of the skeletons a read stands behind. */
+  loadingLabel?: string;
+  /** Shown in place of what the failed read said. */
+  errorLabel?: string;
   /** Left region of the toolbar above the table. */
   toolbarStart?: React.ReactNode;
   /** Right region of the toolbar above the table. */
@@ -229,10 +235,6 @@ const features = tableFeatures({
   expandedRowModel: createExpandedRowModel(),
   rowSelectionFeature,
 });
-
-const stateClass = 'text-muted-foreground flex items-center justify-center gap-2 py-10 text-sm';
-/** The same anatomy under the rows, at a row's height rather than a body's. */
-const errorLineClass = 'text-destructive flex items-center justify-center gap-2 text-sm';
 
 /**
  * A page of rows, one column per field path.
@@ -287,7 +289,9 @@ export function EntityTable({
   pageSizes = [25, 50, 100],
   maxHeight = '28rem',
   virtualizeAfter = 100,
-  emptyLabel = 'No rows',
+  emptyLabel = NO_ROWS_LABEL,
+  loadingLabel,
+  errorLabel,
   toolbarStart,
   toolbarEnd,
   row: rowRender,
@@ -325,6 +329,7 @@ export function EntityTable({
   const rows = snapshot.rows;
   const sort = snapshot.sort;
   const pager = describePaging(snapshot);
+  const loadingText = stateLine('loading', { loadingLabel });
   const rowHeight = ROW_HEIGHT[density];
   const cellClass = cn(CELL[density], TEXT[size]);
   const byPath = useMemo(() => new Map(columns.map((column) => [column.path, column])), [columns]);
@@ -347,7 +352,6 @@ export function EntityTable({
   const [cellError, setCellError] = useState<{ key: string; path: string; message: string } | null>(null);
   const [dragging, setDragging] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<string | null>(null);
-  const [pageDraft, setPageDraft] = useState('');
 
   /* the table ------------------------------------------------------------ */
 
@@ -721,13 +725,6 @@ export function EntityTable({
     else void source.loadMore();
   }
 
-  function goToPage(value: string): void {
-    const wanted = Number(value);
-    setPageDraft('');
-    if (!Number.isFinite(wanted) || wanted < 1) return;
-    void source.setPage(pager.pageCount === null ? wanted : Math.min(wanted, pager.pageCount));
-  }
-
   /** Sticky offset for a column pinned to the start; nothing for the rest. */
   function pinStyle(column: (typeof leafColumns)[number]): React.CSSProperties | undefined {
     return column.getIsPinned() === 'start'
@@ -901,7 +898,11 @@ export function EntityTable({
             </TableRow>
           </TableHeader>
 
-          <TableBody onKeyDown={onRowsKeyDown}>
+          <TableBody
+            onKeyDown={onRowsKeyDown}
+            aria-busy={snapshot.status === 'loading' ? 'true' : undefined}
+            aria-label={snapshot.status === 'loading' ? loadingText : undefined}
+          >
             {snapshot.status === 'loading' ? (
               Array.from({ length: 8 }, (_, index) => (
                 <TableRow key={index}>
@@ -915,19 +916,18 @@ export function EntityTable({
             ) : snapshot.status === 'error' && !pageError ? (
               <TableRow>
                 <TableCell colSpan={leafColumns.length}>
-                  <span className={cn(stateClass, 'text-destructive')}>
-                    <CircleAlert aria-hidden="true" className="size-4 shrink-0" />
-                    {snapshot.error?.message}
-                  </span>
+                  <StateLine
+                    state="error"
+                    pad="table"
+                    icon={CircleAlert}
+                    label={stateLine('error', { errorLabel }, snapshot.error?.message)}
+                  />
                 </TableCell>
               </TableRow>
             ) : modelRows.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={leafColumns.length}>
-                  <span className={stateClass}>
-                    <Inbox aria-hidden="true" className="size-4 shrink-0" />
-                    {emptyLabel}
-                  </span>
+                  <StateLine state="empty" pad="table" icon={Inbox} label={emptyLabel} />
                 </TableCell>
               </TableRow>
             ) : (
@@ -1117,19 +1117,25 @@ export function EntityTable({
                 {pageError ? (
                   <TableRow data-slot="entity-table-page-error" className="hover:bg-transparent">
                     <TableCell colSpan={leafColumns.length} className="p-2">
-                      <span className={errorLineClass}>
-                        <CircleAlert aria-hidden="true" className="size-4 shrink-0" />
-                        <span className="min-w-0 truncate" title={snapshot.error?.message}>
-                          {snapshot.error?.message}
-                        </span>
+                      <StateLine
+                        state="error"
+                        pad="none"
+                        icon={CircleAlert}
+                        label={stateLine('error', { errorLabel }, snapshot.error?.message)}
+                      >
                         <Button variant="outline" size="sm" onClick={retryPage}>
                           Retry
                         </Button>
-                      </span>
+                      </StateLine>
                     </TableCell>
                   </TableRow>
                 ) : snapshot.status === 'loadingMore' ? (
-                  <TableRow data-slot="entity-table-loading" className="hover:bg-transparent">
+                  <TableRow
+                    data-slot="entity-table-loading"
+                    className="hover:bg-transparent"
+                    aria-busy="true"
+                    aria-label={loadingText}
+                  >
                     <TableCell colSpan={leafColumns.length} className="p-2">
                       <Skeleton className="h-4 w-full" />
                     </TableCell>
@@ -1153,80 +1159,13 @@ export function EntityTable({
         </Table>
       </div>
 
-      <div
-        data-slot="entity-table-footer"
-        className="text-muted-foreground flex w-full min-w-0 flex-wrap items-center justify-between gap-2 text-xs"
-      >
-        {pager.mode === 'pages' ? (
-          <>
-            <div data-slot="entity-table-page-size" className="flex items-center gap-2">
-              <span>Rows per page</span>
-              <Select
-                value={String(pager.pageSize)}
-                onValueChange={(value) => void source.setPageSize(Number(value))}
-              >
-                <SelectTrigger aria-label="Rows per page" className="h-7 w-auto min-w-16">
-                  <span data-slot="select-value" className="tabular-nums">
-                    {pager.pageSize}
-                  </span>
-                </SelectTrigger>
-                <SelectContent>
-                  {pageSizes.map((option) => (
-                    <SelectItem key={option} value={String(option)}>
-                      {option}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div data-slot="entity-table-pager" className="flex items-center gap-2">
-              <span data-slot="entity-table-range" className="tabular-nums">
-                {pager.rangeLabel}
-              </span>
-              <Button
-                variant="outline"
-                size="icon-sm"
-                aria-label="Previous page"
-                disabled={!pager.hasPrevious || snapshot.status === 'loading'}
-                onClick={() => void source.setPage(pager.page - 1)}
-              >
-                <ChevronLeft aria-hidden="true" />
-              </Button>
-              <Input
-                type="number"
-                min="1"
-                inputMode="numeric"
-                aria-label="Page number"
-                className="h-7 w-14 text-center tabular-nums"
-                value={pageDraft === '' ? String(pager.page) : pageDraft}
-                onChange={(event) => setPageDraft(event.currentTarget.value)}
-                onKeyDown={(event) => {
-                  if (event.key !== 'Enter') return;
-                  event.preventDefault();
-                  goToPage(event.currentTarget.value);
-                }}
-                onBlur={(event) => goToPage(event.currentTarget.value)}
-              />
-              {pager.pageCount !== null ? <span className="tabular-nums">of {pager.pageCount}</span> : null}
-              <Button
-                variant="outline"
-                size="icon-sm"
-                aria-label="Next page"
-                disabled={!pager.hasNext || snapshot.status === 'loading'}
-                onClick={() => void source.setPage(pager.page + 1)}
-              >
-                <ChevronRight aria-hidden="true" />
-              </Button>
-            </div>
-          </>
-        ) : (
-          <>
-            <span data-slot="entity-table-loaded" className="tabular-nums">
-              {pager.loadedLabel}
-            </span>
-          </>
-        )}
-      </div>
+      <CollectionFooter
+        source={source}
+        pager={pager}
+        pageSizes={pageSizes}
+        loading={snapshot.status === 'loading'}
+        slotName="entity-table"
+      />
     </div>
   );
 }

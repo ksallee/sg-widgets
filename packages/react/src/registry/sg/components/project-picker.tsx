@@ -40,7 +40,6 @@ export function ProjectPicker({
   filters = null,
   fields = [],
   placeholder = 'Search for a project',
-  emptyLabel = 'No project matches.',
   ...rest
 }: ProjectPickerProps) {
   return (
@@ -50,7 +49,6 @@ export function ProjectPicker({
       filters={projectFilters(includeArchived, filters)}
       subLabelField="sg_status"
       placeholder={placeholder}
-      emptyLabel={emptyLabel}
       {...rest}
     />
   );
@@ -73,7 +71,6 @@ export function ProjectMultiPicker({
   filters = null,
   fields = [],
   placeholder = 'Search for projects',
-  emptyLabel = 'No project matches.',
   ...rest
 }: ProjectMultiPickerProps) {
   return (
@@ -83,7 +80,6 @@ export function ProjectMultiPicker({
       filters={projectFilters(includeArchived, filters)}
       subLabelField="sg_status"
       placeholder={placeholder}
-      emptyLabel={emptyLabel}
       {...rest}
     />
   );

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import type { ReactNode } from 'react';
 import type { SgContext, StatusOption, StatusRecord } from '@sg-widgets/core';
+import { NO_ROWS_LABEL, stateLine } from '@sg-widgets/core';
 import { SearchX, TriangleAlert, X } from 'lucide-react';
 import {
   Select,
@@ -11,6 +12,7 @@ import {
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import { StateLine } from '@/registry/sg/components/state-line';
 import { StatusBadge } from '@/registry/sg/components/status-badge';
 
 export type StatusPickerSize = 'sm' | 'md' | 'lg';
@@ -54,7 +56,12 @@ export interface StatusPickerProps extends React.HTMLAttributes<HTMLDivElement> 
   value?: string;
   onValueChange?: (value: string | undefined) => void;
   placeholder?: string;
+  /** Shown when the field offers nothing. */
   emptyLabel?: string;
+  /** The accessible name of the skeletons a read stands behind. */
+  loadingLabel?: string;
+  /** Shown in place of what the failed read said. */
+  errorLabel?: string;
   clearable?: boolean;
   readonly?: boolean;
   disabled?: boolean;
@@ -148,7 +155,9 @@ export function StatusPicker({
   value,
   onValueChange,
   placeholder = 'Select a status',
-  emptyLabel = 'No status on this field.',
+  emptyLabel = NO_ROWS_LABEL,
+  loadingLabel,
+  errorLabel,
   clearable = true,
   readonly = false,
   disabled = false,
@@ -229,17 +238,21 @@ export function StatusPicker({
   let list: ReactNode;
   if (query.error !== null) {
     list = (
-      <div
-        data-slot="status-picker-error"
-        className="text-destructive flex items-center justify-center gap-1.5 py-6 text-center text-sm"
-      >
-        <TriangleAlert aria-hidden="true" className="size-4 shrink-0" />
-        <span className="truncate">{query.error}</span>
-      </div>
+      <StateLine
+        state="error"
+        slotName="status-picker-error"
+        icon={TriangleAlert}
+        label={stateLine('error', { errorLabel }, query.error)}
+      />
     );
   } else if (query.loading) {
     list = (
-      <div data-slot="status-picker-loading" className="flex flex-col gap-2 p-1">
+      <div
+        data-slot="status-picker-loading"
+        className="flex flex-col gap-2 p-1"
+        aria-busy="true"
+        aria-label={stateLine('loading', { loadingLabel })}
+      >
         {[0, 1, 2].map((row) => (
           <Skeleton key={row} className="h-8 w-full" />
         ))}
@@ -247,13 +260,7 @@ export function StatusPicker({
     );
   } else if (rows.length === 0) {
     list = (
-      <div
-        data-slot="status-picker-empty"
-        className="text-muted-foreground flex items-center justify-center gap-1.5 py-6 text-center text-sm"
-      >
-        <SearchX aria-hidden="true" className="size-4 shrink-0" />
-        <span className="truncate">{emptyLabel}</span>
-      </div>
+      <StateLine state="empty" slotName="status-picker-empty" icon={SearchX} label={emptyLabel} />
     );
   } else {
     list = (

@@ -1,11 +1,14 @@
 <script lang="ts">
+	import type { HTMLAttributes } from 'svelte/elements';
 	import type { EntityRef, PickerRow } from '@sg-widgets/core';
+	import { type WithElementRef } from '$lib/utils.js';
 	import EntityMultiPicker, {
 		type EntityMultiPickerBaseProps
 	} from './entity-multi-picker.svelte';
 	import { USER_FIELDS, userFilters, userSearchFieldsWith, userSubLabel, userTypes } from './user-picker.svelte';
 
-	type Props = Omit<EntityMultiPickerBaseProps, 'entityTypes'> & {
+	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>, HTMLDivElement> &
+		Omit<EntityMultiPickerBaseProps, 'entityTypes'> & {
 		value?: EntityRef[];
 		onValueChange?: (value: EntityRef[], rows: PickerRow[]) => void;
 		/** Search script accounts alongside people. */
@@ -23,6 +26,8 @@
 		searchFields = [],
 		placeholder = 'Search for people',
 		emptyLabel = 'No person matches.',
+		open = $bindable(false),
+		ref = $bindable(null),
 		...rest
 	}: Props = $props();
 </script>
@@ -36,6 +41,8 @@
 -->
 <EntityMultiPicker
 	bind:value
+	bind:open
+	bind:ref
 	entityTypes={userTypes(includeApiUsers)}
 	searchFields={userSearchFieldsWith(searchFields)}
 	fields={[...USER_FIELDS, ...fields]}

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useSyncExternalStore } from 'react';
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import type { ReactNode } from 'react';
 import type { SgClient, StatusOption, StatusRecord } from '@sg-widgets/core';
 import { createSchemaService, createStatusService } from '@sg-widgets/core';
@@ -36,7 +36,10 @@ const BADGE: Record<StatusPickerSize, 'sm' | 'md'> = { sm: 'sm', md: 'sm', lg: '
 const TRIGGER =
   'border-input bg-background focus-visible:ring-ring focus-visible:ring-offset-background aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 flex w-full min-w-0 items-center rounded-md border text-sm outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 aria-invalid:ring-2';
 
-export interface StatusPickerProps {
+export interface StatusPickerProps extends React.HTMLAttributes<HTMLDivElement> {
+  /** The root element. */
+  ref?: React.Ref<HTMLDivElement>;
+
   /** The site to read from. Wrap it in `createQueryCache` so widgets on a page share one read. */
   client: SgClient;
   entityType: string;
@@ -52,7 +55,7 @@ export interface StatusPickerProps {
   placeholder?: string;
   emptyLabel?: string;
   clearable?: boolean;
-  readOnly?: boolean;
+  readonly?: boolean;
   disabled?: boolean;
   invalid?: boolean;
   /** Show the raw code instead of the label. The other one stays in the tooltip. */
@@ -60,6 +63,9 @@ export interface StatusPickerProps {
   /** The site the stock sprite is served from, passed to every badge. */
   siteUrl?: string;
   size?: StatusPickerSize;
+  /** Whether the popup is showing. */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
   className?: string;
 }
 
@@ -141,14 +147,25 @@ export function StatusPicker({
   placeholder = 'Select a status',
   emptyLabel = 'No status on this field.',
   clearable = true,
-  readOnly = false,
+  readonly = false,
   disabled = false,
   invalid = false,
   showCode = false,
   siteUrl,
   size = 'md',
+  open: openProp,
+  onOpenChange,
   className,
+  ref,
+  ...rest
 }: StatusPickerProps) {
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const open = openProp ?? uncontrolledOpen;
+  const setOpen = (next: boolean): void => {
+    setUncontrolledOpen(next);
+    onOpenChange?.(next);
+  };
+
   const projectKey = (projectIds ?? (projectId === undefined ? [] : [projectId])).join(',');
   const store = useMemo(
     () => statusOptionStore(client, entityType, projectKey, field),
@@ -164,8 +181,8 @@ export function StatusPicker({
   const title = value ? (rows.find((o) => o.code === value)?.label ?? value) : placeholder;
 
   // Read-only wins over disabled and over the loading window.
-  const inert = !readOnly && (disabled || query.loading);
-  const showClear = clearable && Boolean(value) && !readOnly && !disabled;
+  const inert = !readonly && (disabled || query.loading);
+  const showClear = clearable && Boolean(value) && !readonly && !disabled;
 
   // The first option set is not a change: it is what the widget was mounted to show.
   const seen = useRef<string | null>(null);
@@ -246,12 +263,14 @@ export function StatusPicker({
 
   return (
     <div
+      ref={ref}
       data-slot="status-picker"
       data-size={size}
       data-loading={query.loading ? 'true' : undefined}
       className={cn('relative flex w-full min-w-0 items-center', className)}
+      {...rest}
     >
-      {readOnly ? (
+      {readonly ? (
         <div
           data-slot="status-picker-trigger"
           data-readonly="true"
@@ -268,6 +287,8 @@ export function StatusPicker({
             value={value ?? null}
             onValueChange={(next: string | null) => onValueChange?.(next ?? undefined)}
             disabled={inert}
+            open={open}
+            onOpenChange={(next: boolean) => setOpen(inert ? false : next)}
           >
             <SelectTrigger
               aria-invalid={invalid ? 'true' : undefined}

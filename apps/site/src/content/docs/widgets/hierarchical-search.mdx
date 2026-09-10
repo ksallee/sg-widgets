@@ -25,7 +25,11 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/hierarchical-s
 | `rootPath` | `string` | `'/'` | Where the tree starts. `/Project/70` scopes it to that project. |
 | `entityTypes` | `string[] \| Record<string, WireCondition[] \| null>` | Shot, Asset, Sequence, Task | Types a search may end on. |
 | `placeholder` | `string` | `'Search the hierarchy…'` | Text in the search input. |
+| `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Row text, leading slot and glyphs. |
 | `class` / `className` | `string` | — | Merged after the widget's own classes. |
+
+Every other attribute is spread onto the root: `id`, `aria-*`, `data-*`, key handlers and a
+`ref` to the root element.
 
 With no query the list is one level of the tree. With a query it is the rows that match, each shown
 as the breadcrumb that reaches it, the row itself last and in bold.
@@ -35,9 +39,9 @@ is not one of these types opens instead of being picked.
 
 ## Events
 
-| event | React | Svelte | payload |
-|---|---|---|---|
-| select | `onSelect` | `onselect` | The row picked, then every row the path runs through, root first. |
+| event | payload | when |
+|---|---|---|
+| `onSelect` | `EntityRef`, `EntityRef[]` | A row was picked. The second argument is every row its path runs through, root first. |
 
 ## Slots
 

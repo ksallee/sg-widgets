@@ -150,7 +150,7 @@
 				<EntityChip
 					{entity}
 					removable
-					onremove={(e) => (removed = [...removed, `${e.type}:${e.id}`])}
+					onRemove={(e) => (removed = [...removed, `${e.type}:${e.id}`])}
 				/>
 			{/each}
 			{#if shown.length === 0}

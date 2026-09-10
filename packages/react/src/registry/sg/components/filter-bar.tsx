@@ -33,7 +33,21 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { cn } from '@/lib/utils';
 import { FilterDialog } from '@/registry/sg/components/filter-dialog';
 
-export interface FilterBarProps {
+export type FilterBarSize = 'sm' | 'md' | 'lg';
+
+/** Pills follow the input ladder of `docs/design-rules.md`. */
+const PILL: Record<FilterBarSize, string> = { sm: 'h-8', md: 'h-9', lg: 'h-10' };
+const PAD: Record<FilterBarSize, string> = { sm: 'px-2', md: 'px-3', lg: 'px-3' };
+/** The remove control sits inside the pill, so it takes the tighter padding. */
+const REMOVE_PAD: Record<FilterBarSize, string> = { sm: 'px-1.5', md: 'px-2', lg: 'px-2' };
+const GLYPH: Record<FilterBarSize, string> = { sm: 'size-4', md: 'size-4', lg: 'size-5' };
+/** The button step beside a pill of each height. */
+const BTN: Record<FilterBarSize, 'sm' | 'default' | 'lg'> = { sm: 'sm', md: 'default', lg: 'lg' };
+
+export interface FilterBarProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange'> {
+  /** The root element. */
+  ref?: React.Ref<HTMLDivElement>;
+
   entityType: string;
   client: SgClient;
   schema?: SchemaService;
@@ -41,6 +55,7 @@ export interface FilterBarProps {
   facets: string[];
   value: FilterGroup;
   hidePaths?: string[];
+  size?: FilterBarSize;
   disabled?: boolean;
   /**
    * Counts per value for one facet. Wire it to a `_summarize` grouping call.
@@ -75,12 +90,15 @@ export function FilterBar({
   facets,
   value = emptyFilter(),
   hidePaths = [],
+  size = 'md',
   disabled = false,
   counts,
   baseFilter = null,
   sampleSize = 200,
   onChange,
   className,
+  ref,
+  ...rest
 }: FilterBarProps) {
   const service = useMemo(() => schema ?? createSchemaService(client), [schema, client]);
   const [fields, setFields] = useState<Record<string, FieldSchema>>({});
@@ -199,7 +217,7 @@ export function FilterBar({
           <div className="border-border border-t p-1">
             <Button
               variant="ghost"
-              size="sm"
+              size={BTN[size]}
               className="w-full"
               data-slot="filter-pill-clear"
               onClick={() => onChange?.(setFacet(value, name, []))}
@@ -215,7 +233,12 @@ export function FilterBar({
   const activeCount = facets.filter((name) => Boolean(conditionOf(name))).length;
 
   return (
-    <div className={cn('flex w-full min-w-0 flex-wrap items-center gap-2', className)} data-slot="filter-bar">
+    <div
+      ref={ref}
+      data-slot="filter-bar"
+      className={cn('flex w-full min-w-0 flex-wrap items-center gap-2', className)}
+      {...rest}
+    >
       {facets.map((name) => {
         const field = fields[name];
         const found = conditionOf(name);
@@ -227,10 +250,14 @@ export function FilterBar({
             disabled={disabled}
             data-slot="filter-pill-remove"
             aria-label={`Remove ${label} filter`}
-            className="border-border text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring/50 inline-flex h-8 shrink-0 items-center border-l px-1.5 outline-none focus-visible:ring-3 disabled:pointer-events-none disabled:opacity-50"
+            className={cn(
+              'border-border text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring/50 inline-flex shrink-0 items-center border-l outline-none focus-visible:ring-3 disabled:pointer-events-none disabled:opacity-50',
+              PILL[size],
+              REMOVE_PAD[size],
+            )}
             onClick={() => onChange?.(withoutPaths(value, [name]))}
           >
-            <XIcon className="size-4" />
+            <XIcon className={GLYPH[size]} />
           </button>
         );
         if (!found || !parts || conditionArity(found, field?.dataType ?? '') === 'many') {
@@ -240,22 +267,28 @@ export function FilterBar({
               <div
                 data-slot="filter-pill"
                 data-field={name}
+                data-size={size}
                 data-active={found ? 'true' : undefined}
                 role={found ? 'group' : undefined}
                 aria-label={found ? describeCondition(found, field) : undefined}
                 className={cn(
-                  'border-border inline-flex h-8 max-w-full min-w-0 items-center overflow-hidden rounded-lg border text-sm',
+                  'border-border inline-flex max-w-full min-w-0 items-center overflow-hidden rounded-lg border text-sm',
+                  PILL[size],
                   found ? 'bg-background' : 'text-muted-foreground max-w-72 border-dashed',
                 )}
               >
                 <PopoverTrigger
                   disabled={disabled || !field}
                   data-slot="filter-pill-trigger"
-                  className="hover:bg-muted hover:text-foreground focus-visible:ring-ring/50 inline-flex h-8 min-w-0 items-center gap-1.5 px-2.5 outline-none focus-visible:ring-3 focus-visible:ring-inset disabled:pointer-events-none disabled:opacity-50"
+                  className={cn(
+                    'hover:bg-muted hover:text-foreground focus-visible:ring-ring/50 inline-flex min-w-0 items-center gap-1.5 outline-none focus-visible:ring-3 focus-visible:ring-inset disabled:pointer-events-none disabled:opacity-50',
+                    PILL[size],
+                    PAD[size],
+                  )}
                 >
                   {!found || !parts ? (
                     <>
-                      <PlusIcon className="size-4 shrink-0" />
+                      <PlusIcon className={cn('shrink-0', GLYPH[size])} />
                       <span className="min-w-0 truncate">{field?.displayName ?? name}</span>
                     </>
                   ) : (
@@ -287,12 +320,20 @@ export function FilterBar({
             key={name}
             data-slot="filter-pill"
             data-field={name}
+            data-size={size}
             data-active="true"
             role="group"
             aria-label={describeCondition(found, field)}
-            className="border-border bg-background inline-flex h-8 max-w-full min-w-0 items-center overflow-hidden rounded-lg border text-sm"
+            className={cn(
+              'border-border bg-background inline-flex max-w-full min-w-0 items-center overflow-hidden rounded-lg border text-sm',
+              PILL[size],
+            )}
           >
-            <span data-slot="filter-pill-values" className="inline-flex h-8 min-w-0 items-center gap-1.5 px-2.5" title={parts.value}>
+            <span
+              data-slot="filter-pill-values"
+              className={cn('inline-flex min-w-0 items-center gap-1.5', PILL[size], PAD[size])}
+              title={parts.value}
+            >
               <span data-slot="filter-pill-field" className="shrink-0 font-medium">
                 {parts.field}
               </span>
@@ -307,7 +348,7 @@ export function FilterBar({
       {activeCount > 0 ? (
         <Button
           variant="ghost"
-          size="sm"
+          size={BTN[size]}
           disabled={disabled}
           className="text-muted-foreground hover:text-foreground"
           data-slot="filter-clear-all"
@@ -323,6 +364,7 @@ export function FilterBar({
         schema={schema}
         hidePaths={hidePaths}
         disabled={disabled}
+        size={size}
         label="More filters"
         value={value}
         onChange={(next) => onChange?.(next)}

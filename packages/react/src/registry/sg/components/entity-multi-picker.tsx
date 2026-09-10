@@ -193,7 +193,11 @@ function secondaryPlanStore(
 }
 
 /** Everything both entity pickers take. They differ only in the shape of the value. */
-export interface EntityMultiPickerBaseProps {
+export interface EntityMultiPickerBaseProps
+  extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onError'> {
+  /** The root element. */
+  ref?: React.Ref<HTMLDivElement>;
+
   /** Types to search. One for a homogeneous picker, several for a polymorphic one. */
   entityTypes: string[];
   /** A cached client. Every read goes through it. */
@@ -238,10 +242,13 @@ export interface EntityMultiPickerBaseProps {
   max?: number;
   size?: EntityMultiPickerSize;
   disabled?: boolean;
-  readOnly?: boolean;
+  readonly?: boolean;
   invalid?: boolean;
   clearable?: boolean;
   debounceMs?: number;
+  /** Whether the popup is showing. */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
   onError?: (error: Error) => void;
   className?: string;
 }
@@ -293,12 +300,16 @@ export function EntityMultiPicker({
   max = 0,
   size = 'md',
   disabled = false,
-  readOnly = false,
+  readonly = false,
   invalid = false,
   clearable = true,
   debounceMs = 250,
+  open: openProp,
+  onOpenChange,
   onError,
   className,
+  ref,
+  ...rest
 }: EntityMultiPickerProps) {
   const errorRef = useRef(onError);
   errorRef.current = onError;
@@ -338,7 +349,12 @@ export function EntityMultiPicker({
   );
   const state = useSyncExternalStore(search.subscribe, () => search.state, () => search.state);
 
-  const [open, setOpen] = useState(false);
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const open = openProp ?? uncontrolledOpen;
+  const setOpen = (next: boolean): void => {
+    setUncontrolledOpen(next);
+    onOpenChange?.(next);
+  };
   const [query, setQuery] = useState('');
   const controlRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -423,7 +439,7 @@ export function EntityMultiPicker({
   const options = withSelectedPinned(state.rows, value, search.known);
   const polymorphic = entityTypes.length > 1;
   const hasSubLabel = Boolean(subLabelField || subLabel);
-  const interactive = !disabled && !readOnly;
+  const interactive = !disabled && !readonly;
   const showClear = clearable && value.length > 0 && interactive;
   /** An id is a code, and codes are the mono treatment of `docs/design-rules.md`. */
   const secondaryIsId = secondaryField === 'id';
@@ -653,6 +669,7 @@ export function EntityMultiPicker({
 
   return (
     <div
+      ref={ref}
       data-slot="entity-picker"
       data-size={size}
       data-multiple="true"
@@ -662,6 +679,7 @@ export function EntityMultiPicker({
         disabled && 'pointer-events-none opacity-50',
         className,
       )}
+      {...rest}
     >
       <ComboboxPrimitive.Root
         multiple
@@ -697,9 +715,9 @@ export function EntityMultiPicker({
       role="group"
           aria-disabled={disabled ? 'true' : undefined}
           data-invalid={invalid && !inline ? 'true' : undefined}
-          data-readonly={readOnly ? 'true' : undefined}
+          data-readonly={readonly ? 'true' : undefined}
           title={plan.title || placeholder}
-          className={cn(PICKER_CONTROL, PICKER_BOX[size], plan.oneLine && 'flex-nowrap', readOnly ? 'pr-3' : showClear ? 'pr-14' : 'pr-8')}
+          className={cn(PICKER_CONTROL, PICKER_BOX[size], plan.oneLine && 'flex-nowrap', readonly ? 'pr-3' : showClear ? 'pr-14' : 'pr-8')}
         >
           {value.length > 0 ? (
             <span
@@ -764,7 +782,7 @@ export function EntityMultiPicker({
               data-slot="entity-picker-input"
               aria-invalid={invalid ? 'true' : undefined}
               aria-label={placeholder}
-              readOnly={readOnly || undefined}
+              readOnly={readonly || undefined}
               placeholder={value.length > 0 ? '' : placeholder}
               className={PICKER_INPUT}
             />
@@ -808,7 +826,7 @@ export function EntityMultiPicker({
           </ComboboxPrimitive.Positioner>
         </ComboboxPrimitive.Portal>
 
-        {readOnly ? null : (
+        {readonly ? null : (
           <div className="pointer-events-none absolute right-2 flex items-center gap-1">
             {showClear ? (
               <button

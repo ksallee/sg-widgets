@@ -31,14 +31,18 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/entity-type-pi
 | `searchPlaceholder` | `string` | `'Search types…'` | Shown in the search box. |
 | `emptyLabel` | `string` | `'No entity type matches.'` | Shown when nothing matches. |
 | `clearable` | `boolean` | `true` | Show the clear control once something is chosen. |
-| `readOnly` / `readonly` | `boolean` | `false` | Keeps full contrast and removes the chevron and the clear control. |
+| `readonly` | `boolean` | `false` | Keeps full contrast and removes the chevron and the clear control. |
 | `disabled` | `boolean` | `false` | |
 | `invalid` | `boolean` | `false` | Applies the invalid ring and `aria-invalid`. |
 | `showCode` | `boolean` | `true` | Shows the code under the display name where the two differ. |
 | `summary` | `'chips' \| 'ellipsis' \| 'count'` | `'ellipsis'` | What the control shows for the selection in multi mode. |
 | `max` | `number` | `0` | Chips drawn before the rest becomes `+n`. `0` lets the row fit what it can. |
 | `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | |
+| `open` | `boolean` | `false` | Whether the popup is showing. Two-way in Svelte. |
 | `className` / `class` | `string` | — | Merged after the widget's own classes. |
+
+Every other attribute is spread onto the root: `id`, `aria-*`, `data-*`, key handlers and a
+`ref` to the root element.
 
 Each row shows the display name, with the code beneath it in mono when the two differ, unless
 `showCode` is off. In multi mode every row carries a checkbox and the list stays open across
@@ -60,6 +64,7 @@ caller narrowing the set sees the list change with no second call.
 | event | payload | when |
 |---|---|---|
 | `onValueChange` | `string \| string[] \| null` | A type is chosen or unchosen, or the clear control is pressed. |
+| `onOpenChange` | `boolean` | The popup opened or closed. Svelte also binds it with `bind:open`. |
 
 ## Slots
 

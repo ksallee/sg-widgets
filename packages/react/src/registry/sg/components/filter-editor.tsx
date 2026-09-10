@@ -146,12 +146,26 @@ function dottedPaths(node: FilterNode, out: string[] = []): string[] {
 }
 
 /** Everything a row needs that does not come from its own node. */
+export type FilterEditorSize = 'sm' | 'md' | 'lg';
+
+/** A condition row is a control inside a control, so its ladder sits one step down. */
+const BOX: Record<FilterEditorSize, string> = { sm: 'h-7', md: 'h-8', lg: 'h-9' };
+const INNER: Record<FilterEditorSize, 'sm' | 'md'> = { sm: 'sm', md: 'sm', lg: 'md' };
+const BTN: Record<FilterEditorSize, 'xs' | 'sm' | 'default'> = { sm: 'xs', md: 'sm', lg: 'default' };
+const ICON: Record<FilterEditorSize, 'icon-xs' | 'icon-sm' | 'icon'> = {
+  sm: 'icon-xs',
+  md: 'icon-sm',
+  lg: 'icon',
+};
+const TOGGLE: Record<FilterEditorSize, 'sm' | 'default'> = { sm: 'sm', md: 'sm', lg: 'default' };
+
 interface EditorContext {
   entityType: string;
   client: SgClient;
   service: SchemaService;
   hidePaths: string[];
   projectId?: number;
+  size: FilterEditorSize;
   disabled: boolean;
   fieldChooser?: (args: FieldChooserArgs) => ReactNode;
   valueEditor?: (args: ValueEditorArgs) => ReactNode;
@@ -166,7 +180,10 @@ interface EditorContext {
   pickPreset: (path: NodePath, node: FilterCondition, id: string) => void;
 }
 
-export interface FilterEditorProps {
+export interface FilterEditorProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange'> {
+  /** The root element. */
+  ref?: React.Ref<HTMLDivElement>;
+
   /** Type the root of every field path is read on. */
   entityType: string;
   client: SgClient;
@@ -177,6 +194,7 @@ export interface FilterEditorProps {
   hidePaths?: string[];
   /** Scopes the status pickers to the codes one project allows. */
   projectId?: number;
+  size?: FilterEditorSize;
   disabled?: boolean;
   onChange?: (value: FilterGroup) => void;
   fieldChooser?: (args: FieldChooserArgs) => ReactNode;
@@ -206,12 +224,15 @@ export function FilterEditor({
   value = emptyFilter(),
   hidePaths = [],
   projectId,
+  size = 'md',
   disabled = false,
   onChange,
   fieldChooser,
   valueEditor,
   entityEditor,
   className,
+  ref,
+  ...rest
 }: FilterEditorProps) {
   const service = useMemo(() => schema ?? createSchemaService(client), [schema, client]);
   const [fields, setFields] = useState<Record<string, FieldSchema>>({});
@@ -275,6 +296,7 @@ export function FilterEditor({
     service,
     hidePaths,
     projectId,
+    size,
     disabled,
     fieldChooser,
     valueEditor,
@@ -308,10 +330,12 @@ export function FilterEditor({
 
   return (
     <div
-      className={cn('flex w-full min-w-0 flex-col gap-3', disabled && 'opacity-50', className)}
+      ref={ref}
       data-slot="filter-editor"
       data-entity-type={entityType}
       aria-disabled={disabled ? 'true' : undefined}
+      className={cn('flex w-full min-w-0 flex-col gap-3', disabled && 'opacity-50', className)}
+      {...rest}
     >
       <GroupNode ctx={ctx} path={[]} node={value} />
     </div>
@@ -335,7 +359,7 @@ function GroupNode({ ctx, path, node }: { ctx: EditorContext; path: NodePath; no
     >
       <div className="flex min-h-9 min-w-0 items-center gap-2" data-slot="filter-group-header">
         <ToggleGroup
-          size="sm"
+          size={TOGGLE[ctx.size]}
           variant="outline"
           disabled={ctx.disabled}
           value={[node.logicalOperator]}
@@ -356,7 +380,7 @@ function GroupNode({ ctx, path, node }: { ctx: EditorContext; path: NodePath; no
         {depth > 0 ? (
           <Button
             variant="ghost"
-            size="icon-sm"
+            size={ICON[ctx.size]}
             className="text-muted-foreground hover:text-foreground mt-1 shrink-0 self-start"
             disabled={ctx.disabled}
             aria-label="Remove group"
@@ -382,7 +406,7 @@ function GroupNode({ ctx, path, node }: { ctx: EditorContext; path: NodePath; no
       <div className="flex min-w-0 flex-wrap items-center gap-1 pl-3" data-slot="filter-foot">
         <Button
           variant="ghost"
-          size="sm"
+          size={BTN[ctx.size]}
           className="text-muted-foreground hover:text-foreground"
           disabled={ctx.disabled}
           data-slot="filter-add-condition"
@@ -394,7 +418,7 @@ function GroupNode({ ctx, path, node }: { ctx: EditorContext; path: NodePath; no
         </Button>
         <Button
           variant="ghost"
-          size="sm"
+          size={BTN[ctx.size]}
           className="text-muted-foreground hover:text-foreground"
           disabled={ctx.disabled}
           data-slot="filter-add-group"
@@ -424,7 +448,7 @@ function ConditionRow({ ctx, path, node }: { ctx: EditorContext; path: NodePath;
       </div>
       <Button
         variant="ghost"
-        size="icon-sm"
+        size={ICON[ctx.size]}
         className="text-muted-foreground hover:text-foreground mt-1 shrink-0 self-start"
         disabled={ctx.disabled}
         aria-label="Remove condition"
@@ -460,7 +484,7 @@ function FieldSlot({ ctx, path, node }: { ctx: EditorContext; path: NodePath; no
           deepLinks
           filterableOnly
           clearable={false}
-          size="sm"
+          size={INNER[ctx.size]}
           placeholder="Select a field"
           onValueChange={(next) => ctx.pickField(path, node, next)}
         />
@@ -479,7 +503,7 @@ function OperatorSlot({ ctx, path, node }: { ctx: EditorContext; path: NodePath;
       disabled={ctx.disabled || menu.length === 0}
       onValueChange={(id) => ctx.pickPreset(path, node, id as string)}
     >
-      <SelectTrigger className="h-8 w-40 shrink-0" data-slot="filter-operator">
+      <SelectTrigger className={cn(BOX[ctx.size], 'w-40 shrink-0')} data-slot="filter-operator">
         {presetById(dataType, current)?.label ?? current}
       </SelectTrigger>
       <SelectContent>
@@ -498,12 +522,25 @@ function OperatorSlot({ ctx, path, node }: { ctx: EditorContext; path: NodePath;
   );
 }
 
-function PickerTrigger({ label, count, disabled }: { label: string; count: number; disabled: boolean }) {
+function PickerTrigger({
+  label,
+  count,
+  disabled,
+  size,
+}: {
+  label: string;
+  count: number;
+  disabled: boolean;
+  size: FilterEditorSize;
+}) {
   return (
     <PopoverTrigger
       disabled={disabled}
       data-slot="filter-value-trigger"
-      className="border-border bg-background hover:bg-muted focus-visible:border-ring focus-visible:ring-ring/50 inline-flex h-8 w-full min-w-0 items-center justify-between gap-1.5 rounded-lg border px-2.5 text-sm outline-none focus-visible:ring-3 disabled:pointer-events-none disabled:opacity-50"
+      className={cn(
+        'border-border bg-background hover:bg-muted focus-visible:border-ring focus-visible:ring-ring/50 inline-flex w-full min-w-0 items-center justify-between gap-1.5 rounded-lg border px-2.5 text-sm outline-none focus-visible:ring-3 disabled:pointer-events-none disabled:opacity-50',
+        BOX[size],
+      )}
     >
       <span className={cn('min-w-0 truncate', count === 0 && 'text-muted-foreground')} title={label}>
         {label}
@@ -531,7 +568,7 @@ function ValueSlot({ ctx, path, node }: { ctx: EditorContext; path: NodePath; no
   return (
     <div className="flex min-w-40 flex-1 flex-wrap items-center gap-2" data-slot="filter-value">
       {ctx.unresolved(node.path) ? (
-        <Skeleton className="h-8 min-w-0 flex-1" />
+        <Skeleton className={cn(BOX[ctx.size], 'min-w-0 flex-1')} />
       ) : ctx.valueEditor ? (
         // Integration point: a caller's own editors replace every one below.
         ctx.valueEditor(args)
@@ -539,7 +576,7 @@ function ValueSlot({ ctx, path, node }: { ctx: EditorContext; path: NodePath; no
         // `is empty` and the calendar presets pin their value; there is nothing to edit.
         null
       ) : arity === 'relative' ? (
-        <RelativeValue value={node.value} disabled={disabled} onChange={set} />
+        <RelativeValue value={node.value} disabled={disabled} size={ctx.size} onChange={set} />
       ) : kind === 'entity' ? (
         ctx.entityEditor ? (
           // Integration point: EntityMultiPicker plugs in here.
@@ -550,7 +587,7 @@ function ValueSlot({ ctx, path, node }: { ctx: EditorContext; path: NodePath; no
       ) : kind === 'checkbox' ? (
         <CheckboxEditor
           className="min-w-0 flex-1"
-          size="sm"
+          size={INNER[ctx.size]}
           disabled={disabled}
           field={{ displayName: field?.displayName ?? 'Value', mandatory: false }}
           value={node.value === true}
@@ -559,7 +596,7 @@ function ValueSlot({ ctx, path, node }: { ctx: EditorContext; path: NodePath; no
       ) : kind === 'options' && dataType === 'status_list' && arity === 'many' ? (
         <StatusMultiPicker
           className="min-w-0 flex-1"
-          size="sm"
+          size={INNER[ctx.size]}
           client={ctx.client}
           disabled={disabled}
           projectId={ctx.projectId}
@@ -571,7 +608,7 @@ function ValueSlot({ ctx, path, node }: { ctx: EditorContext; path: NodePath; no
       ) : kind === 'options' && dataType === 'status_list' ? (
         <StatusPicker
           className="min-w-0 flex-1"
-          size="sm"
+          size={INNER[ctx.size]}
           client={ctx.client}
           disabled={disabled}
           projectId={ctx.projectId}
@@ -581,11 +618,11 @@ function ValueSlot({ ctx, path, node }: { ctx: EditorContext; path: NodePath; no
           onValueChange={(next) => set(next ?? '')}
         />
       ) : kind === 'options' && arity === 'many' ? (
-        <OptionsMany field={field} value={node.value} disabled={disabled} onChange={set} />
+        <OptionsMany field={field} value={node.value} disabled={disabled} size={ctx.size} onChange={set} />
       ) : kind === 'options' ? (
         <ListSelect
           className="min-w-0 flex-1"
-          size="sm"
+          size={INNER[ctx.size]}
           disabled={disabled}
           field={field}
           placeholder="Select a value…"
@@ -593,11 +630,18 @@ function ValueSlot({ ctx, path, node }: { ctx: EditorContext; path: NodePath; no
           onValueChange={(next) => set(next ?? '')}
         />
       ) : arity === 'two' ? (
-        <TwoValues kind={kind} dataType={dataType} value={node.value} disabled={disabled} onChange={set} />
+        <TwoValues
+          kind={kind}
+          dataType={dataType}
+          value={node.value}
+          disabled={disabled}
+          size={ctx.size}
+          onChange={set}
+        />
       ) : arity === 'many' ? (
         // A list of dates, numbers or strings has no per-value editor: one line, comma separated.
         <Input
-          className="h-8 min-w-0 flex-1"
+          className={cn(BOX[ctx.size], 'min-w-0 flex-1')}
           disabled={disabled}
           placeholder="value, value"
           aria-label="Values"
@@ -619,6 +663,7 @@ function ValueSlot({ ctx, path, node }: { ctx: EditorContext; path: NodePath; no
           label={field?.displayName ?? 'Value'}
           value={node.value as Scalar}
           disabled={disabled}
+          size={ctx.size}
           onChange={(v) => set(v)}
         />
       )}
@@ -637,6 +682,7 @@ function ScalarEditor({
   label,
   value,
   disabled,
+  size,
   onChange,
 }: {
   kind: string;
@@ -644,6 +690,7 @@ function ScalarEditor({
   label: string;
   value: Scalar;
   disabled: boolean;
+  size: FilterEditorSize;
   onChange: (v: Scalar) => void;
 }) {
   const field = { displayName: label, mandatory: false };
@@ -651,7 +698,7 @@ function ScalarEditor({
     return (
       <NumberEditor
         className="shrink-0"
-        size="sm"
+        size={INNER[size]}
         inline
         disabled={disabled}
         dataType={numericType(dataType)}
@@ -665,7 +712,7 @@ function ScalarEditor({
     return (
       <DateEditor
         className="shrink-0"
-        size="sm"
+        size={INNER[size]}
         inline
         disabled={disabled}
         field={field}
@@ -678,7 +725,7 @@ function ScalarEditor({
     return (
       <DateTimeEditor
         className="shrink-0"
-        size="sm"
+        size={INNER[size]}
         inline
         hint={false}
         disabled={disabled}
@@ -691,7 +738,7 @@ function ScalarEditor({
   return (
     <TextEditor
       className="min-w-0 flex-1"
-      size="sm"
+      size={INNER[size]}
       disabled={disabled}
       field={field}
       value={textValue(value)}
@@ -703,16 +750,18 @@ function ScalarEditor({
 function RelativeValue({
   value,
   disabled,
+  size,
   onChange,
 }: {
   value: ConditionValue;
   disabled: boolean;
+  size: FilterEditorSize;
   onChange: (v: ConditionValue) => void;
 }) {
   const pair = (Array.isArray(value) ? value : [1, 'DAY']) as [number, string];
   return (
     // A window is one quantity: the count and its unit share a box.
-    <InputGroup className="w-40 shrink-0">
+    <InputGroup className={cn(BOX[size], 'w-40 shrink-0')}>
       <InputGroupInput
         type="number"
         min="1"
@@ -749,12 +798,14 @@ function TwoValues({
   dataType,
   value,
   disabled,
+  size,
   onChange,
 }: {
   kind: string;
   dataType: string;
   value: ConditionValue;
   disabled: boolean;
+  size: FilterEditorSize;
   onChange: (v: ConditionValue) => void;
 }) {
   const pair = (Array.isArray(value) ? value : [null, null]) as [Scalar, Scalar];
@@ -767,6 +818,7 @@ function TwoValues({
         label="From"
         value={pair[0]}
         disabled={disabled}
+        size={size}
         onChange={(v) => onChange([v, pair[1]] as ConditionValue)}
       />
       <span className="text-muted-foreground shrink-0 text-sm">and</span>
@@ -776,6 +828,7 @@ function TwoValues({
         label="To"
         value={pair[1]}
         disabled={disabled}
+        size={size}
         onChange={(v) => onChange([pair[0], v] as ConditionValue)}
       />
     </div>
@@ -786,11 +839,13 @@ function OptionsMany({
   field,
   value,
   disabled,
+  size,
   onChange,
 }: {
   field: FieldSchema | null;
   value: ConditionValue;
   disabled: boolean;
+  size: FilterEditorSize;
   onChange: (v: ConditionValue) => void;
 }) {
   const codes = codesOf(value);
@@ -798,6 +853,7 @@ function OptionsMany({
     <Popover>
       <PickerTrigger
         disabled={disabled}
+        size={size}
         label={codes.length === 0 ? 'Select values…' : codes.map((c) => field?.displayValues?.[c] ?? c).join(', ')}
         count={codes.length}
       />
@@ -842,7 +898,7 @@ function EntityValue({
     return (
       <EntityMultiPicker
         className="min-w-0 flex-1"
-        size="sm"
+        size={INNER[ctx.size]}
         client={ctx.client}
         disabled={ctx.disabled}
         projectId={ctx.projectId}
@@ -856,7 +912,7 @@ function EntityValue({
   return (
     <EntityPicker
       className="min-w-0 flex-1"
-      size="sm"
+      size={INNER[ctx.size]}
       client={ctx.client}
       disabled={ctx.disabled}
       projectId={ctx.projectId}

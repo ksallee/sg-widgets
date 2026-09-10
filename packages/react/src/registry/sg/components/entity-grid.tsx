@@ -18,6 +18,11 @@ export type EntityGridSize = 'sm' | 'md' | 'lg';
  */
 const TILE: Record<EntityGridSize, number> = { sm: 160, md: 224, lg: 288 };
 
+export type EntityGridDensity = 'compact' | 'default';
+
+/** The gap between tiles; compact halves it, as it halves a row's padding elsewhere. */
+const GAP: Record<EntityGridDensity, string> = { compact: 'gap-1.5', default: 'gap-3' };
+
 const TILE_SELECTOR = '[data-slot="entity-card"][data-variant="tile"]';
 
 export interface EntityGridProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'children' | 'onSelect'> {
@@ -42,6 +47,7 @@ export interface EntityGridProps extends Omit<React.HTMLAttributes<HTMLDivElemen
   /** `Status` rows by code, for the badge (probe 010). Read through the context when not given. */
   statuses?: Record<string, StatusRecord> | null;
   size?: EntityGridSize;
+  density?: EntityGridDensity;
   selectable?: boolean;
   onSelectionChange?: (rows: EntityRef[]) => void;
   onSelect?: (row: EntityRow) => void;
@@ -85,6 +91,7 @@ export function EntityGrid({
   showCode = false,
   statuses = null,
   size = 'md',
+  density = 'default',
   selectable = false,
   onSelectionChange,
   onSelect,
@@ -238,7 +245,7 @@ export function EntityGrid({
             {snapshot.error?.message}
           </p>
         ) : snapshot.status === 'loading' ? (
-          <div className="grid gap-3" style={columns}>
+          <div className={cn('grid', GAP[density])} style={columns}>
             {Array.from({ length: 8 }, (_, index) => (
               <div key={index} className="flex flex-col gap-2">
                 <Skeleton className="aspect-video w-full" />
@@ -260,7 +267,7 @@ export function EntityGrid({
               aria-multiselectable={selectable ? true : undefined}
               aria-label="Rows"
               tabIndex={-1}
-              className="grid gap-3"
+              className={cn('grid', GAP[density])}
               style={columns}
               onKeyDown={onKeyDown}
             >

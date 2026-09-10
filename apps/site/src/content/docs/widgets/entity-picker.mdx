@@ -44,11 +44,15 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/entity-picker.
 | `emptyLabel` | `string` | `'No entity matches.'` | Shown when a query matches nothing. |
 | `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Heights 8, 9 and 10. |
 | `disabled` | `boolean` | `false` | |
-| `readonly` / `readOnly` | `boolean` | `false` | Keeps full contrast and drops the affordances. |
+| `readonly` | `boolean` | `false` | Keeps full contrast and drops the affordances. |
 | `invalid` | `boolean` | `false` | Sets `aria-invalid` and the destructive ring. |
 | `clearable` | `boolean` | `true` | Shows the clear control. |
 | `debounceMs` | `number` | `250` | Wait after the last keystroke before searching. |
+| `open` | `boolean` | `false` | Whether the popup is showing. Two-way in Svelte. |
 | `class` / `className` | `string` | — | Merged after the widget's own classes. |
+
+Every other attribute is spread onto the root: `id`, `aria-*`, `data-*`, key handlers and a
+`ref` to the root element.
 
 The secondary column shows nothing until `secondaryField` or `secondary` asks for something.
 `secondaryField` is drawn by the field's data type, so a status is a badge, an entity is the name it
@@ -66,10 +70,11 @@ The picker is `w-full`; wrap it in a sized container.
 
 ## Events
 
-| event | React | Svelte | payload |
-|---|---|---|---|
-| change | `onValueChange` | `onValueChange` | The new reference and the full row, or `null` on clear. |
-| error | `onError` | `onerror` | The failure. The list shows it inline as well. |
+| event | payload | when |
+|---|---|---|
+| `onValueChange` | `EntityRef \| null`, `PickerRow \| null` | A row was chosen, or the clear control was pressed. |
+| `onError` | `Error` | A read failed. The list shows it inline as well. |
+| `onOpenChange` | `boolean` | The popup opened or closed. Svelte also binds it with `bind:open`. |
 
 ## Slots
 

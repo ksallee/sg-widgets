@@ -40,11 +40,15 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/field-picker.j
 | `searchPlaceholder` | `string` | `'Search fields…'` | Shown in the search box. |
 | `emptyLabel` | `string` | `'No field matches.'` | Shown when nothing matches. |
 | `clearable` | `boolean` | `true` | Show the clear control once a field is chosen. |
-| `readOnly` / `readonly` | `boolean` | `false` | Keeps full contrast and removes the chevron and the clear control. |
+| `readonly` | `boolean` | `false` | Keeps full contrast and removes the chevron and the clear control. |
 | `disabled` | `boolean` | `false` | |
 | `invalid` | `boolean` | `false` | Applies the invalid ring and `aria-invalid`. |
 | `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | |
+| `open` | `boolean` | `false` | Whether the popover is showing. Two-way in Svelte. |
 | `className` / `class` | `string` | — | Merged after the widget's own classes. |
+
+Every other attribute is spread onto the root: `id`, `aria-*`, `data-*`, key handlers and a
+`ref` to the root element.
 
 The value is a dotted path. A root field is its own code; every hop names the field followed and the
 type it landed on, which is the syntax a projection and a filter both take.
@@ -72,7 +76,8 @@ one.
 
 | event | payload | when |
 |---|---|---|
-| `onValueChange` / `onValueChange` | `string` | A field is chosen, or the clear control is pressed, which sends the empty string. |
+| `onValueChange` | `string` | A field is chosen, or the clear control is pressed, which sends the empty string. |
+| `onOpenChange` | `boolean` | The popover opened or closed. Svelte also binds it with `bind:open`. |
 
 ## Slots
 

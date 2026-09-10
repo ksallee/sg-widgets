@@ -41,13 +41,17 @@ row already holding a value outside that set keeps showing it.
 | `invalid` | `boolean` | `false` | |
 | `error` | `string \| null` | `null` | A message from the caller. |
 | `placeholder` | `string` | `'Choose'` | Shown while the field is unset. |
+| `open` | `boolean` | `false` | Whether the popup is showing. Two-way in Svelte. |
 | `class` / `className` | `string` | — | Merged after the widget's own classes. |
 
 A mandatory field is offered without the clear entry.
 
 ## Events
 
-`onValueChange` fires as soon as an entry is chosen.
+`onValueChange` fires as soon as an entry is chosen. `onErrorChange` fires with `null` on that same
+change, so a message the caller set clears when the field is answered.
+
+`onOpenChange` fires when the popup opens or closes. Svelte also binds it with `bind:open`.
 
 ## Slots
 

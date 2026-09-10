@@ -58,7 +58,7 @@
 		onclick?: MouseEventHandler<HTMLButtonElement>;
 		size?: EntityChipSize;
 		removable?: boolean;
-		onremove?: (entity: EntityRef) => void;
+		onRemove?: (entity: EntityRef) => void;
 		/** Accessible label for the remove control. */
 		removeLabel?: string;
 	};
@@ -74,7 +74,7 @@
 		onclick,
 		size = 'md',
 		removable = false,
-		onremove,
+		onRemove,
 		removeLabel,
 		class: className,
 		ref = $bindable(null),
@@ -188,7 +188,7 @@
 			<button
 				type="button"
 				aria-label={removeLabel ?? `Remove ${label}`}
-				onclick={() => onremove?.(entity)}
+				onclick={() => onRemove?.(entity)}
 				class="hover:bg-destructive/15 hover:text-destructive focus-visible:ring-ring focus-visible:ring-offset-background shrink-0 rounded-sm p-0.5 opacity-70 outline-none transition-colors duration-150 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-2 motion-safe:active:scale-[0.98]"
 			>
 				<X aria-hidden="true" class="size-3" />

@@ -109,12 +109,16 @@
 		invalid?: boolean;
 		clearable?: boolean;
 		debounceMs?: number;
-		onerror?: (error: Error) => void;
+		/** Whether the popup is showing, two-way. */
+		open?: boolean;
+		onOpenChange?: (open: boolean) => void;
+		onError?: (error: Error) => void;
 		class?: string;
 	}
 </script>
 
 <script lang="ts">
+	import type { HTMLAttributes } from 'svelte/elements';
 	import type { FieldSchema, StatusRecord } from '@sg-widgets/core';
 	import {
 		createEntitySearch,
@@ -140,9 +144,10 @@
 	import FieldValue from '$lib/registry/components/field-value.svelte';
 	import Thumbnail from '$lib/registry/components/thumbnail.svelte';
 	import UserAvatar from '$lib/registry/components/user-avatar.svelte';
-	import { cn } from '$lib/utils.js';
+	import { cn, type WithElementRef } from '$lib/utils.js';
 
-	type Props = EntityMultiPickerBaseProps & {
+	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>, HTMLDivElement> &
+		EntityMultiPickerBaseProps & {
 		/** The chosen rows, two-way. Bare `{type, id}` members are resolved on mount. */
 		value?: EntityRef[];
 		onValueChange?: (value: EntityRef[], rows: PickerRow[]) => void;
@@ -179,9 +184,13 @@
 		invalid = false,
 		clearable = true,
 		debounceMs = 250,
+		open = $bindable(false),
+		onOpenChange,
 		onValueChange,
-		onerror,
-		class: className
+		onError,
+		class: className,
+		ref = $bindable(null),
+		...rest
 	}: Props = $props();
 
 	// One schema service for the widget, built from the prop so a client swapped in
@@ -206,11 +215,10 @@
 		minQueryLength,
 		pageSize,
 		debounceMs,
-		onError: (error: Error) => onerror?.(error)
+		onError: (error: Error) => onError?.(error)
 	});
 
 	let snap = $state(search.state);
-	let open = $state(false);
 	let controlEl = $state<HTMLElement | null>(null);
 	let inputEl = $state<HTMLInputElement | null>(null);
 	let query = $state('');
@@ -237,7 +245,7 @@
 			minQueryLength,
 			pageSize,
 			debounceMs,
-			onError: (error: Error) => onerror?.(error)
+			onError: (error: Error) => onError?.(error)
 		});
 	});
 
@@ -364,7 +372,7 @@
 			if (found.some((field) => field && renderKindFor(field.dataType) === 'status')) {
 				plan.statuses = Object.fromEntries(await statusTable.byCode());
 			}
-		}, onerror);
+		}, onError);
 		return plan;
 	}
 
@@ -436,7 +444,7 @@
 			event.preventDefault();
 			inputEl?.focus({ preventScroll: true });
 		}
-		open = true;
+		setOpen(true);
 	}
 
 	// A summary trigger has no caret of its own, so the popup's search box takes it.
@@ -452,8 +460,11 @@
 			paging = false;
 			return;
 		}
-		open = interactive ? next : false;
-		if (!open) query = '';
+		const wanted = interactive ? next : false;
+		if (!wanted) query = '';
+		if (wanted === open) return;
+		open = wanted;
+		onOpenChange?.(open);
 	}
 
 	function setSelected(keys: string[]): void {
@@ -491,11 +502,13 @@
 	status is a badge and a date is formatted.
 -->
 <div
+	bind:this={ref}
 	data-slot="entity-picker"
 	data-size={size}
 	data-multiple="true"
 	data-summary={summary}
 	class={cn('relative flex w-full min-w-0 items-center', disabled && 'pointer-events-none opacity-50', className)}
+	{...rest}
 >
 	<Combobox.Root
 		type="multiple"
@@ -540,7 +553,7 @@
 									thumbnail={chip.thumbnail}
 									size={PICKER_CHIP[size]}
 									removable={interactive}
-									onremove={() => remove(chip.ref)}
+									onRemove={() => remove(chip.ref)}
 									data-chip=""
 									hidden={ready && index >= plan.shown.length}
 									class="shrink-0"

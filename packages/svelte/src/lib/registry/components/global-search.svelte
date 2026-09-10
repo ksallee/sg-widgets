@@ -1,6 +1,14 @@
 <script lang="ts" module>
 	import type { EntityRef, SearchHit, WireCondition } from '@sg-widgets/core';
 
+	export type GlobalSearchSize = 'sm' | 'md' | 'lg';
+
+	/** The trigger follows the input ladder of `docs/design-rules.md`. */
+	const BOX: Record<GlobalSearchSize, string> = { sm: 'h-8', md: 'h-9', lg: 'h-10' };
+	const GLYPH: Record<GlobalSearchSize, string> = { sm: 'size-4', md: 'size-4', lg: 'size-5' };
+	/** A row's leading slot sits one step down the leaf ladder. */
+	const LEAD: Record<GlobalSearchSize, 'sm' | 'md'> = { sm: 'sm', md: 'sm', lg: 'md' };
+
 	/** Types to search, either bare names or names with a filter each. */
 	export type GlobalSearchTypes = string[] | Record<string, WireCondition[] | null>;
 
@@ -21,7 +29,6 @@
 
 	const PEOPLE = ['HumanUser', 'ApiUser', 'ClientUser'];
 
-
 	/** The modifier the hotkey shows, from the platform the page is on. */
 	const META =
 		typeof navigator !== 'undefined' && /Mac|iPhone|iPad/i.test(navigator.platform || navigator.userAgent)
@@ -38,6 +45,7 @@
 </script>
 
 <script lang="ts">
+	import type { HTMLAttributes } from 'svelte/elements';
 	import type { SgClient } from '@sg-widgets/core';
 	import { createSchemaService, hydrate, matchRuns, scopeToProject } from '@sg-widgets/core';
 	import type { Snippet } from 'svelte';
@@ -47,12 +55,12 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Kbd } from '$lib/components/ui/kbd/index.js';
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
-	import { cn } from '$lib/utils.js';
+	import { cn, type WithElementRef } from '$lib/utils.js';
 	import EntityChip from '$lib/registry/components/entity-chip.svelte';
 	import Thumbnail from '$lib/registry/components/thumbnail.svelte';
 	import UserAvatar from '$lib/registry/components/user-avatar.svelte';
 
-	type Props = {
+	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>, HTMLDivElement> & {
 		/** Where rows come from. Wrap it in `createQueryCache` once for the whole app. */
 		client: SgClient;
 		entityTypes?: GlobalSearchTypes;
@@ -62,13 +70,16 @@
 		hotkey?: boolean;
 		/** Render as a combobox in the page instead of a dialog behind a trigger. */
 		inline?: boolean;
+		size?: GlobalSearchSize;
+		/** Whether the dialog is showing, two-way. */
 		open?: boolean;
+		onOpenChange?: (open: boolean) => void;
 		/** Rows picked before, newest first. Held by the caller: persisting them is the app's job. */
 		recents?: EntityRef[];
 		/** How many recents to keep when a pick is prepended. */
 		recentLimit?: number;
-		onrecents?: (recents: EntityRef[]) => void;
-		onselect?: (entity: EntityRef) => void;
+		onRecentsChange?: (recents: EntityRef[]) => void;
+		onSelect?: (entity: EntityRef) => void;
 		placeholder?: string;
 		/** Text on the trigger. */
 		label?: string;
@@ -83,15 +94,19 @@
 		projectId = null,
 		hotkey = false,
 		inline = false,
+		size = 'md',
 		open = $bindable(false),
+		onOpenChange,
 		recents = [],
 		recentLimit = 5,
-		onrecents,
-		onselect,
+		onRecentsChange,
+		onSelect,
 		placeholder = 'Search…',
 		label = 'Search',
 		class: className,
-		trigger
+		trigger,
+		ref = $bindable(null),
+		...rest
 	}: Props = $props();
 
 	const schema = $derived(createSchemaService(client));
@@ -198,10 +213,16 @@
 		timer = setTimeout(() => void run(text, 1), DEBOUNCE_MS);
 	}
 
+	function setOpen(next: boolean): void {
+		if (next === open) return;
+		open = next;
+		onOpenChange?.(next);
+	}
+
 	function choose(entity: EntityRef): void {
-		onrecents?.([entity, ...recents.filter((r) => !same(r, entity))].slice(0, recentLimit));
-		onselect?.(entity);
-		if (!inline) open = false;
+		onRecentsChange?.([entity, ...recents.filter((r) => !same(r, entity))].slice(0, recentLimit));
+		onSelect?.(entity);
+		if (!inline) setOpen(false);
 		setQuery('');
 	}
 
@@ -209,7 +230,7 @@
 		if (!hotkey || inline) return;
 		if (event.key.toLowerCase() !== 'k' || !(event.metaKey || event.ctrlKey)) return;
 		event.preventDefault();
-		open = !open;
+		setOpen(!open);
 	}
 
 	function subLabel(hit: SearchHit): string {
@@ -234,9 +255,9 @@
 	{@const name = hit.ref.name ?? `${hit.ref.type} #${hit.ref.id}`}
 	{@const sub = subLabel(hit)}
 	{#if PEOPLE.includes(hit.ref.type)}
-		<UserAvatar name={name} image={hit.image} size="sm" color="auto" apiUser={hit.ref.type === 'ApiUser'} />
+		<UserAvatar name={name} image={hit.image} size={LEAD[size]} color="auto" apiUser={hit.ref.type === 'ApiUser'} />
 	{:else}
-		<Thumbnail src={hit.image} size="sm" />
+		<Thumbnail src={hit.image} size={LEAD[size]} />
 	{/if}
 	<span class="flex min-w-0 flex-1 flex-col">
 		<span class="truncate" title={name}>
@@ -286,7 +307,7 @@
 						value={`recent:${entity.type}:${entity.id}`}
 						onSelect={() => choose(entity)}
 					>
-						<EntityChip {entity} size="sm" />
+						<EntityChip {entity} size={LEAD[size]} />
 						<span class="text-muted-foreground truncate text-xs">
 							{displayNames[entity.type] ?? entity.type}
 						</span>
@@ -324,32 +345,45 @@
 {/snippet}
 
 {#if inline}
-	<div data-slot="global-search" data-variant="inline" class={cn('w-full', className)}>
+	<div
+		bind:this={ref}
+		data-slot="global-search"
+		data-variant="inline"
+		class={cn('w-full', className)}
+		{...rest}
+	>
 		<!-- Server-side matching only, so the list never filters what came back. -->
 		<Command.Root shouldFilter={false} bind:value={cursor} class="border-border rounded-md border">
 			{@render body()}
 		</Command.Root>
 	</div>
 {:else}
-	<div data-slot="global-search" data-variant="dialog" class={cn('w-full', className)}>
+	<div
+		bind:this={ref}
+		data-slot="global-search"
+		data-variant="dialog"
+		class={cn('w-full', className)}
+		{...rest}
+	>
 		{#if trigger}
-			{@render trigger({ open: () => (open = true) })}
+			{@render trigger({ open: () => setOpen(true) })}
 		{:else}
 			<Button
 				variant="outline"
 				data-slot="global-search-trigger"
-				class="h-9 w-full justify-between"
-				onclick={() => (open = true)}
+				data-size={size}
+				class={cn('w-full justify-between', BOX[size])}
+				onclick={() => setOpen(true)}
 			>
 				<span class="flex min-w-0 items-center gap-1.5">
-					<Search aria-hidden="true" class="size-4 opacity-70" />
+					<Search aria-hidden="true" class={cn('opacity-70', GLYPH[size])} />
 					<span class="truncate">{label}</span>
 				</span>
 				{#if hotkey}<Kbd>{META}K</Kbd>{/if}
 			</Button>
 		{/if}
 		<Command.Dialog
-			bind:open={() => open, (next) => (open = next)}
+			bind:open={() => open, setOpen}
 			bind:value={cursor}
 			shouldFilter={false}
 			title="Search"

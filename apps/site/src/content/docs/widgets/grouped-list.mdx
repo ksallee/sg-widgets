@@ -52,14 +52,15 @@ const [group, sub, secondary] = await resolveColumns(context.schema, 'Task', [
 | `pageSizes` | `number[]` | `[25, 50, 100]` | Rows per page offered in the footer. |
 | `maxHeight` | `string` | `'28rem'` | Height of the scrolling body. |
 | `emptyLabel` | `string` | `'No rows'` | Shown when the read returned nothing. |
+| `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Row text and thumbnail. A compact row takes the step below. |
 | `class` / `className` | `string` | — | Merged after the widget's own classes. |
 
 ## Events
 
 | event | payload | when |
 |---|---|---|
-| `onselectionchange` / `onSelectionChange` | `EntityRef[]` | The selection changed. |
-| `onselect` / `onSelect` | `EntityRow` | A row was activated, when `selectable` is off. |
+| `onSelectionChange` | `EntityRef[]` | The selection changed. |
+| `onSelect` | `EntityRow` | A row was activated, when `selectable` is off. |
 
 ## Slots
 

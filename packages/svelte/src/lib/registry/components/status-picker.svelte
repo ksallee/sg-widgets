@@ -23,6 +23,7 @@
 </script>
 
 <script lang="ts">
+	import type { HTMLAttributes } from 'svelte/elements';
 	import type { SgClient, StatusOption, StatusRecord } from '@sg-widgets/core';
 	import { createSchemaService, createStatusService } from '@sg-widgets/core';
 	import SearchX from '@lucide/svelte/icons/search-x';
@@ -30,10 +31,10 @@
 	import X from '@lucide/svelte/icons/x';
 	import * as Select from '$lib/components/ui/select/index.js';
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
-	import { cn } from '$lib/utils.js';
+	import { cn, type WithElementRef } from '$lib/utils.js';
 	import StatusBadge from '$lib/registry/components/status-badge.svelte';
 
-	type Props = {
+	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>, HTMLDivElement> & {
 		/** The site to read from. Wrap it in `createQueryCache` so widgets on a page share one read. */
 		client: SgClient;
 		entityType: string;
@@ -57,6 +58,9 @@
 		/** The site the stock sprite is served from, passed to every badge. */
 		siteUrl?: string;
 		size?: StatusPickerSize;
+		/** Whether the popup is showing, two-way. */
+		open?: boolean;
+		onOpenChange?: (open: boolean) => void;
 		class?: string;
 	};
 
@@ -77,7 +81,11 @@
 		showCode = false,
 		siteUrl = undefined,
 		size = 'md',
-		class: className
+		open = $bindable(false),
+		onOpenChange,
+		class: className,
+		ref = $bindable(null),
+		...rest
 	}: Props = $props();
 
 	// Built from the prop rather than at init, so a client swapped in reloads.
@@ -157,6 +165,13 @@
 			onValueChange?.(undefined);
 		}
 	});
+
+	function setOpen(next: boolean): void {
+		const wanted = readonly || inert ? false : next;
+		if (wanted === open) return;
+		open = wanted;
+		onOpenChange?.(open);
+	}
 
 	function pick(code: string): void {
 		value = code === '' ? undefined : code;
@@ -240,10 +255,12 @@
 	selected code, the picker clears it and emits once.
 -->
 <div
+	bind:this={ref}
 	data-slot="status-picker"
 	data-size={size}
 	data-loading={query.loading ? 'true' : undefined}
 	class={cn('relative flex w-full min-w-0 items-center', className)}
+	{...rest}
 >
 	{#if readonly}
 		<div
@@ -262,6 +279,7 @@
 			value={value ?? ''}
 			onValueChange={pick}
 			disabled={inert}
+			bind:open={() => open, setOpen}
 			items={rows.map((option) => ({ value: option.code, label: option.label }))}
 		>
 			<Select.Trigger

@@ -97,7 +97,10 @@ const ICONS: Record<string, typeof Type> = {
   type: Type,
 };
 
-export interface ColumnPickerProps {
+export interface ColumnPickerProps extends React.HTMLAttributes<HTMLDivElement> {
+  /** The root element. */
+  ref?: React.Ref<HTMLDivElement>;
+
   /** Reads the schema. Build it once per app with `createSchemaService`. */
   schema: SchemaService;
   /** The type every path starts on. */
@@ -133,7 +136,7 @@ export interface ColumnPickerProps {
   emptyLabel?: string;
   availableLabel?: string;
   chosenLabel?: string;
-  readOnly?: boolean;
+  readonly?: boolean;
   disabled?: boolean;
   invalid?: boolean;
   size?: ColumnPickerSize;
@@ -175,11 +178,13 @@ export function ColumnPicker({
   emptyLabel = 'No columns yet.',
   availableLabel = 'Available',
   chosenLabel = 'Columns',
-  readOnly = false,
+  readonly = false,
   disabled = false,
   invalid = false,
   size = 'md',
   className,
+  ref,
+  ...rest
 }: ColumnPickerProps) {
   /** The field picker's own value, cleared as soon as the path is appended. */
   const [adding, setAdding] = useState('');
@@ -192,9 +197,15 @@ export function ColumnPicker({
   const [labels, setLabels] = useState<Record<string, string>>({});
   const [failure, setFailure] = useState<string | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
+  /** The widget reads its own root to move focus, and the caller still gets its ref. */
+  const setRoot = (node: HTMLDivElement | null): void => {
+    rootRef.current = node;
+    if (typeof ref === 'function') ref(node);
+    else if (ref) ref.current = node;
+  };
 
   const type = currentType(entityType, hops);
-  const editable = !readOnly && !disabled;
+  const editable = !readonly && !disabled;
   // Paths and synthetic names as strings, so a caller passing a fresh array literal
   // on every render does not re-run the resolution.
   const joined = value.join('\n');
@@ -574,7 +585,7 @@ export function ColumnPicker({
                   ROW[size],
                 )}
               >
-                {!readOnly ? (
+                {!readonly ? (
                   <Button
                     variant="ghost"
                     size={ACTION[size]}
@@ -596,7 +607,7 @@ export function ColumnPicker({
                     {labelOf(path)}
                   </span>
                 )}
-                {!readOnly ? (
+                {!readonly ? (
                   <Button
                     variant="ghost"
                     size={ACTION[size]}
@@ -659,25 +670,26 @@ export function ColumnPicker({
 
   return (
     <div
-      ref={rootRef}
+      ref={setRoot}
       data-slot="column-picker"
       data-size={size}
       data-layout={layout}
       aria-disabled={disabled ? 'true' : undefined}
       aria-invalid={invalid ? 'true' : undefined}
-      data-readonly={readOnly ? 'true' : undefined}
+      data-readonly={readonly ? 'true' : undefined}
       className={cn(
         '@container flex w-full min-w-0 flex-col gap-3',
         disabled && 'pointer-events-none opacity-50',
         className,
       )}
+      {...rest}
     >
       {layout === 'dual' ? (
         <div
           data-slot="column-picker-panes"
-          className={cn('grid min-w-0 gap-3', !readOnly && '@lg:grid-cols-2')}
+          className={cn('grid min-w-0 gap-3', !readonly && '@lg:grid-cols-2')}
         >
-          {!readOnly ? (
+          {!readonly ? (
             <section
               data-slot="column-picker-available"
               className={cn(
@@ -707,7 +719,7 @@ export function ColumnPicker({
         </div>
       ) : (
         <>
-          {!readOnly ? picker : null}
+          {!readonly ? picker : null}
           {chosen}
         </>
       )}

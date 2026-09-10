@@ -30,7 +30,11 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/global-search.
 | `recentLimit` | `number` | `5` | How many recents survive a pick. |
 | `placeholder` | `string` | `'Search…'` | Text in the search input. |
 | `label` | `string` | `'Search'` | Text on the trigger. |
+| `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Trigger heights 8, 9 and 10, and the row's leading slot. |
 | `class` / `className` | `string` | — | Merged after the widget's own classes. |
+
+Every other attribute is spread onto the root: `id`, `aria-*`, `data-*`, key handlers and a
+`ref` to the root element.
 
 Recents live in the caller. The widget hands back the new list and never writes anywhere, so where
 they are kept between sessions is the app's decision.
@@ -43,11 +47,11 @@ from the site schema.
 
 ## Events
 
-| event | React | Svelte | payload |
-|---|---|---|---|
-| select | `onSelect` | `onselect` | The row that was picked, as `{type, id, name}`. |
-| recents | `onRecentsChange` | `onrecents` | The new recents list, the pick first. |
-| open | `onOpenChange` | `bind:open` | Whether the dialog is open. |
+| event | payload | when |
+|---|---|---|
+| `onSelect` | `EntityRef` | A row was picked. |
+| `onRecentsChange` | `EntityRef[]` | The recents list changed, the pick first. |
+| `onOpenChange` | `boolean` | The dialog opened or closed. Svelte also binds it with `bind:open`. |
 
 ## Slots
 

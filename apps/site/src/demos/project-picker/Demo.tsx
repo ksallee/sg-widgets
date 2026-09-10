@@ -79,7 +79,7 @@ export default function ProjectPickerDemo() {
           </div>
           <div className={field}>
             <span className={caption}>Read-only</span>
-            <ProjectPicker client={client} value={preset} readOnly />
+            <ProjectPicker client={client} value={preset} readonly />
           </div>
           <div className={field}>
             <span className={caption}>Invalid</span>

@@ -127,7 +127,10 @@ const PICKER_NOTE = 'flex items-center justify-center gap-1.5 py-6 text-center t
 const PICKER_ICON_BUTTON =
   'hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring focus-visible:ring-offset-background pointer-events-auto shrink-0 rounded-sm p-0.5 opacity-70 outline-none transition-colors duration-150 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-2 motion-safe:active:scale-[0.98]';
 
-export interface StatusMultiPickerProps {
+export interface StatusMultiPickerProps extends React.HTMLAttributes<HTMLDivElement> {
+  /** The root element. */
+  ref?: React.Ref<HTMLDivElement>;
+
   /** The site to read from. Wrap it in `createQueryCache` so widgets on a page share one read. */
   client: SgClient;
   entityType: string;
@@ -144,7 +147,7 @@ export interface StatusMultiPickerProps {
   searchPlaceholder?: string;
   emptyLabel?: string;
   clearable?: boolean;
-  readOnly?: boolean;
+  readonly?: boolean;
   disabled?: boolean;
   invalid?: boolean;
   /** Show the raw code instead of the label. The other one stays in the tooltip. */
@@ -156,6 +159,9 @@ export interface StatusMultiPickerProps {
   /** The site the stock sprite is served from, passed to every badge. */
   siteUrl?: string;
   size?: StatusMultiPickerSize;
+  /** Whether the popup is showing. */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
   className?: string;
 }
 
@@ -241,7 +247,7 @@ export function StatusMultiPicker({
   searchPlaceholder = 'Search statuses…',
   emptyLabel = 'No status matches.',
   clearable = true,
-  readOnly = false,
+  readonly = false,
   disabled = false,
   invalid = false,
   showCode = false,
@@ -249,7 +255,11 @@ export function StatusMultiPicker({
   max = 0,
   siteUrl,
   size = 'md',
+  open: openProp,
+  onOpenChange,
   className,
+  ref,
+  ...rest
 }: StatusMultiPickerProps) {
   const projectKey = (projectIds ?? (projectId === undefined ? [] : [projectId])).join(',');
   const store = useMemo(
@@ -257,7 +267,12 @@ export function StatusMultiPicker({
     [client, entityType, projectKey, field],
   );
   const query = useSyncExternalStore(store.subscribe, store.snapshot, store.snapshot);
-  const [open, setOpen] = useState(false);
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const open = openProp ?? uncontrolledOpen;
+  const setOpen = (next: boolean): void => {
+    setUncontrolledOpen(next);
+    onOpenChange?.(next);
+  };
   const [search, setSearch] = useState('');
   const controlRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -293,9 +308,9 @@ export function StatusMultiPicker({
   });
 
   // Read-only wins over disabled and over the loading window.
-  const inert = !readOnly && (disabled || query.loading);
-  const interactive = !readOnly && !inert;
-  const showClear = clearable && value.length > 0 && !readOnly && !disabled;
+  const inert = !readonly && (disabled || query.loading);
+  const interactive = !readonly && !inert;
+  const showClear = clearable && value.length > 0 && !readonly && !disabled;
 
   /** A press anywhere in the field opens the list and puts the caret in the input. */
   function openFromControl(event: ReactPointerEvent<HTMLDivElement>): void {
@@ -400,11 +415,13 @@ export function StatusMultiPicker({
 
   return (
     <div
+      ref={ref}
       data-slot="status-multi-picker"
       data-size={size}
       data-summary={summary}
       data-loading={query.loading ? 'true' : undefined}
       className={cn('relative flex w-full min-w-0 items-center', className)}
+      {...rest}
     >
       <ComboboxPrimitive.Root
         multiple
@@ -439,9 +456,9 @@ export function StatusMultiPicker({
       role="group"
           aria-disabled={inert ? 'true' : undefined}
           data-invalid={invalid && !inline ? 'true' : undefined}
-          data-readonly={readOnly ? 'true' : undefined}
+          data-readonly={readonly ? 'true' : undefined}
           title={plan.title || placeholder}
-          className={cn(PICKER_CONTROL, PICKER_BOX[size], plan.oneLine && 'flex-nowrap', readOnly ? 'pr-3' : showClear ? 'pr-14' : 'pr-8')}
+          className={cn(PICKER_CONTROL, PICKER_BOX[size], plan.oneLine && 'flex-nowrap', readonly ? 'pr-3' : showClear ? 'pr-14' : 'pr-8')}
         >
           {value.length > 0 ? (
             <span
@@ -498,7 +515,7 @@ export function StatusMultiPicker({
               data-slot="status-multi-picker-input"
               aria-invalid={invalid ? 'true' : undefined}
               aria-label={placeholder}
-              readOnly={readOnly || undefined}
+              readOnly={readonly || undefined}
               placeholder={value.length > 0 ? '' : placeholder}
               className={PICKER_INPUT}
             />
@@ -542,7 +559,7 @@ export function StatusMultiPicker({
           </ComboboxPrimitive.Positioner>
         </ComboboxPrimitive.Portal>
 
-        {readOnly ? null : (
+        {readonly ? null : (
           <div className="pointer-events-none absolute right-2 flex items-center gap-1">
             {showClear ? (
               <button

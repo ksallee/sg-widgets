@@ -16,6 +16,7 @@
 </script>
 
 <script lang="ts">
+	import type { HTMLAttributes } from 'svelte/elements';
 	import type { FieldHop, FieldOption, FieldSchema, SchemaService } from '@sg-widgets/core';
 	import {
 		currentType,
@@ -61,11 +62,11 @@
 	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
 	import * as Command from '$lib/components/ui/command/index.js';
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
-	import { cn } from '$lib/utils.js';
+	import { cn, type WithElementRef } from '$lib/utils.js';
 	import FieldPicker from '$lib/registry/components/field-picker.svelte';
 	import { createSortable } from '$lib/registry/components/sortable.svelte.js';
 
-	type Props = {
+	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>, HTMLDivElement> & {
 		/** Reads the schema. Build it once per app with `createSchemaService`. */
 		schema: SchemaService;
 		/** The type every path starts on. */
@@ -133,7 +134,9 @@
 		disabled = false,
 		invalid = false,
 		size = 'md',
-		class: className
+		class: className,
+		ref = $bindable(null),
+		...rest
 	}: Props = $props();
 
 	const ICONS: Record<string, typeof Type> = {
@@ -162,7 +165,6 @@
 		type: Type
 	};
 
-	let rootEl = $state<HTMLDivElement | null>(null);
 	/** The field picker's own value, cleared as soon as the path is appended. */
 	let adding = $state('');
 	let search = $state('');
@@ -281,7 +283,7 @@
 		emit([...value, path]);
 		// The trigger takes focus back where the popover left it, with the page still.
 		requestAnimationFrame(() =>
-			rootEl
+			ref
 				?.querySelector<HTMLElement>('[data-slot="field-picker-trigger"]')
 				?.focus({ preventScroll: true })
 		);
@@ -637,7 +639,7 @@
 {/snippet}
 
 <div
-	bind:this={rootEl}
+	bind:this={ref}
 	data-slot="column-picker"
 	data-size={size}
 	data-layout={layout}
@@ -649,6 +651,7 @@
 		disabled && 'pointer-events-none opacity-50',
 		className
 	)}
+	{...rest}
 >
 	{#if layout === 'dual'}
 		<div

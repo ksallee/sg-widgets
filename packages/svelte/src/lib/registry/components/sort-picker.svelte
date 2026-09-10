@@ -1,9 +1,18 @@
+<script lang="ts" module>
+	export type SortPickerSize = 'sm' | 'md' | 'lg';
+
+	/** Controls follow the input ladder of `docs/design-rules.md`. */
+	const BOX: Record<SortPickerSize, string> = { sm: 'h-8 px-2', md: 'h-9 px-3', lg: 'h-10 px-3' };
+	const GLYPH: Record<SortPickerSize, string> = { sm: 'size-4', md: 'size-4', lg: 'size-5' };
+</script>
+
 <script lang="ts">
 	import ArrowDownIcon from '@lucide/svelte/icons/arrow-down';
 	import ArrowUpIcon from '@lucide/svelte/icons/arrow-up';
 	import ArrowUpDownIcon from '@lucide/svelte/icons/arrow-up-down';
 	import GripVerticalIcon from '@lucide/svelte/icons/grip-vertical';
 	import XIcon from '@lucide/svelte/icons/x';
+	import type { HTMLAttributes } from 'svelte/elements';
 	import type { SchemaService, SgClient, SortKey } from '@sg-widgets/core';
 	import { createSchemaService, friendlyFieldPath, isSortable, toSortString } from '@sg-widgets/core';
 	import { Badge } from '$lib/components/ui/badge/index.js';
@@ -11,20 +20,24 @@
 	import * as Popover from '$lib/components/ui/popover/index.js';
 	import { Separator } from '$lib/components/ui/separator/index.js';
 	import * as ToggleGroup from '$lib/components/ui/toggle-group/index.js';
-	import { cn } from '$lib/utils.js';
+	import { cn, type WithElementRef } from '$lib/utils.js';
 	import FieldPicker from '$lib/registry/components/field-picker.svelte';
 	import { createSortable } from '$lib/registry/components/sortable.svelte.js';
 
-	type Props = {
+	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>, HTMLDivElement> & {
 		entityType: string;
 		client: SgClient;
 		schema?: SchemaService;
 		value: SortKey[];
 		/** Paths to keep out of the field list, each hiding itself and everything under it. */
 		hidePaths?: string[];
+		size?: SortPickerSize;
 		disabled?: boolean;
 		/** Both the keys and the `sort` string they serialise to. */
 		onChange?: (value: SortKey[], sort: string) => void;
+		/** Whether the popover is showing, two-way. */
+		open?: boolean;
+		onOpenChange?: (open: boolean) => void;
 		class?: string;
 	};
 
@@ -34,10 +47,22 @@
 		schema,
 		value = $bindable([]),
 		hidePaths = [],
+		size = 'md',
 		disabled = false,
 		onChange,
-		class: className
+		open = $bindable(false),
+		onOpenChange,
+		class: className,
+		ref = $bindable(null),
+		...rest
 	}: Props = $props();
+
+	function setOpen(next: boolean): void {
+		const wanted = disabled ? false : next;
+		if (wanted === open) return;
+		open = wanted;
+		onOpenChange?.(open);
+	}
 
 	const service = $derived(schema ?? createSchemaService(client));
 
@@ -124,14 +149,23 @@
 	through links. An unsortable or unknown field is a silent 200 no-op with the rows
 	in default order, so only types that sort are offered.
 -->
-<div class={cn('inline-flex min-w-0 items-center', className)} data-slot="sort-picker">
-	<Popover.Root>
+<div
+	bind:this={ref}
+	data-slot="sort-picker"
+	class={cn('inline-flex min-w-0 items-center', className)}
+	{...rest}
+>
+	<Popover.Root bind:open={() => open, setOpen}>
 		<Popover.Trigger
 			{disabled}
 			data-slot="sort-trigger"
-			class="border-border bg-background hover:bg-muted focus-visible:border-ring focus-visible:ring-ring/50 inline-flex h-8 min-w-0 items-center gap-1.5 rounded-lg border px-2.5 text-sm font-medium outline-none focus-visible:ring-3 disabled:pointer-events-none disabled:opacity-50"
+			data-size={size}
+			class={cn(
+				'border-border bg-background hover:bg-muted focus-visible:border-ring focus-visible:ring-ring/50 inline-flex min-w-0 items-center gap-1.5 rounded-lg border text-sm font-medium outline-none focus-visible:ring-3 disabled:pointer-events-none disabled:opacity-50',
+				BOX[size]
+			)}
 		>
-			<ArrowUpDownIcon class="size-4 shrink-0" />
+			<ArrowUpDownIcon class={cn('shrink-0', GLYPH[size])} />
 			<span class="min-w-0 truncate" title={label}>{label}</span>
 			{#if value.length > 1}
 				<Badge variant="secondary" class="shrink-0" data-slot="sort-count">{value.length}</Badge>
@@ -214,6 +248,7 @@
 				{entityType}
 				{hidePaths}
 				{disabled}
+				{size}
 				bind:value={adding}
 				deepLinks
 				clearable={false}

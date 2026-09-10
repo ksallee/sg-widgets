@@ -64,6 +64,9 @@
 		error?: string | null;
 		onErrorChange?: (error: string | null) => void;
 		placeholder?: string;
+		/** Whether the calendar popover is showing, two-way. */
+		open?: boolean;
+		onOpenChange?: (open: boolean) => void;
 		errorMessage?: Snippet<[string]>;
 	};
 
@@ -82,6 +85,8 @@
 		error = null,
 		onErrorChange,
 		placeholder = 'YYYY-MM-DD',
+		open = $bindable(false),
+		onOpenChange,
 		errorMessage,
 		class: className,
 		ref = $bindable(null),
@@ -95,7 +100,6 @@
 	let timeDraft = $state('');
 	let parseError = $state<string | null>(null);
 	let editing = $state(false);
-	let open = $state(false);
 	let dateInput = $state<HTMLInputElement | null>(null);
 
 	$effect(() => {
@@ -155,6 +159,13 @@
 		commit();
 	}
 
+	function setOpen(next: boolean): void {
+		const wanted = readonly || disabled ? false : next;
+		if (wanted === open) return;
+		open = wanted;
+		onOpenChange?.(open);
+	}
+
 	function onkeydown(event: KeyboardEvent): void {
 		if (event.key !== 'Enter' && event.key !== 'Escape') return;
 		// The popover is portalled out of the widget, but React replays a synthetic event
@@ -163,7 +174,7 @@
 		if (event.key === 'Enter') {
 			if (!commit()) return;
 			editing = false;
-			open = false;
+			setOpen(false);
 			return;
 		}
 		reset();
@@ -191,7 +202,7 @@
 	class={cn('flex w-full min-w-0 flex-col gap-2', inline && 'w-fit', className)}
 	{...rest}
 >
-	<Popover.Root bind:open={() => open, (next) => (open = readonly || disabled ? false : next)}>
+	<Popover.Root bind:open={() => open, setOpen}>
 		<Popover.Trigger
 			data-slot="date-time-editor-trigger"
 			aria-label={field?.displayName ?? 'Pick a date and time'}

@@ -35,13 +35,17 @@ nesting reads as one indent; the foot carries the add-condition and add-group co
 | `hidePaths` | `string[]` | `[]` | Paths kept out of the field list. A pattern hides itself and everything under it. |
 | `projectId` | `number` | — | Scopes the status pickers to the codes one project allows. |
 | `disabled` | `boolean` | `false` | Dims the editor and blocks every control. |
+| `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Condition-row heights 7, 8 and 9: a row is a control inside a control, so its ladder sits one step down. |
 | `class` / `className` | `string` | — | Merged after the widget's own classes. |
+
+Every other attribute is spread onto the root: `id`, `aria-*`, `data-*`, key handlers and a
+`ref` to the root element.
 
 ## Events
 
-| event | React | Svelte | payload |
-|---|---|---|---|
-| change | `onChange` | `onChange`, `bind:value` | The whole tree, on every edit. |
+| event | payload | when |
+|---|---|---|
+| `onChange` | `FilterGroup` | The whole tree changed, on every edit. Svelte also binds it with `bind:value`. |
 
 ## Value editors
 

@@ -39,10 +39,15 @@
 		disabled?: boolean;
 		readonly?: boolean;
 		invalid?: boolean;
+		/** A message from the caller. The list has nothing of its own to fail on. */
 		error?: string | null;
+		onErrorChange?: (error: string | null) => void;
 		placeholder?: string;
 		/** The label of the entry that clears the field. */
 		clearLabel?: string;
+		/** Whether the popup is showing, two-way. */
+		open?: boolean;
+		onOpenChange?: (open: boolean) => void;
 		errorMessage?: Snippet<[string]>;
 	};
 
@@ -56,8 +61,11 @@
 		readonly = false,
 		invalid = false,
 		error = null,
+		onErrorChange,
 		placeholder = 'Choose',
 		clearLabel = 'Clear',
+		open = $bindable(false),
+		onOpenChange,
 		errorMessage,
 		class: className,
 		ref = $bindable(null),
@@ -82,7 +90,15 @@
 		const chosen = next === CLEAR ? null : next;
 		if (chosen === value) return;
 		value = chosen;
+		onErrorChange?.(null);
 		onValueChange?.(chosen);
+	}
+
+	function setOpen(next: boolean): void {
+		const wanted = readonly || disabled ? false : next;
+		if (wanted === open) return;
+		open = wanted;
+		onOpenChange?.(open);
 	}
 </script>
 
@@ -101,7 +117,13 @@
 	class={cn('flex w-full min-w-0 flex-col gap-2', className)}
 	{...rest}
 >
-	<Select.Root type="single" value={selected} onValueChange={pick} disabled={disabled || readonly}>
+	<Select.Root
+		type="single"
+		value={selected}
+		onValueChange={pick}
+		disabled={disabled || readonly}
+		bind:open={() => open, setOpen}
+	>
 		<Select.Trigger
 			class={cn('w-full', BOX[size])}
 			aria-invalid={invalid}

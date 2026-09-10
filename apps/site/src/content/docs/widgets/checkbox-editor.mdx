@@ -43,7 +43,8 @@ There is no third state, and no way to clear the field.
 
 ## Events
 
-`onValueChange` fires as soon as the switch moves. There is nothing to commit.
+`onValueChange` fires as soon as the switch moves. There is nothing to commit. `onErrorChange` fires
+with `null` on that same change, so a message the caller set clears when the field is answered.
 
 ## Slots
 

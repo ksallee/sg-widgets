@@ -51,6 +51,7 @@
 </script>
 
 <script lang="ts">
+	import type { HTMLAttributes } from 'svelte/elements';
 	import type { EntityTypeInfo, SchemaService } from '@sg-widgets/core';
 	import { filterEntityTypes, matchesTokens, summariseSelection } from '@sg-widgets/core';
 	import { Combobox } from 'bits-ui';
@@ -61,9 +62,9 @@
 	import X from '@lucide/svelte/icons/x';
 	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
-	import { cn } from '$lib/utils.js';
+	import { cn, type WithElementRef } from '$lib/utils.js';
 
-	type Props = {
+	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>, HTMLDivElement> & {
 		/** Reads the site's enabled types. Build it once per app with `createSchemaService`. */
 		schema: SchemaService;
 		/** A type code in single mode, an array of them in multi mode. */
@@ -88,6 +89,9 @@
 		/** Chips drawn before the rest becomes `+n`. `0` draws every chip. */
 		max?: number;
 		size?: EntityTypePickerSize;
+		/** Whether the popup is showing, two-way. */
+		open?: boolean;
+		onOpenChange?: (open: boolean) => void;
 		class?: string;
 	};
 
@@ -109,10 +113,12 @@
 		summary = 'ellipsis',
 		max = 0,
 		size = 'md',
-		class: className
+		open = $bindable(false),
+		onOpenChange,
+		class: className,
+		ref = $bindable(null),
+		...rest
 	}: Props = $props();
-
-	let open = $state(false);
 	let controlEl = $state<HTMLElement | null>(null);
 	let inputEl = $state<HTMLInputElement | null>(null);
 	let search = $state('');
@@ -228,7 +234,7 @@
 			event.preventDefault();
 			inputEl?.focus({ preventScroll: true });
 		}
-		open = true;
+		setOpen(true);
 	}
 
 	// A summary trigger has no caret of its own, so the popup's search box takes it.
@@ -238,8 +244,11 @@
 	});
 
 	function setOpen(next: boolean): void {
-		open = interactive ? next : false;
-		if (!open) search = '';
+		const wanted = interactive ? next : false;
+		if (!wanted) search = '';
+		if (wanted === open) return;
+		open = wanted;
+		onOpenChange?.(open);
 	}
 
 	function setSingle(code: string): void {
@@ -460,11 +469,13 @@
 	Multi mode keeps the popup open and ticks the chosen rows.
 -->
 <div
+	bind:this={ref}
 	data-slot="entity-type-picker"
 	data-size={size}
 	data-multiple={multiple ? 'true' : 'false'}
 	data-summary={multiple ? summary : undefined}
 	class={cn('relative flex w-full min-w-0 items-center', className)}
+	{...rest}
 >
 	{#if multiple}
 		<Combobox.Root

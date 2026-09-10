@@ -13,11 +13,19 @@ import { FieldValue } from '@/registry/sg/components/field-value';
 import { Thumbnail } from '@/registry/sg/components/thumbnail';
 
 export type GroupedListDensity = 'compact' | 'default';
+export type GroupedListSize = 'sm' | 'md' | 'lg';
 
 /** The list-row padding of `docs/design-rules.md`; compact halves the vertical half. */
 const ROW: Record<GroupedListDensity, string> = { compact: 'px-2 py-1', default: 'px-2 py-1.5' };
 /** Thumbnail sizes follow the ladder of `docs/design-rules.md`. */
-const THUMB: Record<GroupedListDensity, 'sm' | 'md'> = { compact: 'sm', default: 'md' };
+const THUMB: Record<GroupedListSize, Record<GroupedListDensity, 'sm' | 'md' | 'lg'>> = {
+  sm: { compact: 'sm', default: 'sm' },
+  md: { compact: 'sm', default: 'md' },
+  lg: { compact: 'md', default: 'lg' },
+};
+/** A row's text and glyphs, on the leaf ladder of `docs/design-rules.md`. */
+const TEXT: Record<GroupedListSize, string> = { sm: 'text-xs', md: 'text-sm', lg: 'text-base' };
+const GLYPH: Record<GroupedListSize, string> = { sm: 'size-3.5', md: 'size-4', lg: 'size-5' };
 
 export interface GroupedListProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'children' | 'onSelect'> {
   /** The rows and the order behind them. Created with core's `createEntitySource`. */
@@ -45,6 +53,7 @@ export interface GroupedListProps extends Omit<React.HTMLAttributes<HTMLDivEleme
   /** The widget context. An entity value links to the row's page when this carries a site. */
   context?: SgContext;
   density?: GroupedListDensity;
+  size?: GroupedListSize;
   selectable?: boolean;
   onSelectionChange?: (rows: EntityRef[]) => void;
   onSelect?: (row: EntityRow) => void;
@@ -85,6 +94,7 @@ export function GroupedList({
   statuses = null,
   context,
   density = 'default',
+  size = 'md',
   selectable = false,
   onSelectionChange,
   onSelect,
@@ -195,11 +205,18 @@ export function GroupedList({
                     type="button"
                     aria-expanded={!shut}
                     onClick={() => setCollapsed((was) => ({ ...was, [group.key]: !shut }))}
-                    className="bg-muted/50 focus-visible:ring-ring focus-visible:ring-offset-background border-border sticky top-0 z-10 flex w-full items-center gap-1.5 border-b px-2 py-1.5 text-left text-sm font-medium outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+                    className={cn(
+                      'bg-muted/50 focus-visible:ring-ring focus-visible:ring-offset-background border-border sticky top-0 z-10 flex w-full items-center gap-1.5 border-b px-2 py-1.5 text-left font-medium outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
+                      TEXT[size],
+                    )}
                   >
                     <ChevronRight
                       aria-hidden="true"
-                      className={cn('size-4 shrink-0 transition-transform duration-150 ease-out', !shut && 'rotate-90')}
+                      className={cn(
+                        'shrink-0 transition-transform duration-150 ease-out',
+                        GLYPH[size],
+                        !shut && 'rotate-90',
+                      )}
                     />
                     <span className="min-w-0 truncate">
                       <FieldValue
@@ -244,7 +261,7 @@ export function GroupedList({
                               <Thumbnail
                                 src={cellValue(row, thumbnail) as string | null}
                                 alt=""
-                                size={THUMB[density]}
+                                size={THUMB[size][density]}
                                 className="shrink-0"
                               />
                             ) : leading ? (
@@ -256,7 +273,7 @@ export function GroupedList({
                               className="focus-visible:ring-ring focus-visible:ring-offset-background flex min-w-0 flex-1 flex-col items-start rounded-sm text-left outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
                             >
                               <span className="flex w-full min-w-0 items-center gap-1.5">
-                                <span className="min-w-0 truncate text-sm" title={label}>
+                                <span className={cn('min-w-0 truncate', TEXT[size])} title={label}>
                                   {label}
                                 </span>
                                 {code ? (

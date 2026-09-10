@@ -29,8 +29,8 @@
 			entityTypes={TYPES}
 			hotkey
 			{recents}
-			onrecents={(next) => (recents = next)}
-			onselect={(entity) => (picked = entity)}
+			onRecentsChange={(next) => (recents = next)}
+			onSelect={(entity) => (picked = entity)}
 			label="Search the site"
 		/>
 	</section>
@@ -42,7 +42,7 @@
 			entityTypes={TYPES}
 			projectId={context.projectId}
 			inline
-			onselect={(entity) => (picked = entity)}
+			onSelect={(entity) => (picked = entity)}
 			placeholder="Search one project…"
 		/>
 	</section>

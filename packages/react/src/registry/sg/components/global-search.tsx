@@ -54,7 +54,18 @@ function same(a: EntityRef, b: EntityRef): boolean {
   return a.type === b.type && a.id === b.id;
 }
 
-export interface GlobalSearchProps {
+export type GlobalSearchSize = 'sm' | 'md' | 'lg';
+
+/** The trigger follows the input ladder of `docs/design-rules.md`. */
+const BOX: Record<GlobalSearchSize, string> = { sm: 'h-8', md: 'h-9', lg: 'h-10' };
+const GLYPH: Record<GlobalSearchSize, string> = { sm: 'size-4', md: 'size-4', lg: 'size-5' };
+/** A row's leading slot sits one step down the leaf ladder. */
+const LEAD: Record<GlobalSearchSize, 'sm' | 'md'> = { sm: 'sm', md: 'sm', lg: 'md' };
+
+export interface GlobalSearchProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onSelect'> {
+  /** The root element. */
+  ref?: React.Ref<HTMLDivElement>;
+
   /** Where rows come from. Wrap it in `createQueryCache` once for the whole app. */
   client: SgClient;
   entityTypes?: GlobalSearchTypes;
@@ -64,6 +75,7 @@ export interface GlobalSearchProps {
   hotkey?: boolean;
   /** Render as a combobox in the page instead of a dialog behind a trigger. */
   inline?: boolean;
+  size?: GlobalSearchSize;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   /** Rows picked before, newest first. Held by the caller: persisting them is the app's job. */
@@ -95,6 +107,7 @@ export function GlobalSearch({
   projectId = null,
   hotkey = false,
   inline = false,
+  size = 'md',
   open: openProp,
   onOpenChange,
   recents = [],
@@ -105,6 +118,8 @@ export function GlobalSearch({
   label = 'Search',
   className,
   trigger,
+  ref,
+  ...rest
 }: GlobalSearchProps) {
   const schema = useMemo(() => createSchemaService(client), [client]);
 
@@ -240,9 +255,15 @@ export function GlobalSearch({
     return (
       <>
         {PEOPLE.includes(hit.ref.type) ? (
-          <UserAvatar name={name} image={hit.image} size="sm" color="auto" apiUser={hit.ref.type === 'ApiUser'} />
+          <UserAvatar
+            name={name}
+            image={hit.image}
+            size={LEAD[size]}
+            color="auto"
+            apiUser={hit.ref.type === 'ApiUser'}
+          />
         ) : (
-          <Thumbnail src={hit.image} size="sm" />
+          <Thumbnail src={hit.image} size={LEAD[size]} />
         )}
         <span className="flex min-w-0 flex-1 flex-col">
           <span className="truncate" title={name}>
@@ -304,7 +325,7 @@ export function GlobalSearch({
                 value={`recent:${entity.type}:${entity.id}`}
                 onSelect={() => choose(entity)}
               >
-                <EntityChip entity={entity} size="sm" />
+                <EntityChip entity={entity} size={LEAD[size]} />
                 <span className="text-muted-foreground truncate text-xs">
                   {displayNames[entity.type] ?? entity.type}
                 </span>
@@ -347,7 +368,13 @@ export function GlobalSearch({
 
   if (inline) {
     return (
-      <div data-slot="global-search" data-variant="inline" className={cn('w-full', className)}>
+      <div
+        ref={ref}
+        data-slot="global-search"
+        data-variant="inline"
+        className={cn('w-full', className)}
+        {...rest}
+      >
         {/* Server-side matching only, so the list never filters what came back. */}
         <Command shouldFilter={false} className="border-border rounded-md border">
           {body}
@@ -357,18 +384,25 @@ export function GlobalSearch({
   }
 
   return (
-    <div data-slot="global-search" data-variant="dialog" className={cn('w-full', className)}>
+    <div
+      ref={ref}
+      data-slot="global-search"
+      data-variant="dialog"
+      className={cn('w-full', className)}
+      {...rest}
+    >
       {trigger ? (
         trigger({ open: () => setOpen(true) })
       ) : (
         <Button
           variant="outline"
           data-slot="global-search-trigger"
-          className="h-9 w-full justify-between"
+          data-size={size}
+          className={cn('w-full justify-between', BOX[size])}
           onClick={() => setOpen(true)}
         >
           <span className="flex min-w-0 items-center gap-1.5">
-            <Search aria-hidden="true" className="size-4 opacity-70" />
+            <Search aria-hidden="true" className={cn('opacity-70', GLYPH[size])} />
             <span className="truncate">{label}</span>
           </span>
           {hotkey ? <Kbd>{META}K</Kbd> : null}

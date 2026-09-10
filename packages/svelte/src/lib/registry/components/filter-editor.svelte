@@ -1,5 +1,18 @@
 <script lang="ts" module>
 	import type { Snippet } from 'svelte';
+
+	export type FilterEditorSize = 'sm' | 'md' | 'lg';
+
+	/** A condition row is a control inside a control, so its ladder sits one step down. */
+	const BOX: Record<FilterEditorSize, string> = { sm: 'h-7', md: 'h-8', lg: 'h-9' };
+	const INNER: Record<FilterEditorSize, 'sm' | 'md'> = { sm: 'sm', md: 'sm', lg: 'md' };
+	const BTN: Record<FilterEditorSize, 'xs' | 'sm' | 'default'> = { sm: 'xs', md: 'sm', lg: 'default' };
+	const ICON: Record<FilterEditorSize, 'icon-xs' | 'icon-sm' | 'icon'> = {
+		sm: 'icon-xs',
+		md: 'icon-sm',
+		lg: 'icon'
+	};
+	const TOGGLE: Record<FilterEditorSize, 'sm' | 'default'> = { sm: 'sm', md: 'sm', lg: 'default' };
 	import type {
 		ConditionValue,
 		EntityRef,
@@ -102,6 +115,7 @@
 	import ChevronDownIcon from '@lucide/svelte/icons/chevron-down';
 	import PlusIcon from '@lucide/svelte/icons/plus';
 	import XIcon from '@lucide/svelte/icons/x';
+	import type { HTMLAttributes } from 'svelte/elements';
 	import type { SchemaService, SgClient } from '@sg-widgets/core';
 	import {
 		appendAt,
@@ -129,7 +143,7 @@
 	import * as Select from '$lib/components/ui/select/index.js';
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
 	import * as ToggleGroup from '$lib/components/ui/toggle-group/index.js';
-	import { cn } from '$lib/utils.js';
+	import { cn, type WithElementRef } from '$lib/utils.js';
 	import CheckboxEditor from '$lib/registry/components/checkbox-editor.svelte';
 	import DateEditor from '$lib/registry/components/date-editor.svelte';
 	import DateTimeEditor from '$lib/registry/components/date-time-editor.svelte';
@@ -142,7 +156,7 @@
 	import StatusPicker from '$lib/registry/components/status-picker.svelte';
 	import TextEditor from '$lib/registry/components/text-editor.svelte';
 
-	type Props = {
+	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>, HTMLDivElement> & {
 		/** Type the root of every field path is read on. */
 		entityType: string;
 		client: SgClient;
@@ -153,6 +167,7 @@
 		hidePaths?: string[];
 		/** Scopes the status pickers to the codes one project allows. */
 		projectId?: number;
+		size?: FilterEditorSize;
 		disabled?: boolean;
 		onChange?: (value: FilterGroup) => void;
 		fieldChooser?: Snippet<[FieldChooserArgs]>;
@@ -168,12 +183,15 @@
 		value = $bindable(emptyFilter()),
 		hidePaths = [],
 		projectId,
+		size = 'md',
 		disabled = false,
 		onChange,
 		fieldChooser,
 		valueEditor,
 		entityEditor,
-		class: className
+		class: className,
+		ref = $bindable(null),
+		...rest
 	}: Props = $props();
 
 	const service = $derived(schema ?? createSchemaService(client));
@@ -284,7 +302,7 @@
 				deepLinks
 				filterableOnly
 				clearable={false}
-				size="sm"
+				size={INNER[size]}
 				placeholder="Select a field"
 				onValueChange={(next) => void pickField(path, node, next)}
 			/>
@@ -302,7 +320,7 @@
 		disabled={disabled || menu.length === 0}
 		onValueChange={(id) => pickPreset(path, node, id)}
 	>
-		<Select.Trigger class="h-8 w-40 shrink-0" data-slot="filter-operator">
+		<Select.Trigger class={cn(BOX[size], 'w-40 shrink-0')} data-slot="filter-operator">
 			{presetById(dataType, current)?.label ?? current}
 		</Select.Trigger>
 		<Select.Content>
@@ -322,7 +340,10 @@
 	<Popover.Trigger
 		{disabled}
 		data-slot="filter-value-trigger"
-		class="border-border bg-background hover:bg-muted focus-visible:border-ring focus-visible:ring-ring/50 inline-flex h-8 w-full min-w-0 items-center justify-between gap-1.5 rounded-lg border px-2.5 text-sm outline-none focus-visible:ring-3 disabled:pointer-events-none disabled:opacity-50"
+		class={cn(
+			'border-border bg-background hover:bg-muted focus-visible:border-ring focus-visible:ring-ring/50 inline-flex w-full min-w-0 items-center justify-between gap-1.5 rounded-lg border px-2.5 text-sm outline-none focus-visible:ring-3 disabled:pointer-events-none disabled:opacity-50',
+			BOX[size]
+		)}
 	>
 		<span class={cn('min-w-0 truncate', count === 0 && 'text-muted-foreground')} title={label}>{label}</span>
 		{#if count > 0}
@@ -342,7 +363,7 @@
 	{#if kind === 'number'}
 		<NumberEditor
 			class="shrink-0"
-			size="sm"
+			size={INNER[size]}
 			inline
 			{disabled}
 			dataType={numericType(dataType)}
@@ -353,7 +374,7 @@
 	{:else if kind === 'date'}
 		<DateEditor
 			class="shrink-0"
-			size="sm"
+			size={INNER[size]}
 			inline
 			{disabled}
 			field={{ displayName: label, mandatory: false }}
@@ -363,7 +384,7 @@
 	{:else if kind === 'date_time'}
 		<DateTimeEditor
 			class="shrink-0"
-			size="sm"
+			size={INNER[size]}
 			inline
 			hint={false}
 			{disabled}
@@ -374,7 +395,7 @@
 	{:else}
 		<TextEditor
 			class="min-w-0 flex-1"
-			size="sm"
+			size={INNER[size]}
 			{disabled}
 			field={{ displayName: label, mandatory: false }}
 			value={textValue(current)}
@@ -388,7 +409,7 @@
 	{#if arity === 'many'}
 		<EntityMultiPicker
 			class="min-w-0 flex-1"
-			size="sm"
+			size={INNER[size]}
 			{client}
 			{disabled}
 			{projectId}
@@ -400,7 +421,7 @@
 	{:else}
 		<EntityPicker
 			class="min-w-0 flex-1"
-			size="sm"
+			size={INNER[size]}
 			{client}
 			{disabled}
 			{projectId}
@@ -420,7 +441,7 @@
 	{@const set = (v: ConditionValue) => edit(path, { ...node, value: v })}
 	<div class="flex min-w-40 flex-1 flex-wrap items-center gap-2" data-slot="filter-value">
 		{#if unresolved(node.path)}
-			<Skeleton class="h-8 min-w-0 flex-1" />
+			<Skeleton class={cn(BOX[size], 'min-w-0 flex-1')} />
 		{:else if valueEditor}
 			<!-- Integration point: a caller's own editors replace every one below. -->
 			{@render valueEditor({
@@ -437,7 +458,7 @@
 		{:else if arity === 'relative'}
 			{@const pair = (Array.isArray(node.value) ? node.value : [1, 'DAY']) as [number, string]}
 			<!-- A window is one quantity: the count and its unit share a box. -->
-			<InputGroup.Root class="w-40 shrink-0">
+			<InputGroup.Root class={cn(BOX[size], 'w-40 shrink-0')}>
 				<InputGroup.Input
 					type="number"
 					min="1"
@@ -483,7 +504,7 @@
 		{:else if kind === 'checkbox'}
 			<CheckboxEditor
 				class="min-w-0 flex-1"
-				size="sm"
+				size={INNER[size]}
 				{disabled}
 				field={{ displayName: field?.displayName ?? 'Value', mandatory: false }}
 				value={node.value === true}
@@ -492,7 +513,7 @@
 		{:else if kind === 'options' && dataType === 'status_list' && arity === 'many'}
 			<StatusMultiPicker
 				class="min-w-0 flex-1"
-				size="sm"
+				size={INNER[size]}
 				{client}
 				{disabled}
 				{projectId}
@@ -504,7 +525,7 @@
 		{:else if kind === 'options' && dataType === 'status_list'}
 			<StatusPicker
 				class="min-w-0 flex-1"
-				size="sm"
+				size={INNER[size]}
 				{client}
 				{disabled}
 				{projectId}
@@ -545,7 +566,7 @@
 		{:else if kind === 'options'}
 			<ListSelect
 				class="min-w-0 flex-1"
-				size="sm"
+				size={INNER[size]}
 				{disabled}
 				{field}
 				placeholder="Select a value…"
@@ -564,7 +585,7 @@
 			{@const items = (Array.isArray(node.value) ? node.value : []) as Scalar[]}
 			<!-- A list of dates, numbers or strings has no per-value editor: one line, comma separated. -->
 			<Input
-				class="h-8 min-w-0 flex-1"
+				class={cn(BOX[size], 'min-w-0 flex-1')}
 				{disabled}
 				placeholder="value, value"
 				aria-label="Values"
@@ -598,7 +619,7 @@
 		</div>
 		<Button
 			variant="ghost"
-			size="icon-sm"
+			size={ICON[size]}
 			class="text-muted-foreground hover:text-foreground mt-1 shrink-0 self-start"
 			{disabled}
 			aria-label="Remove condition"
@@ -627,7 +648,7 @@
 		<div class="flex min-h-9 min-w-0 items-center gap-2" data-slot="filter-group-header">
 			<ToggleGroup.Root
 				type="single"
-				size="sm"
+				size={TOGGLE[size]}
 				variant="outline"
 				{disabled}
 				value={node.logicalOperator}
@@ -642,7 +663,7 @@
 			{#if depth > 0}
 				<Button
 					variant="ghost"
-					size="icon-sm"
+					size={ICON[size]}
 					class="text-muted-foreground hover:text-foreground mt-1 shrink-0 self-start"
 					{disabled}
 					aria-label="Remove group"
@@ -671,7 +692,7 @@
 		<div class="flex min-w-0 flex-wrap items-center gap-1 pl-3" data-slot="filter-foot">
 			<Button
 				variant="ghost"
-				size="sm"
+				size={BTN[size]}
 				class="text-muted-foreground hover:text-foreground"
 				{disabled}
 				data-slot="filter-add-condition"
@@ -683,7 +704,7 @@
 			</Button>
 			<Button
 				variant="ghost"
-				size="sm"
+				size={BTN[size]}
 				class="text-muted-foreground hover:text-foreground"
 				{disabled}
 				data-slot="filter-add-group"
@@ -712,10 +733,12 @@
 	pins its value draws no editor at all.
 -->
 <div
-	class={cn('flex w-full min-w-0 flex-col gap-3', disabled && 'opacity-50', className)}
+	bind:this={ref}
 	data-slot="filter-editor"
 	data-entity-type={entityType}
 	aria-disabled={disabled ? 'true' : undefined}
+	class={cn('flex w-full min-w-0 flex-col gap-3', disabled && 'opacity-50', className)}
+	{...rest}
 >
 	{@render groupNode([], value)}
 </div>

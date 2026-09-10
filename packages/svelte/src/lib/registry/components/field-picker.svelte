@@ -15,6 +15,7 @@
 </script>
 
 <script lang="ts">
+	import type { HTMLAttributes } from 'svelte/elements';
 	import type { FieldHop, FieldOption, FieldSchema, SchemaService } from '@sg-widgets/core';
 	import {
 		currentType,
@@ -56,9 +57,9 @@
 	import * as Command from '$lib/components/ui/command/index.js';
 	import * as Popover from '$lib/components/ui/popover/index.js';
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
-	import { cn } from '$lib/utils.js';
+	import { cn, type WithElementRef } from '$lib/utils.js';
 
-	type Props = {
+	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>, HTMLDivElement> & {
 		/** Reads the schema. Build it once per app with `createSchemaService`. */
 		schema: SchemaService;
 		/** The type the path starts on. */
@@ -96,6 +97,9 @@
 		disabled?: boolean;
 		invalid?: boolean;
 		size?: FieldPickerSize;
+		/** Whether the popover is showing, two-way. */
+		open?: boolean;
+		onOpenChange?: (open: boolean) => void;
 		class?: string;
 	};
 
@@ -123,7 +127,11 @@
 		disabled = false,
 		invalid = false,
 		size = 'md',
-		class: className
+		open = $bindable(false),
+		onOpenChange,
+		class: className,
+		ref = $bindable(null),
+		...rest
 	}: Props = $props();
 
 	const ICONS: Record<string, typeof Type> = {
@@ -152,7 +160,13 @@
 		type: Type
 	};
 
-	let open = $state(false);
+	function setOpen(next: boolean): void {
+		const wanted = readonly || disabled ? false : next;
+		if (wanted === open) return;
+		open = wanted;
+		onOpenChange?.(open);
+	}
+
 	let inputEl = $state<HTMLInputElement | null>(null);
 	let search = $state('');
 	let highlighted = $state('');
@@ -267,7 +281,7 @@
 		// adding one field after another never has to reach for the mouse.
 		search = '';
 		highlighted = '';
-		if (closeOnSelect) open = false;
+		if (closeOnSelect) setOpen(false);
 	}
 
 	function descendInto(row: FieldOption): void {
@@ -330,12 +344,14 @@
 	date behind a link.
 -->
 <div
+	bind:this={ref}
 	data-slot="field-picker"
 	data-size={size}
 	data-depth={hops.length}
 	class={cn('relative flex w-full min-w-0 items-center', className)}
+	{...rest}
 >
-	<Popover.Root bind:open={() => open, (next) => (open = readonly || disabled ? false : next)}>
+	<Popover.Root bind:open={() => open, setOpen}>
 		<Popover.Trigger
 			data-slot="field-picker-trigger"
 			role="combobox"

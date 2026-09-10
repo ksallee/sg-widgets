@@ -55,7 +55,22 @@ const heading = 'text-muted-foreground px-2 py-1.5 text-xs font-medium';
 const rowClass =
   'hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring focus-visible:ring-offset-background flex w-full min-w-0 items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2';
 
-export interface ContextSelectorProps {
+export type ContextSelectorSize = 'sm' | 'md' | 'lg';
+
+/** The trigger follows the input ladder of `docs/design-rules.md`. */
+const BOX: Record<ContextSelectorSize, string> = {
+  sm: 'min-h-8 px-2 py-1',
+  md: 'min-h-9 px-2 py-1.5',
+  lg: 'min-h-10 px-3 py-1.5',
+};
+const GLYPH: Record<ContextSelectorSize, string> = { sm: 'size-4', md: 'size-4', lg: 'size-5' };
+/** A chip inside a control sits one step down the leaf ladder. */
+const CHIP: Record<ContextSelectorSize, 'sm' | 'md'> = { sm: 'sm', md: 'sm', lg: 'md' };
+
+export interface ContextSelectorProps extends React.HTMLAttributes<HTMLDivElement> {
+  /** The root element. */
+  ref?: React.Ref<HTMLDivElement>;
+
   /** Where rows come from. Wrap it in `createQueryCache` once for the whole app. */
   client: SgClient;
   context?: WorkContext;
@@ -66,6 +81,7 @@ export interface ContextSelectorProps {
   recentLimit?: number;
   onRecentsChange?: (recents: WorkContext[]) => void;
   onContextChange?: (context: WorkContext) => void;
+  size?: ContextSelectorSize;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   className?: string;
@@ -86,9 +102,12 @@ export function ContextSelector({
   recentLimit = 5,
   onRecentsChange,
   onContextChange,
+  size = 'md',
   open: openProp,
   onOpenChange,
   className,
+  ref,
+  ...rest
 }: ContextSelectorProps) {
   const schema = useMemo(() => createSchemaService(client), [client]);
 
@@ -183,21 +202,27 @@ export function ContextSelector({
   }
 
   return (
-    <div data-slot="context-selector" className={cn('w-full', className)}>
+    <div ref={ref} data-slot="context-selector" className={cn('w-full', className)} {...rest}>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger
           data-slot="context-selector-trigger"
-          className="border-border bg-background hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring focus-visible:ring-offset-background flex w-full min-w-0 items-center gap-2 rounded-md border px-2 py-1.5 text-left outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2"
+          data-size={size}
+          className={cn(
+            'border-border bg-background hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring focus-visible:ring-offset-background flex w-full min-w-0 items-center gap-2 rounded-md border text-left outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2',
+            BOX[size],
+          )}
           aria-label={`Context: ${label(context)}`}
         >
           <span className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
             {chips.length === 0 ? (
               <span className="text-muted-foreground text-sm">No context</span>
             ) : (
-              chips.map((chip) => <EntityChip key={`${chip.type}:${chip.id}`} entity={chip} size="sm" />)
+              chips.map((chip) => (
+                <EntityChip key={`${chip.type}:${chip.id}`} entity={chip} size={CHIP[size]} />
+              ))
             )}
           </span>
-          <ChevronDown aria-hidden="true" className="text-muted-foreground size-4 shrink-0" />
+          <ChevronDown aria-hidden="true" className={cn('text-muted-foreground shrink-0', GLYPH[size])} />
         </PopoverTrigger>
 
         <PopoverContent className="flex w-96 max-w-[calc(100vw-2rem)] flex-col gap-3 p-3" align="start">
@@ -212,7 +237,7 @@ export function ContextSelector({
                     {[recent.project, recent.entity, recent.task]
                       .filter((r): r is EntityRef => r !== null)
                       .map((chip) => (
-                        <EntityChip key={`${chip.type}:${chip.id}`} entity={chip} size="sm" />
+                        <EntityChip key={`${chip.type}:${chip.id}`} entity={chip} size={CHIP[size]} />
                       ))}
                   </span>
                 </button>
@@ -263,7 +288,12 @@ export function ContextSelector({
                           {[row.entity?.name, row.step].filter(Boolean).join(' · ')}
                         </span>
                       </span>
-                      <StatusBadge code={row.status} status={statuses[row.status]} field={statusField} size="sm" />
+                      <StatusBadge
+                        code={row.status}
+                        status={statuses[row.status]}
+                        field={statusField}
+                        size={CHIP[size]}
+                      />
                     </button>
                   ))}
                 </Fragment>
@@ -276,6 +306,7 @@ export function ContextSelector({
             <HierarchicalSearch
               client={client}
               rootPath={rootPath}
+              size={size}
               onSelect={(leaf, path) => apply(contextFromPath(leaf, path))}
               placeholder="Search for a task or a shot…"
             />

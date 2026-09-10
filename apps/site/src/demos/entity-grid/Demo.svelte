@@ -71,7 +71,7 @@
 				secondaryField={artist}
 				{size}
 				maxHeight="26rem"
-				onselect={(row) => (opened = row)}
+				onSelect={(row) => (opened = row)}
 			/>
 		</section>
 
@@ -87,7 +87,7 @@
 				size="sm"
 				selectable
 				maxHeight="18rem"
-				onselectionchange={(rows) => (selected = rows)}
+				onSelectionChange={(rows) => (selected = rows)}
 			/>
 		</section>
 

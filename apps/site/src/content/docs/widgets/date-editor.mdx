@@ -44,11 +44,14 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/date-editor.js
 | `error` | `string \| null` | `null` | A message from the caller, shown in place of the parse error. |
 | `onErrorChange` | `(error: string \| null) => void` | — | Called when the parse error appears or clears. |
 | `placeholder` | `string` | `'YYYY-MM-DD'` | Shown on the button and in the typed day while the field is unset. |
+| `open` | `boolean` | `false` | Whether the calendar popover is showing. Two-way in Svelte. |
 | `class` / `className` | `string` | — | Merged after the widget's own classes. |
 
 ## Events
 
 `onValueChange` fires on commit and on a pick. Input that does not parse emits nothing.
+
+`onOpenChange` fires when the calendar popover opens or closes. Svelte also binds it with `bind:open`.
 
 ## Slots
 

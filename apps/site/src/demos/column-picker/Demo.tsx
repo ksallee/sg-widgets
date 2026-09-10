@@ -63,7 +63,7 @@ function Pickers() {
 
       <div className="flex flex-col gap-2" data-demo="readonly">
         <span className={label}>Read-only: the chosen list alone</span>
-        <ColumnPicker schema={schema} entityType="Shot" value={LOCKED} readOnly />
+        <ColumnPicker schema={schema} entityType="Shot" value={LOCKED} readonly />
       </div>
     </div>
   );

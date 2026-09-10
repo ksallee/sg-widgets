@@ -22,6 +22,18 @@ import { Thumbnail } from '@/registry/sg/components/thumbnail';
 
 type DivProps = Omit<React.HTMLAttributes<HTMLDivElement>, 'children' | 'onSelect' | 'onError'>;
 
+export type EntityTreeSize = 'sm' | 'md' | 'lg';
+export type EntityTreeDensity = 'compact' | 'default';
+
+/** The list-row padding of `docs/design-rules.md`; compact halves the vertical half. */
+const ROW: Record<EntityTreeDensity, string> = { compact: 'px-2 py-1', default: 'px-2 py-1.5' };
+/** A row's text, leading slot and glyphs, on the leaf ladder of `docs/design-rules.md`. */
+const TEXT: Record<EntityTreeSize, string> = { sm: 'text-xs', md: 'text-sm', lg: 'text-base' };
+const LEAD: Record<EntityTreeSize, string> = { sm: 'size-5', md: 'size-6', lg: 'size-8' };
+const GLYPH: Record<EntityTreeSize, string> = { sm: 'size-3.5', md: 'size-4', lg: 'size-5' };
+/** A leaf inside a row sits one step down the ladder. */
+const LEAF: Record<EntityTreeSize, 'sm' | 'md'> = { sm: 'sm', md: 'sm', lg: 'md' };
+
 export interface EntityTreeProps extends DivProps {
   /** Reads one level per call. Wrap it in a query cache so a reopened node costs nothing. */
   client: SgClient;
@@ -62,6 +74,8 @@ export interface EntityTreeProps extends DivProps {
   maxHeight?: string;
   emptyLabel?: string;
   noMatchLabel?: string;
+  size?: EntityTreeSize;
+  density?: EntityTreeDensity;
 }
 
 const stateClass = 'text-muted-foreground flex items-center justify-center gap-2 py-10 text-sm';
@@ -115,6 +129,8 @@ export function EntityTree({
   maxHeight = '24rem',
   emptyLabel = 'Nothing under this project',
   noMatchLabel = 'Nothing matches every word',
+  size = 'md',
+  density = 'default',
   className,
   ...rest
 }: EntityTreeProps) {
@@ -388,7 +404,9 @@ export function EntityTree({
                     tabIndex={row.focused ? 0 : -1}
                     onClick={() => activate(row)}
                     className={cn(
-                      'focus-visible:ring-ring focus-visible:ring-offset-background flex min-w-0 cursor-default gap-1.5 rounded-md px-2 py-1.5 text-sm outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2',
+                      'focus-visible:ring-ring focus-visible:ring-offset-background flex min-w-0 cursor-default gap-1.5 rounded-md outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2',
+                      ROW[density],
+                      TEXT[size],
                       hasSubLabel ? 'items-start' : 'items-center',
                       dimming && !row.match && 'text-muted-foreground',
                       row.selected ? 'bg-accent text-accent-foreground' : 'hover:bg-muted/50',
@@ -399,22 +417,26 @@ export function EntityTree({
                         aria-hidden="true"
                         data-slot="entity-tree-chevron"
                         onClick={(event) => openBranch(event, row)}
-                        className="flex size-4 shrink-0 items-center justify-center"
+                        className={cn('flex shrink-0 items-center justify-center', GLYPH[size])}
                       >
                         {row.loading ? (
-                          <Loader aria-hidden="true" className="size-4 shrink-0 motion-safe:animate-spin" />
+                          <Loader
+                            aria-hidden="true"
+                            className={cn('shrink-0 motion-safe:animate-spin', GLYPH[size])}
+                          />
                         ) : (
                           <ChevronRight
                             aria-hidden="true"
                             className={cn(
-                              'text-muted-foreground size-4 shrink-0 transition-transform duration-150 ease-out',
+                              'text-muted-foreground shrink-0 transition-transform duration-150 ease-out',
+                              GLYPH[size],
                               row.expanded && 'rotate-90',
                             )}
                           />
                         )}
                       </span>
                     ) : (
-                      <span aria-hidden="true" className="size-4 shrink-0" />
+                      <span aria-hidden="true" className={cn('shrink-0', GLYPH[size])} />
                     )}
 
                     {checkable ? (
@@ -428,7 +450,8 @@ export function EntityTree({
                           engine.toggleChecked(node.path);
                         }}
                         className={cn(
-                          'flex size-4 shrink-0 items-center justify-center rounded-[4px] border transition-colors duration-150 [&>svg]:size-3.5',
+                          'flex shrink-0 items-center justify-center rounded-[4px] border transition-colors duration-150 [&>svg]:size-3.5',
+                          GLYPH[size],
                           row.checked === 'unchecked'
                             ? 'border-input'
                             : 'border-primary bg-primary text-primary-foreground',
@@ -439,8 +462,10 @@ export function EntityTree({
                     ) : null}
 
                     {thumbnail !== false ? (
-                      <span className="flex size-6 shrink-0 items-center">
-                        {thumbOf(node) ? <Thumbnail src={thumbOf(node)} aspect="square" size="sm" /> : null}
+                      <span className={cn('flex shrink-0 items-center', LEAD[size])}>
+                        {thumbOf(node) ? (
+                          <Thumbnail src={thumbOf(node)} aspect="square" size={LEAF[size]} />
+                        ) : null}
                       </span>
                     ) : null}
 
@@ -484,7 +509,7 @@ export function EntityTree({
                         status={plan.statuses?.[status] ?? null}
                         field={node.entity ? (plan.status[node.entity.type] ?? null) : null}
                         variant="icon"
-                        size="sm"
+                        size={LEAF[size]}
                         siteUrl={siteUrl}
                         className="shrink-0"
                       />

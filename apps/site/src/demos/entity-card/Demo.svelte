@@ -113,7 +113,7 @@
 					actions={tileActions}
 					selectable
 					{selected}
-					onselectedchange={(value) => (selected = value)}
+					onSelectedChange={(value) => (selected = value)}
 				/>
 			</div>
 		</section>

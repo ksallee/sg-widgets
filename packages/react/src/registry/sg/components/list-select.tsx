@@ -1,4 +1,5 @@
 import type * as React from 'react';
+import { useState } from 'react';
 import type { FieldSchema } from '@sg-widgets/core';
 import { statusLabel, usableStatuses } from '@sg-widgets/core';
 import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select';
@@ -32,10 +33,15 @@ export interface ListSelectProps extends Omit<React.HTMLAttributes<HTMLDivElemen
   disabled?: boolean;
   readonly?: boolean;
   invalid?: boolean;
+  /** A message from the caller. The list has nothing of its own to fail on. */
   error?: string | null;
+  onErrorChange?: (error: string | null) => void;
   placeholder?: string;
   /** The label of the entry that clears the field. */
   clearLabel?: string;
+  /** Whether the popup is showing. */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
   errorMessage?: (message: string) => React.ReactNode;
 }
 
@@ -57,8 +63,11 @@ export function ListSelect({
   readonly = false,
   invalid = false,
   error = null,
+  onErrorChange,
   placeholder = 'Choose',
   clearLabel = 'Clear',
+  open: openProp,
+  onOpenChange,
   errorMessage,
   className,
   ...rest
@@ -73,9 +82,17 @@ export function ListSelect({
   const label =
     value === null || value === undefined ? placeholder : (options.find((o) => o.code === value)?.label ?? value);
 
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const open = openProp ?? uncontrolledOpen;
+  const setOpen = (next: boolean): void => {
+    setUncontrolledOpen(next);
+    onOpenChange?.(next);
+  };
+
   const pick = (next: string | null): void => {
     const chosen = next === null || next === CLEAR ? null : next;
     if (chosen === value) return;
+    onErrorChange?.(null);
     onValueChange?.(chosen);
   };
 
@@ -86,7 +103,13 @@ export function ListSelect({
       className={cn('flex w-full min-w-0 flex-col gap-2', className)}
       {...rest}
     >
-      <Select value={selected} onValueChange={pick} disabled={disabled || readonly}>
+      <Select
+        value={selected}
+        onValueChange={pick}
+        disabled={disabled || readonly}
+        open={open}
+        onOpenChange={(next: boolean) => setOpen(readonly || disabled ? false : next)}
+      >
         <SelectTrigger
           className={cn('w-full', BOX[size])}
           aria-invalid={invalid}

@@ -55,6 +55,7 @@
 </script>
 
 <script lang="ts">
+	import type { HTMLAttributes } from 'svelte/elements';
 	import type { SgClient, StatusOption, StatusRecord } from '@sg-widgets/core';
 	import { createSchemaService, createStatusService, matchesTokens, summariseSelection } from '@sg-widgets/core';
 	import { Combobox } from 'bits-ui';
@@ -65,10 +66,10 @@
 	import X from '@lucide/svelte/icons/x';
 	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
-	import { cn } from '$lib/utils.js';
+	import { cn, type WithElementRef } from '$lib/utils.js';
 	import StatusBadge from '$lib/registry/components/status-badge.svelte';
 
-	type Props = {
+	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>, HTMLDivElement> & {
 		/** The site to read from. Wrap it in `createQueryCache` so widgets on a page share one read. */
 		client: SgClient;
 		entityType: string;
@@ -97,6 +98,9 @@
 		/** The site the stock sprite is served from, passed to every badge. */
 		siteUrl?: string;
 		size?: StatusMultiPickerSize;
+		/** Whether the popup is showing, two-way. */
+		open?: boolean;
+		onOpenChange?: (open: boolean) => void;
 		class?: string;
 	};
 
@@ -120,7 +124,11 @@
 		max = 0,
 		siteUrl = undefined,
 		size = 'md',
-		class: className
+		open = $bindable(false),
+		onOpenChange,
+		class: className,
+		ref = $bindable(null),
+		...rest
 	}: Props = $props();
 
 	// Built from the prop rather than at init, so a client swapped in reloads.
@@ -168,7 +176,6 @@
 		load(entityType, projectKey === '' ? [] : projectKey.split(',').map(Number), field)
 	);
 
-	let open = $state(false);
 	let controlEl = $state<HTMLElement | null>(null);
 	let inputEl = $state<HTMLInputElement | null>(null);
 	let search = $state('');
@@ -277,7 +284,7 @@
 			event.preventDefault();
 			inputEl?.focus({ preventScroll: true });
 		}
-		open = true;
+		setOpen(true);
 	}
 
 	// A summary trigger has no caret of its own, so the popup's search box takes it.
@@ -289,8 +296,11 @@
 	});
 
 	function setOpen(next: boolean): void {
-		open = interactive ? next : false;
-		if (!open) search = '';
+		const wanted = interactive ? next : false;
+		if (!wanted) search = '';
+		if (wanted === open) return;
+		open = wanted;
+		onOpenChange?.(open);
 	}
 
 	function setSelected(next: string[]): void {
@@ -357,11 +367,13 @@
 	(field_types/status_list).
 -->
 <div
+	bind:this={ref}
 	data-slot="status-multi-picker"
 	data-size={size}
 	data-summary={summary}
 	data-loading={query.loading ? 'true' : undefined}
 	class={cn('relative flex w-full min-w-0 items-center', className)}
+	{...rest}
 >
 	<Combobox.Root
 		type="multiple"

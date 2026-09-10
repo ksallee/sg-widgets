@@ -27,7 +27,11 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/context-select
 | `recents` | `WorkContext[]` | `[]` | Contexts used before, newest first. |
 | `recentLimit` | `number` | `5` | How many recents survive a change. |
 | `open` | `boolean` | `false` | Whether the popover is open. |
+| `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Trigger heights 8, 9 and 10, and the chips inside it. |
 | `class` / `className` | `string` | — | Merged after the widget's own classes. |
+
+Every other attribute is spread onto the root: `id`, `aria-*`, `data-*`, key handlers and a
+`ref` to the root element.
 
 A `WorkContext` is a project, an entity and a task, each of them a row reference or null.
 
@@ -40,11 +44,11 @@ project. Picking from the tree reads the same three out of the path.
 
 ## Events
 
-| event | React | Svelte | payload |
-|---|---|---|---|
-| contextChange | `onContextChange` | `oncontextChange` | The new project, entity and task. |
-| recents | `onRecentsChange` | `onrecents` | The new recents list, the change first. |
-| open | `onOpenChange` | `bind:open` | Whether the popover is open. |
+| event | payload | when |
+|---|---|---|
+| `onContextChange` | `WorkContext` | The project, entity or task changed. |
+| `onRecentsChange` | `WorkContext[]` | The recents list changed, the newest first. |
+| `onOpenChange` | `boolean` | The popover opened or closed. Svelte also binds it with `bind:open`. |
 
 ## Slots
 

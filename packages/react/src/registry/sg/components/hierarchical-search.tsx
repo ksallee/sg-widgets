@@ -78,7 +78,26 @@ function glyphFor(row: HierarchicalSearchRow) {
   return GLYPHS[row.ref.type as keyof typeof GLYPHS] ?? Tag;
 }
 
-export interface HierarchicalSearchProps {
+export type HierarchicalSearchSize = 'sm' | 'md' | 'lg';
+
+/** A row's leading slot and its glyph, on the leaf ladder of `docs/design-rules.md`. */
+const LEAD: Record<HierarchicalSearchSize, string> = { sm: 'size-5', md: 'size-6', lg: 'size-8' };
+const GLYPH: Record<HierarchicalSearchSize, string> = {
+  sm: 'size-3.5',
+  md: 'size-4',
+  lg: 'size-5',
+};
+const TEXT: Record<HierarchicalSearchSize, string> = {
+  sm: 'text-xs',
+  md: 'text-sm',
+  lg: 'text-base',
+};
+
+export interface HierarchicalSearchProps
+  extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onSelect'> {
+  /** The root element. */
+  ref?: React.Ref<HTMLDivElement>;
+
   /** Where rows come from. Wrap it in `createQueryCache` once for the whole app. */
   client: SgClient;
   /** Where the tree starts, `/Project/<id>` for one project or `/` for the site. */
@@ -87,6 +106,7 @@ export interface HierarchicalSearchProps {
   entityTypes?: HierarchicalSearchTypes;
   onSelect?: (entity: EntityRef, path: EntityRef[]) => void;
   placeholder?: string;
+  size?: HierarchicalSearchSize;
   className?: string;
 }
 
@@ -107,7 +127,10 @@ export function HierarchicalSearch({
   entityTypes = HIERARCHICAL_SEARCH_TYPES,
   onSelect,
   placeholder = 'Search the hierarchy…',
+  size = 'md',
   className,
+  ref,
+  ...rest
 }: HierarchicalSearchProps) {
   const schema = useMemo(() => createSchemaService(client), [client]);
 
@@ -292,7 +315,7 @@ export function HierarchicalSearch({
   }, [rootPath, client]);
 
   return (
-    <div data-slot="hierarchical-search" className={cn('w-full', className)}>
+    <div ref={ref} data-slot="hierarchical-search" className={cn('w-full', className)} {...rest}>
       {/* Server-side matching only, so the list never filters what came back. */}
       <Command shouldFilter={false} className="border-border rounded-md border" onKeyDown={onKeydown}>
         <CommandInput value={query} placeholder={placeholder} onValueChange={setQuery} />
@@ -309,7 +332,7 @@ export function HierarchicalSearch({
             <div data-slot="search-loading" className="flex flex-col gap-2 p-1" aria-busy="true">
               {[0, 1, 2].map((line) => (
                 <div key={line} className="flex items-center gap-2 px-2 py-1.5">
-                  <Skeleton className="size-6 shrink-0" />
+                  <Skeleton className={cn('shrink-0', LEAD[size])} />
                   <div className="flex min-w-0 flex-1 flex-col gap-1">
                     <Skeleton className="h-3 w-1/2" />
                     <Skeleton className="h-2.5 w-1/4" />
@@ -329,10 +352,17 @@ export function HierarchicalSearch({
             <CommandGroup heading={searching ? 'Results' : trail.map((c) => c.label).join(' › ') || 'Tree'}>
               {!searching && trail.length > 0 ? (
                 <CommandItem value="up" data-slot="search-up" onSelect={up}>
-                  <span className="text-muted-foreground flex size-6 shrink-0 items-center justify-center">
-                    <ChevronRight aria-hidden="true" className="size-4 rotate-180" />
+                  <span
+                    className={cn(
+                      'text-muted-foreground flex shrink-0 items-center justify-center',
+                      LEAD[size],
+                    )}
+                  >
+                    <ChevronRight aria-hidden="true" className={cn('rotate-180', GLYPH[size])} />
                   </span>
-                  <span className="text-muted-foreground min-w-0 flex-1 truncate text-sm">Back</span>
+                  <span className={cn('text-muted-foreground min-w-0 flex-1 truncate', TEXT[size])}>
+                    Back
+                  </span>
                 </CommandItem>
               ) : null}
               {rows.map((item) => {
@@ -347,10 +377,15 @@ export function HierarchicalSearch({
                     data-selectable={item.selectable ? 'true' : 'false'}
                     onSelect={() => activate(item)}
                   >
-                    <span className="text-muted-foreground flex size-6 shrink-0 items-center justify-center">
-                      <Glyph aria-hidden="true" className="size-4" />
+                    <span
+                      className={cn(
+                        'text-muted-foreground flex shrink-0 items-center justify-center',
+                        LEAD[size],
+                      )}
+                    >
+                      <Glyph aria-hidden="true" className={GLYPH[size]} />
                     </span>
-                    <span className="flex min-w-0 flex-1 flex-col">
+                    <span className={cn('flex min-w-0 flex-1 flex-col', TEXT[size])}>
                       <span
                         data-slot="search-breadcrumb"
                         className="truncate"
@@ -391,7 +426,7 @@ export function HierarchicalSearch({
                           drill(item);
                         }}
                       >
-                        <ChevronRight aria-hidden="true" className="size-4" />
+                        <ChevronRight aria-hidden="true" className={GLYPH[size]} />
                       </button>
                     ) : null}
                   </CommandItem>

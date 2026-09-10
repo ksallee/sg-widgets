@@ -122,7 +122,10 @@ const PICKER_ICON_BUTTON =
 const PICKER_TEXT_CHIP =
   'bg-muted text-foreground flex h-6 min-w-0 shrink-0 items-center gap-1 rounded-sm px-1.5 text-xs';
 
-export interface EntityTypePickerProps {
+export interface EntityTypePickerProps extends React.HTMLAttributes<HTMLDivElement> {
+  /** The root element. */
+  ref?: React.Ref<HTMLDivElement>;
+
   /** Reads the site's enabled types. Build it once per app with `createSchemaService`. */
   schema: SchemaService;
   /** A type code in single mode, an array of them in multi mode. */
@@ -137,7 +140,7 @@ export interface EntityTypePickerProps {
   searchPlaceholder?: string;
   emptyLabel?: string;
   clearable?: boolean;
-  readOnly?: boolean;
+  readonly?: boolean;
   disabled?: boolean;
   invalid?: boolean;
   /** Show the code under the display name where the two differ. */
@@ -147,6 +150,9 @@ export interface EntityTypePickerProps {
   /** Chips drawn before the rest becomes `+n`. `0` draws every chip. */
   max?: number;
   size?: EntityTypePickerSize;
+  /** Whether the popup is showing. */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
   className?: string;
 }
 
@@ -170,16 +176,25 @@ export function EntityTypePicker({
   searchPlaceholder = 'Search types…',
   emptyLabel = 'No entity type matches.',
   clearable = true,
-  readOnly = false,
+  readonly = false,
   disabled = false,
   invalid = false,
   showCode = true,
   summary = 'ellipsis',
   max = 0,
   size = 'md',
+  open: openProp,
+  onOpenChange,
   className,
+  ref,
+  ...rest
 }: EntityTypePickerProps) {
-  const [open, setOpen] = useState(false);
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const open = openProp ?? uncontrolledOpen;
+  const setOpen = (next: boolean): void => {
+    setUncontrolledOpen(next);
+    onOpenChange?.(next);
+  };
   const [search, setSearch] = useState('');
   const [loaded, setLoaded] = useState<EntityTypeInfo[] | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
@@ -222,7 +237,7 @@ export function EntityTypePicker({
   const rowKey = `${size}|${summary}|${selected.map(labelOf).join(', ')}`;
   const row = useChipRow(fitted, rowKey, controlRef, chipsRef);
   const plan = summariseSelection(selected, labelOf, { summary, max, fit: row.fit });
-  const interactive = !readOnly && !disabled;
+  const interactive = !readonly && !disabled;
   const showClear = clearable && selected.length > 0 && interactive;
 
   /** A press anywhere in the field opens the list, and a token field takes the caret. */
@@ -312,9 +327,9 @@ export function EntityTypePicker({
       role="group"
       aria-disabled={disabled ? 'true' : undefined}
       data-invalid={invalid && !inline ? 'true' : undefined}
-      data-readonly={readOnly ? 'true' : undefined}
+      data-readonly={readonly ? 'true' : undefined}
       title={plan.title || placeholder}
-      className={cn(PICKER_CONTROL, PICKER_BOX[size], plan.oneLine && 'flex-nowrap', readOnly ? 'pr-3' : showClear ? 'pr-14' : 'pr-8')}
+      className={cn(PICKER_CONTROL, PICKER_BOX[size], plan.oneLine && 'flex-nowrap', readonly ? 'pr-3' : showClear ? 'pr-14' : 'pr-8')}
     >
       {selected.length > 0 ? (
         <span
@@ -388,7 +403,7 @@ export function EntityTypePicker({
           data-slot="entity-type-picker-input"
           aria-invalid={invalid ? 'true' : undefined}
           aria-label={placeholder}
-          readOnly={readOnly || undefined}
+          readOnly={readonly || undefined}
           placeholder={selected.length > 0 ? '' : placeholder}
           className={PICKER_INPUT}
         />
@@ -433,7 +448,7 @@ export function EntityTypePicker({
     </ComboboxPrimitive.Portal>
   );
 
-  const actions = readOnly ? null : (
+  const actions = readonly ? null : (
     <div className="pointer-events-none absolute right-2 flex items-center gap-1">
       {showClear ? (
         <button
@@ -468,11 +483,13 @@ export function EntityTypePicker({
 
   return (
     <div
+      ref={ref}
       data-slot="entity-type-picker"
       data-size={size}
       data-multiple={multiple ? 'true' : 'false'}
       data-summary={multiple ? summary : undefined}
       className={cn('relative flex w-full min-w-0 items-center', className)}
+      {...rest}
     >
       {multiple ? (
         <ComboboxPrimitive.Root

@@ -32,13 +32,19 @@ anything.
 | `label` | `string` | — | Replaces both button labels. |
 | `title` | `string` | `'Filters'` | Dialog title. |
 | `disabled` | `boolean` | `false` | Blocks both buttons. |
+| `open` | `boolean` | `false` | Whether the dialog is showing. Two-way in Svelte. |
+| `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Launcher heights 8, 9 and 10. Passed to the editor inside. |
 | `class` / `className` | `string` | — | Merged after the widget's own classes. |
+
+Every other attribute is spread onto the root: `id`, `aria-*`, `data-*`, key handlers and a
+`ref` to the root element.
 
 ## Events
 
-| event | React | Svelte | payload |
-|---|---|---|---|
-| change | `onChange` | `onChange`, `bind:value` | The applied tree. Fires on Apply, Clear all and the clear control, never while editing. |
+| event | payload | when |
+|---|---|---|
+| `onChange` | `FilterGroup` | The tree was applied, by Apply, Clear all or the clear control, never while editing. Svelte also binds it with `bind:value`. |
+| `onOpenChange` | `boolean` | The dialog opened or closed. Svelte also binds it with `bind:open`. |
 
 ## Slots
 

@@ -31,8 +31,8 @@
 			searchable
 			{searchPlaceholder}
 			showCode
-			onselect={(node) => (picked = node)}
-			oncheckedchange={(rows) => (checked = rows)}
+			onSelect={(node) => (picked = node)}
+			onCheckedChange={(rows) => (checked = rows)}
 		/>
 		<p class="text-muted-foreground text-xs">
 			<span data-testid="picked">{picked ? picked.label : 'nothing selected'}</span>

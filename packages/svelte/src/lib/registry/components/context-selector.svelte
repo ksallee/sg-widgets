@@ -1,6 +1,18 @@
 <script lang="ts" module>
 	import type { EntityRef } from '@sg-widgets/core';
 
+	export type ContextSelectorSize = 'sm' | 'md' | 'lg';
+
+	/** The trigger follows the input ladder of `docs/design-rules.md`. */
+	const BOX: Record<ContextSelectorSize, string> = {
+		sm: 'min-h-8 px-2 py-1',
+		md: 'min-h-9 px-2 py-1.5',
+		lg: 'min-h-10 px-3 py-1.5'
+	};
+	const GLYPH: Record<ContextSelectorSize, string> = { sm: 'size-4', md: 'size-4', lg: 'size-5' };
+	/** A chip inside a control sits one step down the leaf ladder. */
+	const CHIP: Record<ContextSelectorSize, 'sm' | 'md'> = { sm: 'sm', md: 'sm', lg: 'md' };
+
 	/** What a widget or a publish needs to know about where the user is working. */
 	export interface WorkContext {
 		project: EntityRef | null;
@@ -45,6 +57,7 @@
 </script>
 
 <script lang="ts">
+	import type { HTMLAttributes } from 'svelte/elements';
 	import type { FieldSchema, SgClient, StatusRecord } from '@sg-widgets/core';
 	import { createSchemaService } from '@sg-widgets/core';
 	import ChevronDown from '@lucide/svelte/icons/chevron-down';
@@ -52,12 +65,12 @@
 	import TriangleAlert from '@lucide/svelte/icons/triangle-alert';
 	import * as Popover from '$lib/components/ui/popover/index.js';
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
-	import { cn } from '$lib/utils.js';
+	import { cn, type WithElementRef } from '$lib/utils.js';
 	import EntityChip from '$lib/registry/components/entity-chip.svelte';
 	import HierarchicalSearch from '$lib/registry/components/hierarchical-search.svelte';
 	import StatusBadge from '$lib/registry/components/status-badge.svelte';
 
-	type Props = {
+	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>, HTMLDivElement> & {
 		/** Where rows come from. Wrap it in `createQueryCache` once for the whole app. */
 		client: SgClient;
 		context?: WorkContext;
@@ -66,9 +79,12 @@
 		/** Contexts used before, newest first. Held by the caller. */
 		recents?: WorkContext[];
 		recentLimit?: number;
-		onrecents?: (recents: WorkContext[]) => void;
-		oncontextChange?: (context: WorkContext) => void;
+		onRecentsChange?: (recents: WorkContext[]) => void;
+		onContextChange?: (context: WorkContext) => void;
+		size?: ContextSelectorSize;
+		/** Whether the popover is showing, two-way. */
 		open?: boolean;
+		onOpenChange?: (open: boolean) => void;
 		class?: string;
 	};
 
@@ -78,10 +94,14 @@
 		currentUser = null,
 		recents = [],
 		recentLimit = 5,
-		onrecents,
-		oncontextChange,
+		onRecentsChange,
+		onContextChange,
+		size = 'md',
 		open = $bindable(false),
-		class: className
+		onOpenChange,
+		class: className,
+		ref = $bindable(null),
+		...rest
 	}: Props = $props();
 
 	const schema = $derived(createSchemaService(client));
@@ -160,10 +180,16 @@
 		};
 	});
 
+	function setOpen(next: boolean): void {
+		if (next === open) return;
+		open = next;
+		onOpenChange?.(next);
+	}
+
 	function apply(next: WorkContext): void {
-		onrecents?.([next, ...recents.filter((r) => keyOf(r) !== keyOf(next))].slice(0, recentLimit));
-		oncontextChange?.(next);
-		open = false;
+		onRecentsChange?.([next, ...recents.filter((r) => keyOf(r) !== keyOf(next))].slice(0, recentLimit));
+		onContextChange?.(next);
+		setOpen(false);
 	}
 
 	const heading = 'text-muted-foreground px-2 py-1.5 text-xs font-medium';
@@ -178,11 +204,15 @@
 	to the current user, and a drill-down over the navigation tree. Assigned tasks are
 	one `_search` on Task filtered by `task_assignees`, grouped under their project.
 -->
-<div data-slot="context-selector" class={cn('w-full', className)}>
-	<Popover.Root bind:open={() => open, (next) => (open = next)}>
+<div bind:this={ref} data-slot="context-selector" class={cn('w-full', className)} {...rest}>
+	<Popover.Root bind:open={() => open, setOpen}>
 		<Popover.Trigger
 			data-slot="context-selector-trigger"
-			class="border-border bg-background hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring focus-visible:ring-offset-background flex w-full min-w-0 items-center gap-2 rounded-md border px-2 py-1.5 text-left outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2"
+			data-size={size}
+			class={cn(
+				'border-border bg-background hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring focus-visible:ring-offset-background flex w-full min-w-0 items-center gap-2 rounded-md border text-left outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2',
+				BOX[size]
+			)}
 			aria-label={`Context: ${label(context)}`}
 		>
 			<span class="flex min-w-0 flex-1 flex-wrap items-center gap-2">
@@ -190,11 +220,11 @@
 					<span class="text-muted-foreground text-sm">No context</span>
 				{:else}
 					{#each chips as chip (`${chip.type}:${chip.id}`)}
-						<EntityChip entity={chip} size="sm" />
+						<EntityChip entity={chip} size={CHIP[size]} />
 					{/each}
 				{/if}
 			</span>
-			<ChevronDown aria-hidden="true" class="text-muted-foreground size-4 shrink-0" />
+			<ChevronDown aria-hidden="true" class={cn('text-muted-foreground shrink-0', GLYPH[size])} />
 		</Popover.Trigger>
 
 		<!-- Fixed: the Command list inside scrolls its cursor into view on mount, and an absolute
@@ -213,7 +243,7 @@
 						<button type="button" class={rowClass} onclick={() => apply(recent)}>
 							<span class="flex min-w-0 flex-1 flex-wrap items-center gap-2">
 								{#each [recent.project, recent.entity, recent.task].filter((r) => r !== null) as chip (`${chip.type}:${chip.id}`)}
-									<EntityChip entity={chip} size="sm" />
+									<EntityChip entity={chip} size={CHIP[size]} />
 								{/each}
 							</span>
 						</button>
@@ -260,7 +290,12 @@
 										{[row.entity?.name, row.step].filter(Boolean).join(' · ')}
 									</span>
 								</span>
-								<StatusBadge code={row.status} status={statuses[row.status]} field={statusField} size="sm" />
+								<StatusBadge
+									code={row.status}
+									status={statuses[row.status]}
+									field={statusField}
+									size={CHIP[size]}
+								/>
 							</button>
 						{/each}
 					{/each}
@@ -272,7 +307,8 @@
 				<HierarchicalSearch
 					{client}
 					{rootPath}
-					onselect={(leaf, path) => apply(contextFromPath(leaf, path))}
+					{size}
+					onSelect={(leaf, path) => apply(contextFromPath(leaf, path))}
 					placeholder="Search for a task or a shot…"
 				/>
 			</section>

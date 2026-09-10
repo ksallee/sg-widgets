@@ -52,6 +52,7 @@ list; the metadata line needs whatever `subLabelField` and `secondaryField` name
 | `pageSizes` | `number[]` | `[25, 50, 100]` | Rows per page offered in the footer. |
 | `maxHeight` | `string` | `'32rem'` | Height of the scrolling body. |
 | `emptyLabel` | `string` | `'No rows'` | Shown when the read returned nothing. |
+| `density` | `'compact' \| 'default'` | `'default'` | Compact halves the gap between tiles. |
 | `class` / `className` | `string` | — | Merged after the widget's own classes. |
 
 Nothing is on the metadata line by default, and the row's id is never on it.
@@ -60,8 +61,8 @@ Nothing is on the metadata line by default, and the row's id is never on it.
 
 | event | payload | when |
 |---|---|---|
-| `onselectionchange` / `onSelectionChange` | `EntityRef[]` | The selection changed. |
-| `onselect` / `onSelect` | `EntityRow` | A tile was activated, by click or by Enter. |
+| `onSelectionChange` | `EntityRef[]` | The selection changed. |
+| `onSelect` | `EntityRow` | A tile was activated, by click or by Enter. |
 
 ## Slots
 

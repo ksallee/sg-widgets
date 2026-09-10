@@ -90,7 +90,10 @@ const ICONS: Record<string, typeof Type> = {
   type: Type,
 };
 
-export interface FieldPickerProps {
+export interface FieldPickerProps extends React.HTMLAttributes<HTMLDivElement> {
+  /** The root element. */
+  ref?: React.Ref<HTMLDivElement>;
+
   /** Reads the schema. Build it once per app with `createSchemaService`. */
   schema: SchemaService;
   /** The type the path starts on. */
@@ -124,10 +127,13 @@ export interface FieldPickerProps {
   searchPlaceholder?: string;
   emptyLabel?: string;
   clearable?: boolean;
-  readOnly?: boolean;
+  readonly?: boolean;
   disabled?: boolean;
   invalid?: boolean;
   size?: FieldPickerSize;
+  /** Whether the popover is showing. */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
   className?: string;
 }
 
@@ -162,13 +168,22 @@ export function FieldPicker({
   searchPlaceholder = 'Search fields…',
   emptyLabel = 'No field matches.',
   clearable = true,
-  readOnly = false,
+  readonly = false,
   disabled = false,
   invalid = false,
   size = 'md',
+  open: openProp,
+  onOpenChange,
   className,
+  ref,
+  ...rest
 }: FieldPickerProps) {
-  const [open, setOpen] = useState(false);
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const open = openProp ?? uncontrolledOpen;
+  const setOpen = (next: boolean): void => {
+    setUncontrolledOpen(next);
+    onOpenChange?.(next);
+  };
   const [search, setSearch] = useState('');
   const [highlighted, setHighlighted] = useState('');
   const [hops, setHops] = useState<FieldHop[]>([]);
@@ -245,7 +260,7 @@ export function FieldPicker({
     : resolved?.path === value
       ? resolved.label
       : null;
-  const showClear = clearable && value !== '' && !readOnly && !disabled;
+  const showClear = clearable && value !== '' && !readonly && !disabled;
   const breadcrumb = hops.length > 0 || choosing !== null;
 
   /** Every hop clears the search box; nothing is remounted, so focus stays in the input. */
@@ -317,26 +332,28 @@ export function FieldPicker({
 
   return (
     <div
+      ref={ref}
       data-slot="field-picker"
       data-size={size}
       data-depth={hops.length}
       className={cn('relative flex w-full min-w-0 items-center', className)}
+      {...rest}
     >
-      <Popover open={open} onOpenChange={(next) => setOpen(readOnly || disabled ? false : next)}>
+      <Popover open={open} onOpenChange={(next) => setOpen(readonly || disabled ? false : next)}>
         <PopoverTrigger
           data-slot="field-picker-trigger"
           role="combobox"
           aria-expanded={open}
           aria-invalid={invalid ? 'true' : undefined}
           aria-disabled={disabled ? 'true' : undefined}
-          data-readonly={readOnly ? 'true' : undefined}
+          data-readonly={readonly ? 'true' : undefined}
           data-value={value || undefined}
           disabled={disabled}
           title={label ?? placeholder}
           className={cn(
             'border-input bg-background focus-visible:ring-ring focus-visible:ring-offset-background aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 flex w-full min-w-0 items-center rounded-md border text-sm outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 aria-invalid:ring-2',
             BOX[size],
-            readOnly ? 'pr-3' : showClear ? 'pr-14' : 'pr-8',
+            readonly ? 'pr-3' : showClear ? 'pr-14' : 'pr-8',
           )}
         >
           {value === '' ? (
@@ -508,7 +525,7 @@ export function FieldPicker({
         </PopoverContent>
       </Popover>
 
-      {!readOnly ? (
+      {!readonly ? (
         <div className="pointer-events-none absolute right-2 flex items-center gap-1">
           {showClear ? (
             <button

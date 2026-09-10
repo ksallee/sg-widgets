@@ -58,6 +58,9 @@ export interface DateTimeEditorProps extends Omit<React.HTMLAttributes<HTMLDivEl
   error?: string | null;
   onErrorChange?: (error: string | null) => void;
   placeholder?: string;
+  /** Whether the calendar popover is showing. */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
   errorMessage?: (message: string) => React.ReactNode;
 }
 
@@ -88,6 +91,8 @@ export function DateTimeEditor({
   error = null,
   onErrorChange,
   placeholder = 'YYYY-MM-DD',
+  open: openProp,
+  onOpenChange,
   errorMessage,
   className,
   ...rest
@@ -103,7 +108,12 @@ export function DateTimeEditor({
   const [dateDraft, setDateDraft] = React.useState(incomingDate);
   const [timeDraft, setTimeDraft] = React.useState(incomingTime);
   const [parseError, setParseError] = React.useState<string | null>(null);
-  const [open, setOpen] = React.useState(false);
+  const [uncontrolledOpen, setUncontrolledOpen] = React.useState(false);
+  const open = openProp ?? uncontrolledOpen;
+  const setOpen = (next: boolean): void => {
+    setUncontrolledOpen(next);
+    onOpenChange?.(next);
+  };
   const editing = React.useRef(false);
   const dateInput = React.useRef<HTMLInputElement>(null);
 

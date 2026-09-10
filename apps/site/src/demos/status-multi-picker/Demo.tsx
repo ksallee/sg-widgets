@@ -212,7 +212,7 @@ export default function StatusMultiPickerDemo() {
               entityType="Version"
               projectId={projectId}
               value={['apr']}
-              readOnly
+              readonly
             />
           </div>
           <div className={field}>

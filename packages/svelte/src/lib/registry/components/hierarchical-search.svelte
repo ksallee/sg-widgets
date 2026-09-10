@@ -1,6 +1,17 @@
 <script lang="ts" module>
 	import type { EntityRef, HierarchyNode, WireCondition } from '@sg-widgets/core';
 
+	export type HierarchicalSearchSize = 'sm' | 'md' | 'lg';
+
+	/** A row's leading slot and its glyph, on the leaf ladder of `docs/design-rules.md`. */
+	const LEAD: Record<HierarchicalSearchSize, string> = { sm: 'size-5', md: 'size-6', lg: 'size-8' };
+	const GLYPH: Record<HierarchicalSearchSize, string> = {
+		sm: 'size-3.5',
+		md: 'size-4',
+		lg: 'size-5'
+	};
+	const TEXT: Record<HierarchicalSearchSize, string> = { sm: 'text-xs', md: 'text-sm', lg: 'text-base' };
+
 	/** Types to search, either bare names or names with a filter each. */
 	export type HierarchicalSearchTypes = string[] | Record<string, WireCondition[] | null>;
 
@@ -39,6 +50,7 @@
 </script>
 
 <script lang="ts">
+	import type { HTMLAttributes } from 'svelte/elements';
 	import type { SgClient } from '@sg-widgets/core';
 	import {
 		breadcrumb,
@@ -62,17 +74,18 @@
 	import Video from '@lucide/svelte/icons/video';
 	import * as Command from '$lib/components/ui/command/index.js';
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
-	import { cn } from '$lib/utils.js';
+	import { cn, type WithElementRef } from '$lib/utils.js';
 
-	type Props = {
+	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>, HTMLDivElement> & {
 		/** Where rows come from. Wrap it in `createQueryCache` once for the whole app. */
 		client: SgClient;
 		/** Where the tree starts, `/Project/<id>` for one project or `/` for the site. */
 		rootPath?: string;
 		/** Types a search may end on. Browsing reaches every level whatever this says. */
 		entityTypes?: HierarchicalSearchTypes;
-		onselect?: (entity: EntityRef, path: EntityRef[]) => void;
+		onSelect?: (entity: EntityRef, path: EntityRef[]) => void;
 		placeholder?: string;
+		size?: HierarchicalSearchSize;
 		class?: string;
 	};
 
@@ -80,9 +93,12 @@
 		client,
 		rootPath = '/',
 		entityTypes = HIERARCHICAL_SEARCH_TYPES,
-		onselect,
+		onSelect,
 		placeholder = 'Search the hierarchy…',
-		class: className
+		size = 'md',
+		class: className,
+		ref = $bindable(null),
+		...rest
 	}: Props = $props();
 
 	const schema = $derived(createSchemaService(client));
@@ -238,7 +254,7 @@
 
 	function activate(row: HierarchicalSearchRow): void {
 		if (row.selectable && row.ref) {
-			onselect?.(row.ref, row.path);
+			onSelect?.(row.ref, row.path);
 			return;
 		}
 		drill(row);
@@ -282,7 +298,7 @@
 	result a breadcrumb. The path runs through field names such as `sg_sequence`,
 	because the tree follows the site's own navigation configuration.
 -->
-<div data-slot="hierarchical-search" class={cn('w-full', className)}>
+<div bind:this={ref} data-slot="hierarchical-search" class={cn('w-full', className)} {...rest}>
 	<!-- Server-side matching only, so the list never filters what came back. -->
 	<Command.Root shouldFilter={false} bind:value={cursor} class="border-border rounded-md border" onkeydown={onKeydown}>
 		<Command.Input value={query} {placeholder} oninput={(e) => setQuery(e.currentTarget.value)} />
@@ -299,7 +315,7 @@
 				<div data-slot="search-loading" class="flex flex-col gap-2 p-1" aria-busy="true">
 					{#each [0, 1, 2] as line (line)}
 						<div class="flex items-center gap-2 px-2 py-1.5">
-							<Skeleton class="size-6 shrink-0" />
+							<Skeleton class={cn('shrink-0', LEAD[size])} />
 							<div class="flex min-w-0 flex-1 flex-col gap-1">
 								<Skeleton class="h-3 w-1/2" />
 								<Skeleton class="h-2.5 w-1/4" />
@@ -319,10 +335,15 @@
 				<Command.Group heading={searching ? 'Results' : trail.map((c) => c.label).join(' › ') || 'Tree'}>
 					{#if !searching && trail.length > 0}
 						<Command.Item value="up" data-slot="search-up" onSelect={up}>
-							<span class="text-muted-foreground flex size-6 shrink-0 items-center justify-center">
-								<ChevronRight aria-hidden="true" class="size-4 rotate-180" />
+							<span
+								class={cn(
+									'text-muted-foreground flex shrink-0 items-center justify-center',
+									LEAD[size]
+								)}
+							>
+								<ChevronRight aria-hidden="true" class={cn('rotate-180', GLYPH[size])} />
 							</span>
-							<span class="text-muted-foreground min-w-0 flex-1 truncate text-sm">Back</span>
+							<span class={cn('text-muted-foreground min-w-0 flex-1 truncate', TEXT[size])}>Back</span>
 						</Command.Item>
 					{/if}
 					{#each rows as item (item.nodePath)}
@@ -335,10 +356,15 @@
 							data-selectable={item.selectable ? 'true' : 'false'}
 							onSelect={() => activate(item)}
 						>
-							<span class="text-muted-foreground flex size-6 shrink-0 items-center justify-center">
-								<Glyph aria-hidden="true" class="size-4" />
+							<span
+								class={cn(
+									'text-muted-foreground flex shrink-0 items-center justify-center',
+									LEAD[size]
+								)}
+							>
+								<Glyph aria-hidden="true" class={GLYPH[size]} />
 							</span>
-							<span class="flex min-w-0 flex-1 flex-col">
+							<span class={cn('flex min-w-0 flex-1 flex-col', TEXT[size])}>
 								<span
 									data-slot="search-breadcrumb"
 									class="truncate"
@@ -369,7 +395,7 @@
 										drill(item);
 									}}
 								>
-									<ChevronRight aria-hidden="true" class="size-4" />
+									<ChevronRight aria-hidden="true" class={GLYPH[size]} />
 								</button>
 							{/if}
 						</Command.Item>

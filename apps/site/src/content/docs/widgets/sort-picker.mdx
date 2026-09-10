@@ -28,13 +28,19 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/sort-picker.js
 | `value` | `SortKey[]` | `[]` | The keys, in order. Two-way in Svelte through `bind:value`. |
 | `hidePaths` | `string[]` | `[]` | Paths kept out of the field list. A pattern hides itself and everything under it. |
 | `disabled` | `boolean` | `false` | Blocks the trigger. |
+| `open` | `boolean` | `false` | Whether the popover is showing. Two-way in Svelte. |
+| `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Trigger heights 8, 9 and 10. |
 | `class` / `className` | `string` | — | Merged after the widget's own classes. |
+
+Every other attribute is spread onto the root: `id`, `aria-*`, `data-*`, key handlers and a
+`ref` to the root element.
 
 ## Events
 
-| event | React | Svelte | payload |
-|---|---|---|---|
-| change | `onChange` | `onChange`, `bind:value` | The keys and the `sort` string, on every edit. |
+| event | payload | when |
+|---|---|---|
+| `onChange` | `SortKey[]`, `string` | The keys and the `sort` string changed, on every edit. Svelte also binds it with `bind:value`. |
+| `onOpenChange` | `boolean` | The popover opened or closed. Svelte also binds it with `bind:open`. |
 
 ## Slots
 

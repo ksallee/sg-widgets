@@ -213,7 +213,7 @@ export default function EntityPickerDemo() {
           </div>
           <div className={field}>
             <span className={caption}>Read-only</span>
-            <EntityPicker client={client} entityTypes={['Asset']} value={preset} readOnly />
+            <EntityPicker client={client} entityTypes={['Asset']} value={preset} readonly />
           </div>
           <div className={field}>
             <span className={caption}>Invalid</span>

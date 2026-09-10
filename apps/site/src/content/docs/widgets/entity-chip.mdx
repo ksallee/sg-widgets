@@ -52,10 +52,10 @@ The root carries the entity type, id and variant as data attributes.
 
 ## Events
 
-| event | React | Svelte | payload |
-|---|---|---|---|
-| activate | `onClick` | `onclick` | The mouse event. Renders the content as a button. Ignored when a link is set. |
-| remove | `onRemove` | `onremove` | The entity that was removed. |
+| event | payload | when |
+|---|---|---|
+| `onClick` | `MouseEvent` | The content was pressed. It renders as a button. Ignored when a link is set. Svelte spells it `onclick`, as it does every DOM event. |
+| `onRemove` | `EntityRef` | The remove control was pressed. |
 
 ## Slots
 

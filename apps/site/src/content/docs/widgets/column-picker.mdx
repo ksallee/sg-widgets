@@ -41,11 +41,14 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/column-picker.
 | `emptyLabel` | `string` | `'No columns yet.'` | Shown while nothing is chosen. |
 | `availableLabel` | `string` | `'Available'` | Heading of the left list, `dual` only. |
 | `chosenLabel` | `string` | `'Columns'` | Heading of the right list, `dual` only. |
-| `readOnly` / `readonly` | `boolean` | `false` | Shows the chosen list alone, with no controls. |
+| `readonly` | `boolean` | `false` | Shows the chosen list alone, with no controls. |
 | `disabled` | `boolean` | `false` | |
 | `invalid` | `boolean` | `false` | Puts the invalid ring on the field picker, or on both lists under `dual`. |
 | `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Row height. |
 | `className` / `class` | `string` | — | Merged after the widget's own classes. |
+
+Every other attribute is spread onto the root: `id`, `aria-*`, `data-*`, key handlers and a
+`ref` to the root element.
 
 Picking a field appends its path to the end of the list and clears the picker, which takes focus
 back for the next one. A path already chosen is off the list, so a column is never added twice.

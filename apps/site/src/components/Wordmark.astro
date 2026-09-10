@@ -1,0 +1,108 @@
+---
+/**
+ * One wordmark variant, at one size.
+ *
+ * Every snippet below is the same two words and nothing else: the variant is what
+ * separates them -- weight, colour, case, face, or a mark in front. Colours are tokens,
+ * so a variant is judged under whichever palette and theme the page wears, and sizes are
+ * relative to the wrapper, so the mark and the type scale together.
+ *
+ * `size` is any CSS length. The page passes the size Starlight gives the site title and a
+ * display size.
+ */
+import WordmarkMark from './WordmarkMark.astro';
+
+interface Props {
+  /** An `id` from wordmark-variants.ts. */
+  variant: string;
+  size: string;
+}
+
+const { variant, size } = Astro.props;
+---
+
+<span class="lockup" style={`font-size:${size}`}>
+  {
+    variant === 'weight-split' && (
+      <span><span class="font-medium">SG</span> <span class="font-normal">Widgets</span></span>
+    )
+  }
+
+  {
+    variant === 'muted-tail' && (
+      <span><span class="font-medium">SG</span> <span class="font-normal text-muted-foreground">Widgets</span></span>
+    )
+  }
+
+  {
+    variant === 'primary-tail' && (
+      <span><span class="font-medium">SG</span> <span class="font-normal text-primary">Widgets</span></span>
+    )
+  }
+
+  {
+    variant === 'tracked-caps' && (
+      <span><span class="font-medium uppercase tracking-widest">SG</span> <span class="font-normal">Widgets</span></span>
+    )
+  }
+
+  {
+    variant === 'mono-sg' && (
+      <span><span class="font-mono font-medium">SG</span> <span class="font-sans font-normal">Widgets</span></span>
+    )
+  }
+
+  {
+    variant === 'mono-widgets' && (
+      <span><span class="font-sans font-medium">SG</span> <span class="font-mono font-normal">Widgets</span></span>
+    )
+  }
+
+  {
+    variant === 'stacked-tiles' && (
+      <>
+        <WordmarkMark mark="stacked-tiles" size="1.15em" />
+        <span><span class="font-medium">SG</span> <span class="font-normal">Widgets</span></span>
+      </>
+    )
+  }
+
+  {
+    variant === 'tile-grid' && (
+      <>
+        <WordmarkMark mark="tile-grid" size="1.15em" />
+        <span><span class="font-medium">SG</span> <span class="font-normal">Widgets</span></span>
+      </>
+    )
+  }
+
+  {
+    variant === 'bracket-sg' && (
+      <>
+        <WordmarkMark mark="bracket-sg" size="1em" />
+        <span class="font-normal">Widgets</span>
+      </>
+    )
+  }
+
+  {
+    variant === 'slate-bars' && (
+      <>
+        <WordmarkMark mark="slate-bars" size="1.1em" />
+        <span><span class="font-medium">SG</span> <span class="font-normal">Widgets</span></span>
+      </>
+    )
+  }
+</span>
+
+<style>
+  /* The lockup owns the space between a mark and the type; the space between the two
+     words is a word space, so it stays a typographic one at every size. */
+  .lockup {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4em;
+    line-height: 1.1;
+    white-space: nowrap;
+  }
+</style>

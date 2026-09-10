@@ -47,6 +47,8 @@
 		'data-highlighted:bg-accent data-highlighted:text-accent-foreground relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0';
 	/** The centred line every empty, loading and error state uses. */
 	const PICKER_NOTE = 'flex items-center justify-center gap-1.5 py-6 text-center text-sm';
+	/** The chip a Backspace has armed. The keyboard cursor wears the focus ring. */
+	const PICKER_ARMED = 'ring-ring ring-offset-background ring-2 ring-offset-1';
 	/** The clear control, shared by every picker in this registry. */
 	const PICKER_ICON_BUTTON =
 		'hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring focus-visible:ring-offset-background pointer-events-auto shrink-0 rounded-sm p-0.5 opacity-70 outline-none transition-colors duration-150 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-2 motion-safe:active:scale-[0.98]';
@@ -56,9 +58,17 @@
 </script>
 
 <script lang="ts">
+	import { tick } from 'svelte';
 	import type { HTMLAttributes } from 'svelte/elements';
 	import type { EntityTypeInfo, SchemaService } from '@sg-widgets/core';
-	import { filterEntityTypes, matchesTokens, summariseSelection } from '@sg-widgets/core';
+	import {
+		filterEntityTypes,
+		holdsArmed,
+		matchesTokens,
+		pickerKeyIntent,
+		scrollHighlightedIntoView,
+		summariseSelection
+	} from '@sg-widgets/core';
 	import { Combobox } from 'bits-ui';
 	import ChevronsUpDown from '@lucide/svelte/icons/chevrons-up-down';
 	import Search from '@lucide/svelte/icons/search';
@@ -125,8 +135,11 @@
 		...rest
 	}: Props = $props();
 	let controlEl = $state<HTMLElement | null>(null);
+	let listEl = $state<HTMLElement | null>(null);
 	let inputEl = $state<HTMLInputElement | null>(null);
 	let search = $state('');
+	/** The chip a Backspace has highlighted. The next one removes it. */
+	let armed = $state<number | null>(null);
 	let loaded = $state<EntityTypeInfo[] | null>(null);
 	let failure = $state<string | null>(null);
 
@@ -250,7 +263,10 @@
 
 	function setOpen(next: boolean): void {
 		const wanted = interactive ? next : false;
-		if (!wanted) search = '';
+		if (!wanted) {
+			search = '';
+			armed = null;
+		}
 		if (wanted === open) return;
 		open = wanted;
 		onOpenChange?.(open);
@@ -272,6 +288,54 @@
 		emit(multiple ? [] : null);
 		if (inline) inputEl?.focus({ preventScroll: true });
 	}
+
+	// A chip removed from under the highlight takes it with it.
+	$effect(() => {
+		if (armed !== null && armed >= selected.length) armed = null;
+	});
+
+	/**
+	 * Backspace, Escape and the arrows. The primitive's own handler runs after this
+	 * one, so a key this picker owns is prevented rather than shared.
+	 */
+	function onKey(event: KeyboardEvent): void {
+		const intent = pickerKeyIntent(event.key, {
+			open,
+			query: search,
+			count: selected.length,
+			armed,
+			editable: interactive
+		});
+		if (!holdsArmed(event.key)) armed = null;
+		switch (intent.kind) {
+			case 'dismiss':
+				setOpen(false);
+				return;
+			case 'arm':
+				event.preventDefault();
+				armed = intent.index;
+				return;
+			case 'remove': {
+				event.preventDefault();
+				const code = selected[intent.index];
+				if (code !== undefined) remove(code);
+				return;
+			}
+			case 'follow':
+				void tick().then(() => scrollHighlightedIntoView(listEl));
+				return;
+			default:
+				return;
+		}
+	}
+
+	// The search box narrows the list here, so the rows change under the highlight;
+	// the list follows it.
+	$effect(() => {
+		void shown.length;
+		if (!open) return;
+		void tick().then(() => scrollHighlightedIntoView(listEl));
+	});
 </script>
 
 {#snippet control()}
@@ -310,8 +374,9 @@
 						<span
 							data-slot="entity-type-picker-chip"
 							data-chip=""
+							data-armed={armed === index ? 'true' : undefined}
 							hidden={ready && index >= plan.shown.length}
-							class={PICKER_TEXT_CHIP}
+							class={cn(PICKER_TEXT_CHIP, armed === index && PICKER_ARMED)}
 						>
 							<span class="truncate">{labelOf(code)}</span>
 							{#if multiple && interactive}
@@ -385,11 +450,12 @@
 						aria-label={searchPlaceholder}
 						placeholder={searchPlaceholder}
 						oninput={(e) => (search = e.currentTarget.value)}
+						onkeydown={onKey}
 						class={PICKER_SEARCH}
 					/>
 				</div>
 			{/if}
-			<div data-slot="entity-type-picker-list" class={PICKER_LIST}>
+			<div bind:this={listEl} data-slot="entity-type-picker-list" class={PICKER_LIST}>
 				{#if failure}
 					<div data-slot="entity-type-picker-error" class={cn(PICKER_NOTE, 'text-destructive')}>
 						<TriangleAlert aria-hidden="true" class="size-4 shrink-0" />

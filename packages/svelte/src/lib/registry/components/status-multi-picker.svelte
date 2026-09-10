@@ -54,15 +54,26 @@
 		'data-highlighted:bg-accent data-highlighted:text-accent-foreground relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0';
 	/** The centred line every empty, loading and error state uses. */
 	const PICKER_NOTE = 'flex items-center justify-center gap-1.5 py-6 text-center text-sm';
+	/** The chip a Backspace has armed. The keyboard cursor wears the focus ring. */
+	const PICKER_ARMED = 'ring-ring ring-offset-background rounded-sm ring-2 ring-offset-1';
 	/** The clear control, shared by every picker in this registry. */
 	const PICKER_ICON_BUTTON =
 		'hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring focus-visible:ring-offset-background pointer-events-auto shrink-0 rounded-sm p-0.5 opacity-70 outline-none transition-colors duration-150 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-2 motion-safe:active:scale-[0.98]';
 </script>
 
 <script lang="ts">
+	import { tick } from 'svelte';
 	import type { HTMLAttributes } from 'svelte/elements';
 	import type { SgClient, StatusOption, StatusRecord } from '@sg-widgets/core';
-	import { createSchemaService, createStatusService, matchesTokens, summariseSelection } from '@sg-widgets/core';
+	import {
+		createSchemaService,
+		createStatusService,
+		holdsArmed,
+		matchesTokens,
+		pickerKeyIntent,
+		scrollHighlightedIntoView,
+		summariseSelection
+	} from '@sg-widgets/core';
 	import { Combobox } from 'bits-ui';
 	import ChevronsUpDown from '@lucide/svelte/icons/chevrons-up-down';
 	import Search from '@lucide/svelte/icons/search';
@@ -182,8 +193,11 @@
 	);
 
 	let controlEl = $state<HTMLElement | null>(null);
+	let listEl = $state<HTMLElement | null>(null);
 	let inputEl = $state<HTMLInputElement | null>(null);
 	let search = $state('');
+	/** The chip a Backspace has highlighted. The next one removes it. */
+	let armed = $state<number | null>(null);
 
 	// `display_values` is the only other source of a label, so the options carry it to the badge.
 	const badgeField = $derived({
@@ -302,7 +316,10 @@
 
 	function setOpen(next: boolean): void {
 		const wanted = interactive ? next : false;
-		if (!wanted) search = '';
+		if (!wanted) {
+			search = '';
+			armed = null;
+		}
 		if (wanted === open) return;
 		open = wanted;
 		onOpenChange?.(open);
@@ -316,6 +333,54 @@
 	function remove(code: string): void {
 		setSelected(value.filter((c) => c !== code));
 	}
+
+	// A chip removed from under the highlight takes it with it.
+	$effect(() => {
+		if (armed !== null && armed >= value.length) armed = null;
+	});
+
+	/**
+	 * Backspace, Escape and the arrows. The primitive's own handler runs after this
+	 * one, so a key this picker owns is prevented rather than shared.
+	 */
+	function onKey(event: KeyboardEvent): void {
+		const intent = pickerKeyIntent(event.key, {
+			open,
+			query: search,
+			count: value.length,
+			armed,
+			editable: interactive
+		});
+		if (!holdsArmed(event.key)) armed = null;
+		switch (intent.kind) {
+			case 'dismiss':
+				setOpen(false);
+				return;
+			case 'arm':
+				event.preventDefault();
+				armed = intent.index;
+				return;
+			case 'remove': {
+				event.preventDefault();
+				const code = value[intent.index];
+				if (code !== undefined) remove(code);
+				return;
+			}
+			case 'follow':
+				void tick().then(() => scrollHighlightedIntoView(listEl));
+				return;
+			default:
+				return;
+		}
+	}
+
+	// The search box narrows the list here, so the rows change under the highlight;
+	// the list follows it.
+	$effect(() => {
+		void shown.length;
+		if (!open) return;
+		void tick().then(() => scrollHighlightedIntoView(listEl));
+	});
 
 	function clear(): void {
 		setSelected([]);
@@ -340,8 +405,9 @@
 	<span
 		data-slot="status-multi-picker-chip"
 		data-chip=""
+		data-armed={armed === index ? 'true' : undefined}
 		hidden={ready && index >= plan.shown.length}
-		class="flex min-w-0 shrink-0 items-center gap-1"
+		class={cn('flex min-w-0 shrink-0 items-center gap-1', armed === index && PICKER_ARMED)}
 	>
 		{@render badge(code, summary === 'icons' ? 'icon' : 'both')}
 		{#if interactive && summary !== 'icons'}
@@ -453,6 +519,7 @@
 					readonly={readonly || undefined}
 					placeholder={value.length > 0 ? '' : placeholder}
 					oninput={(e) => (search = e.currentTarget.value)}
+					onkeydown={onKey}
 					class={PICKER_INPUT}
 				/>
 			{/if}
@@ -482,11 +549,12 @@
 							aria-label={searchPlaceholder}
 							placeholder={searchPlaceholder}
 							oninput={(e) => (search = e.currentTarget.value)}
+							onkeydown={onKey}
 							class={PICKER_SEARCH}
 						/>
 					</div>
 				{/if}
-				<div data-slot="status-multi-picker-list" class={PICKER_LIST}>
+				<div bind:this={listEl} data-slot="status-multi-picker-list" class={PICKER_LIST}>
 					{#if query.error !== null}
 						<div data-slot="status-multi-picker-error" class={cn(PICKER_NOTE, 'text-destructive')}>
 							<TriangleAlert aria-hidden="true" class="size-4 shrink-0" />

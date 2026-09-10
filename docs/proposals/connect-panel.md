@@ -1,46 +1,45 @@
 # Connect panel
 
-A proposal for the header control that says what the demos read. It covers the flow, where the
-control lives, and what the panel is made of. Nothing here is implemented yet.
+The header control that says what the demos read: one choice, then the rows that choice needs. This
+is the record of the decision; the control itself is
+
+    apps/site/src/components/ConnectPanel.svelte
+
+and the drive that checks its states is
+
+    tools/drives/connect-panel-state.js
 
 The docs site sidebar has three groups (Start, Core, Widgets) and no place for a proposal, so this
 page stays a repo doc.
 
-## Current state
+## What it replaced
 
-The header carries a `Connect` button. It opens a 24rem panel holding, in this order: the Mock/Live
+The header carried a `Connect` button opening a 24rem panel that held, in this order: the Mock/Live
 choice, a site url field, a status line, a note about the dev token, a Log in and a Log out button,
-and a project picker. The panel is a plain element with `role="dialog"`, opened and dismissed by two
-document listeners.
+and a project picker. The panel was a plain element with `role="dialog"`, opened and dismissed by two
+document listeners, one of which carried an allow-list of the `data-slot` values a portalled surface
+inside the panel could use.
 
-Four of those parts hide themselves by state: the project picker waits for a client, Log in shows
-when nobody is signed in, Log out when somebody is, and the dev note only when the dev key minted the
-token. The source choice and the site field show in every state.
+Four of those parts hid themselves by state: the project picker waited for a client, Log in showed
+when nobody was signed in, Log out when somebody was, and the dev note only when the dev key had
+minted the token. The source choice and the site field showed in every state.
 
-Two light shots, taken on the StatusBadge page with the panel open:
-
-    pnpm qa --start --path /widgets/status-badge/ --drive tools/drives/connect-panel-state.js --shot shots/connect-panel-mock-light.png
-    pnpm qa --start --live --path /widgets/status-badge/ --drive tools/drives/connect-panel-state.js --shot shots/connect-panel-live-light.png
-
-`shots/` is ignored by git and the live shot names the test site, so neither image is committed. The
-drive opens the panel and reports which rows the state shows.
-
-On Mock the panel is 384px wide and 220px tall: the source choice, the `Site` label over an empty url
-field, the line `The demos read fixtures.`, and a `Log in` button. On Live with the dev key it is
-326px tall: the source choice, the site field filled with the site url, a status line naming the same
-url a second time, the dev note, and the project picker under it. The trigger says `Connect` on Mock
-and `Live · <site> · Whole site` on Live.
+On Mock the panel was 384px wide and 220px tall: the source choice, the `Site` label over an empty
+url field, the line `The demos read fixtures.`, and a `Log in` button. On Live with the dev key it
+was 326px tall: the source choice, the site field filled with the site url, a status line naming the
+same url a second time, the dev note, and the project picker under it. The trigger said `Connect` on
+Mock and `Live · <site> · Whole site` on Live.
 
 ## The problem
 
-Mock still shows the site url field, the login controls and the dev note, none of which apply to
-fixtures. Three of the four rows under the choice belong to the other source.
+Mock still showed the site url field, the login controls and the dev note, none of which apply to
+fixtures. Three of the four rows under the choice belonged to the other source.
 
-Live states the same fact twice: the site url sits in an editable field and again in the status
-line. The login state is spread over three rows, a status line, a note and a button pair, so the
-answer to "can this read the site" is assembled by the reader rather than stated.
+Live stated the same fact twice: the site url sat in an editable field and again in the status line.
+The login state was spread over three rows, a status line, a note and a button pair, so the answer to
+"can this read the site" was assembled by the reader rather than stated.
 
-The trigger says `Connect` on Mock, which names the control, not the state.
+The trigger said `Connect` on Mock, which names the control, not the state.
 
 ## The flow
 
@@ -61,9 +60,10 @@ The trigger label keeps its three parts, `lead · site · scope`, and only the s
 | Live, refused | `Live · <site> · not reading` | Site: the host and `Change`. Login: the refusal and `Sign in`. |
 
 The site row is text plus `Change`; `Change` swaps the row into the url input and a `Use site`
-button. The url field is a step, not a permanent row, so the site is one line in every settled state.
+button. The url field is a step, not a permanent row, so the site is one line in every settled state,
+and while the step runs the rows under it are not drawn.
 
-The status line goes. Each row says its own state, and a failure appears on the row that failed.
+There is no status line. Each row says its own state, and a failure appears on the row that failed.
 
 The dev key state has no sign-in control, because the token is already minted, and no note about
 where it came from beyond the row's own label.
@@ -75,7 +75,7 @@ The panel sizes to its content and is capped at 24rem, so Mock is a small box ho
 The source can sit in the header, with the rest of Connect, or on each demo's toolbar beside
 framework, reduced motion and radius.
 
-Recommendation: the header. The source is one site-wide, persisted choice, and changing it reloads
+Decided: the header. The source is one site-wide, persisted choice, and changing it reloads
 the page, because a demo is built once when its island mounts. The toolbar holds view preferences
 that apply without a reload and carry no credentials; a site url and a login repeated above every
 example would read as per-demo scope the choice does not have. Every demo already carries its source
@@ -83,14 +83,14 @@ as `data-source`, so a toolbar that wants to name the source can read it without
 
 ## Popover or plain element
 
-Recommendation: a shadcn Popover, mounted as one Svelte island in the header.
+Decided: the shadcn Popover, mounted as one Svelte island in the header.
 
-The panel is a plain element today because the project picker inside it portals to `<body>`, and the
-hand-written outside-click dismissal has to let that surface through. It does so with an allow-list
-of `data-slot` selectors, and Escape needs a matching guard so the picker closes before the panel.
-Both are re-implementations of what the primitive's layer stack already does.
+The panel was a plain element because the project picker inside it portals to `<body>`, and the
+hand-written outside-click dismissal had to let that surface through. It did so with an allow-list of
+`data-slot` selectors, and Escape needed a matching guard so the picker closed before the panel. Both
+were re-implementations of what the primitive's layer stack already does.
 
-What the change buys:
+What it buys:
 
 - Dismissal follows the layer stack. The topmost surface closes first, with no selector allow-list
   and no document listeners.
@@ -101,6 +101,11 @@ What the change buys:
 
 What it costs: one hydration boundary in the header on every page, and a panel written in one
 framework. Svelte, since the project picker inside the panel already mounts Svelte there.
+
+The island is mounted by hand rather than with `client:load`. An Astro island on the page makes Astro
+emit every before-hydration script, including the React refresh preamble the demo harness installs
+itself, and the harness has to keep owning that. The header holds the trigger's height and width from
+the first paint, so nothing shifts when the panel arrives.
 
 The trigger stays in Starlight's own vocabulary (`--sl-color-*`) so the header still reads as the
 header; the panel keeps the shadcn tokens through `sg-demo-chrome`, so the picker inside it looks
@@ -114,84 +119,87 @@ Mock. The panel is the choice.
 
     [ Mock ]
 
-    +------------------------------------------+
-    | +------+------+                          |
-    | | Mock | Live |                          |
-    | +------+------+                          |
-    +------------------------------------------+
+    +--------------------------------------------------+
+    | +------+------+                                  |
+    | | Mock | Live |                                  |
+    | +------+------+                                  |
+    +--------------------------------------------------+
 
 Live, no site.
 
     [ Live · no site ]
 
-    +------------------------------------------+
-    | +------+------+                          |
-    | | Mock | Live |                          |
-    | +------+------+                          |
-    |                                          |
-    | Site                                     |
-    | [ https://northstar.example.com        ] |
-    | [ Use site ]                             |
-    +------------------------------------------+
+    +--------------------------------------------------+
+    | +------+------+                                  |
+    | | Mock | Live |                                  |
+    | +------+------+                                  |
+    |                                                  |
+    | Site                                             |
+    | [ https://northstar.example.com ]   [ Use site ] |
+    +--------------------------------------------------+
 
 Live, signed out.
 
     [ Live · northstar · signed out ]
 
-    +------------------------------------------+
-    | +------+------+                          |
-    | | Mock | Live |                          |
-    | +------+------+                          |
-    |                                          |
-    | Site   northstar.example.com    [Change] |
-    |                                          |
-    | [ Sign in ]    Sign in to read the site. |
-    +------------------------------------------+
+    +--------------------------------------------------+
+    | +------+------+                                  |
+    | | Mock | Live |                                  |
+    | +------+------+                                  |
+    |                                                  |
+    | Site                                             |
+    | northstar.example.com                   [Change] |
+    |                                                  |
+    | [ Sign in ]  Sign in to read the site.           |
+    +--------------------------------------------------+
 
 Live, signed in.
 
     [ Live · northstar · Ocean Floor ]
 
-    +------------------------------------------+
-    | +------+------+                          |
-    | | Mock | Live |                          |
-    | +------+------+                          |
-    |                                          |
-    | Site   northstar.example.com    [Change] |
-    |                                          |
-    | Signed in as a.rossi        [ Sign out ] |
-    |                                          |
-    | Project                                  |
-    | [ Ocean Floor                        v ] |
-    +------------------------------------------+
+    +--------------------------------------------------+
+    | +------+------+                                  |
+    | | Mock | Live |                                  |
+    | +------+------+                                  |
+    |                                                  |
+    | Site                                             |
+    | northstar.example.com                   [Change] |
+    |                                                  |
+    | Signed in as a.rossi                [ Sign out ] |
+    |                                                  |
+    | Project                                          |
+    | [ Ocean Floor                                v ] |
+    +--------------------------------------------------+
 
 Live, dev key. The login row states the key and offers nothing.
 
-    +------------------------------------------+
-    | +------+------+                          |
-    | | Mock | Live |                          |
-    | +------+------+                          |
-    |                                          |
-    | Site   northstar.example.com    [Change] |
-    |                                          |
-    | Reading with the dev key                 |
-    |                                          |
-    | Project                                  |
-    | [ Ocean Floor                        v ] |
-    +------------------------------------------+
+    +--------------------------------------------------+
+    | +------+------+                                  |
+    | | Mock | Live |                                  |
+    | +------+------+                                  |
+    |                                                  |
+    | Site                                             |
+    | northstar.example.com                   [Change] |
+    |                                                  |
+    | Reading with the dev key                         |
+    |                                                  |
+    | Project                                          |
+    | [ Ocean Floor                                v ] |
+    +--------------------------------------------------+
 
 Live, refused. The failure sits on the row that failed.
 
-    +------------------------------------------+
-    | +------+------+                          |
-    | | Mock | Live |                          |
-    | +------+------+                          |
-    |                                          |
-    | Site   northstar.example.com    [Change] |
-    |                                          |
-    | The site refused the read.               |
-    | [ Sign in ]                              |
-    +------------------------------------------+
+    +--------------------------------------------------+
+    | +------+------+                                  |
+    | | Mock | Live |                                  |
+    | +------+------+                                  |
+    |                                                  |
+    | Site                                             |
+    | northstar.example.com                   [Change] |
+    |                                                  |
+    | The site refused the read.                       |
+    | [ Sign in ]                                      |
+    +--------------------------------------------------+
 
 ## Rules the implementation keeps
 

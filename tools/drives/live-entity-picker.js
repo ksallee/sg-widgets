@@ -28,8 +28,9 @@ async function until(read, timeoutMs = 15000) {
 const source = $('[data-sg-demo]')?.dataset.source;
 if (source !== 'live') return { verdict: `FAIL the toolbar is in ${source} mode, not live` };
 
-const status = $('[data-live-status]')?.textContent.trim() ?? '';
-if (!/dev token|Logged in/.test(status)) return { verdict: `FAIL live mode is not authenticated: "${status}"` };
+// The Connect trigger carries the login state, whether or not the panel is open.
+const auth = $('[data-sg-connect]')?.dataset.liveState ?? '';
+if (auth !== 'dev' && auth !== 'signed-in') return { verdict: `FAIL live mode is not authenticated: "${auth}"` };
 
 const popup = () => $('[data-picker="entity"]');
 const rows = () => $$('[data-picker="entity"] [data-slot="entity-picker-option"]');

@@ -30,7 +30,9 @@
 		disabled?: boolean;
 		readonly?: boolean;
 		invalid?: boolean;
+		/** A message from the caller. The switch has nothing of its own to fail on. */
 		error?: string | null;
+		onErrorChange?: (error: string | null) => void;
 		placeholder?: string;
 		/** The two words shown beside the switch. */
 		labels?: { on: string; off: string };
@@ -46,6 +48,7 @@
 		readonly = false,
 		invalid = false,
 		error = null,
+		onErrorChange,
 		placeholder,
 		labels = { on: 'Yes', off: 'No' },
 		errorMessage,
@@ -61,6 +64,7 @@
 		// `false` is the only off state: null is unwritable on this type (field_types/checkbox).
 		if (readonly || disabled) return;
 		value = next;
+		onErrorChange?.(null);
 		onValueChange?.(next);
 	}
 </script>

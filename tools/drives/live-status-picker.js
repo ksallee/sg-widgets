@@ -11,8 +11,9 @@ const failures = [];
 const source = $('[data-sg-demo]')?.dataset.source;
 if (source !== 'live') return { verdict: `FAIL the toolbar is in ${source} mode, not live` };
 
-const status = $('[data-live-status]')?.textContent.trim() ?? '';
-if (!/dev token|Logged in/.test(status)) return { verdict: `FAIL live mode is not authenticated: "${status}"` };
+// The Connect trigger carries the login state, whether or not the panel is open.
+const auth = $('[data-sg-connect]')?.dataset.liveState ?? '';
+if (auth !== 'dev' && auth !== 'signed-in') return { verdict: `FAIL live mode is not authenticated: "${auth}"` };
 
 for (const framework of ['svelte', 'react']) {
   const pane = $(`[data-pane="${framework}"]`);

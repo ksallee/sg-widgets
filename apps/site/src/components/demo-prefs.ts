@@ -16,8 +16,6 @@ export interface Palette {
    */
   name: string;
   label: string;
-  /** The `family` query the palette's own typeface needs from Google Fonts. */
-  font?: string;
 }
 
 /**
@@ -31,11 +29,11 @@ export const palettes: Palette[] = [
   { name: 'zinc', label: 'Zinc' },
   { name: 'mauve', label: 'Mauve' },
   { name: 'mist', label: 'Mist' },
-  { name: 'vercel', label: 'Vercel', font: 'Geist:wght@100..900' },
-  { name: 'supabase', label: 'Supabase', font: 'Outfit:wght@100..900' },
+  { name: 'vercel', label: 'Vercel' },
+  { name: 'supabase', label: 'Supabase' },
   { name: 'claude', label: 'Claude' },
-  { name: 'twitter', label: 'Twitter', font: 'Open+Sans:ital,wght@0,300..800;1,300..800' },
-  { name: 'catppuccin', label: 'Catppuccin', font: 'Montserrat:ital,wght@0,100..900;1,100..900' },
+  { name: 'twitter', label: 'Twitter' },
+  { name: 'catppuccin', label: 'Catppuccin' },
 ];
 
 /* `default` keeps whatever `--radius` the palette sets; the rest override it. */
@@ -126,22 +124,6 @@ export function togglePref(pref: Pref): void {
   setPref(pref, prefs[pref] === ALLOWED[pref][1] ? ALLOWED[pref][0]! : ALLOWED[pref][1]!);
 }
 
-/*
- * A palette's own typeface, fetched when that palette is first picked and never on page
- * load. Until the stylesheet arrives the stage renders the rest of the palette's stack,
- * so nothing waits on the network.
- */
-const fetched = new Set<string>();
-
-function loadFont(family: string | undefined): void {
-  if (!family || fetched.has(family)) return;
-  fetched.add(family);
-  const link = document.createElement('link');
-  link.rel = 'stylesheet';
-  link.href = `https://fonts.googleapis.com/css2?family=${family}&display=swap`;
-  document.head.append(link);
-}
-
 /** Put the current view on every demo on the page, and back on the controls. */
 export function applyPrefs(): void {
   // The palette and the radius also land on `:root`, where the `--sl-*` block in
@@ -180,7 +162,6 @@ export function applyPrefs(): void {
 
   const palettePick = document.querySelector<HTMLSelectElement>('.sg-palette select');
   if (palettePick) palettePick.value = prefs.palette;
-  loadFont(palettes.find((palette) => palette.name === prefs.palette)?.font);
 }
 
 let watching = false;

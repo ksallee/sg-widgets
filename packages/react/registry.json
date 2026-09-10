@@ -428,6 +428,33 @@
       ]
     },
     {
+      "name": "list-multi-select",
+      "type": "registry:component",
+      "title": "List Multi Select",
+      "description": "Several values of a list field, chosen from its valid values with checkboxes.",
+      "categories": [
+        "flow-production-tracking",
+        "editor"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "badge",
+        "checkbox",
+        "command",
+        "popover"
+      ],
+      "docs": "With a project id the field's hidden values are subtracted, which REST does not do on write.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/list-multi-select.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
       "name": "url-editor",
       "type": "registry:component",
       "title": "Url Editor",
@@ -497,9 +524,12 @@
         "https://sg-widgets.dev/r/react/date-time-editor.json",
         "https://sg-widgets.dev/r/react/list-select.json",
         "https://sg-widgets.dev/r/react/url-editor.json",
-        "https://sg-widgets.dev/r/react/color-editor.json"
+        "https://sg-widgets.dev/r/react/color-editor.json",
+        "https://sg-widgets.dev/r/react/status-picker.json",
+        "https://sg-widgets.dev/r/react/entity-picker.json",
+        "https://sg-widgets.dev/r/react/entity-multi-picker.json"
       ],
-      "docs": "Installs FieldValue and all eight editors alongside it.",
+      "docs": "Installs FieldValue, the eight typed editors and the three pickers alongside it.",
       "files": [
         {
           "path": "src/registry/sg/components/field-editor.tsx",
@@ -521,27 +551,24 @@
         "lucide-react"
       ],
       "registryDependencies": [
-        "badge",
         "button",
-        "checkbox",
-        "command",
-        "input",
-        "input-group",
-        "popover",
         "select",
         "skeleton",
         "toggle-group",
         "https://sg-widgets.dev/r/react/checkbox-editor.json",
+        "https://sg-widgets.dev/r/react/color-editor.json",
         "https://sg-widgets.dev/r/react/date-editor.json",
         "https://sg-widgets.dev/r/react/date-time-editor.json",
         "https://sg-widgets.dev/r/react/entity-multi-picker.json",
         "https://sg-widgets.dev/r/react/entity-picker.json",
         "https://sg-widgets.dev/r/react/field-picker.json",
+        "https://sg-widgets.dev/r/react/list-multi-select.json",
         "https://sg-widgets.dev/r/react/list-select.json",
         "https://sg-widgets.dev/r/react/number-editor.json",
         "https://sg-widgets.dev/r/react/status-multi-picker.json",
         "https://sg-widgets.dev/r/react/status-picker.json",
-        "https://sg-widgets.dev/r/react/text-editor.json"
+        "https://sg-widgets.dev/r/react/text-editor.json",
+        "https://sg-widgets.dev/r/react/url-editor.json"
       ],
       "docs": "Takes a FilterGroup and emits one on every edit. toApi3Hash turns it into the body _search takes.",
       "files": [

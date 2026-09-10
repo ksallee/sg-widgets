@@ -40,6 +40,7 @@
 		pathOf,
 		preferencesOf,
 		renderKindFor,
+		stateLine,
 		urlLink
 	} from '@sg-widgets/core';
 	import Box from '@lucide/svelte/icons/box';
@@ -56,6 +57,7 @@
 	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
+	import StateLine from '$lib/registry/components/state-line.svelte';
 	import StatusBadge from '$lib/registry/components/status-badge.svelte';
 	import Thumbnail from '$lib/registry/components/thumbnail.svelte';
 
@@ -105,6 +107,8 @@
 		frameRate?: number;
 		/** What a field with no value shows. */
 		emptyLabel?: string;
+		/** Shown in place of what the failed read said. */
+		errorLabel?: string;
 	};
 
 	let {
@@ -133,6 +137,7 @@
 		timeZone,
 		frameRate,
 		emptyLabel = 'empty',
+		errorLabel,
 		class: className,
 		ref = $bindable(null),
 		...rest
@@ -198,7 +203,6 @@
 	// list is a new promise and no effect has to guard against the last one.
 	const loaded = $derived(build({ row, entity }, paths, statuses));
 	const site = $derived(siteUrl ?? ctx?.siteUrl ?? '');
-	const stateClass = 'text-muted-foreground flex items-center justify-center gap-2 py-6 text-sm';
 	const linkClass =
 		'focus-visible:ring-ring focus-visible:ring-offset-background truncate underline-offset-2 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-offset-2';
 	/** Chrome over the thumbnail: absent until it is wanted, then a fade and a small rise. */
@@ -406,10 +410,11 @@
 				{/if}
 			</div>
 		{:catch error}
-			<p class={cn(stateClass, 'text-destructive')}>
-				<CircleAlert aria-hidden="true" class="size-4 shrink-0" />
-				{error.message}
-			</p>
+			<StateLine
+				state="error"
+				icon={CircleAlert}
+				label={stateLine('error', { errorLabel }, error.message)}
+			/>
 		{/await}
 	</div>
 {:else}
@@ -480,10 +485,11 @@
 				</dl>
 			{/if}
 		{:catch error}
-			<p class={cn(stateClass, 'text-destructive')}>
-				<CircleAlert aria-hidden="true" class="size-4 shrink-0" />
-				{error.message}
-			</p>
+			<StateLine
+				state="error"
+				icon={CircleAlert}
+				label={stateLine('error', { errorLabel }, error.message)}
+			/>
 		{/await}
 	</div>
 {/if}

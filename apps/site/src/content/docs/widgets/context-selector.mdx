@@ -34,6 +34,9 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/context-select
 | `secondary` | `(task) => string` | — | Right-aligned text of your own. Wins over `secondaryField`. |
 | `showCode` | `boolean` | `false` | Shows the row's `code` beside the label when the two differ. |
 | `fields` | `string[]` | `[]` | Extra fields to request, so your own sub-label or secondary can read them. |
+| `emptyLabel` | `string` | `'No rows'` | Shown when the person has no task assigned. |
+| `loadingLabel` | `string` | `'Loading…'` | Names the skeletons a read stands behind, for a screen reader. |
+| `errorLabel` | `string` | — | Shown in place of what the failed read said. |
 | `open` | `boolean` | `false` | Whether the popover is open. |
 | `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Trigger heights 8, 9 and 10, and the chips inside it. |
 | `class` / `className` | `string` | — | Merged after the widget's own classes. |

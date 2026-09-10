@@ -74,8 +74,10 @@ Each level's rows are read once per type over the ids the level returned, so `su
 | `siteUrl` | `string` | the context's | The site the status sprite is served from. |
 | `label` | `string` | `'Project hierarchy'` | Accessible name of the tree. |
 | `maxHeight` | `string` | `'24rem'` | Height of the scrolling body. |
-| `emptyLabel` | `string` | `'Nothing under this project'` | Shown when the root has no children. |
-| `noMatchLabel` | `string` | `'Nothing matches every word'` | Shown when a search matched no row. |
+| `emptyLabel` | `string` | `'No rows'` | Shown when the root has no children. |
+| `noMatchLabel` | `string` | `'No match'` | Shown when a search matched no row. |
+| `loadingLabel` | `string` | `'Loading…'` | Names the skeletons a read stands behind, for a screen reader. |
+| `errorLabel` | `string` | — | Shown in place of what the failed read said. |
 | `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Row text, leading slot and glyphs. |
 | `density` | `'compact' \| 'default'` | `'default'` | Compact halves the vertical row padding. |
 | `class` / `className` | `string` | — | Merged after the widget's own classes. |

@@ -3,7 +3,7 @@
 	import { cellValue, condition, createEntitySource, resolveColumns } from '@sg-widgets/core';
 	import GroupedList from '$lib/registry/components/grouped-list.svelte';
 	import StatusBadge from '$lib/registry/components/status-badge.svelte';
-	import { createDemoContext } from '../_shared/client';
+	import { createDemoClient, createDemoContext } from '../_shared/client';
 	import { setDemoContext } from '../_shared/svelte';
 
 	const GROUP = 'step.Step.code';
@@ -23,6 +23,34 @@
 		mode: 'pages',
 		pageSize: 25
 	});
+
+	/** A filter no Task matches, so the list draws the caller's own empty label. */
+	const emptySource = createEntitySource({
+		client: context.client,
+		entityType: 'Task',
+		fields: FIELDS,
+		filters: condition('content', 'is', 'no such task'),
+		mode: 'pages',
+		pageSize: 25
+	});
+
+	/** A client whose next read can be armed to fail, so the error line is on the page. */
+	const failing = createDemoClient();
+	const failedSource = createEntitySource({
+		client: failing.context.client,
+		entityType: 'Task',
+		fields: FIELDS,
+		mode: 'infinite',
+		pageSize: 25
+	});
+
+	function armFailure(): void {
+		failing.mock.failNext({ status: 503, message: 'Flow PT API error 503' });
+		// The read a page already made is cached, so the armed call is only reached
+		// once the cache lets it through.
+		failing.context.invalidate();
+		void failedSource.load();
+	}
 
 	let statusTable = $state<Record<string, StatusRecord>>({});
 	let compact = $state(false);
@@ -79,6 +107,32 @@
 			density={compact ? 'compact' : 'default'}
 			onSelectionChange={(rows) => (selected = rows)}
 		/>
+
+		<section class="flex w-full min-w-0 flex-col gap-3" data-demo-case="states">
+			<h4 class="text-muted-foreground text-xs font-medium">Empty and error</h4>
+			<GroupedList
+				source={emptySource}
+				{context}
+				paging="pages"
+				groupBy={columns[0]!}
+				labelField="content"
+				{statuses}
+				maxHeight="12rem"
+				emptyLabel="No Task in this window"
+			/>
+			<GroupedList
+				source={failedSource}
+				context={failing.context}
+				paging="more"
+				groupBy={columns[0]!}
+				labelField="content"
+				{statuses}
+				maxHeight="12rem"
+			/>
+			<button type="button" class={toggle} data-arm-failure onclick={armFailure}>
+				Arm the next read to fail
+			</button>
+		</section>
 	</div>
 {:catch error}
 	<p class="text-destructive text-sm">{error.message}</p>

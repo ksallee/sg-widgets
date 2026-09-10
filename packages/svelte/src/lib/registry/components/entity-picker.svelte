@@ -11,48 +11,6 @@
 
 	export type EntityPickerSize = 'sm' | 'md' | 'lg';
 
-	/**
-	 * Controls follow the input ladder of `docs/design-rules.md`. `data-empty` takes the
-	 * leading and the vertical inset down one step, so an empty control is tighter than a
-	 * filled one; `min-h` holds the ladder and the trailing inset stays reserve for the
-	 * clear and open controls.
-	 */
-	const PICKER_BOX: Record<EntityPickerSize, string> = {
-		sm: 'min-h-8 px-2 py-1 data-empty:pl-1.5 data-empty:py-0.5',
-		md: 'min-h-9 px-3 py-1 data-empty:pl-2 data-empty:py-0.5',
-		lg: 'min-h-10 px-3 py-1 data-empty:pl-2 data-empty:py-0.5'
-	};
-	const PICKER_GLYPH: Record<EntityPickerSize, string> = {
-		sm: 'size-4',
-		md: 'size-4',
-		lg: 'size-5'
-	};
-	/** A chip sits inside the control, so it takes the step below it. */
-	const PICKER_CHIP: Record<EntityPickerSize, EntityPickerSize> = { sm: 'sm', md: 'sm', lg: 'md' };
-
-	/** The bordered field the chips and the query input sit in. */
-	const PICKER_CONTROL =
-		'border-input bg-background has-[:focus-visible]:ring-ring has-[:focus-visible]:ring-offset-background has-aria-invalid:border-destructive has-aria-invalid:ring-destructive/20 dark:has-aria-invalid:ring-destructive/40 relative flex w-full min-w-0 flex-wrap items-center gap-1.5 rounded-md border text-sm transition-colors duration-150 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-offset-2 has-aria-invalid:ring-2';
-	/** The combobox input: no box of its own, it borrows the control's. */
-	const PICKER_INPUT =
-		'placeholder:text-muted-foreground relative min-w-8 flex-1 bg-transparent outline-none disabled:cursor-not-allowed';
-	/** The popup surface, matching the popover item of each registry. */
-	const PICKER_POPUP =
-		'bg-popover text-popover-foreground data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 ring-foreground/10 z-50 w-96 max-w-[calc(100vw-2rem)] origin-(--bits-combobox-content-transform-origin) overflow-hidden rounded-lg shadow-md ring-1 outline-hidden duration-100';
-	/** The scrolling list inside the popup. */
-	const PICKER_LIST = 'no-scrollbar max-h-72 scroll-py-1 overflow-x-hidden overflow-y-auto p-1 outline-none';
-	/** One row. Highlight and selection share one colour, per `docs/design-rules.md`. */
-	const PICKER_ROW =
-		'data-highlighted:bg-accent data-highlighted:text-accent-foreground relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0';
-	/** The centred line every empty, loading and error state uses. */
-	const PICKER_NOTE = 'flex items-center justify-center gap-1.5 py-6 text-center text-sm';
-	/** The clear control, shared by every picker in this registry. */
-	const PICKER_ICON_BUTTON =
-		'hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring focus-visible:ring-offset-background pointer-events-auto shrink-0 rounded-sm p-0.5 opacity-70 outline-none transition-colors duration-150 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-2 motion-safe:active:scale-[0.98]';
-
-	/** The chip a Backspace has armed. The keyboard cursor wears the focus ring. */
-	const PICKER_ARMED = 'ring-ring ring-offset-background ring-2 ring-offset-1';
-
 	/** The row a press on the last row of a page carries, rather than an entity key. */
 	const LOAD_MORE = '__load-more';
 
@@ -96,7 +54,12 @@
 		pageSize?: number;
 		placeholder?: string;
 		searchPlaceholder?: string;
+		/** Shown when the query matches nothing. */
 		emptyLabel?: string;
+		/** The accessible name of the skeletons a read stands behind. */
+		loadingLabel?: string;
+		/** Shown in place of what the failed read said. */
+		errorLabel?: string;
 		size?: EntityPickerSize;
 		disabled?: boolean;
 		readonly?: boolean;
@@ -118,11 +81,13 @@
 		createEntitySearch,
 		entityKey,
 		holdsArmed,
+		NO_MATCH_LABEL,
 		pathOf,
 		pickerKeyIntent,
 		placeholderName,
 		rowThumbnail,
 		scrollHighlightedIntoView,
+		stateLine,
 		withSelectedPinned
 	} from '@sg-widgets/core';
 	import { Combobox } from 'bits-ui';
@@ -133,6 +98,19 @@
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
 	import EntityChip from '$lib/registry/components/entity-chip.svelte';
 	import Row from '$lib/registry/components/picker-row.svelte';
+	import StateLine from '$lib/registry/components/state-line.svelte';
+	import {
+		PICKER_ARMED,
+		PICKER_BOX,
+		PICKER_CHIP,
+		PICKER_CONTROL,
+		PICKER_GLYPH,
+		PICKER_ICON_BUTTON,
+		PICKER_INPUT,
+		PICKER_LIST,
+		PICKER_POPUP,
+		PICKER_ROW
+	} from '$lib/registry/components/picker-classes.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
 
 	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>, HTMLDivElement> &
@@ -164,7 +142,9 @@
 		pageSize = 20,
 		placeholder = 'Search for an entity',
 		searchPlaceholder = 'Search…',
-		emptyLabel = 'No entity matches.',
+		emptyLabel = NO_MATCH_LABEL,
+		loadingLabel,
+		errorLabel,
 		size = 'md',
 		disabled = false,
 		readonly = false,
@@ -184,6 +164,7 @@
 	// and one status table.
 	const schema = $derived(context.schema);
 	const site = $derived(siteUrl ?? context.siteUrl);
+	const loadingText = $derived(stateLine('loading', { loadingLabel }));
 
 	// svelte-ignore state_referenced_locally
 	const search = createEntitySearch({
@@ -466,21 +447,25 @@
 			>
 				<div bind:this={listEl} data-slot="entity-picker-list" class={PICKER_LIST}>
 					{#if snap.error}
-						<div data-slot="entity-picker-error" class={cn(PICKER_NOTE, 'text-destructive')}>
-							<TriangleAlert aria-hidden="true" class="size-4 shrink-0" />
-							<span class="truncate">{snap.error.message}</span>
-						</div>
+						<StateLine
+							state="error"
+							slotName="entity-picker-error"
+							icon={TriangleAlert}
+							label={stateLine('error', { errorLabel }, snap.error.message)}
+						/>
 					{:else if snap.loading && options.length === 0}
-						<div data-slot="entity-picker-loading" class="flex flex-col gap-2">
+						<div
+							data-slot="entity-picker-loading"
+							class="flex flex-col gap-2"
+							aria-busy="true"
+							aria-label={loadingText}
+						>
 							{#each [0, 1, 2] as row (row)}
 								<Skeleton class="h-8 w-full" />
 							{/each}
 						</div>
 					{:else if options.length === 0}
-						<div data-slot="entity-picker-empty" class={cn(PICKER_NOTE, 'text-muted-foreground')}>
-							<SearchX aria-hidden="true" class="size-4 shrink-0" />
-							<span class="truncate">{emptyLabel}</span>
-						</div>
+						<StateLine state="empty" slotName="entity-picker-empty" icon={SearchX} label={emptyLabel} />
 					{:else}
 						{#each options as row (entityKey(row))}
 							{@const chosen = selectedKey === entityKey(row)}
@@ -513,10 +498,10 @@
 							<Combobox.Item
 								data-slot="entity-picker-more"
 								value={LOAD_MORE}
-								label={snap.loading ? 'Loading…' : 'Load more'}
+								label={snap.loading ? loadingText : 'Load more'}
 								class={cn(PICKER_ROW, 'text-muted-foreground justify-center text-xs')}
 							>
-								{snap.loading ? 'Loading…' : 'Load more'}
+								{snap.loading ? loadingText : 'Load more'}
 							</Combobox.Item>
 						{/if}
 					{/if}

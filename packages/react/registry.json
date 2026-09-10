@@ -64,6 +64,7 @@
         "lucide-react"
       ],
       "registryDependencies": [
+        "https://sg-widgets.dev/r/react/state-line.json",
         "https://sg-widgets.dev/r/react/status-badge.json",
         "https://sg-widgets.dev/r/react/thumbnail.json",
         "checkbox",
@@ -174,6 +175,49 @@
       ]
     },
     {
+      "name": "state-line",
+      "type": "registry:component",
+      "title": "State Line",
+      "description": "The centred empty and error line every data widget draws, with its glyph and its inset.",
+      "categories": [
+        "flow-production-tracking",
+        "atom"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react"
+      ],
+      "registryDependencies": [],
+      "docs": "Rule 5 of docs/design-rules.md, in one place. Loading stays with the widget: skeletons are shaped like the rows they replace.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/state-line.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "picker-classes",
+      "type": "registry:component",
+      "title": "Picker Classes",
+      "description": "The control, popup, list and row classes every picker in this registry wears.",
+      "categories": [
+        "flow-production-tracking",
+        "atom"
+      ],
+      "dependencies": [
+        "@sg-widgets/core"
+      ],
+      "registryDependencies": [],
+      "docs": "Class strings only. Import what a control needs; the ladder and the states are the design rules'.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/picker-classes.ts",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
       "name": "entity-type-picker",
       "type": "registry:component",
       "title": "Entity Type Picker",
@@ -188,6 +232,8 @@
         "@base-ui/react"
       ],
       "registryDependencies": [
+        "https://sg-widgets.dev/r/react/picker-classes.json",
+        "https://sg-widgets.dev/r/react/state-line.json",
         "skeleton",
         "checkbox"
       ],
@@ -213,6 +259,7 @@
         "lucide-react"
       ],
       "registryDependencies": [
+        "https://sg-widgets.dev/r/react/state-line.json",
         "popover",
         "command",
         "skeleton"
@@ -260,6 +307,7 @@
         "lucide-react"
       ],
       "registryDependencies": [
+        "https://sg-widgets.dev/r/react/state-line.json",
         "button",
         "checkbox",
         "command",
@@ -551,6 +599,7 @@
         "lucide-react"
       ],
       "registryDependencies": [
+        "https://sg-widgets.dev/r/react/state-line.json",
         "button",
         "select",
         "skeleton",
@@ -679,6 +728,7 @@
         "lucide-react"
       ],
       "registryDependencies": [
+        "https://sg-widgets.dev/r/react/state-line.json",
         "https://sg-widgets.dev/r/react/status-badge.json",
         "select",
         "skeleton"
@@ -706,6 +756,8 @@
         "@base-ui/react"
       ],
       "registryDependencies": [
+        "https://sg-widgets.dev/r/react/picker-classes.json",
+        "https://sg-widgets.dev/r/react/state-line.json",
         "https://sg-widgets.dev/r/react/status-badge.json",
         "checkbox",
         "skeleton"
@@ -714,6 +766,32 @@
       "files": [
         {
           "path": "src/registry/sg/components/status-multi-picker.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "collection-footer",
+      "type": "registry:component",
+      "title": "Collection Footer",
+      "description": "The pager under a collection: page size, range and arrows in pages, the loaded count otherwise.",
+      "categories": [
+        "flow-production-tracking",
+        "collection"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "button",
+        "input",
+        "select"
+      ],
+      "docs": "Takes a source and the numbers core's describePaging answers, and drives the source itself.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/collection-footer.tsx",
           "type": "registry:component"
         }
       ]
@@ -734,6 +812,8 @@
         "@tanstack/react-virtual"
       ],
       "registryDependencies": [
+        "https://sg-widgets.dev/r/react/collection-footer.json",
+        "https://sg-widgets.dev/r/react/state-line.json",
         "https://sg-widgets.dev/r/react/field-value.json",
         "https://sg-widgets.dev/r/react/field-editor.json",
         "table",
@@ -767,6 +847,8 @@
         "@tanstack/react-virtual"
       ],
       "registryDependencies": [
+        "https://sg-widgets.dev/r/react/collection-footer.json",
+        "https://sg-widgets.dev/r/react/state-line.json",
         "https://sg-widgets.dev/r/react/entity-card.json",
         "skeleton",
         "input",
@@ -796,6 +878,8 @@
         "@tanstack/react-virtual"
       ],
       "registryDependencies": [
+        "https://sg-widgets.dev/r/react/collection-footer.json",
+        "https://sg-widgets.dev/r/react/state-line.json",
         "https://sg-widgets.dev/r/react/field-value.json",
         "https://sg-widgets.dev/r/react/thumbnail.json",
         "checkbox",
@@ -826,6 +910,7 @@
         "lucide-react"
       ],
       "registryDependencies": [
+        "https://sg-widgets.dev/r/react/state-line.json",
         "https://sg-widgets.dev/r/react/field-value.json",
         "https://sg-widgets.dev/r/react/status-badge.json",
         "https://sg-widgets.dev/r/react/thumbnail.json",
@@ -856,6 +941,8 @@
         "@base-ui/react"
       ],
       "registryDependencies": [
+        "https://sg-widgets.dev/r/react/picker-classes.json",
+        "https://sg-widgets.dev/r/react/state-line.json",
         "https://sg-widgets.dev/r/react/entity-chip.json",
         "https://sg-widgets.dev/r/react/picker-row.json",
         "skeleton"
@@ -883,6 +970,8 @@
         "@base-ui/react"
       ],
       "registryDependencies": [
+        "https://sg-widgets.dev/r/react/picker-classes.json",
+        "https://sg-widgets.dev/r/react/state-line.json",
         "https://sg-widgets.dev/r/react/entity-chip.json",
         "https://sg-widgets.dev/r/react/picker-row.json",
         "checkbox",
@@ -960,6 +1049,7 @@
         "lucide-react"
       ],
       "registryDependencies": [
+        "https://sg-widgets.dev/r/react/state-line.json",
         "https://sg-widgets.dev/r/react/entity-chip.json",
         "https://sg-widgets.dev/r/react/picker-row.json",
         "command",
@@ -990,6 +1080,7 @@
         "lucide-react"
       ],
       "registryDependencies": [
+        "https://sg-widgets.dev/r/react/state-line.json",
         "https://sg-widgets.dev/r/react/picker-row.json",
         "command",
         "skeleton"
@@ -1016,6 +1107,7 @@
         "lucide-react"
       ],
       "registryDependencies": [
+        "https://sg-widgets.dev/r/react/state-line.json",
         "https://sg-widgets.dev/r/react/entity-chip.json",
         "https://sg-widgets.dev/r/react/picker-row.json",
         "https://sg-widgets.dev/r/react/hierarchical-search.json",

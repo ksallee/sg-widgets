@@ -22,6 +22,7 @@ import {
   pathOf,
   preferencesOf,
   renderKindFor,
+  stateLine,
   urlLink,
 } from '@sg-widgets/core';
 import {
@@ -40,6 +41,7 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import { StateLine } from '@/registry/sg/components/state-line';
 import { StatusBadge } from '@/registry/sg/components/status-badge';
 import { Thumbnail, type ThumbnailSize } from '@/registry/sg/components/thumbnail';
 
@@ -117,6 +119,8 @@ export interface EntityCardProps extends Omit<HTMLAttributes<HTMLDivElement>, 'c
   frameRate?: number;
   /** What a field with no value shows. */
   emptyLabel?: string;
+  /** Shown in place of what the failed read said. */
+  errorLabel?: string;
 }
 
 interface Loaded {
@@ -124,7 +128,6 @@ interface Loaded {
   statuses: Record<string, StatusRecord>;
 }
 
-const stateClass = 'text-muted-foreground flex items-center justify-center gap-2 py-6 text-sm';
 const linkClass =
   'focus-visible:ring-ring focus-visible:ring-offset-background truncate underline-offset-2 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-offset-2';
 /** Chrome over the thumbnail: absent until it is wanted, then a fade and a small rise. */
@@ -186,6 +189,7 @@ export function EntityCard({
   timeZone,
   frameRate,
   emptyLabel = 'empty',
+  errorLabel,
   className,
   ...rest
 }: EntityCardProps) {
@@ -442,10 +446,11 @@ export function EntityCard({
         {...rest}
       >
         {error !== null ? (
-          <p className={cn(stateClass, 'text-destructive')}>
-            <CircleAlert aria-hidden="true" className="size-4 shrink-0" />
-            {error}
-          </p>
+          <StateLine
+            state="error"
+            icon={CircleAlert}
+            label={stateLine('error', { errorLabel }, error)}
+          />
         ) : card === null ? (
           <>
             <Skeleton className="aspect-video w-full rounded-none" />
@@ -470,10 +475,11 @@ export function EntityCard({
       {...rest}
     >
       {error !== null ? (
-        <p className={cn(stateClass, 'text-destructive')}>
-          <CircleAlert aria-hidden="true" className="size-4 shrink-0" />
-          {error}
-        </p>
+        <StateLine
+          state="error"
+          icon={CircleAlert}
+          label={stateLine('error', { errorLabel }, error)}
+        />
       ) : card === null ? (
         <>
           <div className={cn('flex min-w-0 items-start', HEADER[size])}>

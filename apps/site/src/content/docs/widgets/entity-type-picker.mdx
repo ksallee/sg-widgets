@@ -29,7 +29,9 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/entity-type-pi
 | `deny` | `string[]` | — | Codes withheld, applied after `allow`. |
 | `placeholder` | `string` | `'Select an entity type'` | Shown while nothing is chosen. |
 | `searchPlaceholder` | `string` | `'Search types…'` | Shown in the search box. |
-| `emptyLabel` | `string` | `'No entity type matches.'` | Shown when nothing matches. |
+| `emptyLabel` | `string` | `'No match'` | Shown when the search matches nothing. |
+| `loadingLabel` | `string` | `'Loading…'` | Names the skeletons a read stands behind, for a screen reader. |
+| `errorLabel` | `string` | — | Shown in place of what the failed read said. |
 | `clearable` | `boolean` | `true` | Show the clear control once something is chosen. |
 | `readonly` | `boolean` | `false` | Keeps full contrast and removes the chevron and the clear control. |
 | `disabled` | `boolean` | `false` | |

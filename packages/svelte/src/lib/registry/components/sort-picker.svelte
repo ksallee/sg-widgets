@@ -253,7 +253,7 @@
 				filter={(field) => isSortable(field.dataType)}
 				placeholder="Add a field"
 				searchPlaceholder="Add a field…"
-				emptyLabel="No field left to sort on."
+				emptyLabel="No field left to sort on"
 				onValueChange={add}
 			/>
 		</Popover.Content>

@@ -27,12 +27,14 @@
 <script lang="ts">
 	import type { HTMLAttributes } from 'svelte/elements';
 	import type { SgContext, StatusOption, StatusRecord } from '@sg-widgets/core';
+	import { NO_ROWS_LABEL, stateLine } from '@sg-widgets/core';
 	import SearchX from '@lucide/svelte/icons/search-x';
 	import TriangleAlert from '@lucide/svelte/icons/triangle-alert';
 	import X from '@lucide/svelte/icons/x';
 	import * as Select from '$lib/components/ui/select/index.js';
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
+	import StateLine from '$lib/registry/components/state-line.svelte';
 	import StatusBadge from '$lib/registry/components/status-badge.svelte';
 
 	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>, HTMLDivElement> & {
@@ -49,7 +51,12 @@
 		value?: string;
 		onValueChange?: (value: string | undefined) => void;
 		placeholder?: string;
+		/** Shown when the field offers nothing. */
 		emptyLabel?: string;
+		/** The accessible name of the skeletons a read stands behind. */
+		loadingLabel?: string;
+		/** Shown in place of what the failed read said. */
+		errorLabel?: string;
 		clearable?: boolean;
 		readonly?: boolean;
 		disabled?: boolean;
@@ -74,7 +81,9 @@
 		value = $bindable(undefined),
 		onValueChange,
 		placeholder = 'Select a status',
-		emptyLabel = 'No status on this field.',
+		emptyLabel = NO_ROWS_LABEL,
+		loadingLabel,
+		errorLabel,
 		clearable = true,
 		readonly = false,
 		disabled = false,
@@ -215,27 +224,25 @@
 
 {#snippet list()}
 	{#if query.error !== null}
-		<div
-			data-slot="status-picker-error"
-			class="text-destructive flex items-center justify-center gap-1.5 py-6 text-center text-sm"
-		>
-			<TriangleAlert aria-hidden="true" class="size-4 shrink-0" />
-			<span class="truncate">{query.error}</span>
-		</div>
+		<StateLine
+			state="error"
+			slotName="status-picker-error"
+			icon={TriangleAlert}
+			label={stateLine('error', { errorLabel }, query.error)}
+		/>
 	{:else if query.loading}
-		<div data-slot="status-picker-loading" class="flex flex-col gap-2 p-1">
+		<div
+			data-slot="status-picker-loading"
+			class="flex flex-col gap-2 p-1"
+			aria-busy="true"
+			aria-label={stateLine('loading', { loadingLabel })}
+		>
 			{#each [0, 1, 2] as row (row)}
 				<Skeleton class="h-8 w-full" />
 			{/each}
 		</div>
 	{:else if rows.length === 0}
-		<div
-			data-slot="status-picker-empty"
-			class="text-muted-foreground flex items-center justify-center gap-1.5 py-6 text-center text-sm"
-		>
-			<SearchX aria-hidden="true" class="size-4 shrink-0" />
-			<span class="truncate">{emptyLabel}</span>
-		</div>
+		<StateLine state="empty" slotName="status-picker-empty" icon={SearchX} label={emptyLabel} />
 	{:else}
 		<Select.Group>
 			{#each rows as option (option.code)}

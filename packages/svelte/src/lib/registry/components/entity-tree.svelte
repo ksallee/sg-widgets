@@ -45,9 +45,12 @@
 		hierarchySearcher,
 		isEmptyValue,
 		matchRuns,
+		NO_MATCH_LABEL,
+		NO_ROWS_LABEL,
 		pathOf,
 		resolveTreeFields,
 		sameIds,
+		stateLine,
 		TREE_STATUS_FIELDS
 	} from '@sg-widgets/core';
 	import ChevronRight from '@lucide/svelte/icons/chevron-right';
@@ -60,6 +63,7 @@
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
 	import FieldValue from '$lib/registry/components/field-value.svelte';
+	import StateLine from '$lib/registry/components/state-line.svelte';
 	import StatusBadge from '$lib/registry/components/status-badge.svelte';
 	import Thumbnail from '$lib/registry/components/thumbnail.svelte';
 
@@ -116,8 +120,14 @@
 		siteUrl?: string;
 		label?: string;
 		maxHeight?: string;
+		/** Shown when the root holds nothing. */
 		emptyLabel?: string;
+		/** Shown when the query matches nothing. */
 		noMatchLabel?: string;
+		/** The accessible name of the skeletons a read stands behind. */
+		loadingLabel?: string;
+		/** Shown in place of what the failed read said. */
+		errorLabel?: string;
 		size?: EntityTreeSize;
 		density?: EntityTreeDensity;
 	};
@@ -153,8 +163,10 @@
 		siteUrl,
 		label = 'Project hierarchy',
 		maxHeight = '24rem',
-		emptyLabel = 'Nothing under this project',
-		noMatchLabel = 'Nothing matches every word',
+		emptyLabel = NO_ROWS_LABEL,
+		noMatchLabel = NO_MATCH_LABEL,
+		loadingLabel,
+		errorLabel,
 		size = 'md',
 		density = 'default',
 		class: className,
@@ -374,7 +386,7 @@
 		root.querySelector<HTMLElement>(`[data-path="${CSS.escape(path)}"]`)?.focus({ preventScroll: true });
 	});
 
-	const stateClass = 'text-muted-foreground flex items-center justify-center gap-2 py-10 text-sm';
+	const loadingText = $derived(stateLine('loading', { loadingLabel }));
 </script>
 
 <!--
@@ -429,26 +441,28 @@
 		class="border-border w-full overflow-auto rounded-md border p-1"
 	>
 		{#if snap.status === 'error'}
-			<p class={cn(stateClass, 'text-destructive')}>
-				<CircleAlert aria-hidden="true" class="size-4 shrink-0" />
-				{snap.error?.message}
-			</p>
+			<StateLine
+				state="error"
+				pad="table"
+				icon={CircleAlert}
+				label={stateLine('error', { errorLabel }, snap.error?.message)}
+			/>
 		{:else if snap.status === 'loading' || snap.status === 'idle'}
-			<div class="flex flex-col gap-2 p-1">
+			<div class="flex flex-col gap-2 p-1" aria-busy="true" aria-label={loadingText}>
 				{#each { length: 5 } as _, index (index)}
 					<Skeleton class="h-6 w-full" />
 				{/each}
 			</div>
 		{:else if snap.rows.length === 0}
-			<p class={stateClass}>
-				<Inbox aria-hidden="true" class="size-4 shrink-0" />
-				{emptyLabel}
-			</p>
+			<StateLine state="empty" pad="table" icon={Inbox} label={emptyLabel} />
 		{:else if noMatch}
-			<p data-slot="entity-tree-no-match" class={stateClass}>
-				<Search aria-hidden="true" class="size-4 shrink-0" />
-				{noMatchLabel}
-			</p>
+			<StateLine
+				state="empty"
+				slotName="entity-tree-no-match"
+				pad="table"
+				icon={Search}
+				label={noMatchLabel}
+			/>
 		{:else}
 			<!-- svelte-ignore a11y_no_noninteractive_element_to_interactive_role -->
 			<ul

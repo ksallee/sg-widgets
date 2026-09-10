@@ -22,6 +22,7 @@ import {
   hasFailedPage,
   loadsOnArrowDown,
   nextEnabledIndex,
+  NO_ROWS_LABEL,
   rowIdOf,
   rowIsDisabled,
   rowKey,
@@ -29,18 +30,19 @@ import {
   sameSort,
   shouldLoadNext,
   sourceModeFor,
+  stateLine,
   toColumn,
   toggleId,
 } from '@sg-widgets/core';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { ChevronLeft, ChevronRight, CircleAlert, Inbox } from 'lucide-react';
+import { ChevronRight, CircleAlert, Inbox } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import { CollectionFooter } from '@/registry/sg/components/collection-footer';
 import { FieldValue } from '@/registry/sg/components/field-value';
+import { StateLine } from '@/registry/sg/components/state-line';
 import { Thumbnail } from '@/registry/sg/components/thumbnail';
 
 export type GroupedListDensity = 'compact' | 'default';
@@ -154,12 +156,13 @@ export interface GroupedListProps extends Omit<React.HTMLAttributes<HTMLDivEleme
   maxHeight?: string;
   /** Rows and headers above which the list is virtualised. */
   virtualizeAfter?: number;
+  /** Shown when the read returned nothing. */
   emptyLabel?: string;
+  /** The accessible name of the skeletons a read stands behind. */
+  loadingLabel?: string;
+  /** Shown in place of what the failed read said. */
+  errorLabel?: string;
 }
-
-const stateClass = 'text-muted-foreground flex items-center justify-center gap-2 py-10 text-sm';
-/** The same anatomy under the rows, at a row's height rather than a body's. */
-const errorLineClass = 'text-destructive flex items-center justify-center gap-2 text-sm';
 
 /**
  * Rows under collapsible group headers.
@@ -213,7 +216,9 @@ export function GroupedList({
   paging = 'more',
   maxHeight = '28rem',
   virtualizeAfter = 100,
-  emptyLabel = 'No rows',
+  emptyLabel = NO_ROWS_LABEL,
+  loadingLabel,
+  errorLabel,
   className,
   ...rest
 }: GroupedListProps) {
@@ -243,12 +248,12 @@ export function GroupedList({
 
   const rows = snapshot.rows;
   const pager = describePaging(snapshot);
+  const loadingText = stateLine('loading', { loadingLabel });
   /** A page that failed under rows already loaded, which the bottom line reports. */
   const pageError = hasFailedPage(snapshot);
   const rowClass = ROW[density];
   const subColumn = subLabelField ? toColumn(subLabelField) : null;
   const secondaryColumn = secondaryField ? toColumn(secondaryField) : null;
-  const [pageDraft, setPageDraft] = useState('');
   const rowId = (row: EntityRow): string => rowIdOf(row, getRowId);
   const rowDisabled = (row: EntityRow): boolean => rowIsDisabled(row, isRowDisabled);
   const disabledAt = (index: number): boolean => {
@@ -322,13 +327,6 @@ export function GroupedList({
     if (!showCode) return '';
     const raw = cellValue(row, 'code');
     return typeof raw === 'string' && raw.length > 0 && raw !== labelOf(row) ? raw : '';
-  }
-
-  function goToPage(value: string): void {
-    const wanted = Number(value);
-    setPageDraft('');
-    if (!Number.isFinite(wanted) || wanted < 1) return;
-    void source.setPage(pager.pageCount === null ? wanted : Math.min(wanted, pager.pageCount));
   }
 
   /* virtual rows --------------------------------------------------------- */
@@ -490,21 +488,20 @@ export function GroupedList({
         className="border-border w-full overflow-auto rounded-md border"
       >
         {snapshot.status === 'error' && !pageError ? (
-          <p className={cn(stateClass, 'text-destructive')}>
-            <CircleAlert aria-hidden="true" className="size-4 shrink-0" />
-            {snapshot.error?.message}
-          </p>
+          <StateLine
+            state="error"
+            pad="table"
+            icon={CircleAlert}
+            label={stateLine('error', { errorLabel }, snapshot.error?.message)}
+          />
         ) : snapshot.status === 'loading' ? (
-          <div className="flex flex-col gap-2 p-2">
+          <div className="flex flex-col gap-2 p-2" aria-busy="true" aria-label={loadingText}>
             {Array.from({ length: 8 }, (_, index) => (
               <Skeleton key={index} className="h-6 w-full" />
             ))}
           </div>
         ) : rows.length === 0 ? (
-          <p className={stateClass}>
-            <Inbox aria-hidden="true" className="size-4 shrink-0" />
-            {emptyLabel}
-          </p>
+          <StateLine state="empty" pad="table" icon={Inbox} label={emptyLabel} />
         ) : (
           <>
             {window_.before > 0 ? <div aria-hidden="true" style={{ height: `${window_.before}px` }} /> : null}
@@ -677,17 +674,25 @@ export function GroupedList({
             })}
             {window_.after > 0 ? <div aria-hidden="true" style={{ height: `${window_.after}px` }} /> : null}
             {pageError ? (
-              <p data-slot="grouped-list-page-error" className={cn(errorLineClass, 'p-2')}>
-                <CircleAlert aria-hidden="true" className="size-4 shrink-0" />
-                <span className="min-w-0 truncate" title={snapshot.error?.message}>
-                  {snapshot.error?.message}
-                </span>
+              <StateLine
+                state="error"
+                slotName="grouped-list-page-error"
+                pad="none"
+                className="p-2"
+                icon={CircleAlert}
+                label={stateLine('error', { errorLabel }, snapshot.error?.message)}
+              >
                 <Button variant="outline" size="sm" onClick={retryPage}>
                   Retry
                 </Button>
-              </p>
+              </StateLine>
             ) : snapshot.status === 'loadingMore' ? (
-              <div data-slot="grouped-list-loading" className="p-2">
+              <div
+                data-slot="grouped-list-loading"
+                className="p-2"
+                aria-busy="true"
+                aria-label={loadingText}
+              >
                 <Skeleton className="h-4 w-full" />
               </div>
             ) : paging === 'more' && snapshot.hasMore ? (
@@ -703,77 +708,13 @@ export function GroupedList({
         )}
       </div>
 
-      <div
-        data-slot="grouped-list-footer"
-        className="text-muted-foreground flex w-full min-w-0 flex-wrap items-center justify-between gap-2 text-xs"
-      >
-        {pager.mode === 'pages' ? (
-          <>
-            <div data-slot="grouped-list-page-size" className="flex items-center gap-2">
-              <span>Rows per page</span>
-              <Select value={String(pager.pageSize)} onValueChange={(value) => void source.setPageSize(Number(value))}>
-                <SelectTrigger aria-label="Rows per page" className="h-7 w-auto min-w-16">
-                  <span data-slot="select-value" className="tabular-nums">
-                    {pager.pageSize}
-                  </span>
-                </SelectTrigger>
-                <SelectContent>
-                  {pageSizes.map((option) => (
-                    <SelectItem key={option} value={String(option)}>
-                      {option}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div data-slot="grouped-list-pager" className="flex items-center gap-2">
-              <span data-slot="grouped-list-range" className="tabular-nums">
-                {pager.rangeLabel}
-              </span>
-              <Button
-                variant="outline"
-                size="icon-sm"
-                aria-label="Previous page"
-                disabled={!pager.hasPrevious || snapshot.status === 'loading'}
-                onClick={() => void source.setPage(pager.page - 1)}
-              >
-                <ChevronLeft aria-hidden="true" />
-              </Button>
-              <Input
-                type="number"
-                min="1"
-                inputMode="numeric"
-                aria-label="Page number"
-                className="h-7 w-14 text-center tabular-nums"
-                value={pageDraft === '' ? String(pager.page) : pageDraft}
-                onChange={(event) => setPageDraft(event.currentTarget.value)}
-                onKeyDown={(event) => {
-                  if (event.key !== 'Enter') return;
-                  event.preventDefault();
-                  goToPage(event.currentTarget.value);
-                }}
-                onBlur={(event) => goToPage(event.currentTarget.value)}
-              />
-              {pager.pageCount !== null ? <span className="tabular-nums">of {pager.pageCount}</span> : null}
-              <Button
-                variant="outline"
-                size="icon-sm"
-                aria-label="Next page"
-                disabled={!pager.hasNext || snapshot.status === 'loading'}
-                onClick={() => void source.setPage(pager.page + 1)}
-              >
-                <ChevronRight aria-hidden="true" />
-              </Button>
-            </div>
-          </>
-        ) : (
-          <>
-            <span data-slot="grouped-list-loaded" className="tabular-nums">
-              {pager.loadedLabel}
-            </span>
-          </>
-        )}
-      </div>
+      <CollectionFooter
+        source={source}
+        pager={pager}
+        pageSizes={pageSizes}
+        loading={snapshot.status === 'loading'}
+        slotName="grouped-list"
+      />
 
       {footer ? (
         <div data-slot="grouped-list-footer-region" className="flex w-full min-w-0 flex-wrap items-center gap-2">

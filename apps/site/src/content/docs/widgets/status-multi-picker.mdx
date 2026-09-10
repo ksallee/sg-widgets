@@ -29,7 +29,9 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/status-multi-p
 | `value` | `string[]` | `[]` | The selected codes. `bind:value` in Svelte, `value` with `onValueChange` in React. |
 | `placeholder` | `string` | `'Select statuses'` | Shown with nothing selected. |
 | `searchPlaceholder` | `string` | `'Search statuses…'` | Placeholder of the search box. |
-| `emptyLabel` | `string` | `'No status matches.'` | Shown when the search matches nothing. |
+| `emptyLabel` | `string` | `'No match'` | Shown when the search matches nothing. |
+| `loadingLabel` | `string` | `'Loading…'` | Names the skeletons a read stands behind, for a screen reader. |
+| `errorLabel` | `string` | — | Shown in place of what the failed read said. |
 | `clearable` | `boolean` | `true` | Offers a control that clears the selection. |
 | `readonly` | `boolean` | `false` | Keeps full contrast and drops the chevron, the popup and the clear control. |
 | `disabled` | `boolean` | `false` | Greys the control and takes it out of the tab order. |

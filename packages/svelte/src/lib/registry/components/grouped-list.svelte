@@ -64,6 +64,7 @@
 		hasFailedPage,
 		loadsOnArrowDown,
 		nextEnabledIndex,
+		NO_ROWS_LABEL,
 		rowIdOf,
 		rowIsDisabled,
 		rowKey,
@@ -72,21 +73,21 @@
 		sameSort,
 		shouldLoadNext,
 		sourceModeFor,
+		stateLine,
 		toColumn,
 		toggleId
 	} from '@sg-widgets/core';
 	import { Virtualizer, elementScroll, observeElementOffset, observeElementRect } from '@tanstack/virtual-core';
-	import ChevronLeft from '@lucide/svelte/icons/chevron-left';
 	import ChevronRight from '@lucide/svelte/icons/chevron-right';
 	import CircleAlert from '@lucide/svelte/icons/circle-alert';
 	import Inbox from '@lucide/svelte/icons/inbox';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
-	import { Input } from '$lib/components/ui/input/index.js';
-	import * as Select from '$lib/components/ui/select/index.js';
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
+	import CollectionFooter from '$lib/registry/components/collection-footer.svelte';
 	import FieldValue from '$lib/registry/components/field-value.svelte';
+	import StateLine from '$lib/registry/components/state-line.svelte';
 	import Thumbnail from '$lib/registry/components/thumbnail.svelte';
 
 	type Props = WithElementRef<Omit<HTMLAttributes<HTMLDivElement>, 'children'>, HTMLDivElement> & {
@@ -151,7 +152,12 @@
 		maxHeight?: string;
 		/** Rows and headers above which the list is virtualised. */
 		virtualizeAfter?: number;
+		/** Shown when the read returned nothing. */
 		emptyLabel?: string;
+		/** The accessible name of the skeletons a read stands behind. */
+		loadingLabel?: string;
+		/** Shown in place of what the failed read said. */
+		errorLabel?: string;
 	};
 
 	let {
@@ -190,7 +196,9 @@
 		pageSizes = [25, 50, 100],
 		maxHeight = '28rem',
 		virtualizeAfter = 100,
-		emptyLabel = 'No rows',
+		emptyLabel = NO_ROWS_LABEL,
+		loadingLabel,
+		errorLabel,
 		class: className,
 		ref = $bindable(null),
 		...rest
@@ -237,7 +245,6 @@
 	const chosenKeys = $derived(new Set((selection ?? []).map(rowKey)));
 	/** The keys of the shut groups. The `collapsed` prop holds the same list. */
 	let shutKeys = $state<string[]>([]);
-	let pageDraft = $state('');
 
 	// A page whose first rows carry the value the last group carries grows that group
 	// rather than opening a second one, and the key it is collapsed under stands.
@@ -487,16 +494,7 @@
 		else void source.loadMore();
 	}
 
-	function goToPage(value: string): void {
-		const wanted = Number(value);
-		pageDraft = '';
-		if (!Number.isFinite(wanted) || wanted < 1) return;
-		void source.setPage(pager.pageCount === null ? wanted : Math.min(wanted, pager.pageCount));
-	}
-
-	const stateClass = 'text-muted-foreground flex items-center justify-center gap-2 py-10 text-sm';
-	/** The same anatomy under the rows, at a row's height rather than a body's. */
-	const errorLineClass = 'text-destructive flex items-center justify-center gap-2 text-sm';
+	const loadingText = $derived(stateLine('loading', { loadingLabel }));
 </script>
 
 <!--
@@ -523,21 +521,20 @@
 		class="border-border w-full overflow-auto rounded-md border"
 	>
 		{#if snapshot.status === 'error' && !pageError}
-			<p class={cn(stateClass, 'text-destructive')}>
-				<CircleAlert aria-hidden="true" class="size-4 shrink-0" />
-				{snapshot.error?.message}
-			</p>
+			<StateLine
+				state="error"
+				pad="table"
+				icon={CircleAlert}
+				label={stateLine('error', { errorLabel }, snapshot.error?.message)}
+			/>
 		{:else if snapshot.status === 'loading'}
-			<div class="flex flex-col gap-2 p-2">
+			<div class="flex flex-col gap-2 p-2" aria-busy="true" aria-label={loadingText}>
 				{#each { length: 8 } as _, index (index)}
 					<Skeleton class="h-6 w-full" />
 				{/each}
 			</div>
 		{:else if rows.length === 0}
-			<p class={stateClass}>
-				<Inbox aria-hidden="true" class="size-4 shrink-0" />
-				{emptyLabel}
-			</p>
+			<StateLine state="empty" pad="table" icon={Inbox} label={emptyLabel} />
 		{:else}
 			{#if window_.before > 0}
 				<div aria-hidden="true" style="height:{window_.before}px"></div>
@@ -692,13 +689,18 @@
 				<div aria-hidden="true" style="height:{window_.after}px"></div>
 			{/if}
 			{#if pageError}
-				<p data-slot="grouped-list-page-error" class={cn(errorLineClass, 'p-2')}>
-					<CircleAlert aria-hidden="true" class="size-4 shrink-0" />
-					<span class="min-w-0 truncate" title={snapshot.error?.message}>{snapshot.error?.message}</span>
+				<StateLine
+					state="error"
+					slotName="grouped-list-page-error"
+					pad="none"
+					class="p-2"
+					icon={CircleAlert}
+					label={stateLine('error', { errorLabel }, snapshot.error?.message)}
+				>
 					<Button variant="outline" size="sm" onclick={retryPage}>Retry</Button>
-				</p>
+				</StateLine>
 			{:else if snapshot.status === 'loadingMore'}
-				<div data-slot="grouped-list-loading" class="p-2">
+				<div data-slot="grouped-list-loading" class="p-2" aria-busy="true" aria-label={loadingText}>
 					<Skeleton class="h-4 w-full" />
 				</div>
 			{:else if paging === 'more' && snapshot.hasMore}
@@ -711,71 +713,13 @@
 		{/if}
 	</div>
 
-	<div
-		data-slot="grouped-list-footer"
-		class="text-muted-foreground flex w-full min-w-0 flex-wrap items-center justify-between gap-2 text-xs"
-	>
-		{#if pager.mode === 'pages'}
-			<div data-slot="grouped-list-page-size" class="flex items-center gap-2">
-				<span>Rows per page</span>
-				<Select.Root
-					type="single"
-					value={String(pager.pageSize)}
-					onValueChange={(value) => void source.setPageSize(Number(value))}
-				>
-					<Select.Trigger aria-label="Rows per page" class="h-7 w-auto min-w-16">
-						<span data-slot="select-value" class="tabular-nums">{pager.pageSize}</span>
-					</Select.Trigger>
-					<Select.Content>
-						{#each pageSizes as option (option)}
-							<Select.Item value={String(option)} label={String(option)} />
-						{/each}
-					</Select.Content>
-				</Select.Root>
-			</div>
-			<div data-slot="grouped-list-pager" class="flex items-center gap-2">
-				<span data-slot="grouped-list-range" class="tabular-nums">{pager.rangeLabel}</span>
-				<Button
-					variant="outline"
-					size="icon-sm"
-					aria-label="Previous page"
-					disabled={!pager.hasPrevious || snapshot.status === 'loading'}
-					onclick={() => void source.setPage(pager.page - 1)}
-				>
-					<ChevronLeft aria-hidden="true" />
-				</Button>
-				<Input
-					type="number"
-					min="1"
-					inputmode="numeric"
-					aria-label="Page number"
-					class="h-7 w-14 text-center tabular-nums"
-					value={pageDraft === '' ? String(pager.page) : pageDraft}
-					oninput={(event) => (pageDraft = event.currentTarget.value)}
-					onkeydown={(event) => {
-						if (event.key !== 'Enter') return;
-						event.preventDefault();
-						goToPage(event.currentTarget.value);
-					}}
-					onblur={(event) => goToPage(event.currentTarget.value)}
-				/>
-				{#if pager.pageCount !== null}
-					<span class="tabular-nums">of {pager.pageCount}</span>
-				{/if}
-				<Button
-					variant="outline"
-					size="icon-sm"
-					aria-label="Next page"
-					disabled={!pager.hasNext || snapshot.status === 'loading'}
-					onclick={() => void source.setPage(pager.page + 1)}
-				>
-					<ChevronRight aria-hidden="true" />
-				</Button>
-			</div>
-		{:else}
-			<span data-slot="grouped-list-loaded" class="tabular-nums">{pager.loadedLabel}</span>
-		{/if}
-	</div>
+	<CollectionFooter
+		{source}
+		{pager}
+		{pageSizes}
+		loading={snapshot.status === 'loading'}
+		slotName="grouped-list"
+	/>
 
 	{#if footer}
 		<div data-slot="grouped-list-footer-region" class="flex w-full min-w-0 flex-wrap items-center gap-2">

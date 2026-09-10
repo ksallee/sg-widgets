@@ -49,6 +49,7 @@
 	import {
 		describePaging,
 		firstEnabledIndex,
+		NO_ROWS_LABEL,
 		hasFailedPage,
 		loadsOnArrowDown,
 		nextEnabledIndex,
@@ -58,19 +59,18 @@
 		sameFilters,
 		sameSort,
 		shouldLoadNext,
-		sourceModeFor
+		sourceModeFor,
+		stateLine
 	} from '@sg-widgets/core';
 	import { Virtualizer, elementScroll, observeElementOffset, observeElementRect } from '@tanstack/virtual-core';
-	import ChevronLeft from '@lucide/svelte/icons/chevron-left';
-	import ChevronRight from '@lucide/svelte/icons/chevron-right';
 	import CircleAlert from '@lucide/svelte/icons/circle-alert';
 	import Inbox from '@lucide/svelte/icons/inbox';
 	import { Button } from '$lib/components/ui/button/index.js';
-	import { Input } from '$lib/components/ui/input/index.js';
-	import * as Select from '$lib/components/ui/select/index.js';
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
+	import CollectionFooter from '$lib/registry/components/collection-footer.svelte';
 	import EntityCard from '$lib/registry/components/entity-card.svelte';
+	import StateLine from '$lib/registry/components/state-line.svelte';
 
 	type Props = WithElementRef<Omit<HTMLAttributes<HTMLDivElement>, 'children'>, HTMLDivElement> & {
 		/** The rows and the paging behind them. Created with core's `createEntitySource`. */
@@ -118,7 +118,12 @@
 		maxHeight?: string;
 		/** Rows above which the grid is virtualised. */
 		virtualizeAfter?: number;
+		/** Shown when the read returned nothing. */
 		emptyLabel?: string;
+		/** The accessible name of the skeletons a read stands behind. */
+		loadingLabel?: string;
+		/** Shown in place of what the failed read said. */
+		errorLabel?: string;
 		/** Draws one grid cell. Without it, the row is an EntityCard tile. */
 		card?: Snippet<[EntityGridCardContext]>;
 		/** Region above the grid. */
@@ -154,7 +159,9 @@
 		pageSizes = [25, 50, 100],
 		maxHeight = '32rem',
 		virtualizeAfter = 100,
-		emptyLabel = 'No rows',
+		emptyLabel = NO_ROWS_LABEL,
+		loadingLabel,
+		errorLabel,
 		card,
 		header,
 		footer,
@@ -188,7 +195,6 @@
 		return row === undefined || rowIsDisabled(row, isRowDisabled);
 	};
 
-	let pageDraft = $state('');
 
 	/** The selection as keys, so a row asks whether it is in it in constant time. */
 	const chosenKeys = $derived(new Set((selection ?? []).map(rowKey)));
@@ -231,13 +237,6 @@
 			: [...(selection ?? []), { type: row.type, id: row.id }];
 		selection = next;
 		onSelectionChange?.(next);
-	}
-
-	function goToPage(value: string): void {
-		const wanted = Number(value);
-		pageDraft = '';
-		if (!Number.isFinite(wanted) || wanted < 1) return;
-		void source.setPage(pager.pageCount === null ? wanted : Math.min(wanted, pager.pageCount));
 	}
 
 	/* keyboard ------------------------------------------------------------- */
@@ -457,9 +456,7 @@
 		else void source.loadMore();
 	}
 
-	const stateClass = 'text-muted-foreground flex items-center justify-center gap-2 py-10 text-sm';
-	/** The same anatomy under the tiles, at a row's height rather than a body's. */
-	const errorLineClass = 'text-destructive flex items-center justify-center gap-2 text-sm';
+	const loadingText = $derived(stateLine('loading', { loadingLabel }));
 </script>
 
 <!--
@@ -496,12 +493,16 @@
 		class="border-border flex w-full flex-col gap-3 overflow-auto rounded-md border p-3"
 	>
 		{#if snapshot.status === 'error' && !pageError}
-			<p class={cn(stateClass, 'text-destructive')}>
-				<CircleAlert aria-hidden="true" class="size-4 shrink-0" />
-				{snapshot.error?.message}
-			</p>
+			<StateLine
+				state="error"
+				pad="table"
+				icon={CircleAlert}
+				label={stateLine('error', { errorLabel }, snapshot.error?.message)}
+			/>
 		{:else if snapshot.status === 'loading'}
 			<div
+				aria-busy="true"
+				aria-label={loadingText}
 				class={cn('grid', GAP[density])}
 				style="grid-template-columns:repeat(auto-fill,minmax({TILE[size]}px,1fr))"
 			>
@@ -514,10 +515,7 @@
 				{/each}
 			</div>
 		{:else if rows.length === 0}
-			<p class={stateClass}>
-				<Inbox aria-hidden="true" class="size-4 shrink-0" />
-				{emptyLabel}
-			</p>
+			<StateLine state="empty" pad="table" icon={Inbox} label={emptyLabel} />
 		{:else}
 			<div
 				bind:this={listEl}
@@ -589,13 +587,17 @@
 				{/if}
 			</div>
 			{#if pageError}
-				<p data-slot="entity-grid-page-error" class={errorLineClass}>
-					<CircleAlert aria-hidden="true" class="size-4 shrink-0" />
-					<span class="min-w-0 truncate" title={snapshot.error?.message}>{snapshot.error?.message}</span>
+				<StateLine
+					state="error"
+					slotName="entity-grid-page-error"
+					pad="none"
+					icon={CircleAlert}
+					label={stateLine('error', { errorLabel }, snapshot.error?.message)}
+				>
 					<Button variant="outline" size="sm" onclick={retryPage}>Retry</Button>
-				</p>
+				</StateLine>
 			{:else if snapshot.status === 'loadingMore'}
-				<div data-slot="entity-grid-loading">
+				<div data-slot="entity-grid-loading" aria-busy="true" aria-label={loadingText}>
 					<Skeleton class="h-4 w-full" />
 				</div>
 			{:else if paging === 'more' && snapshot.hasMore}
@@ -608,71 +610,13 @@
 		{/if}
 	</div>
 
-	<div
-		data-slot="entity-grid-footer"
-		class="text-muted-foreground flex w-full min-w-0 flex-wrap items-center justify-between gap-2 text-xs"
-	>
-		{#if pager.mode === 'pages'}
-			<div data-slot="entity-grid-page-size" class="flex items-center gap-2">
-				<span>Rows per page</span>
-				<Select.Root
-					type="single"
-					value={String(pager.pageSize)}
-					onValueChange={(value) => void source.setPageSize(Number(value))}
-				>
-					<Select.Trigger aria-label="Rows per page" class="h-7 w-auto min-w-16">
-						<span data-slot="select-value" class="tabular-nums">{pager.pageSize}</span>
-					</Select.Trigger>
-					<Select.Content>
-						{#each pageSizes as option (option)}
-							<Select.Item value={String(option)} label={String(option)} />
-						{/each}
-					</Select.Content>
-				</Select.Root>
-			</div>
-			<div data-slot="entity-grid-pager" class="flex items-center gap-2">
-				<span data-slot="entity-grid-range" class="tabular-nums">{pager.rangeLabel}</span>
-				<Button
-					variant="outline"
-					size="icon-sm"
-					aria-label="Previous page"
-					disabled={!pager.hasPrevious || snapshot.status === 'loading'}
-					onclick={() => void source.setPage(pager.page - 1)}
-				>
-					<ChevronLeft aria-hidden="true" />
-				</Button>
-				<Input
-					type="number"
-					min="1"
-					inputmode="numeric"
-					aria-label="Page number"
-					class="h-7 w-14 text-center tabular-nums"
-					value={pageDraft === '' ? String(pager.page) : pageDraft}
-					oninput={(event) => (pageDraft = event.currentTarget.value)}
-					onkeydown={(event) => {
-						if (event.key !== 'Enter') return;
-						event.preventDefault();
-						goToPage(event.currentTarget.value);
-					}}
-					onblur={(event) => goToPage(event.currentTarget.value)}
-				/>
-				{#if pager.pageCount !== null}
-					<span class="tabular-nums">of {pager.pageCount}</span>
-				{/if}
-				<Button
-					variant="outline"
-					size="icon-sm"
-					aria-label="Next page"
-					disabled={!pager.hasNext || snapshot.status === 'loading'}
-					onclick={() => void source.setPage(pager.page + 1)}
-				>
-					<ChevronRight aria-hidden="true" />
-				</Button>
-			</div>
-		{:else}
-			<span data-slot="entity-grid-loaded" class="tabular-nums">{pager.loadedLabel}</span>
-		{/if}
-	</div>
+	<CollectionFooter
+		{source}
+		{pager}
+		{pageSizes}
+		loading={snapshot.status === 'loading'}
+		slotName="entity-grid"
+	/>
 
 	{#if footer}
 		<div data-slot="entity-grid-footer-region" class="flex w-full min-w-0 flex-wrap items-center gap-2">

@@ -21,6 +21,7 @@ import {
   defaultCondition,
   emptyFilter,
   group as makeGroup,
+  NOTHING_CHOSEN_LABEL,
   operatorMenu,
   presetById,
   presetIdOf,
@@ -57,6 +58,7 @@ import { FieldPicker } from '@/registry/sg/components/field-picker';
 import { ListMultiSelect } from '@/registry/sg/components/list-multi-select';
 import { ListSelect } from '@/registry/sg/components/list-select';
 import { NumberEditor } from '@/registry/sg/components/number-editor';
+import { StateLine } from '@/registry/sg/components/state-line';
 import { StatusMultiPicker } from '@/registry/sg/components/status-multi-picker';
 import { StatusPicker } from '@/registry/sg/components/status-picker';
 import { TextEditor } from '@/registry/sg/components/text-editor';
@@ -148,6 +150,7 @@ interface EditorContext {
   context: SgContext;
   hidePaths: string[];
   projectId?: number;
+  emptyLabel: string;
   size: FilterEditorSize;
   disabled: boolean;
   fieldChooser?: (args: FieldChooserArgs) => ReactNode;
@@ -176,6 +179,8 @@ export interface FilterEditorProps extends Omit<React.HTMLAttributes<HTMLDivElem
   hidePaths?: string[];
   /** Scopes the status pickers to the codes one project allows. */
   projectId?: number;
+  /** Shown when a group holds no condition. */
+  emptyLabel?: string;
   size?: FilterEditorSize;
   disabled?: boolean;
   onChange?: (value: FilterGroup) => void;
@@ -205,6 +210,7 @@ export function FilterEditor({
   value = emptyFilter(),
   hidePaths = [],
   projectId,
+  emptyLabel = NOTHING_CHOSEN_LABEL,
   size = 'md',
   disabled = false,
   onChange,
@@ -275,6 +281,7 @@ export function FilterEditor({
     context,
     hidePaths,
     projectId,
+    emptyLabel,
     size,
     disabled,
     fieldChooser,
@@ -379,7 +386,7 @@ function GroupNode({ ctx, path, node }: { ctx: EditorContext; path: NodePath; no
           ),
         )}
         {node.conditions.length === 0 ? (
-          <p className="text-muted-foreground py-6 text-center text-sm">No conditions.</p>
+          <StateLine state="empty" slotName="filter-group-empty" label={ctx.emptyLabel} />
         ) : null}
       </div>
       <div className="flex min-w-0 flex-wrap items-center gap-1 pl-3" data-slot="filter-foot">

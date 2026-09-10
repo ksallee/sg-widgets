@@ -26,7 +26,9 @@
 		deriveFieldOptions,
 		friendlyFieldPath,
 		iconNameFor,
-		searchFieldOptions
+		NO_MATCH_LABEL,
+		searchFieldOptions,
+		stateLine
 	} from '@sg-widgets/core';
 	import Braces from '@lucide/svelte/icons/braces';
 	import Calendar from '@lucide/svelte/icons/calendar';
@@ -62,6 +64,7 @@
 	import * as Popover from '$lib/components/ui/popover/index.js';
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
+	import StateLine from '$lib/registry/components/state-line.svelte';
 
 	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>, HTMLDivElement> & {
 		/** The widget context. The schema is read through it, once per page. */
@@ -95,7 +98,12 @@
 		closeOnSelect?: boolean;
 		placeholder?: string;
 		searchPlaceholder?: string;
+		/** Shown when the search matches nothing. */
 		emptyLabel?: string;
+		/** The accessible name of the skeletons a read stands behind. */
+		loadingLabel?: string;
+		/** Shown in place of what the failed read said. */
+		errorLabel?: string;
 		clearable?: boolean;
 		readonly?: boolean;
 		disabled?: boolean;
@@ -125,7 +133,9 @@
 		closeOnSelect = true,
 		placeholder = 'Select a field',
 		searchPlaceholder = 'Search fields…',
-		emptyLabel = 'No field matches.',
+		emptyLabel = NO_MATCH_LABEL,
+		loadingLabel,
+		errorLabel,
 		clearable = true,
 		readonly = false,
 		disabled = false,
@@ -453,19 +463,15 @@
 				/>
 				<Command.List>
 					{#if failure}
-						<div
-							data-slot="field-picker-error"
-							class="text-destructive flex items-center justify-center gap-1.5 py-6 text-center text-sm"
-						>
-							<TriangleAlert aria-hidden="true" class="size-4 shrink-0" />
-							<span class="truncate">{failure}</span>
-						</div>
+						<StateLine
+							state="error"
+							slotName="field-picker-error"
+							icon={TriangleAlert}
+							label={stateLine('error', { errorLabel }, failure)}
+						/>
 					{:else if choosing}
 						<Command.Empty>
-							<span class="text-muted-foreground inline-flex items-center gap-1.5">
-								<SearchX aria-hidden="true" class="size-4 shrink-0" />
-								{emptyLabel}
-							</span>
+							<StateLine state="empty" icon={SearchX} label={emptyLabel} pad="none" />
 						</Command.Empty>
 						{#each targets as target (target)}
 							<Command.Item
@@ -482,17 +488,19 @@
 							</Command.Item>
 						{/each}
 					{:else if fields === null}
-						<div data-slot="field-picker-loading" class="flex flex-col gap-2 p-1">
+						<div
+							data-slot="field-picker-loading"
+							class="flex flex-col gap-2 p-1"
+							aria-busy="true"
+							aria-label={stateLine('loading', { loadingLabel })}
+						>
 							{#each [0, 1, 2] as row (row)}
 								<Skeleton class="h-10 w-full" />
 							{/each}
 						</div>
 					{:else}
 						<Command.Empty>
-							<span class="text-muted-foreground inline-flex items-center gap-1.5">
-								<SearchX aria-hidden="true" class="size-4 shrink-0" />
-								{emptyLabel}
-							</span>
+							<StateLine state="empty" icon={SearchX} label={emptyLabel} pad="none" />
 						</Command.Empty>
 						{#each rows as row (row.path)}
 							{@const Glyph = ICONS[iconNameFor(row.dataType)] ?? FileText}

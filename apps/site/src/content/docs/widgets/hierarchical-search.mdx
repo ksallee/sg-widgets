@@ -33,6 +33,10 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/hierarchical-s
 | `showCode` | `boolean` | `false` | Shows the row's `code` beside the label when the two differ. |
 | `fields` | `string[]` | `[]` | Extra fields to request, so your own sub-label or secondary can read them. |
 | `placeholder` | `string` | `'Search the hierarchy…'` | Text in the search input. |
+| `emptyLabel` | `string` | `'No rows'` | Shown when a level holds nothing. |
+| `noMatchLabel` | `string` | `'No match'` | Shown when a query matches nothing. |
+| `loadingLabel` | `string` | `'Loading…'` | Names the skeletons a read stands behind, for a screen reader. |
+| `errorLabel` | `string` | — | Shown in place of what the failed read said. |
 | `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Row text, leading slot and glyphs. |
 | `class` / `className` | `string` | — | Merged after the widget's own classes. |
 

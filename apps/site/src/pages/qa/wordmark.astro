@@ -1,18 +1,19 @@
 ---
 /**
- * A design harness, not a docs page: every candidate for the site's title side by side,
- * so the one to keep can be picked by looking rather than by describing. It sits outside
- * Starlight and outside the sidebar, and nothing links to it.
+ * A design harness, not a docs page: the second round of the site title, narrowed to two
+ * marks and two type treatments and pushed further. It sits outside Starlight and outside
+ * the sidebar, and nothing links to it.
  *
- * Each variant is shown at the size Starlight gives the site title and at a display size,
- * on the page background and on a nav-coloured strip, and the marks that can stand alone
- * are shown again at favicon sizes. Everything is drawn from tokens, so the three controls
- * at the top -- palette, radius, light and dark -- redress every card at once.
+ * Each mark take is shown at a display size and at favicon sizes, each type treatment at
+ * the size Starlight gives the site title and at the display size, and the last section
+ * pairs every take with every treatment. Both grounds a title has to hold -- the page and
+ * the nav strip -- carry every one of them. Everything is drawn from tokens, so the three
+ * controls at the top redress the whole page at once.
  */
 import '../../styles/global.css';
 import Wordmark from '../../components/Wordmark.astro';
 import WordmarkMark from '../../components/WordmarkMark.astro';
-import { markSizes, wordmarkMarks, wordmarkVariants } from '../../components/wordmark-variants';
+import { markSizes, markTakes, typeTreatments } from '../../components/wordmark-variants';
 import { palettes, radii } from '../../components/demo-prefs';
 
 /*
@@ -27,10 +28,32 @@ import paletteBoot from '../../scripts/palette-boot.js?raw';
 const HEADER_SIZE = 'var(--sl-text-2xl)';
 const DISPLAY_SIZE = 'var(--sl-text-6xl)';
 
-/* The two grounds a title has to hold: the page, and the chrome strip behind the header. */
+/*
+ * The two grounds a title has to hold. Each hands the marks on it its own background
+ * token, so the gap that lifts a front tile off a back one is the colour behind it.
+ */
 const grounds = [
-  { id: 'page', label: 'Page', surface: 'bg-background text-foreground' },
-  { id: 'nav', label: 'Nav', surface: 'bg-sidebar text-sidebar-foreground' },
+  { id: 'page', label: 'Page', surface: 'bg-background text-foreground', ground: '--mark-ground: var(--background)' },
+  { id: 'nav', label: 'Nav', surface: 'bg-sidebar text-sidebar-foreground', ground: '--mark-ground: var(--sidebar)' },
+];
+
+const tileTakes = markTakes.filter((take) => take.family === 'tiles');
+const slateTakes = markTakes.filter((take) => take.family === 'slate');
+
+const markSections = [
+  {
+    id: 'tiles',
+    title: 'Stacked tiles',
+    intro:
+      'Two tiles, a widget on a widget. The inner square is gone: every tile is one flat shape, and the front one is lifted off the back one by a gap in the colour behind the mark.',
+    takes: tileTakes,
+  },
+  {
+    id: 'slate',
+    title: 'Slate bars',
+    intro: 'The clapper, taken past two rectangles. Each take stays geometric and is judged at 16px first.',
+    takes: slateTakes,
+  },
 ];
 ---
 
@@ -39,7 +62,7 @@ const grounds = [
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="robots" content="noindex" />
-    <title>SG Widgets: wordmark and mark variants</title>
+    <title>SG Widgets: wordmark round two</title>
     <script is:inline set:html={paletteBoot} />
     <script is:inline>
       /* Light and dark before the first paint. Starlight's own theme script is not here. */
@@ -62,12 +85,12 @@ const grounds = [
   </head>
 
   <body class="sg-demo min-h-screen bg-background text-foreground">
-    <div class="mx-auto flex w-full max-w-6xl flex-col gap-6 p-6">
+    <div class="mx-auto flex w-full max-w-6xl flex-col gap-8 p-6">
       <header class="flex flex-col gap-3">
-        <h1 class="text-2xl font-medium">SG Widgets: wordmark and mark variants</h1>
+        <h1 class="text-2xl font-medium">SG Widgets: wordmark round two</h1>
         <p class="max-w-prose text-sm text-muted-foreground">
-          Ten treatments of the site title, and the four marks that can stand alone. Nothing here is a
-          decision; it is the material for one. No third-party logo or brand asset is reproduced.
+          Two marks taken further and two type treatments, then every pairing of the two. Nothing here is
+          a decision; it is the material for one. No third-party logo or brand asset is reproduced.
         </p>
 
         <div class="flex flex-wrap items-center gap-2">
@@ -102,70 +125,132 @@ const grounds = [
         </div>
       </header>
 
-      <section class="grid gap-4 lg:grid-cols-2">
-        {
-          wordmarkVariants.map((variant) => (
-            <article
-              class="flex flex-col overflow-hidden rounded-lg border border-border"
-              data-variant={variant.id}
-            >
-              <div class="flex flex-col gap-1 bg-card px-4 py-3">
-                <h2 class="text-sm font-medium text-card-foreground" data-variant-label>
-                  {variant.label}
-                </h2>
-                <p class="text-xs text-muted-foreground">{variant.rationale}</p>
-              </div>
+      {
+        markSections.map((section) => (
+          <section class="flex flex-col gap-3" data-mark-section={section.id}>
+            <h2 class="text-sm font-medium">{section.title}</h2>
+            <p class="max-w-prose text-xs text-muted-foreground">{section.intro}</p>
 
-              <div class="grid gap-px border-t border-border bg-border">
-                {grounds.map((ground) => (
-                  <div class={`flex flex-col gap-3 p-4 ${ground.surface}`} data-ground={ground.id}>
-                    <span class="text-xs text-muted-foreground">{ground.label}</span>
-                    <div class="flex flex-wrap items-center gap-6">
-                      <span class="flex items-center" data-size="display">
-                        <Wordmark variant={variant.id} size={DISPLAY_SIZE} />
-                      </span>
-                      <span class="flex items-center" data-size="header">
-                        <Wordmark variant={variant.id} size={HEADER_SIZE} />
-                      </span>
-                    </div>
+            <div class="grid gap-4 lg:grid-cols-2">
+              {section.takes.map((take) => (
+                <article
+                  class="flex flex-col overflow-hidden rounded-lg border border-border"
+                  data-take={take.id}
+                >
+                  <div class="flex flex-col gap-1 bg-card px-4 py-3">
+                    <h3 class="text-sm font-medium text-card-foreground" data-take-label>
+                      {take.label}
+                    </h3>
+                    <p class="text-xs text-muted-foreground">{take.note}</p>
                   </div>
-                ))}
-              </div>
-            </article>
-          ))
-        }
-      </section>
+
+                  <div class="grid gap-px border-t border-border bg-border">
+                    {grounds.map((ground) => (
+                      <div
+                        class={`flex flex-col gap-3 p-4 ${ground.surface}`}
+                        style={ground.ground}
+                        data-ground={ground.id}
+                      >
+                        <span class="text-xs text-muted-foreground">{ground.label}</span>
+                        <div class="flex items-end gap-6">
+                          <span class="flex flex-col items-center gap-1.5" data-mark-size="display">
+                            <WordmarkMark mark={take.id} size={DISPLAY_SIZE} />
+                            <span class="text-xs text-muted-foreground">display</span>
+                          </span>
+                          {markSizes.map((px) => (
+                            <span class="flex flex-col items-center gap-1.5" data-mark-size={px}>
+                              <WordmarkMark mark={take.id} size={`${px}px`} />
+                              <span class="text-xs tabular-nums text-muted-foreground">{px}</span>
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
+        ))
+      }
 
       <section class="flex flex-col gap-3">
-        <h2 class="text-sm font-medium">Marks alone</h2>
+        <h2 class="text-sm font-medium">Type treatments</h2>
         <p class="max-w-prose text-xs text-muted-foreground">
-          At 16, 24 and 32px: a favicon, a sidebar entry, a browser tab.
+          Both keep the weight split, SG medium and Widgets regular, and change only what carries the
+          colour.
         </p>
 
         <div class="grid gap-4 lg:grid-cols-2">
           {
-            wordmarkMarks.map((mark) => (
-              <article class="flex flex-col overflow-hidden rounded-lg border border-border" data-mark={mark.id}>
-                <div class="bg-card px-4 py-3">
-                  <h3 class="text-sm font-medium text-card-foreground">{mark.label}</h3>
+            typeTreatments.map((treatment) => (
+              <article
+                class="flex flex-col overflow-hidden rounded-lg border border-border"
+                data-treatment={treatment.id}
+              >
+                <div class="flex flex-col gap-1 bg-card px-4 py-3">
+                  <h3 class="text-sm font-medium text-card-foreground" data-treatment-label>
+                    {treatment.label}
+                  </h3>
+                  <p class="text-xs text-muted-foreground">{treatment.note}</p>
                 </div>
 
                 <div class="grid gap-px border-t border-border bg-border">
                   {grounds.map((ground) => (
-                    <div class={`flex flex-col gap-3 p-4 ${ground.surface}`} data-ground={ground.id}>
+                    <div
+                      class={`flex flex-col gap-3 p-4 ${ground.surface}`}
+                      style={ground.ground}
+                      data-ground={ground.id}
+                    >
                       <span class="text-xs text-muted-foreground">{ground.label}</span>
-                      <div class="flex items-end gap-6">
-                        {markSizes.map((px) => (
-                          <span class="flex flex-col items-center gap-1.5" data-mark-size={px}>
-                            <WordmarkMark mark={mark.id} size={`${px}px`} />
-                            <span class="text-xs tabular-nums text-muted-foreground">{px}</span>
-                          </span>
-                        ))}
+                      <div class="flex flex-wrap items-center gap-6">
+                        <span class="flex items-center" data-size="display">
+                          <Wordmark treatment={treatment.id} size={DISPLAY_SIZE} />
+                        </span>
+                        <span class="flex items-center" data-size="header">
+                          <Wordmark treatment={treatment.id} size={HEADER_SIZE} />
+                        </span>
                       </div>
                     </div>
                   ))}
                 </div>
               </article>
+            ))
+          }
+        </div>
+      </section>
+
+      <section class="flex flex-col gap-3">
+        <h2 class="text-sm font-medium">Combinations</h2>
+        <p class="max-w-prose text-xs text-muted-foreground">
+          Every mark take beside every treatment, at the header size. Each cell is the page ground over
+          the nav strip.
+        </p>
+
+        <div class="grid gap-px overflow-hidden rounded-lg border border-border bg-border sm:grid-cols-[9rem_1fr_1fr]">
+          <div class="bg-card px-3 py-2" />
+          {
+            typeTreatments.map((treatment) => (
+              <div class="bg-card px-3 py-2 text-xs font-medium text-card-foreground">{treatment.label}</div>
+            ))
+          }
+
+          {
+            markTakes.map((take) => (
+              <>
+                <div class="flex items-center bg-card px-3 py-2 text-xs font-medium text-card-foreground">
+                  {take.label}
+                </div>
+                {typeTreatments.map((treatment) => (
+                  <div class="grid gap-px bg-border" data-cell={`${take.id}:${treatment.id}`}>
+                    {grounds.map((ground) => (
+                      <div class={`px-3 py-2.5 ${ground.surface}`} style={ground.ground} data-ground={ground.id}>
+                        <Wordmark treatment={treatment.id} mark={take.id} size={HEADER_SIZE} />
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </>
             ))
           }
         </div>

@@ -1,21 +1,24 @@
 ---
 /**
- * One candidate mark, drawn from tokens alone.
+ * One mark take, drawn from tokens alone.
  *
- * Fills are `--primary`, `--muted` or `currentColor`, so a mark wears the palette and
- * the light/dark theme around it, and every corner is a fraction of `--radius`, so the
- * radius switch reaches the mark: at radius none every tile is square, at xl every tile
- * is a disc. The `rx` attributes are the value the CSS below overrides, for a browser
- * that does not take the geometry properties as CSS.
+ * Fills are `--primary` or `currentColor`, so a mark wears the palette and the theme
+ * around it, and every corner is a fraction of `--radius`, so the radius switch reaches
+ * the mark: at radius none every tile is square, at xl every tile is a disc. The `rx`
+ * attributes are the value the CSS below overrides, for a browser that does not take the
+ * geometry properties as CSS.
  *
- * `size` is any CSS length. The square marks take it as their box; the bracketed one is
- * type, so it takes it as its font size.
+ * A tile that sits on top of another is parted by a gap in `--mark-ground`, which the
+ * surface under the mark sets to its own background token. Nothing inside a tile draws a
+ * second shape.
+ *
+ * `size` is any CSS length and is the box side.
  */
-import type { WordmarkMarkId } from './wordmark-variants';
+import type { MarkTake } from './wordmark-variants';
 
 interface Props {
-  mark: WordmarkMarkId;
-  /** Box side for the drawn marks, font size for the bracketed one. */
+  /** An `id` from markTakes. */
+  mark: MarkTake['id'];
   size?: string;
 }
 
@@ -24,38 +27,76 @@ const box = `width:${size};height:${size}`;
 ---
 
 {
-  mark === 'stacked-tiles' && (
+  mark === 'tiles-tight' && (
     <svg class="mark" style={box} viewBox="0 0 40 40" aria-hidden="true" focusable="false">
-      <rect class="tile outline" x="2.25" y="2.25" width="21.5" height="21.5" rx="5" />
-      <rect class="tile solid" x="16" y="16" width="22" height="22" rx="5" />
+      <rect class="tile ink-dim" x="2" y="2" width="23" height="23" rx="4" />
+      <rect class="tile accent knock" x="15" y="15" width="23" height="23" rx="4" />
     </svg>
   )
 }
 
 {
-  mark === 'tile-grid' && (
+  mark === 'tiles-generous' && (
     <svg class="mark" style={box} viewBox="0 0 40 40" aria-hidden="true" focusable="false">
-      <rect class="tile dim" x="1" y="1" width="17" height="17" rx="5" />
-      <rect class="tile solid" x="22" y="1" width="17" height="17" rx="5" />
-      <rect class="tile dim" x="1" y="22" width="17" height="17" rx="5" />
-      <rect class="tile dim" x="22" y="22" width="17" height="17" rx="5" />
+      <rect class="tile ink-dim" x="2" y="2" width="21" height="21" rx="4" />
+      <rect class="tile accent knock" x="17" y="17" width="21" height="21" rx="4" />
     </svg>
   )
 }
 
 {
-  mark === 'bracket-sg' && (
-    <span class="bracket font-mono font-medium" style={`font-size:${size}`} aria-hidden="true">
-      <span class="text-muted-foreground">[</span>SG<span class="text-muted-foreground">]</span>
-    </span>
+  mark === 'tiles-back-accent' && (
+    <svg class="mark" style={box} viewBox="0 0 40 40" aria-hidden="true" focusable="false">
+      <rect class="tile accent" x="2" y="2" width="23" height="23" rx="4" />
+      <rect class="tile ink knock" x="15" y="15" width="23" height="23" rx="4" />
+    </svg>
   )
 }
 
 {
-  mark === 'slate-bars' && (
+  mark === 'tiles-mono' && (
     <svg class="mark" style={box} viewBox="0 0 40 40" aria-hidden="true" focusable="false">
-      <rect class="bar dim" x="2" y="15" width="36" height="23" rx="3" />
-      <rect class="bar solid" x="3" y="3.5" width="34" height="9" rx="3" transform="rotate(-5 20 8)" />
+      <rect class="tile ink-dim" x="2" y="2" width="23" height="23" rx="4" />
+      <rect class="tile ink knock" x="15" y="15" width="23" height="23" rx="4" />
+    </svg>
+  )
+}
+
+{
+  mark === 'tiles-popover' && (
+    <svg class="mark" style={box} viewBox="0 0 40 40" aria-hidden="true" focusable="false">
+      <rect class="tile ink-dim" x="1.5" y="1.5" width="25" height="25" rx="4" />
+      <rect class="tile accent knock" x="17" y="17" width="21" height="21" rx="4" />
+    </svg>
+  )
+}
+
+{
+  mark === 'slate-hinge' && (
+    <svg class="mark" style={box} viewBox="0 0 40 40" aria-hidden="true" focusable="false">
+      <rect class="bar ink" x="7" y="24.5" width="29" height="10.5" rx="2" />
+      <rect class="bar ink-mid" x="7" y="9.5" width="29" height="10" rx="2" transform="rotate(-14 9.5 22)" />
+      <circle class="accent" cx="9.5" cy="22" r="4.4" />
+    </svg>
+  )
+}
+
+{
+  mark === 'slate-rows' && (
+    <svg class="mark" style={box} viewBox="0 0 40 40" aria-hidden="true" focusable="false">
+      <rect class="bar accent" x="5" y="5" width="30" height="8" rx="2" />
+      <rect class="bar ink-mid" x="5" y="16" width="23" height="8" rx="2" />
+      <rect class="bar ink-faint" x="5" y="27" width="16" height="8" rx="2" />
+    </svg>
+  )
+}
+
+{
+  mark === 'slate-progress' && (
+    <svg class="mark" style={box} viewBox="0 0 40 40" aria-hidden="true" focusable="false">
+      <rect class="bar ink-dim" x="4" y="5" width="32" height="9" rx="2" />
+      <rect class="bar accent" x="4" y="5" width="19" height="9" rx="2" />
+      <rect class="tile ink-mid" x="4" y="17" width="32" height="18" rx="4" />
     </svg>
   )
 }
@@ -80,25 +121,40 @@ const box = `width:${size};height:${size}`;
     ry: var(--bar-radius);
   }
 
-  .solid {
+  .accent {
     fill: var(--primary);
   }
 
-  /* A palette where `--primary` sits on top of `--foreground` would flatten the mark, so
-     the quiet shapes are set apart by weight rather than by a second colour. */
-  .dim {
+  .ink {
     fill: currentColor;
-    opacity: 0.28;
   }
 
-  .outline {
-    fill: var(--muted);
-    stroke: currentColor;
-    stroke-width: 2.5;
+  /* A palette where `--primary` sits on `--foreground` would flatten a mark, so the quiet
+     shapes are set apart by weight rather than by a second colour. */
+  .ink-mid {
+    fill: currentColor;
+    opacity: 0.85;
   }
 
-  .bracket {
-    line-height: 1;
-    white-space: nowrap;
+  .ink-faint {
+    fill: currentColor;
+    opacity: 0.55;
+  }
+
+  .ink-dim {
+    fill: currentColor;
+    opacity: 0.3;
+  }
+
+  /* The gap that lifts the front tile off the back one. `paint-order` puts the fill over
+     the inner half of the stroke, so the whole gap falls outside the tile and the tile
+     keeps its size. */
+  .knock {
+    /* The surface under the mark sets `--mark-ground` to its own background token; the
+       fallback is the page. Declaring it here instead would outrank what the surface
+       inherits down. */
+    stroke: var(--mark-ground, var(--background));
+    stroke-width: 2.2;
+    paint-order: stroke;
   }
 </style>

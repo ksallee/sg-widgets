@@ -296,10 +296,12 @@
 	}
 
 	$effect(() => {
-		// One tab stop: focus follows the cursor while the tree already holds it.
+		// One tab stop: focus follows the cursor while a row already holds it. The search
+		// box is inside the tree too, and a result arriving must not take the caret.
 		const path = snap.cursor;
 		const root = ref;
-		if (!path || !root || !root.contains(document.activeElement)) return;
+		if (!path || !root || !document.activeElement?.closest('[data-path]')) return;
+		if (!root.contains(document.activeElement)) return;
 		root.querySelector<HTMLElement>(`[data-path="${CSS.escape(path)}"]`)?.focus({ preventScroll: true });
 	});
 

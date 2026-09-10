@@ -306,9 +306,11 @@ export function EntityTree({
 
   const cursor = snap.cursor;
   const moveFocus = useCallback(() => {
-    // One tab stop: focus follows the cursor while the tree already holds it.
+    // One tab stop: focus follows the cursor while a row already holds it. The search
+    // box is inside the tree too, and a result arriving must not take the caret.
     const root = rootRef.current;
-    if (!cursor || !root || !root.contains(document.activeElement)) return;
+    if (!cursor || !root || !document.activeElement?.closest('[data-path]')) return;
+    if (!root.contains(document.activeElement)) return;
     root.querySelector<HTMLElement>(`[data-path="${CSS.escape(cursor)}"]`)?.focus({ preventScroll: true });
   }, [cursor]);
 

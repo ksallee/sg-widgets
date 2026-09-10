@@ -38,7 +38,10 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/column-picker.
 | `filter` | `(field, path) => boolean` | — | Your own visibility test over the schema and the candidate's full path. |
 | `placeholder` | `string` | `'Add a column'` | Placeholder of the field picker. |
 | `searchPlaceholder` | `string` | `'Search fields…'` | Shown in the search box. |
-| `emptyLabel` | `string` | `'No columns yet.'` | Shown while nothing is chosen. |
+| `emptyLabel` | `string` | `'Nothing chosen'` | Shown while no column is chosen. |
+| `noMatchLabel` | `string` | `'No match'` | Shown when the search over the fields on offer matches nothing. |
+| `loadingLabel` | `string` | `'Loading…'` | Names the skeletons a read stands behind, for a screen reader. |
+| `errorLabel` | `string` | — | Shown in place of what the failed read said. |
 | `availableLabel` | `string` | `'Available'` | Heading of the left list, `dual` only. |
 | `chosenLabel` | `string` | `'Columns'` | Heading of the right list, `dual` only. |
 | `readonly` | `boolean` | `false` | Shows the chosen list alone, with no controls. |

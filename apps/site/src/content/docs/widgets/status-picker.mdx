@@ -27,7 +27,9 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/status-picker.
 | `field` | `string` | status field | A list or status field other than the type's own. |
 | `value` | `string` | — | The selected code. `bind:value` in Svelte, `value` with `onValueChange` in React. |
 | `placeholder` | `string` | `'Select a status'` | Shown with no selection. |
-| `emptyLabel` | `string` | `'No status on this field.'` | Shown when the field offers nothing. |
+| `emptyLabel` | `string` | `'No rows'` | Shown when the field offers nothing. |
+| `loadingLabel` | `string` | `'Loading…'` | Names the skeletons a read stands behind, for a screen reader. |
+| `errorLabel` | `string` | — | Shown in place of what the failed read said. |
 | `clearable` | `boolean` | `true` | Offers a control that clears the selection. |
 | `readonly` | `boolean` | `false` | Keeps full contrast and drops the chevron, the popup and the clear control. |
 | `disabled` | `boolean` | `false` | Greys the control and takes it out of the tab order. |

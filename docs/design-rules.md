@@ -144,3 +144,17 @@ request; a list of values a widget draws is `details`.
 
 The row itself is one component per framework, `picker-row`, and every widget that lists entity rows
 composes it rather than drawing a second one.
+
+## 10. Wordmark
+
+The site's mark is two tiles, a widget on a widget: an accent tile behind and a quiet ink tile
+in front, lifted off it by a gap in the colour of the surface under the mark. It reads
+`--primary` for the back tile, `currentColor` at 30% over the ground for the front one,
+`--mark-ground` (falling back to `--background`) for the gap, and a fraction of `--radius` for
+every corner, so it wears whatever palette, theme and radius the page does. Two rules: the
+accent appears once, on the back tile; the front tile stays quiet. The type beside it is the
+title split at its first space, the head word in `--foreground` at medium weight and the tail
+in `--muted-foreground` at regular, in the site's sans. The source of truth is
+`apps/site/src/components/WordmarkMark.astro` for the mark and `Wordmark.astro` for the
+lockup; `apps/site/public/favicon.svg` is the mark with the default palette's values pinned,
+and follows a change to the mark. The mark belongs to the site; no widget package carries it.

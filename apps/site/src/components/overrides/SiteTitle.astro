@@ -1,0 +1,32 @@
+---
+/**
+ * Starlight's site title, drawn as the wordmark.
+ *
+ * The link keeps the size Starlight gives the title and the header its height; what
+ * changes is the colour, which is the ink rather than the accent so the mark and the
+ * head word share it, and the ground the mark cuts its gap in, which is the header's.
+ * The title text comes from the config, so the document title, the search and the
+ * header say the same thing.
+ */
+import Wordmark from '../Wordmark.astro';
+
+const { siteTitle, siteTitleHref } = Astro.locals.starlightRoute;
+---
+
+<a href={siteTitleHref} class="site-title sl-flex">
+  <Wordmark title={siteTitle} />
+</a>
+
+<style>
+  @layer starlight.core {
+    .site-title {
+      align-items: center;
+      font-size: var(--sl-text-h4);
+      color: var(--foreground);
+      text-decoration: none;
+      white-space: nowrap;
+      min-width: 0;
+      --mark-ground: var(--sl-color-bg-nav);
+    }
+  }
+</style>

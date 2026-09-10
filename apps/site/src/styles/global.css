@@ -39,7 +39,17 @@
 /* One stylesheet serves both frameworks. cmdk marks the Command cursor `data-selected="true"`,
    Bits UI marks it with an empty value; the variant must match both. */
 @custom-variant data-selected (&:where([data-selected=''], [data-selected='true']));
+
+/*
+ * Every typeface a palette can name, self-hosted. A palette sets `--font-sans` on the
+ * page and on the stage alike, so the family has to be there for the chrome as well as
+ * for the demos; the variable face of each covers the 400-600 the site uses. Geist is the
+ * default palette's family and the last named fallback of every other stack.
+ */
 @import '@fontsource-variable/geist';
+@import '@fontsource-variable/montserrat';
+@import '@fontsource-variable/open-sans';
+@import '@fontsource-variable/outfit';
 
 /*
  * The palettes the toolbar can put on a stage and on the page around it. Unlayered, like
@@ -232,6 +242,13 @@
  * light and dark. So each step maps to the token that plays its part, never to a
  * lightness, and the ramp turns over with the theme on its own.
  *
+ * The text scale is mapped the same way. Starlight sizes the chrome from `--sl-text-*`,
+ * so the steps the chrome names are pinned to the two sizes docs/design-rules.md gives a
+ * widget -- body `text-sm` and sub-label `text-xs` -- and a sidebar entry, a table of
+ * contents entry and a widget label then read at the size their part is. Everything above
+ * the base keeps Starlight's ratio to it, so a heading stays a heading's distance from
+ * the text it introduces.
+ *
  * Left on Starlight's own values: `--sl-shadow-*`, which are neutral alpha blacks, and
  * `--sl-color-{orange,green,blue,purple,red}*`, which asides use to say what kind of
  * note they are.
@@ -239,6 +256,31 @@
 :root {
   --sl-font: var(--font-sans);
   --sl-font-mono: var(--font-mono);
+
+  /* The widget scale bottoms out at the sub-label: the search button's key hint. */
+  --sl-text-2xs: 0.75rem;
+  /* Sub-label: table of contents entries, the footer, inline code, an aside's body. */
+  --sl-text-xs: 0.75rem;
+  /* Body: a sidebar entry, the header's selects, the search button, a code block. */
+  --sl-text-sm: 0.875rem;
+  /* The base the rest of the scale is measured from, and what a widget calls body. */
+  --sl-text-base: 0.875rem;
+  /* Starlight's 1.125 of the base: the table of contents heading, an aside's title. */
+  --sl-text-lg: calc(var(--sl-text-base) * 1.125);
+  /* Starlight's 1.25: the site title, and the search button on a narrow viewport. */
+  --sl-text-xl: calc(var(--sl-text-base) * 1.25);
+  /* Starlight's 1.5: `h3`, and the arrows either side of the pagination links. */
+  --sl-text-2xl: calc(var(--sl-text-base) * 1.5);
+  /* Starlight's 1.8125: `h2` on a narrow viewport, `h3` on a wide one. */
+  --sl-text-3xl: calc(var(--sl-text-base) * 1.8125);
+  /* Starlight's 2.1875: `h1` on a narrow viewport, `h2` on a wide one. */
+  --sl-text-4xl: calc(var(--sl-text-base) * 2.1875);
+  /* Starlight's 2.625: `h1` on a wide viewport. */
+  --sl-text-5xl: calc(var(--sl-text-base) * 2.625);
+  /* Starlight's 4: the top of a hero. */
+  --sl-text-6xl: calc(var(--sl-text-base) * 4);
+  /* Starlight's own ratio, kept: on the smaller base a paragraph still runs 24px apart. */
+  --sl-line-height: 1.75;
 
   --sl-color-white: var(--foreground);
   --sl-color-gray-1: var(--foreground);
@@ -281,6 +323,16 @@
   --sl-color-hairline: var(--border);
   --sl-color-hairline-light: var(--border);
   --sl-color-hairline-shade: var(--border);
+}
+
+/*
+ * The page on the base of that scale. Starlight sizes what names a `--sl-text-*` step and
+ * leaves the rest on the browser's own 16px, so the content, the mobile menu and the
+ * sidebar below 50rem need the base saying so. The stage pins `1rem` of its own further
+ * down, so a widget keeps the size it has anywhere else.
+ */
+body {
+  font-size: var(--sl-text-body);
 }
 
 /*

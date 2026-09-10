@@ -10,11 +10,16 @@
 
 	export type EntityPickerSize = 'sm' | 'md' | 'lg';
 
-	/** Controls follow the input ladder of `docs/design-rules.md`. */
+	/**
+	 * Controls follow the input ladder of `docs/design-rules.md`. `data-empty` takes the
+	 * leading and the vertical inset down one step, so an empty control is tighter than a
+	 * filled one; `min-h` holds the ladder and the trailing inset stays reserve for the
+	 * clear and open controls.
+	 */
 	const PICKER_BOX: Record<EntityPickerSize, string> = {
-		sm: 'min-h-8 px-2 py-1',
-		md: 'min-h-9 px-3 py-1',
-		lg: 'min-h-10 px-3 py-1'
+		sm: 'min-h-8 px-2 py-1 data-empty:pl-1.5 data-empty:py-0.5',
+		md: 'min-h-9 px-3 py-1 data-empty:pl-2 data-empty:py-0.5',
+		lg: 'min-h-10 px-3 py-1 data-empty:pl-2 data-empty:py-0.5'
 	};
 	const PICKER_GLYPH: Record<EntityPickerSize, string> = {
 		sm: 'size-4',
@@ -412,6 +417,7 @@
 		role="group"
 			aria-disabled={disabled ? 'true' : undefined}
 			data-readonly={readonly ? 'true' : undefined}
+			data-empty={chipEntity ? undefined : ''}
 			title={chipEntity?.name ?? placeholder}
 			class={cn(PICKER_CONTROL, PICKER_BOX[size], readonly ? 'pr-3' : showClear ? 'pr-14' : 'pr-8')}
 		>

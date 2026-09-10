@@ -3,11 +3,16 @@
 
 	export type ContextSelectorSize = 'sm' | 'md' | 'lg';
 
-	/** The trigger follows the input ladder of `docs/design-rules.md`. */
+	/**
+	 * Controls follow the input ladder of `docs/design-rules.md`. `data-empty` takes the
+	 * leading and the vertical inset down one step, so an empty control is tighter than a
+	 * filled one; `min-h` holds the ladder and the trailing inset stays reserve for the
+	 * clear and open controls.
+	 */
 	const BOX: Record<ContextSelectorSize, string> = {
-		sm: 'min-h-8 px-2 py-1',
-		md: 'min-h-9 px-2 py-1.5',
-		lg: 'min-h-10 px-3 py-1.5'
+		sm: 'min-h-8 px-2 py-1 data-empty:pl-1.5 data-empty:py-0.5',
+		md: 'min-h-9 px-3 py-1 data-empty:pl-2 data-empty:py-0.5',
+		lg: 'min-h-10 px-3 py-1 data-empty:pl-2 data-empty:py-0.5'
 	};
 	const GLYPH: Record<ContextSelectorSize, string> = { sm: 'size-4', md: 'size-4', lg: 'size-5' };
 	/** A chip inside a control sits one step down the leaf ladder. */
@@ -209,6 +214,7 @@
 		<Popover.Trigger
 			data-slot="context-selector-trigger"
 			data-size={size}
+			data-empty={chips.length === 0 ? '' : undefined}
 			class={cn(
 				'border-border bg-background hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring focus-visible:ring-offset-background flex w-full min-w-0 items-center gap-2 rounded-md border text-left outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2',
 				BOX[size]

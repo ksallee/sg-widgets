@@ -76,10 +76,11 @@ None. The rows and the closed state are status badges.
 |---|---|
 | <kbd>Space</kbd>, <kbd>Enter</kbd> | On the chevron, opens the list |
 | any text | Narrows the rows, from the caret under `chips` and `icons` and from the popup's search box otherwise |
-| <kbd>↑</kbd> <kbd>↓</kbd> | Moves the highlight |
+| <kbd>↑</kbd> <kbd>↓</kbd> | Moves the highlight and keeps it in view; the last row holds it rather than wrapping |
 | <kbd>Home</kbd> <kbd>End</kbd> | First and last row |
 | <kbd>Enter</kbd> | Toggles the highlighted status; the list stays open |
-| <kbd>Esc</kbd> | Closes, keeps the selection and clears the query |
+| <kbd>Backspace</kbd> | In an empty search box, highlights the last chip; a second one removes it |
+| <kbd>Esc</kbd> | Closes, keeps the selection and clears the query; on a closed control it does nothing |
 | <kbd>Tab</kbd> | Leaves the control, or reaches the clear control when there is one |
 
 ## API behaviour

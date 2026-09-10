@@ -48,6 +48,12 @@ export default function EntityMultiPickerDemo() {
     { type: 'Asset', id: 1226 },
   ]);
   const [excluding, setExcluding] = useState<EntityRef[]>([]);
+  /** A token field with chips already in it, for the keyboard. */
+  const [tokens, setTokens] = useState<EntityRef[]>([
+    { type: 'Asset', id: 1226, name: 'charAda' },
+    { type: 'Asset', id: 1227, name: 'charBruno' },
+    { type: 'Asset', id: 1228, name: 'propLantern' },
+  ]);
   const [paged, setPaged] = useState<EntityRef[]>([]);
   const [failed, setFailed] = useState<EntityRef[]>([]);
   const [lastError, setLastError] = useState<string | null>(null);
@@ -62,6 +68,20 @@ export default function EntityMultiPickerDemo() {
             entityTypes={['Shot']}
             value={shots}
             onValueChange={setShots}
+            clearable
+          />
+        </div>
+      </section>
+
+      <section className={group} data-demo-case="tokens">
+        <h4 className={label}>A token field: Backspace walks the chips</h4>
+        <div className={field}>
+          <EntityMultiPicker
+            client={client}
+            entityTypes={['Asset']}
+            summary="chips"
+            value={tokens}
+            onValueChange={setTokens}
             clearable
           />
         </div>

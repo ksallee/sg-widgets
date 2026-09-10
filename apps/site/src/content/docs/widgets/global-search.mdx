@@ -1,0 +1,98 @@
+---
+title: GlobalSearch
+description: A command palette that searches Flow Production Tracking by name across several entity types.
+---
+
+import Demo from '../../../components/Demo.astro';
+
+Searches several entity types at once by name and emits the row you pick.
+
+## Install
+
+```sh
+pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/global-search.json
+pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/global-search.json
+```
+
+<Demo name="global-search" title="GlobalSearch: palette with a hotkey, and the inline variant scoped to a project" />
+
+## Props
+
+| prop | type | default | meaning |
+|---|---|---|---|
+| `context` | `SgContext` | required | The widget context. Every read goes through it, so widgets on a page share one cache. |
+| `entityTypes` | `string[] \| Record<string, WireCondition[] \| null>` | Asset, Shot, Sequence, Task, Version, HumanUser, Project | Types to search, with an optional filter each. |
+| `projectId` | `number \| null` | `null` | Scopes every searched type that has a `project` field. |
+| `thumbnail` | `string \| false` | `'image'` | Field holding the thumbnail URL. `false` hides the leading slot. |
+| `labelField` | `string` | display-name chain | Field holding the row label. |
+| `subLabelField` | `string \| CollectionColumn \| null` | `null` | The muted line under the label. A resolved column renders it by type. |
+| `subLabel` | `(hit) => string` | — | The muted line of your own. Wins over `subLabelField`. |
+| `secondaryField` | `string \| CollectionColumn \| null` | `null` | The right-aligned value, drawn by its data type. |
+| `secondary` | `(hit) => string` | — | Right-aligned text of your own. Wins over `secondaryField`. |
+| `showCode` | `boolean` | `false` | Shows the row's `code` beside the label when the two differ. |
+| `fields` | `string[]` | `[]` | Extra fields to request, so your own sub-label or secondary can read them. |
+| `hotkey` | `boolean` | `false` | Opens the palette on Cmd/Ctrl+K. |
+| `inline` | `boolean` | `false` | Renders a combobox in the page instead of a dialog. |
+| `open` | `boolean` | `false` | Whether the dialog is open. |
+| `recents` | `EntityRef[]` | `[]` | Rows picked before, newest first, shown on an empty query. |
+| `recentLimit` | `number` | `5` | How many recents survive a pick. |
+| `placeholder` | `string` | `'Search…'` | Text in the search input. |
+| `label` | `string` | `'Search'` | Text on the trigger. |
+| `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Trigger heights 8, 9 and 10, and the row's leading slot. |
+| `class` / `className` | `string` | — | Merged after the widget's own classes. |
+
+Every other attribute is spread onto the root: `id`, `aria-*`, `data-*`, key handlers and a
+`ref` to the root element.
+
+Recents live in the caller. The widget hands back the new list and never writes anywhere, so where
+they are kept between sessions is the app's decision.
+
+A row is the shared picker row: a thumbnail, or an avatar for a person, the name with the matched
+words in bold, a muted sub-label and a right-aligned secondary drawn by its data type. With no
+`subLabelField` and no `subLabel`, the sub-label is the row's project; a row with no project shows
+the row it links to instead.
+
+Results are grouped by entity type, in the order the types were given, under the type's display name
+from the site schema.
+
+## Events
+
+| event | payload | when |
+|---|---|---|
+| `onSelect` | `EntityRef` | A row was picked. |
+| `onRecentsChange` | `EntityRef[]` | The recents list changed, the pick first. |
+| `onOpenChange` | `boolean` | The dialog opened or closed. Svelte also binds it with `bind:open`. |
+
+## Slots
+
+| slot | React | Svelte | receives |
+|---|---|---|---|
+| trigger | `trigger` | `trigger` | `{ open }`, a function that opens the dialog. Replaces the default button. |
+
+## Keyboard
+
+| key | does |
+|---|---|
+| `Cmd/Ctrl` `K` | Opens and closes the palette, when `hotkey` is on. |
+| `Down` / `Up` | Moves through the results, across group headings. |
+| `Enter` | Picks the highlighted row, or loads the next page on the last row. |
+| `Escape` | Closes the palette. |
+| `Tab` | Reaches the trigger; inside the palette focus stays in the input. |
+
+## API behaviour
+
+Every word of the query has to match, each as a case-insensitive substring, and a row matches on its
+own name or on the name of the row it links to. So a Version whose code holds none of the words comes
+back because its linked Shot does (053_text_search_matching).
+
+The page size is 1 to 25, and 25 is also the default. The answer carries no paging links, so "load
+more" asks for the next page and stops when a page comes back short (053_text_search_matching,
+006_pagination).
+
+Search results carry a name, the linked row and a status code, and nothing else: the endpoint has no
+`fields` parameter. The thumbnail, the project and whatever the row props name are a second read of
+the page just returned (post_entity_text_search).
+
+`projectId` adds a project condition only to types that have a `project` field. Project has none and
+neither does Step, and the condition would be a 400 rather than an empty result
+(entity_types/Project, entity_types/Step).

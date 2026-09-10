@@ -1,0 +1,88 @@
+---
+title: ContextSelector
+description: The project, row and task a user is working on, changed from recents, assigned tasks or the tree.
+---
+
+import Demo from '../../../components/Demo.astro';
+
+Shows the project, the linked row and the task the user is working on, and changes them from one
+popover.
+
+## Install
+
+```sh
+pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/context-selector.json
+pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/context-selector.json
+```
+
+<Demo name="context-selector" title="ContextSelector: recents, assigned tasks and the tree in one popover" />
+
+## Props
+
+| prop | type | default | meaning |
+|---|---|---|---|
+| `context` | `SgContext` | required | The widget context. Every read goes through it, so widgets on a page share one cache. |
+| `workContext` | `WorkContext` | empty | The project, row and task on show. |
+| `currentUser` | `EntityRef \| null` | `null` | Whose assigned tasks the second section lists. |
+| `recents` | `WorkContext[]` | `[]` | Contexts used before, newest first. |
+| `recentLimit` | `number` | `5` | How many recents survive a change. |
+| `thumbnail` | `string \| false` | `'image'` | Field holding a task row's thumbnail URL. A task with no picture falls back to its glyph. |
+| `labelField` | `string` | `'content'` | Field holding a task row's label. |
+| `subLabelField` | `string \| CollectionColumn \| null` | `null` | The muted line under the label. A resolved column renders it by type. |
+| `subLabel` | `(task) => string` | — | The muted line of your own. Wins over `subLabelField`. |
+| `secondaryField` | `string \| CollectionColumn \| null` | `'sg_status_list'` | The right-aligned value, drawn by its data type. |
+| `secondary` | `(task) => string` | — | Right-aligned text of your own. Wins over `secondaryField`. |
+| `showCode` | `boolean` | `false` | Shows the row's `code` beside the label when the two differ. |
+| `fields` | `string[]` | `[]` | Extra fields to request, so your own sub-label or secondary can read them. |
+| `open` | `boolean` | `false` | Whether the popover is open. |
+| `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Trigger heights 8, 9 and 10, and the chips inside it. |
+| `class` / `className` | `string` | — | Merged after the widget's own classes. |
+
+Every other attribute is spread onto the root: `id`, `aria-*`, `data-*`, key handlers and a
+`ref` to the root element.
+
+A `WorkContext` is a project, an entity and a task, each of them a row reference or null.
+
+The popover holds three sections in this order: the recents the caller passed, the tasks assigned to
+`currentUser` grouped by project with their step and status, and a drill-down over the navigation
+tree scoped to the current project.
+
+Picking an assigned task sets all three parts at once: the task, the row it hangs off and its
+project. Picking from the tree reads the same three out of the path.
+
+An assigned task is the shared picker row, and the row props shape it. With no `subLabelField` and no
+`subLabel`, the sub-label is the row the task hangs off and its step. The row props reach the tree
+section too, so both lists read the same.
+
+## Events
+
+| event | payload | when |
+|---|---|---|
+| `onWorkContextChange` | `WorkContext` | The project, entity or task changed. |
+| `onRecentsChange` | `WorkContext[]` | The recents list changed, the newest first. |
+| `onOpenChange` | `boolean` | The popover opened or closed. Svelte also binds it with `bind:open`. |
+
+## Slots
+
+None.
+
+## Keyboard
+
+| key | does |
+|---|---|
+| `Enter` / `Space` | Opens the popover from the trigger, and picks the row under focus. |
+| `Tab` | Moves through the recents, the assigned tasks and into the tree. |
+| `Down` / `Up` | Moves through the tree, once focus is in its input. |
+| `Right` / `Left` | Opens the level below a tree row, and goes back up. |
+| `Escape` | Closes the popover and returns focus to the trigger. |
+
+## API behaviour
+
+Assigned tasks are one search on Task filtered by `task_assignees`, a multi-entity field of Group and
+HumanUser (entity_types/Task).
+
+A Task is named by `content`. It has no `code` and no `name` field, and asking for one is a 400
+rather than an empty result (entity_types/Task).
+
+A task's status is a bare code with no row behind it, so its label comes from the field's display
+values and its colour from the site's Status table (field_types/status_list, 010_status_icons).

@@ -1,0 +1,89 @@
+---
+title: SortPicker
+description: The ordered sort keys of a query, and the sort string they serialise to.
+---
+
+import Demo from '../../../components/Demo.astro';
+
+An ordered list of sort keys. Each is a field and a direction; the list serialises to the `sort`
+string `_search` takes. Fields are chosen with FieldPicker, which descends through links, so a key
+may be a dotted path.
+
+## Install
+
+```sh
+pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/sort-picker.json
+pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/sort-picker.json
+```
+
+<Demo name="sort-picker" title="SortPicker: two keys over Shot, with the rows they order" />
+
+## Props
+
+| prop | type | default | meaning |
+|---|---|---|---|
+| `entityType` | `string` | required | Type the field list is read on. |
+| `context` | `SgContext` | required | The widget context. Every read goes through it, so widgets on a page share one cache. |
+| `value` | `SortKey[]` | `[]` | The keys, in order. Two-way in Svelte through `bind:value`. |
+| `hidePaths` | `string[]` | `[]` | Paths kept out of the field list. A pattern hides itself and everything under it. |
+| `disabled` | `boolean` | `false` | Blocks the trigger. |
+| `open` | `boolean` | `false` | Whether the popover is showing. Two-way in Svelte. |
+| `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Trigger heights 8, 9 and 10. |
+| `class` / `className` | `string` | — | Merged after the widget's own classes. |
+
+Every other attribute is spread onto the root: `id`, `aria-*`, `data-*`, key handlers and a
+`ref` to the root element.
+
+## Events
+
+| event | payload | when |
+|---|---|---|
+| `onChange` | `SortKey[]`, `string` | The keys and the `sort` string changed, on every edit. Svelte also binds it with `bind:value`. |
+| `onOpenChange` | `boolean` | The popover opened or closed. Svelte also binds it with `bind:open`. |
+
+## Slots
+
+None.
+
+## Keyboard
+
+| key | does |
+|---|---|
+| `Enter`, `Space` | Opens the list, and toggles a direction or a move control inside it. |
+| `Tab` | Moves through each key's grip, direction, move and remove controls, then to the field search. |
+| `Arrow` keys | Move the cursor in the field list, and between ascending and descending. |
+| `Right arrow` | Descends into the highlighted link in the field picker. |
+| `Left arrow` | Goes back one level in the field picker. |
+| `Space`, `Enter` on the grip | Picks the key up for the arrow keys. |
+| `Up`, `Down` while carrying a key | Move it one place. |
+| `Space`, `Enter` while carrying a key | Drop it where it is. |
+| `Escape` while carrying a key | Put it back where it was. |
+| `Alt` + `Up`, `Alt` + `Down` | Move the key holding focus one place. |
+| `Escape` | Closes the list. |
+
+A key is also reordered by dragging its grip: the key lifts and the ones it passes shift to open a
+gap. Every step is announced in a live region.
+
+## API behaviour
+
+`sort` is one string: field names comma-joined, a leading `-` marking a descending key, as
+`sort=sg_status_list,-id` (026_result_order). The array-of-objects spelling, a leading `+` and a
+trailing ` desc` are each a 400. With no sort, rows come back id ascending, and id ascending is the
+implicit tiebreak whether or not it is in the list. A dotted path sorts: `entity.Shot.code` reorders
+Versions by the shot they link, and `project.Project.name` reverses under `-` (026_result_order).
+
+A sort naming a field that does not exist is a silent 200 in default order, where the same name in a
+filter is a 400, so the field list is built from the schema. Sorting a `uuid` or a `pivot_column`
+field is a 400 and sorting a `summary`, `url`, `password` or `serializable` field is a silent no-op;
+none of them appear in the list. A `calculated` field sorts correctly even though it cannot be
+filtered.
+
+`in` does not preserve the order of the ids it was given: rows come back id ascending regardless, so
+an explicit id order has to be restored on the client.
+
+## Reference
+
+Reordering follows ReUI's Sortable 2.5.2 for the grip and the lifted row, and Dice UI's Sortable,
+its shadcn registry item, for the live-region copy and the keyboard model. Neither is installed. The
+pointer behaviour, a four-pixel activation distance with midpoint hit-testing and edge auto-scroll,
+follows dnd-kit 6.3.1.

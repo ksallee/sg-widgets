@@ -1,0 +1,66 @@
+---
+title: TextEditor
+description: A text field as an input, or a textarea when the field is multi-line.
+---
+
+import Demo from '../../../components/Demo.astro';
+
+Edits a text field and emits the string the API stores.
+
+## Install
+
+```sh
+pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/text-editor.json
+pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/text-editor.json
+```
+
+<Demo name="text-editor" title="TextEditor: single line, multi-line, and the three blocked states" />
+
+## Input
+
+| typed | emitted |
+|---|---|
+| `plate delivered` | `"plate delivered"` |
+| `  padded  ` | `"padded"` |
+| empty, or spaces only | `null` |
+| `line1` newline `line2` | `"line1\nline2"` |
+
+## Props
+
+| prop | type | default | meaning |
+|---|---|---|---|
+| `value` | `string \| null` | `null` | The stored string. Two-way in Svelte. |
+| `onValueChange` | `(value: string \| null) => void` | — | Called when the input commits. |
+| `field` | `FieldSchema \| null` | `null` | Supplies the accessible label and the required flag. |
+| `multiline` | `boolean` | `false` | Renders a textarea. |
+| `rows` | `number` | `3` | Rows of the textarea. |
+| `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Control height. |
+| `disabled` | `boolean` | `false` | |
+| `readonly` | `boolean` | `false` | |
+| `invalid` | `boolean` | `false` | Forced invalid state. |
+| `error` | `string \| null` | `null` | A message from the caller, shown in place of the parse error. |
+| `onErrorChange` | `(error: string \| null) => void` | — | Called when the parse error appears or clears. |
+| `placeholder` | `string` | — | |
+| `class` / `className` | `string` | — | Merged after the widget's own classes. |
+
+## Events
+
+`onValueChange` fires on commit only, never on a keystroke. `onErrorChange` reports the parse error.
+
+## Slots
+
+`errorMessage` receives the message and renders it. Without it the message is a small line under the
+control.
+
+## Keyboard
+
+| key | does |
+|---|---|
+| `Enter` | Commits, on a single-line input. |
+| `Escape` | Restores the stored value. |
+| `Tab` | Commits by leaving the control. |
+
+## API behaviour
+
+Both ends of the value are stripped on write, and an empty string is stored as null, so there is no
+"set but blank" state to round-trip. A non-string is a 400 (field_types/text).

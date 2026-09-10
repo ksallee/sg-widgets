@@ -1,0 +1,105 @@
+---
+title: FieldValue
+description: Any Flow Production Tracking attribute value, rendered by its data type.
+---
+
+import Demo from '../../../components/Demo.astro';
+
+Renders a raw attribute value the way its data type should look, delegating to the other atoms where
+one exists.
+
+## Install
+
+Installing this pulls EntityChip, StatusBadge and Thumbnail with it.
+
+```sh
+pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/field-value.json
+pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/field-value.json
+```
+
+<Demo name="field-value" title="FieldValue: every data type, including the empty and sentinel cases" />
+
+## Props
+
+| prop | type | default | meaning |
+|---|---|---|---|
+| `value` | `unknown` | required | The raw attribute or relationship value, as the API returned it. |
+| `dataType` | `string` | required | The field's data type. An unknown one renders as text. |
+| `field` | `FieldSchema \| null` | `null` | Supplies a status label through its display values. |
+| `statuses` | `Record<string, StatusRecord> \| null` | `null` | Status rows by code, for the status name and icon. |
+| `siteUrl` | `string` | the context's | The site the stock sprite is served from, and the site a linked row is addressed on. |
+| `entityVariant` | `'chip' \| 'link' \| 'text'` | `'chip'` | How an entity or multi-entity value draws. |
+| `preview` | `string[]` | — | Field paths shown in a hover card on a linked row. Needs a context. |
+| `context` | `SgContext` | — | The widget context: the site url, the site preferences and the hover card's read. |
+| `client` | `SgClient` | — | A client, for an app with no context. One context is built per client and shared. |
+| `hoursPerDay` | `number` | the context's | The site's working day. Durations then render in days. |
+| `locale` | `string` | the context's, then the runtime's | Used for dates and numbers. |
+| `timeZone` | `string` | the context's, then the runtime's | IANA zone a `date_time` is shown in. |
+| `frameRate` | `number` | the context's | Frames a second. A timecode then carries its frame digits. |
+| `precision` | `number` | — | Decimals shown on a float, zeros kept. Without it, the value as the API sent it, trailing zeros dropped. On a currency, the decimals, default 2. |
+| `currencySymbol` | `string` | `'$'` | Shown before a currency amount. |
+| `emptyLabel` | `string` | `'empty'` | The marker shown for an unset value. |
+| `class` / `className` | `string` | — | Merged after the widget's own classes. |
+
+Each data type renders as follows.
+
+| data type | rendering |
+|---|---|
+| `entity` | an EntityChip in the chosen variant |
+| `multi_entity`, `tag_list` | a wrapping row of chips in the chosen variant |
+| `status_list` | a StatusBadge |
+| `image` | a Thumbnail |
+| `checkbox` | a read-only switch |
+| `url` | a link showing the file name. A local link opens the path for your platform through `file:`; the full path is in the tooltip |
+| `date` | formatted without a zone shift, with the stored day in the tooltip |
+| `date_time` | formatted in the viewer's zone, with the stored instant in the tooltip |
+| `duration` | hours and minutes, or days when the working day is given |
+| `percent` | the stored integer with a sign appended |
+| `float` | the returned decimal with trailing zeros trimmed |
+| `timecode` | hours, minutes and seconds |
+| `color` | a swatch and the raw triple |
+| `list`, `text` | text, with newlines kept for text |
+| `pivot_column` | the empty marker |
+| anything else | text |
+
+The entity props are passed straight to EntityChip: a variant, the site each row is addressed on, and
+the field paths its hover card shows.
+
+An unset value renders a muted marker rather than a dash, because a dash is a character a field can
+hold. Zero, false and the string zero are values and render as themselves.
+
+The root fills its container, carries the data type as an attribute, and puts the full value in a
+tooltip for every single-line rendering.
+
+## Events
+
+None.
+
+## Slots
+
+None.
+
+## Keyboard
+
+| key | does |
+|---|---|
+| `Tab` | Moves to the link, when the value is a URL field with a URL in it. |
+| `Enter` | Follows that link. |
+
+Nothing else in the widget takes focus.
+
+## API behaviour
+
+A checkbox is two-state and never null, so it is the one type whose empty-looking value is a real
+one (field_types/checkbox).
+
+A float is returned as a quoted string rounded to six decimals, never a JSON number
+(field_types/float).
+
+A url field is an object whose keys depend on its link type, and one of the three shapes carries no
+URL at all, only local paths (field_types/url).
+
+A colour field can hold a pipeline-step token instead of a colour, meaning the value should be taken
+from the linked step (field_types/color).
+
+A pivot column has no REST implementation and reads null on every row (field_types/pivot_column).

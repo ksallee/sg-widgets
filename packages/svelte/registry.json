@@ -2,5 +2,860 @@
   "$schema": "https://shadcn-svelte.com/schema/registry.json",
   "name": "sg-widgets",
   "homepage": "https://sg-widgets.dev",
-  "items": []
+  "aliases": {
+    "components": "$lib/registry/components",
+    "ui": "$lib/registry/ui",
+    "hooks": "$lib/registry/hooks",
+    "lib": "$lib/registry/lib",
+    "utils": "$lib/utils"
+  },
+  "items": [
+    {
+      "name": "status-badge",
+      "type": "registry:component",
+      "title": "Status Badge",
+      "description": "One Flow Production Tracking status as a coloured badge, using the site's own bg_color and icon.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte"
+      ],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "src/lib/registry/components/status-badge.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "entity-chip",
+      "type": "registry:component",
+      "title": "Entity Chip",
+      "description": "A linked Flow Production Tracking row as a chip, with a per-type glyph, optional thumbnail and a remove control.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte"
+      ],
+      "registryDependencies": [
+        "local:entity-card",
+        "hover-card"
+      ],
+      "files": [
+        {
+          "path": "src/lib/registry/components/entity-chip.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "entity-card",
+      "type": "registry:component",
+      "title": "Entity Card",
+      "description": "One Flow Production Tracking row as a card, or as a thumbnail-first tile: thumbnail, name, status and its field values.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte"
+      ],
+      "registryDependencies": [
+        "local:status-badge",
+        "local:thumbnail",
+        "checkbox",
+        "skeleton"
+      ],
+      "files": [
+        {
+          "path": "src/lib/registry/components/entity-card.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "thumbnail",
+      "type": "registry:component",
+      "title": "Thumbnail",
+      "description": "A row's thumbnail, with aspect ratio, an explicit no-image placeholder and a play overlay.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte"
+      ],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "src/lib/registry/components/thumbnail.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "user-avatar",
+      "type": "registry:component",
+      "title": "User Avatar",
+      "description": "A person as a round avatar, with an initials fallback, inactive styling and an API-user badge.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte"
+      ],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "src/lib/registry/components/user-avatar.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "field-value",
+      "type": "registry:component",
+      "title": "Field Value",
+      "description": "Any Flow Production Tracking attribute value, rendered for display by its data type.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte"
+      ],
+      "registryDependencies": [
+        "local:entity-chip",
+        "local:status-badge",
+        "local:thumbnail",
+        "switch"
+      ],
+      "files": [
+        {
+          "path": "src/lib/registry/components/field-value.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "picker-row",
+      "type": "registry:component",
+      "title": "Picker Row",
+      "description": "The row every picker, search and tree draws: a picture, a highlighted label, a sub-label and a typed secondary.",
+      "dependencies": [
+        "@sg-widgets/core"
+      ],
+      "registryDependencies": [
+        "local:field-value",
+        "local:thumbnail",
+        "local:user-avatar"
+      ],
+      "files": [
+        {
+          "path": "src/lib/registry/components/picker-row.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "entity-type-picker",
+      "type": "registry:component",
+      "title": "Entity Type Picker",
+      "description": "One entity type of a Flow Production Tracking site, or several, as a searchable combobox.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte",
+        "bits-ui"
+      ],
+      "registryDependencies": [
+        "skeleton",
+        "checkbox"
+      ],
+      "files": [
+        {
+          "path": "src/lib/registry/components/entity-type-picker.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "field-picker",
+      "type": "registry:component",
+      "title": "Field Picker",
+      "description": "One field of an entity type as a searchable combobox, descending through linked types into a dotted path.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte"
+      ],
+      "registryDependencies": [
+        "popover",
+        "command",
+        "skeleton"
+      ],
+      "files": [
+        {
+          "path": "src/lib/registry/components/field-picker.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "sortable",
+      "type": "registry:component",
+      "title": "Sortable",
+      "description": "Pointer and keyboard reordering for one list, as an attachment: drag handles, live-region announcements and transform-only motion.",
+      "dependencies": [
+        "@sg-widgets/core"
+      ],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "src/lib/registry/components/sortable.svelte.ts",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "column-picker",
+      "type": "registry:component",
+      "title": "Column Picker",
+      "description": "The columns of a grid as a field picker over the ordered list it fills, dragged into place.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte"
+      ],
+      "registryDependencies": [
+        "button",
+        "checkbox",
+        "command",
+        "skeleton",
+        "local:field-picker",
+        "local:sortable"
+      ],
+      "files": [
+        {
+          "path": "src/lib/registry/components/column-picker.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "text-editor",
+      "type": "registry:component",
+      "title": "Text Editor",
+      "description": "A text field as an input, or a textarea when the field is multi-line.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte"
+      ],
+      "registryDependencies": [
+        "input",
+        "textarea"
+      ],
+      "files": [
+        {
+          "path": "src/lib/registry/components/text-editor.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "number-editor",
+      "type": "registry:component",
+      "title": "Number Editor",
+      "description": "The numeric family as one input: number, float, percent, currency, duration and timecode.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte"
+      ],
+      "registryDependencies": [
+        "button",
+        "input"
+      ],
+      "files": [
+        {
+          "path": "src/lib/registry/components/number-editor.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "checkbox-editor",
+      "type": "registry:component",
+      "title": "Checkbox Editor",
+      "description": "A checkbox field as an editable switch.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte"
+      ],
+      "registryDependencies": [
+        "switch"
+      ],
+      "files": [
+        {
+          "path": "src/lib/registry/components/checkbox-editor.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "date-editor",
+      "type": "registry:component",
+      "title": "Date Editor",
+      "description": "A date field as a typed input with a calendar.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte",
+        "@internationalized/date"
+      ],
+      "registryDependencies": [
+        "input",
+        "button",
+        "calendar",
+        "popover"
+      ],
+      "files": [
+        {
+          "path": "src/lib/registry/components/date-editor.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "date-time-editor",
+      "type": "registry:component",
+      "title": "Date Time Editor",
+      "description": "A date_time field as a date and a time input, shown local and stored UTC.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte",
+        "@internationalized/date"
+      ],
+      "registryDependencies": [
+        "input",
+        "button",
+        "calendar",
+        "popover"
+      ],
+      "files": [
+        {
+          "path": "src/lib/registry/components/date-time-editor.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "list-select",
+      "type": "registry:component",
+      "title": "List Editor",
+      "description": "A list field as a select over its valid values.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte"
+      ],
+      "registryDependencies": [
+        "select"
+      ],
+      "files": [
+        {
+          "path": "src/lib/registry/components/list-select.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "list-multi-select",
+      "type": "registry:component",
+      "title": "List Multi Select",
+      "description": "Several values of a list field, chosen from its valid values with checkboxes.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte"
+      ],
+      "registryDependencies": [
+        "badge",
+        "checkbox",
+        "command",
+        "popover"
+      ],
+      "files": [
+        {
+          "path": "src/lib/registry/components/list-multi-select.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "url-editor",
+      "type": "registry:component",
+      "title": "Url Editor",
+      "description": "A url field as a web link: address and name.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte"
+      ],
+      "registryDependencies": [
+        "input"
+      ],
+      "files": [
+        {
+          "path": "src/lib/registry/components/url-editor.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "color-editor",
+      "type": "registry:component",
+      "title": "Color Editor",
+      "description": "A color field as a swatch and a text input.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte"
+      ],
+      "registryDependencies": [
+        "input"
+      ],
+      "files": [
+        {
+          "path": "src/lib/registry/components/color-editor.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "field-editor",
+      "type": "registry:component",
+      "title": "Field Editor",
+      "description": "One field, displayed or edited: the data type picks the editor and a toggle switches between the two.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte"
+      ],
+      "registryDependencies": [
+        "local:field-value",
+        "local:text-editor",
+        "local:number-editor",
+        "local:checkbox-editor",
+        "local:date-editor",
+        "local:date-time-editor",
+        "local:list-select",
+        "local:url-editor",
+        "local:color-editor",
+        "local:status-picker",
+        "local:entity-picker",
+        "local:entity-multi-picker"
+      ],
+      "files": [
+        {
+          "path": "src/lib/registry/components/field-editor.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "filter-editor",
+      "type": "registry:component",
+      "title": "Filter Editor",
+      "description": "A Flow Production Tracking filter tree edited as rows and nested groups, with the operator menu and the value editor chosen by the field data type.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte"
+      ],
+      "registryDependencies": [
+        "button",
+        "select",
+        "skeleton",
+        "toggle-group",
+        "local:checkbox-editor",
+        "local:color-editor",
+        "local:date-editor",
+        "local:date-time-editor",
+        "local:entity-multi-picker",
+        "local:entity-picker",
+        "local:field-picker",
+        "local:list-multi-select",
+        "local:list-select",
+        "local:number-editor",
+        "local:status-multi-picker",
+        "local:status-picker",
+        "local:text-editor",
+        "local:url-editor"
+      ],
+      "files": [
+        {
+          "path": "src/lib/registry/components/filter-editor.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "filter-dialog",
+      "type": "registry:component",
+      "title": "Filter Dialog",
+      "description": "The launcher pair from the legacy filter panel: Add filters, Edit filters with a count, and a clear control, opening the editor in a dialog.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte"
+      ],
+      "registryDependencies": [
+        "badge",
+        "button",
+        "dialog",
+        "local:filter-editor"
+      ],
+      "files": [
+        {
+          "path": "src/lib/registry/components/filter-dialog.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "filter-bar",
+      "type": "registry:component",
+      "title": "Filter Bar",
+      "description": "Quick facet pills over one entity type, each a segmented pill of field, operator and values writing a condition into a bound filter tree.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte"
+      ],
+      "registryDependencies": [
+        "badge",
+        "button",
+        "checkbox",
+        "command",
+        "popover",
+        "select",
+        "local:filter-dialog"
+      ],
+      "files": [
+        {
+          "path": "src/lib/registry/components/filter-bar.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "sort-picker",
+      "type": "registry:component",
+      "title": "Sort Picker",
+      "description": "The ordered sort keys of a query, with add, remove and reorder, emitting the sort string the REST API takes.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte"
+      ],
+      "registryDependencies": [
+        "badge",
+        "button",
+        "popover",
+        "separator",
+        "toggle-group",
+        "local:field-picker",
+        "local:sortable"
+      ],
+      "files": [
+        {
+          "path": "src/lib/registry/components/sort-picker.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "status-picker",
+      "type": "registry:component",
+      "title": "Status Picker",
+      "description": "One Flow Production Tracking status, picked from the codes a project offers.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte"
+      ],
+      "registryDependencies": [
+        "local:status-badge",
+        "select",
+        "skeleton"
+      ],
+      "files": [
+        {
+          "path": "src/lib/registry/components/status-picker.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "status-multi-picker",
+      "type": "registry:component",
+      "title": "Status Multi Picker",
+      "description": "Several Flow Production Tracking statuses, picked from the codes a project offers.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte",
+        "bits-ui"
+      ],
+      "registryDependencies": [
+        "local:status-badge",
+        "checkbox",
+        "skeleton"
+      ],
+      "files": [
+        {
+          "path": "src/lib/registry/components/status-multi-picker.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "entity-table",
+      "type": "registry:component",
+      "title": "Entity Table",
+      "description": "A page of Flow Production Tracking rows as a table: schema-driven columns, server-side sorting, selection, grouping and inline edit.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte",
+        "@tanstack/svelte-table",
+        "@tanstack/virtual-core"
+      ],
+      "registryDependencies": [
+        "local:field-value",
+        "local:field-editor",
+        "table",
+        "checkbox",
+        "skeleton",
+        "input",
+        "button",
+        "dropdown-menu",
+        "select"
+      ],
+      "files": [
+        {
+          "path": "src/lib/registry/components/entity-table.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "entity-grid",
+      "type": "registry:component",
+      "title": "Entity Grid",
+      "description": "Flow Production Tracking rows as EntityCard tiles, with selection, keyboard navigation and infinite scroll.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte",
+        "@tanstack/virtual-core"
+      ],
+      "registryDependencies": [
+        "local:entity-card",
+        "skeleton",
+        "input",
+        "button",
+        "select"
+      ],
+      "files": [
+        {
+          "path": "src/lib/registry/components/entity-grid.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "grouped-list",
+      "type": "registry:component",
+      "title": "Grouped List",
+      "description": "Dense Flow Production Tracking rows grouped under collapsible headers with counts.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte",
+        "@tanstack/virtual-core"
+      ],
+      "registryDependencies": [
+        "local:field-value",
+        "local:thumbnail",
+        "checkbox",
+        "skeleton",
+        "input",
+        "button",
+        "select"
+      ],
+      "files": [
+        {
+          "path": "src/lib/registry/components/grouped-list.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "entity-tree",
+      "type": "registry:component",
+      "title": "Entity Tree",
+      "description": "A lazy tree over a project's navigation hierarchy, with a keyboard model, tri-state checkboxes and a filter.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte"
+      ],
+      "registryDependencies": [
+        "local:field-value",
+        "local:status-badge",
+        "local:thumbnail",
+        "checkbox",
+        "skeleton",
+        "input"
+      ],
+      "files": [
+        {
+          "path": "src/lib/registry/components/entity-tree.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "entity-picker",
+      "type": "registry:component",
+      "title": "Entity Picker",
+      "description": "One Flow Production Tracking entity, chosen by server-side search across one or more types.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte",
+        "bits-ui"
+      ],
+      "registryDependencies": [
+        "local:entity-chip",
+        "local:picker-row",
+        "skeleton"
+      ],
+      "files": [
+        {
+          "path": "src/lib/registry/components/entity-picker.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "entity-multi-picker",
+      "type": "registry:component",
+      "title": "Entity Multi Picker",
+      "description": "Several Flow Production Tracking entities, chosen by server-side search, with checkbox rows and removable chips.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte",
+        "bits-ui"
+      ],
+      "registryDependencies": [
+        "local:entity-chip",
+        "local:picker-row",
+        "checkbox",
+        "skeleton"
+      ],
+      "files": [
+        {
+          "path": "src/lib/registry/components/entity-multi-picker.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "user-picker",
+      "type": "registry:component",
+      "title": "User Picker",
+      "description": "People and script accounts, chosen by server-side search across name, login and email.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte"
+      ],
+      "registryDependencies": [
+        "local:entity-picker",
+        "local:entity-multi-picker"
+      ],
+      "files": [
+        {
+          "path": "src/lib/registry/components/user-picker.svelte",
+          "type": "registry:component"
+        },
+        {
+          "path": "src/lib/registry/components/user-multi-picker.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "project-picker",
+      "type": "registry:component",
+      "title": "Project Picker",
+      "description": "Projects, chosen by server-side search, with the project thumbnail and its status.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte"
+      ],
+      "registryDependencies": [
+        "local:entity-picker",
+        "local:entity-multi-picker"
+      ],
+      "files": [
+        {
+          "path": "src/lib/registry/components/project-picker.svelte",
+          "type": "registry:component"
+        },
+        {
+          "path": "src/lib/registry/components/project-multi-picker.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "global-search",
+      "type": "registry:component",
+      "title": "Global Search",
+      "description": "A command palette that searches Flow Production Tracking by name across several entity types.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte"
+      ],
+      "registryDependencies": [
+        "local:entity-chip",
+        "local:picker-row",
+        "command",
+        "dialog",
+        "button",
+        "kbd",
+        "skeleton"
+      ],
+      "files": [
+        {
+          "path": "src/lib/registry/components/global-search.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "hierarchical-search",
+      "type": "registry:component",
+      "title": "Hierarchical Search",
+      "description": "A drill-down over the Flow Production Tracking navigation tree, with breadcrumb results.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte"
+      ],
+      "registryDependencies": [
+        "local:picker-row",
+        "command",
+        "skeleton"
+      ],
+      "files": [
+        {
+          "path": "src/lib/registry/components/hierarchical-search.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "context-selector",
+      "type": "registry:component",
+      "title": "Context Selector",
+      "description": "The project, row and task a user is working on, changed from recents, assigned tasks or the tree.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte"
+      ],
+      "registryDependencies": [
+        "local:entity-chip",
+        "local:picker-row",
+        "local:hierarchical-search",
+        "popover",
+        "skeleton"
+      ],
+      "files": [
+        {
+          "path": "src/lib/registry/components/context-selector.svelte",
+          "type": "registry:component"
+        }
+      ]
+    }
+  ]
 }

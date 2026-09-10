@@ -1,0 +1,77 @@
+---
+title: ColorEditor
+description: A color field as a picker swatch and a text input.
+---
+
+import Demo from '../../../components/Demo.astro';
+
+Edits a color field and emits the decimal triple it stores.
+
+## Install
+
+```sh
+pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/color-editor.json
+pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/color-editor.json
+```
+
+<Demo name="color-editor" title="ColorEditor: a triple, a hex code, the pipeline-step token" />
+
+## Input
+
+| typed | emitted |
+|---|---|
+| `255,128,0` | `"255,128,0"` |
+| `255, 128, 0` | `"255,128,0"`; the spaces are dropped |
+| `#ff8000`, `ff8000` | `"255,128,0"` |
+| `#f80` | `"255,136,0"` |
+| `pipeline_step` | `"pipeline_step"` |
+| empty | `null` |
+| `300,0,0` | nothing; each channel runs 0 to 255 |
+| `255,128` | nothing |
+
+The swatch opens the browser's colour picker and follows what is typed, so a hex code shows its colour before it is committed.
+
+## Props
+
+| prop | type | default | meaning |
+|---|---|---|---|
+| `value` | `string \| null` | `null` | The stored string. Two-way in Svelte. |
+| `onValueChange` | `(value: string \| null) => void` | — | Called when the input commits. |
+| `field` | `FieldSchema \| null` | `null` | Supplies the accessible label and the required flag. |
+| `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Control height, and the size of the swatch. |
+| `hint` | `boolean` | `true` | Explain the pipeline-step token under the control. |
+| `disabled` | `boolean` | `false` | |
+| `readonly` | `boolean` | `false` | |
+| `invalid` | `boolean` | `false` | Forced invalid state. |
+| `error` | `string \| null` | `null` | A message from the caller, shown in place of the parse error. |
+| `onErrorChange` | `(error: string \| null) => void` | — | Called when the parse error appears or clears. |
+| `placeholder` | `string` | `'255,128,0'` | |
+| `class` / `className` | `string` | — | Merged after the widget's own classes. |
+
+## Events
+
+`onValueChange` fires on commit only. Input that does not parse emits nothing.
+
+## Slots
+
+`errorMessage` receives the message and renders it.
+
+## Keyboard
+
+| key | does |
+|---|---|
+| `Enter` | Commits. |
+| `Escape` | Restores the stored value. |
+| `Tab` | Commits by leaving the control. |
+
+## API behaviour
+
+The stored form is decimal `r,g,b`, no spaces and no `#`. Hex is rejected on write and inside a
+filter, `255, 128, 0` with spaces is rejected, and a channel over 255 is rejected
+(field_types/color).
+
+The token `pipeline_step` means "use the colour of my pipeline step" and is the only way to un-set
+`Task.color`: a written null is a 400 and the empty string is a 400 (field_types/color).
+
+The legacy colour names are accepted on write but stored expanded, so `Red` never reads back as `Red`
+(field_types/color). They are not offered here.

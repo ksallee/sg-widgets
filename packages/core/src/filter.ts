@@ -50,6 +50,29 @@ export interface WireGroup {
   conditions: Array<WireCondition | WireGroup>;
 }
 
+/**
+ * What one type's entry in `_text_search`'s `entity_types` map accepts: a filter
+ * array, or a group this converts to one.
+ */
+export type TextSearchFilter = WireGroup | WireCondition[] | null | undefined;
+
+/**
+ * The filter array `entity_types` wants, `[]` for no filter
+ * (post_entity_text_search). The array form is `and` only and cannot express a
+ * nested group, so one is refused here rather than sent and guessed at.
+ */
+export function toFilterArray(filter: TextSearchFilter): WireCondition[] {
+  if (!filter) return [];
+  if (Array.isArray(filter)) return filter;
+  if (filter.logical_operator !== 'and') {
+    throw new Error("A '_text_search' filter is an array of conditions, which is 'and' only.");
+  }
+  return filter.conditions.map((c) => {
+    if (!Array.isArray(c)) throw new Error("A '_text_search' filter is an array of conditions and cannot nest a group.");
+    return c;
+  });
+}
+
 export function group(logicalOperator: LogicalOperator, conditions: FilterNode[] = []): FilterGroup {
   return { kind: 'group', logicalOperator, conditions };
 }

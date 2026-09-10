@@ -1,0 +1,63 @@
+---
+title: CheckboxEditor
+description: A checkbox field as an editable switch.
+---
+
+import Demo from '../../../components/Demo.astro';
+
+Edits a checkbox field with the shadcn switch.
+
+## Install
+
+```sh
+pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/checkbox-editor.json
+pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/checkbox-editor.json
+```
+
+<Demo name="checkbox-editor" title="CheckboxEditor: two states, and the two blocked ones" />
+
+## Input
+
+| done | emitted |
+|---|---|
+| switch on | `true` |
+| switch off | `false` |
+
+There is no third state, and no way to clear the field.
+
+## Props
+
+| prop | type | default | meaning |
+|---|---|---|---|
+| `value` | `boolean` | `false` | The stored boolean. Two-way in Svelte. |
+| `onValueChange` | `(value: boolean) => void` | — | Called on every change. |
+| `field` | `FieldSchema \| null` | `null` | Supplies the accessible label. |
+| `labels` | `{ on: string; off: string }` | `{ on: 'Yes', off: 'No' }` | The word shown beside the switch. |
+| `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Row height. |
+| `disabled` | `boolean` | `false` | |
+| `readonly` | `boolean` | `false` | Keeps full contrast and refuses the change. |
+| `invalid` | `boolean` | `false` | |
+| `error` | `string \| null` | `null` | A message from the caller. |
+| `placeholder` | `string` | — | Used as the accessible label when there is no field. |
+| `class` / `className` | `string` | — | Merged after the widget's own classes. |
+
+## Events
+
+`onValueChange` fires as soon as the switch moves. There is nothing to commit. `onErrorChange` fires
+with `null` on that same change, so a message the caller set clears when the field is answered.
+
+## Slots
+
+`errorMessage` receives the message and renders it.
+
+## Keyboard
+
+| key | does |
+|---|---|
+| `Space` | Toggles the switch. |
+| `Tab` | Moves off the control. |
+
+## API behaviour
+
+A checkbox is two-state and never null: a row that was never touched already reads false, a written
+null is a 400, and `false` is the only off state (field_types/checkbox).

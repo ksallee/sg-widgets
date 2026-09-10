@@ -2,5 +2,1033 @@
   "$schema": "https://ui.shadcn.com/schema/registry.json",
   "name": "sg-widgets",
   "homepage": "https://sg-widgets.dev",
-  "items": []
+  "items": [
+    {
+      "name": "status-badge",
+      "type": "registry:component",
+      "title": "Status Badge",
+      "description": "One Flow Production Tracking status as a coloured badge, using the site's own bg_color and icon.",
+      "categories": [
+        "flow-production-tracking",
+        "atom"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react"
+      ],
+      "registryDependencies": [],
+      "docs": "Pass the resolved Status row for colour and icon, or just a field schema for the label. An unknown code renders as itself in a muted badge.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/status-badge.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "entity-chip",
+      "type": "registry:component",
+      "title": "Entity Chip",
+      "description": "A linked Flow Production Tracking row as a chip, with a per-type glyph, optional thumbnail and a remove control.",
+      "categories": [
+        "flow-production-tracking",
+        "atom"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "https://sg-widgets.dev/r/react/entity-card.json",
+        "hover-card"
+      ],
+      "docs": "Takes an EntityRef exactly as an entity field returns it. With no name it falls back to `Type #id`. A preview list installs EntityCard for the hover card.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/entity-chip.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "entity-card",
+      "type": "registry:component",
+      "title": "Entity Card",
+      "description": "One Flow Production Tracking row as a card, or as a thumbnail-first tile: thumbnail, name, status and its field values.",
+      "categories": [
+        "flow-production-tracking",
+        "widget"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "https://sg-widgets.dev/r/react/status-badge.json",
+        "https://sg-widgets.dev/r/react/thumbnail.json",
+        "checkbox",
+        "skeleton"
+      ],
+      "docs": "Reads the row through an SgContext when given a reference, labels every dotted path through the schema, and draws values itself so nothing depends on it in return. The tile variant is what EntityGrid lays out.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/entity-card.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "thumbnail",
+      "type": "registry:component",
+      "title": "Thumbnail",
+      "description": "A row's thumbnail, with aspect ratio, an explicit no-image placeholder and a play overlay.",
+      "categories": [
+        "flow-production-tracking",
+        "atom"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react"
+      ],
+      "registryDependencies": [],
+      "docs": "The value of an image field is the only state marker there is: null, still transcoding, or ready. All three render.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/thumbnail.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "user-avatar",
+      "type": "registry:component",
+      "title": "User Avatar",
+      "description": "A person as a round avatar, with an initials fallback, inactive styling and an API-user badge.",
+      "categories": [
+        "flow-production-tracking",
+        "atom"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react"
+      ],
+      "registryDependencies": [],
+      "docs": "Initials come from core's initialsOf so both frameworks derive them identically.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/user-avatar.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "field-value",
+      "type": "registry:component",
+      "title": "Field Value",
+      "description": "Any Flow Production Tracking attribute value, rendered for display by its data type.",
+      "categories": [
+        "flow-production-tracking",
+        "atom"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "https://sg-widgets.dev/r/react/entity-chip.json",
+        "https://sg-widgets.dev/r/react/status-badge.json",
+        "https://sg-widgets.dev/r/react/thumbnail.json",
+        "switch"
+      ],
+      "docs": "Installs EntityChip, StatusBadge and Thumbnail alongside it.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/field-value.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "picker-row",
+      "type": "registry:component",
+      "title": "Picker Row",
+      "description": "The row every picker, search and tree draws: a picture, a highlighted label, a sub-label and a typed secondary.",
+      "categories": [
+        "flow-production-tracking",
+        "atom"
+      ],
+      "dependencies": [
+        "@sg-widgets/core"
+      ],
+      "registryDependencies": [
+        "https://sg-widgets.dev/r/react/field-value.json",
+        "https://sg-widgets.dev/r/react/thumbnail.json",
+        "https://sg-widgets.dev/r/react/user-avatar.json"
+      ],
+      "docs": "The six row-anatomy props of rule 9. It draws a row's contents, not its box: the caller owns the list item.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/picker-row.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "entity-type-picker",
+      "type": "registry:component",
+      "title": "Entity Type Picker",
+      "description": "One entity type of a Flow Production Tracking site, or several, as a searchable combobox.",
+      "categories": [
+        "flow-production-tracking",
+        "picker"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react",
+        "@base-ui/react"
+      ],
+      "registryDependencies": [
+        "skeleton",
+        "checkbox"
+      ],
+      "docs": "Takes a SchemaService. `allow` and `deny` narrow the derived options, so changing them re-filters with no second call.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/entity-type-picker.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "field-picker",
+      "type": "registry:component",
+      "title": "Field Picker",
+      "description": "One field of an entity type as a searchable combobox, descending through linked types into a dotted path.",
+      "categories": [
+        "flow-production-tracking",
+        "picker"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "popover",
+        "command",
+        "skeleton"
+      ],
+      "docs": "Emits ShotGrid's dotted path. Only single entity fields are descended into; a path through a multi-entity field reads back nothing.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/field-picker.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "sortable",
+      "type": "registry:component",
+      "title": "Sortable",
+      "description": "Pointer and keyboard reordering for one list, as a hook: drag handles, live-region announcements and transform-only motion.",
+      "categories": [
+        "flow-production-tracking",
+        "utility"
+      ],
+      "dependencies": [
+        "@sg-widgets/core"
+      ],
+      "registryDependencies": [],
+      "docs": "Put the ref on the list element, `data-sortable-id` on each item and `data-sortable-handle` on each grip, then render the announcement in a polite live region.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/sortable.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "column-picker",
+      "type": "registry:component",
+      "title": "Column Picker",
+      "description": "The columns of a grid as a field picker over the ordered list it fills, dragged into place.",
+      "categories": [
+        "flow-production-tracking",
+        "picker"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "button",
+        "checkbox",
+        "command",
+        "skeleton",
+        "https://sg-widgets.dev/r/react/field-picker.json",
+        "https://sg-widgets.dev/r/react/sortable.json"
+      ],
+      "docs": "The picker appends a path to the list; a row is moved by dragging its grip or with Alt and an arrow key. `layout=\"dual\"` gives the two lists side by side.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/column-picker.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "text-editor",
+      "type": "registry:component",
+      "title": "Text Editor",
+      "description": "A text field as an input, or a textarea when the field is multi-line.",
+      "categories": [
+        "flow-production-tracking",
+        "editor"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "input",
+        "textarea"
+      ],
+      "docs": "Emits on Enter or on losing focus. An empty input emits null, because a text field has no empty string.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/text-editor.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "number-editor",
+      "type": "registry:component",
+      "title": "Number Editor",
+      "description": "The numeric family as one input: number, float, percent, currency, duration and timecode.",
+      "categories": [
+        "flow-production-tracking",
+        "editor"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "button",
+        "input"
+      ],
+      "docs": "The data type picks the parse, the format and the step. A duration takes 1h 30m, steps by a quarter of an hour, and shows the minutes it will store.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/number-editor.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "checkbox-editor",
+      "type": "registry:component",
+      "title": "Checkbox Editor",
+      "description": "A checkbox field as an editable switch.",
+      "categories": [
+        "flow-production-tracking",
+        "editor"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "switch"
+      ],
+      "docs": "The type is two-state and never null, so the control has no empty state.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/checkbox-editor.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "date-editor",
+      "type": "registry:component",
+      "title": "Date Editor",
+      "description": "A date field as a typed input with a calendar.",
+      "categories": [
+        "flow-production-tracking",
+        "editor"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "input",
+        "button",
+        "calendar",
+        "popover"
+      ],
+      "docs": "Takes YYYY-MM-DD and validates the day. A timestamp is never a date on this type.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/date-editor.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "date-time-editor",
+      "type": "registry:component",
+      "title": "Date Time Editor",
+      "description": "A date_time field as a date and a time input, shown local and stored UTC.",
+      "categories": [
+        "flow-production-tracking",
+        "editor"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "input",
+        "button",
+        "calendar",
+        "popover"
+      ],
+      "docs": "The zone the typed time is read in is named under the control.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/date-time-editor.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "list-select",
+      "type": "registry:component",
+      "title": "List Editor",
+      "description": "A list field as a select over its valid values.",
+      "categories": [
+        "flow-production-tracking",
+        "editor"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "select"
+      ],
+      "docs": "With a project id the field's hidden values are subtracted, which REST does not do on write.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/list-select.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "list-multi-select",
+      "type": "registry:component",
+      "title": "List Multi Select",
+      "description": "Several values of a list field, chosen from its valid values with checkboxes.",
+      "categories": [
+        "flow-production-tracking",
+        "editor"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "badge",
+        "checkbox",
+        "command",
+        "popover"
+      ],
+      "docs": "With a project id the field's hidden values are subtracted, which REST does not do on write.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/list-multi-select.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "url-editor",
+      "type": "registry:component",
+      "title": "Url Editor",
+      "description": "A url field as a web link: address and name.",
+      "categories": [
+        "flow-production-tracking",
+        "editor"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "input"
+      ],
+      "docs": "Web links only. Uploads mint an Attachment through a separate flow.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/url-editor.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "color-editor",
+      "type": "registry:component",
+      "title": "Color Editor",
+      "description": "A color field as a swatch and a text input.",
+      "categories": [
+        "flow-production-tracking",
+        "editor"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "input"
+      ],
+      "docs": "Takes r,g,b or a hex code and emits the decimal triple the field stores.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/color-editor.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "field-editor",
+      "type": "registry:component",
+      "title": "Field Editor",
+      "description": "One field, displayed or edited: the data type picks the editor and a toggle switches between the two.",
+      "categories": [
+        "flow-production-tracking",
+        "editor"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "https://sg-widgets.dev/r/react/field-value.json",
+        "https://sg-widgets.dev/r/react/text-editor.json",
+        "https://sg-widgets.dev/r/react/number-editor.json",
+        "https://sg-widgets.dev/r/react/checkbox-editor.json",
+        "https://sg-widgets.dev/r/react/date-editor.json",
+        "https://sg-widgets.dev/r/react/date-time-editor.json",
+        "https://sg-widgets.dev/r/react/list-select.json",
+        "https://sg-widgets.dev/r/react/url-editor.json",
+        "https://sg-widgets.dev/r/react/color-editor.json",
+        "https://sg-widgets.dev/r/react/status-picker.json",
+        "https://sg-widgets.dev/r/react/entity-picker.json",
+        "https://sg-widgets.dev/r/react/entity-multi-picker.json"
+      ],
+      "docs": "Installs FieldValue, the eight typed editors and the three pickers alongside it.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/field-editor.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "filter-editor",
+      "type": "registry:component",
+      "title": "Filter Editor",
+      "description": "A Flow Production Tracking filter tree edited as rows and nested groups, with the operator menu and the value editor chosen by the field data type.",
+      "categories": [
+        "flow-production-tracking",
+        "filter"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "button",
+        "select",
+        "skeleton",
+        "toggle-group",
+        "https://sg-widgets.dev/r/react/checkbox-editor.json",
+        "https://sg-widgets.dev/r/react/color-editor.json",
+        "https://sg-widgets.dev/r/react/date-editor.json",
+        "https://sg-widgets.dev/r/react/date-time-editor.json",
+        "https://sg-widgets.dev/r/react/entity-multi-picker.json",
+        "https://sg-widgets.dev/r/react/entity-picker.json",
+        "https://sg-widgets.dev/r/react/field-picker.json",
+        "https://sg-widgets.dev/r/react/list-multi-select.json",
+        "https://sg-widgets.dev/r/react/list-select.json",
+        "https://sg-widgets.dev/r/react/number-editor.json",
+        "https://sg-widgets.dev/r/react/status-multi-picker.json",
+        "https://sg-widgets.dev/r/react/status-picker.json",
+        "https://sg-widgets.dev/r/react/text-editor.json",
+        "https://sg-widgets.dev/r/react/url-editor.json"
+      ],
+      "docs": "Takes a FilterGroup and emits one on every edit. toApi3Hash turns it into the body _search takes.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/filter-editor.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "filter-dialog",
+      "type": "registry:component",
+      "title": "Filter Dialog",
+      "description": "The launcher pair from the legacy filter panel: Add filters, Edit filters with a count, and a clear control, opening the editor in a dialog.",
+      "categories": [
+        "flow-production-tracking",
+        "filter"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "badge",
+        "button",
+        "dialog",
+        "https://sg-widgets.dev/r/react/filter-editor.json"
+      ],
+      "docs": "Edits are staged. Only Apply emits; Cancel drops them and Clear all emits an empty filter.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/filter-dialog.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "filter-bar",
+      "type": "registry:component",
+      "title": "Filter Bar",
+      "description": "Quick facet pills over one entity type, each a segmented pill of field, operator and values writing a condition into a bound filter tree.",
+      "categories": [
+        "flow-production-tracking",
+        "filter"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "badge",
+        "button",
+        "checkbox",
+        "command",
+        "popover",
+        "select",
+        "https://sg-widgets.dev/r/react/filter-dialog.json"
+      ],
+      "docs": "Pass counts to compute the numbers with a _summarize grouping call; without it the bar tallies one page of rows.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/filter-bar.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "sort-picker",
+      "type": "registry:component",
+      "title": "Sort Picker",
+      "description": "The ordered sort keys of a query, with add, remove and reorder, emitting the sort string the REST API takes.",
+      "categories": [
+        "flow-production-tracking",
+        "filter"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "badge",
+        "button",
+        "popover",
+        "separator",
+        "toggle-group",
+        "https://sg-widgets.dev/r/react/field-picker.json",
+        "https://sg-widgets.dev/r/react/sortable.json"
+      ],
+      "docs": "Emits both the keys and the comma-joined sort string, a leading minus marking a descending key.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/sort-picker.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "status-picker",
+      "type": "registry:component",
+      "title": "Status Picker",
+      "description": "One Flow Production Tracking status, picked from the codes a project offers.",
+      "categories": [
+        "flow-production-tracking",
+        "picker"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "https://sg-widgets.dev/r/react/status-badge.json",
+        "select",
+        "skeleton"
+      ],
+      "docs": "Pass a cached SgClient. The options are valid_values minus the project hidden_values; a code outside them still renders.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/status-picker.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "status-multi-picker",
+      "type": "registry:component",
+      "title": "Status Multi Picker",
+      "description": "Several Flow Production Tracking statuses, picked from the codes a project offers.",
+      "categories": [
+        "flow-production-tracking",
+        "picker"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react",
+        "@base-ui/react"
+      ],
+      "registryDependencies": [
+        "https://sg-widgets.dev/r/react/status-badge.json",
+        "checkbox",
+        "skeleton"
+      ],
+      "docs": "Pass a cached SgClient. Selections outside the option set keep a row of their own rather than being dropped.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/status-multi-picker.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "entity-table",
+      "type": "registry:component",
+      "title": "Entity Table",
+      "description": "A page of Flow Production Tracking rows as a table: schema-driven columns, server-side sorting, selection, grouping and inline edit.",
+      "categories": [
+        "flow-production-tracking",
+        "collection"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react",
+        "@tanstack/react-table",
+        "@tanstack/react-virtual"
+      ],
+      "registryDependencies": [
+        "https://sg-widgets.dev/r/react/field-value.json",
+        "https://sg-widgets.dev/r/react/field-editor.json",
+        "table",
+        "checkbox",
+        "skeleton",
+        "input",
+        "button",
+        "dropdown-menu",
+        "select"
+      ],
+      "docs": "Takes an entity source and resolved columns from @sg-widgets/core. Sorting and grouping go through the server; an edit writes one field and re-reads the row.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/entity-table.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "entity-grid",
+      "type": "registry:component",
+      "title": "Entity Grid",
+      "description": "Flow Production Tracking rows as EntityCard tiles, with selection, keyboard navigation and infinite scroll.",
+      "categories": [
+        "flow-production-tracking",
+        "collection"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react",
+        "@tanstack/react-virtual"
+      ],
+      "registryDependencies": [
+        "https://sg-widgets.dev/r/react/entity-card.json",
+        "skeleton",
+        "input",
+        "button",
+        "select"
+      ],
+      "docs": "Takes an entity source and draws every row as an EntityCard tile; the arrows walk the grid and scrolling to the end asks the source for the next page.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/entity-grid.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "grouped-list",
+      "type": "registry:component",
+      "title": "Grouped List",
+      "description": "Dense Flow Production Tracking rows grouped under collapsible headers with counts.",
+      "categories": [
+        "flow-production-tracking",
+        "collection"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react",
+        "@tanstack/react-virtual"
+      ],
+      "registryDependencies": [
+        "https://sg-widgets.dev/r/react/field-value.json",
+        "https://sg-widgets.dev/r/react/thumbnail.json",
+        "checkbox",
+        "skeleton",
+        "input",
+        "button",
+        "select"
+      ],
+      "docs": "Groups the contiguous runs of the order the server produced, so the source is sorted on the same path.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/grouped-list.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "entity-tree",
+      "type": "registry:component",
+      "title": "Entity Tree",
+      "description": "A lazy tree over a project's navigation hierarchy, with a keyboard model, tri-state checkboxes and a filter.",
+      "categories": [
+        "flow-production-tracking",
+        "collection"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "https://sg-widgets.dev/r/react/field-value.json",
+        "https://sg-widgets.dev/r/react/status-badge.json",
+        "https://sg-widgets.dev/r/react/thumbnail.json",
+        "checkbox",
+        "@shadcn/skeleton",
+        "@shadcn/input"
+      ],
+      "docs": "Expands one level per call through POST /hierarchy/_expand. seedPath opens the tree to a row on mount; checkboxes propagate both ways.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/entity-tree.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "entity-picker",
+      "type": "registry:component",
+      "title": "Entity Picker",
+      "description": "One Flow Production Tracking entity, chosen by server-side search across one or more types.",
+      "categories": [
+        "flow-production-tracking",
+        "picker"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react",
+        "@base-ui/react"
+      ],
+      "registryDependencies": [
+        "https://sg-widgets.dev/r/react/entity-chip.json",
+        "https://sg-widgets.dev/r/react/picker-row.json",
+        "skeleton"
+      ],
+      "docs": "Server-side search only. Pass a cached client; a query past minQueryLength becomes one contains condition per word.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/entity-picker.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "entity-multi-picker",
+      "type": "registry:component",
+      "title": "Entity Multi Picker",
+      "description": "Several Flow Production Tracking entities, chosen by server-side search, with checkbox rows and removable chips.",
+      "categories": [
+        "flow-production-tracking",
+        "picker"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react",
+        "@base-ui/react"
+      ],
+      "registryDependencies": [
+        "https://sg-widgets.dev/r/react/entity-chip.json",
+        "https://sg-widgets.dev/r/react/picker-row.json",
+        "checkbox",
+        "skeleton"
+      ],
+      "docs": "Selected rows stay pinned to the end of the option list, so they can be unticked whatever the query.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/entity-multi-picker.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "user-picker",
+      "type": "registry:component",
+      "title": "User Picker",
+      "description": "People and script accounts, chosen by server-side search across name, login and email.",
+      "categories": [
+        "flow-production-tracking",
+        "picker"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "https://sg-widgets.dev/r/react/entity-picker.json",
+        "https://sg-widgets.dev/r/react/entity-multi-picker.json"
+      ],
+      "docs": "One file exporting UserPicker and UserMultiPicker. Both configure the generic pickers; neither forks them.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/user-picker.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "project-picker",
+      "type": "registry:component",
+      "title": "Project Picker",
+      "description": "Projects, chosen by server-side search, with the project thumbnail and its status.",
+      "categories": [
+        "flow-production-tracking",
+        "picker"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "https://sg-widgets.dev/r/react/entity-picker.json",
+        "https://sg-widgets.dev/r/react/entity-multi-picker.json"
+      ],
+      "docs": "One file exporting ProjectPicker and ProjectMultiPicker. Archived projects are left out unless includeArchived is set.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/project-picker.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "global-search",
+      "type": "registry:component",
+      "title": "Global Search",
+      "description": "A command palette that searches Flow Production Tracking by name across several entity types.",
+      "categories": [
+        "flow-production-tracking",
+        "search"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "https://sg-widgets.dev/r/react/entity-chip.json",
+        "https://sg-widgets.dev/r/react/picker-row.json",
+        "command",
+        "dialog",
+        "button",
+        "kbd",
+        "skeleton"
+      ],
+      "docs": "One text search covers every configured type. Results are grouped by type with the matched words in bold; Cmd/Ctrl+K opens it when hotkey is on.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/global-search.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "hierarchical-search",
+      "type": "registry:component",
+      "title": "Hierarchical Search",
+      "description": "A drill-down over the Flow Production Tracking navigation tree, with breadcrumb results.",
+      "categories": [
+        "flow-production-tracking",
+        "search"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "https://sg-widgets.dev/r/react/picker-row.json",
+        "command",
+        "skeleton"
+      ],
+      "docs": "Browses one level per call and searches by matching words, then asking where each hit sits. Emits the row picked and the path that reaches it.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/hierarchical-search.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "context-selector",
+      "type": "registry:component",
+      "title": "Context Selector",
+      "description": "The project, row and task a user is working on, changed from recents, assigned tasks or the tree.",
+      "categories": [
+        "flow-production-tracking",
+        "search"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "https://sg-widgets.dev/r/react/entity-chip.json",
+        "https://sg-widgets.dev/r/react/picker-row.json",
+        "https://sg-widgets.dev/r/react/hierarchical-search.json",
+        "popover",
+        "skeleton"
+      ],
+      "docs": "Installs HierarchicalSearch alongside it. Assigned tasks are one search on Task filtered by task_assignees.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/context-selector.tsx",
+          "type": "registry:component"
+        }
+      ]
+    }
+  ]
 }

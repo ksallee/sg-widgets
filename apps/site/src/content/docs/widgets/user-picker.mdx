@@ -1,0 +1,82 @@
+---
+title: UserPicker
+description: People and script accounts, chosen by server-side search across name, login and email.
+---
+
+import Demo from '../../../components/Demo.astro';
+
+Searches people, and optionally script accounts, on the server, with an avatar and an address on
+every row.
+
+## Install
+
+```sh
+pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/user-picker.json
+pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/user-picker.json
+```
+
+The item holds both variants. React installs one file exporting `UserPicker` and `UserMultiPicker`;
+Svelte installs `user-picker.svelte` and `user-multi-picker.svelte`. Both configure the generic
+pickers, which are installed alongside.
+
+<Demo name="user-picker" title="UserPicker and UserMultiPicker: scripts, inactive people, hydration, sizes, states" />
+
+## Props
+
+Every prop of [EntityPicker](/widgets/entity-picker/) and
+[EntityMultiPicker](/widgets/entity-multi-picker/) except `entityTypes`, plus:
+
+| prop | type | default | meaning |
+|---|---|---|---|
+| `includeApiUsers` | `boolean` | `true` | Search script accounts alongside people. |
+| `includeInactive` | `boolean` | `false` | Offer people whose status is `dis`. |
+
+`placeholder` defaults to `Search for a person`, or `Search for people` on the multi picker. The
+multi picker takes `summary` and `max` like every other multi picker.
+
+The query is matched against the display-name chain and the email, and against `login` while the
+query holds no whitespace. Both fields are requested so the row can show them. A person's sub-label
+is their email; a script account's is `API user`. `subLabelField="login"` puts the login there
+instead.
+
+## Events
+
+| event | payload | when |
+|---|---|---|
+| `onValueChange` | `EntityRef`, `PickerRow` | The selection changed. The multi picker sends arrays. |
+| `onError` | `Error` | A read failed. The list shows it inline as well. |
+| `onOpenChange` | `boolean` | The popup opened or closed. Svelte also binds it with `bind:open`. |
+
+## Slots
+
+None.
+
+## Keyboard
+
+The same as [EntityPicker](/widgets/entity-picker/) and
+[EntityMultiPicker](/widgets/entity-multi-picker/).
+
+## API behaviour
+
+`login` is the only unique field on HumanUser and is what impersonation matches; `email` is not
+unique, and `code` does not exist at all, so a filter on it is a 400
+(entity_types/HumanUser).
+
+Everyone on a site shares an email domain, so the address is matched with `starts_with` until the
+query holds an `@`, and with `contains` after that. `contains` on the whole address would match the
+domain and with it every person on the site (017_filter_operators).
+
+`sg_status_list` on HumanUser is two codes, `act` and `dis`, with `act` the default
+(entity_types/HumanUser). Active-only is that condition, and it is dropped on ApiUser, which has no
+status field: the same name in a filter on a type that lacks it would be a 400
+(017_filter_operators).
+
+HumanUser is site-wide and has no `project` field; a person's membership is the `projects`
+multi-entity on the row, so `projectId` scopes through that instead (entity_types/HumanUser).
+
+## Reference
+
+The row, chip and checkbox anatomy follows shadcn's Base UI Combobox, read through shadcn 4.21.0.
+The primitive underneath is Base UI Combobox 1.8.0 in React and Bits UI Combobox 2.19.1 in Svelte.
+shadcn-svelte ships no combobox item, so each widget composes the headless primitive of its
+framework and both draw the same rows, the same classes and the same states.

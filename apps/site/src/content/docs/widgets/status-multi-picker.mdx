@@ -1,0 +1,112 @@
+---
+title: StatusMultiPicker
+description: Several Flow Production Tracking statuses, picked from the codes a project offers.
+---
+
+import Demo from '../../../components/Demo.astro';
+
+Picks any number of status codes for an entity type, offering only the codes the project it is scoped
+to allows.
+
+## Install
+
+```sh
+pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/status-multi-picker.json
+pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/status-multi-picker.json
+```
+
+<Demo name="status-multi-picker" title="StatusMultiPicker: per-project options, trigger summaries, unknown codes, states and sizes" />
+
+## Props
+
+| prop | type | default | meaning |
+|---|---|---|---|
+| `context` | `SgContext` | required | The widget context. The options and the status table are read through it, once per page. |
+| `entityType` | `string` | required | The type whose status field is offered. |
+| `projectId` | `number` | — | Offer the codes this project allows. |
+| `projectIds` | `number[]` | — | Offer the codes every one of these projects allows. |
+| `field` | `string` | status field | A list or status field other than the type's own. |
+| `value` | `string[]` | `[]` | The selected codes. `bind:value` in Svelte, `value` with `onValueChange` in React. |
+| `placeholder` | `string` | `'Select statuses'` | Shown with nothing selected. |
+| `searchPlaceholder` | `string` | `'Search statuses…'` | Placeholder of the search box. |
+| `emptyLabel` | `string` | `'No status matches.'` | Shown when the search matches nothing. |
+| `clearable` | `boolean` | `true` | Offers a control that clears the selection. |
+| `readonly` | `boolean` | `false` | Keeps full contrast and drops the chevron, the popup and the clear control. |
+| `disabled` | `boolean` | `false` | Greys the control and takes it out of the tab order. |
+| `invalid` | `boolean` | `false` | Sets `aria-invalid` and the destructive ring. |
+| `showCode` | `boolean` | `false` | Shows the raw code instead of the label. The other one stays in the tooltip. |
+| `summary` | `'chips' \| 'ellipsis' \| 'count'` | `'ellipsis'` | How many of the selection the control shows. |
+| `badge` | `'both' \| 'icon' \| 'text'` | `'both'` | What one selected status is drawn as. |
+| `max` | `number` | `0` | Badges drawn before the rest becomes `+n`. `0` lets the row fit what it can, and `badge="icon"` draws twice as many. |
+| `siteUrl` | `string` | the context's | Passed to every badge, for a sprite cell outside the status icon set. |
+| `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Heights 8, 9 and 10. |
+| `open` | `boolean` | `false` | Whether the popup is showing. Two-way in Svelte. |
+| `class` / `className` | `string` | — | Merged after the widget's own classes. |
+
+Every other attribute is spread onto the root: `id`, `aria-*`, `data-*`, key handlers and a
+`ref` to the root element.
+
+`summary` and `badge` are two axes. `summary` says how many of the selection the control shows:
+`chips` makes it a token field with every badge, wrapped, each with its own remove control, the caret
+beside them, and `+n` after the last badge `max` allows; `ellipsis` makes it a one-line trigger with
+as many whole badges as the row fits, never a cut one, then `+n` inline after the last, and the
+search box at the top of the popup; `count` is the same trigger reading `3 selected`.
+
+`badge` says what one status is drawn as: `both` is the icon and the label, `icon` drops the label
+and the per-badge remove, so removal happens in the list and twice as many fit, and `text` is the
+label alone.
+A press on `+n` opens the list, where the hidden codes are. Without a project the options are the site
+vocabulary, which hides nothing. `projectIds` offers the intersection of what each project allows,
+in the first project's order.
+
+The root carries the size and, while the options load, `data-loading`.
+
+## Events
+
+`onValueChange` fires with the whole array on every change, including the empty array from the clear
+control. A selected code the option set does not carry is kept, never dropped.
+
+`onOpenChange` fires when the popup opens or closes. Svelte also binds it with `bind:open`.
+
+## Slots
+
+None. The rows and the closed state are status badges.
+
+## Keyboard
+
+| key | does |
+|---|---|
+| <kbd>Space</kbd>, <kbd>Enter</kbd> | On the chevron, opens the list |
+| any text | Narrows the rows, from the caret under `chips` and from the popup's search box otherwise |
+| <kbd>↑</kbd> <kbd>↓</kbd> | Moves the highlight and keeps it in view; the last row holds it rather than wrapping |
+| <kbd>Home</kbd> <kbd>End</kbd> | First and last row |
+| <kbd>Enter</kbd> | Toggles the highlighted status; the list stays open |
+| <kbd>Backspace</kbd> | In an empty search box, highlights the last chip; a second one removes it |
+| <kbd>Esc</kbd> | Closes, keeps the selection and clears the query; on a closed control it does nothing |
+| <kbd>Tab</kbd> | Leaves the control, or reaches the clear control when there is one |
+
+## API behaviour
+
+A project's usable statuses are `valid_values` minus `hidden_values`, read with `project_id`.
+`valid_values` is the site's whole vocabulary and is byte-identical at every scope, so reading it
+alone tells you nothing about a project (probe 009).
+
+REST does not enforce `hidden_values` on write: a hidden status writes and reads back. Subtracting is
+right for offering a choice and wrong for testing a row, so a selected code outside the option set
+keeps a row of its own here, labelled with the code (field_types/status_list).
+
+A status list has no substring operator, so there is no server-side type-ahead over it. The
+vocabulary is read once and the query input narrows it in the browser (field_types/status_list).
+
+Labels come from `display_values`, and a missing key falls back to the raw code rather than dropping
+the option (probe 009).
+
+Project's status field is `sg_status`, a plain `list` rather than a `status_list`. There is no Status
+row behind a `list`, so those options carry no icon and no colour (entity_types/Project).
+
+## Reference
+
+The row, chip and checkbox anatomy follows shadcn's Base UI Combobox, read through shadcn 4.21.0.
+The primitive underneath is Base UI Combobox 1.8.0 in React and Bits UI Combobox 2.19.1 in Svelte.
+shadcn-svelte ships no combobox item, so each widget composes the headless primitive of its
+framework and both draw the same rows, the same classes and the same states.

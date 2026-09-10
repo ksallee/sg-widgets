@@ -1,1 +1,455 @@
-@import "tailwindcss";
+/*
+ * Site styles: Tailwind for the demo harness, and one copy of the shadcn tokens.
+ *
+ * Why the package CSS is not imported here
+ * ---------------------------------------
+ * `packages/react/src/index.css` and `packages/svelte/src/app.css` each define the
+ * whole nova token set (`--background`, `--primary`, ...) on `:root`, restyle `body`,
+ * and pull in Tailwind's preflight. Importing either would fight Starlight's own reset
+ * and theme; importing both would define every token twice. So the site imports
+ * neither, and the block below is the single copy of those tokens on this site. When
+ * the packages change a token value, mirror it here.
+ *
+ * The tokens sit on `:root`, and the `--sl-*` block further down hands them to
+ * Starlight, so the header, sidebar, content and code blocks wear the palette the
+ * demos wear. The stage keeps its own copy and its own light/dark.
+ *
+ * The layer order is Starlight's recommended one for Tailwind v4, which deliberately
+ * omits `tailwindcss/preflight.css`: a global preflight would flatten Starlight's
+ * chrome. The demo area gets the preflight rules the shadcn components actually rely
+ * on, scoped to `.sg-demo`, in the `sg-demo-base` layer -- above `starlight` so
+ * Starlight's content styles do not leak into a demo, below `utilities` so Tailwind
+ * classes still win.
+ */
+
+@layer base, starlight, theme, sg-demo-base, components, utilities;
+
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/utilities.css' layer(utilities);
+
+/*
+ * The nova preset: `data-open`/`data-closed`/... custom variants, keyframes and
+ * utilities the registry components are written against. `shadcn/tailwind.css` and
+ * `shadcn-svelte/tailwind.css` are the same file bar whitespace and the accordion
+ * height variable, so only one is loaded; the bits-ui spelling of that variable is
+ * restored just below so Svelte items animate too.
+ */
+@import 'shadcn/tailwind.css';
+
+/* One stylesheet serves both frameworks. cmdk marks the Command cursor `data-selected="true"`,
+   Bits UI marks it with an empty value; the variant must match both. */
+@custom-variant data-selected (&:where([data-selected=''], [data-selected='true']));
+
+/*
+ * Every typeface a palette can name, self-hosted. A palette sets `--font-sans` on the
+ * page and on the stage alike, so the family has to be there for the chrome as well as
+ * for the demos; the variable face of each covers the 400-600 the site uses. Geist is the
+ * default palette's family and the last named fallback of every other stack.
+ */
+@import '@fontsource-variable/geist';
+@import '@fontsource-variable/montserrat';
+@import '@fontsource-variable/open-sans';
+@import '@fontsource-variable/outfit';
+
+/*
+ * The palettes the toolbar can put on a stage and on the page around it. Unlayered, like
+ * the token block below, and every rule in it carries a `[data-theme]`, `[data-radius]`,
+ * `[data-sg-palette]` or `[data-sg-radius]` attribute, so it outranks the defaults on
+ * specificity wherever the import lands.
+ */
+@import './themes.css';
+
+@keyframes accordion-down {
+  from {
+    height: 0;
+  }
+  to {
+    height: var(
+      --radix-accordion-content-height,
+      var(--bits-accordion-content-height, var(--accordion-panel-height, auto))
+    );
+  }
+}
+@keyframes accordion-up {
+  from {
+    height: var(
+      --radix-accordion-content-height,
+      var(--bits-accordion-content-height, var(--accordion-panel-height, auto))
+    );
+  }
+  to {
+    height: 0;
+  }
+}
+
+/* Same spelling as both packages: the demo stage carries `dark`, widgets are inside it. */
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * Classes used by the widgets live outside apps/site, in the workspace packages the
+ * aliases point at. Tailwind only generates what it sees, so scan them. Whole package
+ * roots, so the registry directories are covered the moment issue #2 adds items;
+ * node_modules and dist are gitignored and skipped.
+ */
+@source '../../../../packages/react';
+@source '../../../../packages/svelte';
+@source '../../src';
+
+@theme inline {
+  --font-sans: 'Geist Variable', sans-serif;
+  --font-heading: var(--font-sans);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+/*
+ * The one copy of the shadcn tokens.
+ *
+ * On `:root`, so the whole page reads them: Starlight's chrome through the `--sl-*`
+ * mapping further down, the demo frame and a portalled popup -- both of which sit
+ * outside the stage -- by inheritance. `[data-stage]` is the stage itself, which holds
+ * its own palette and its own light/dark and so pins the tokens again on the element.
+ */
+:root,
+[data-stage] {
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --radius: 0.625rem;
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+}
+
+/*
+ * Dark tokens, for two independent things:
+ *
+ * - `:root[data-theme='dark']` -- the docs page, the spelling Starlight's own theme
+ *   select writes. Everything outside the stage follows it: the chrome through the
+ *   `--sl-*` mapping below, the demo frame and the portalled surfaces (a popover, a
+ *   select popup, a hover card, a dialog all sit on `<body>`) by inheritance.
+ * - `[data-stage].dark` -- the demo stage's own dark class, driven by the toggle in the
+ *   demo toolbar. It pins the tokens on the stage element, so a reviewer can read dark
+ *   docs while QAing a light widget.
+ */
+:root[data-theme='dark'],
+[data-stage].dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
+}
+
+/*
+ * Starlight's chrome, on the tokens above.
+ *
+ * Starlight draws its header, sidebar, table of contents, content, search dialog, code
+ * blocks and mobile menu from the `--sl-*` variables it defines in `@layer
+ * starlight.base` (@astrojs/starlight/style/props.css). This block is unlayered, so it
+ * outranks that definition, and every value here reads a token: the palette on `:root`
+ * reaches the chrome through the tokens, and no rule below names a palette.
+ *
+ * Starlight's grey ramp runs from the colour furthest from the page (`--sl-color-white`,
+ * which headings take) to the page itself (`--sl-color-black`), and swaps ends between
+ * light and dark. So each step maps to the token that plays its part, never to a
+ * lightness, and the ramp turns over with the theme on its own.
+ *
+ * The text scale is mapped the same way. Starlight sizes the chrome from `--sl-text-*`,
+ * so the steps the chrome names are pinned to the two sizes docs/design-rules.md gives a
+ * widget -- body `text-sm` and sub-label `text-xs` -- and a sidebar entry, a table of
+ * contents entry and a widget label then read at the size their part is. Everything above
+ * the base keeps Starlight's ratio to it, so a heading stays a heading's distance from
+ * the text it introduces.
+ *
+ * Left on Starlight's own values: `--sl-shadow-*`, which are neutral alpha blacks, and
+ * `--sl-color-{orange,green,blue,purple,red}*`, which asides use to say what kind of
+ * note they are.
+ */
+:root {
+  --sl-font: var(--font-sans);
+  --sl-font-mono: var(--font-mono);
+
+  /* The widget scale bottoms out at the sub-label: the search button's key hint. */
+  --sl-text-2xs: 0.75rem;
+  /* Sub-label: table of contents entries, the footer, inline code, an aside's body. */
+  --sl-text-xs: 0.75rem;
+  /* Body: a sidebar entry, the header's selects, the search button, a code block. */
+  --sl-text-sm: 0.875rem;
+  /* The base the rest of the scale is measured from, and what a widget calls body. */
+  --sl-text-base: 0.875rem;
+  /* Starlight's 1.125 of the base: the table of contents heading, an aside's title. */
+  --sl-text-lg: calc(var(--sl-text-base) * 1.125);
+  /* Starlight's 1.25: the site title, and the search button on a narrow viewport. */
+  --sl-text-xl: calc(var(--sl-text-base) * 1.25);
+  /* Starlight's 1.5: `h3`, and the arrows either side of the pagination links. */
+  --sl-text-2xl: calc(var(--sl-text-base) * 1.5);
+  /* Starlight's 1.8125: `h2` on a narrow viewport, `h3` on a wide one. */
+  --sl-text-3xl: calc(var(--sl-text-base) * 1.8125);
+  /* Starlight's 2.1875: `h1` on a narrow viewport, `h2` on a wide one. */
+  --sl-text-4xl: calc(var(--sl-text-base) * 2.1875);
+  /* Starlight's 2.625: `h1` on a wide viewport. */
+  --sl-text-5xl: calc(var(--sl-text-base) * 2.625);
+  /* Starlight's 4: the top of a hero. */
+  --sl-text-6xl: calc(var(--sl-text-base) * 4);
+  /* Starlight's own ratio, kept: on the smaller base a paragraph still runs 24px apart. */
+  --sl-line-height: 1.75;
+
+  --sl-color-white: var(--foreground);
+  --sl-color-gray-1: var(--foreground);
+  /* Chrome text one step off the body's, so a sidebar link has somewhere to go on hover. */
+  --sl-color-gray-2: color-mix(in oklab, var(--foreground) 85%, var(--background));
+  /* Muted text, pulled towards the body's colour so it clears AA in every palette. */
+  --sl-color-gray-3: color-mix(in oklab, var(--muted-foreground) 75%, var(--foreground));
+  /* Rules and icon fills: dimmer than muted text, still darker than a border. */
+  --sl-color-gray-4: color-mix(in oklab, var(--muted-foreground) 65%, var(--background));
+  --sl-color-gray-5: var(--border);
+  --sl-color-gray-6: var(--muted);
+  --sl-color-gray-7: var(--muted);
+  --sl-color-black: var(--background);
+
+  --sl-color-text: var(--foreground);
+  --sl-color-bg: var(--background);
+  --sl-color-bg-nav: var(--background);
+  --sl-color-bg-sidebar: var(--background);
+  --sl-color-bg-inline-code: var(--muted);
+
+  /* One accent, the token the widgets take for their strongest surface. */
+  --sl-color-accent: var(--primary);
+  --sl-color-accent-high: var(--primary);
+  --sl-color-accent-low: color-mix(in oklab, var(--primary) 22%, var(--background));
+  --sl-color-bg-accent: var(--primary);
+  /*
+   * The accent as text -- a link, the current heading in the table of contents -- sits
+   * on the page rather than on a surface of its own, and a palette whose `--primary` is
+   * a bright colour would not clear AA there. Half way to the body's colour keeps the
+   * hue and the contrast; where `--primary` is already near `--foreground` it changes
+   * nothing.
+   */
+  --sl-color-text-accent: color-mix(in oklab, var(--primary) 50%, var(--foreground));
+  /*
+   * What Starlight writes on the accent -- the current page in the sidebar. The page's
+   * own colour, so it inherits the contrast the line above guarantees.
+   */
+  --sl-color-text-invert: var(--background);
+
+  --sl-color-hairline: var(--border);
+  --sl-color-hairline-light: var(--border);
+  --sl-color-hairline-shade: var(--border);
+}
+
+/*
+ * The page on the base of that scale. Starlight sizes what names a `--sl-text-*` step and
+ * leaves the rest on the browser's own 16px, so the content, the mobile menu and the
+ * sidebar below 50rem need the base saying so. The stage pins `1rem` of its own further
+ * down, so a widget keeps the size it has anywhere else.
+ */
+body {
+  font-size: var(--sl-text-body);
+}
+
+/*
+ * The wash behind the search dialog: a fixed dark scrim in both themes, as the shadcn
+ * dialog overlay is. It is read from the `::backdrop` pseudo-element, which the tokens
+ * do not reach, so it carries no `var()`.
+ */
+:root,
+::backdrop {
+  --sl-color-backdrop-overlay: oklch(0 0 0 / 60%);
+}
+
+/* Pagefind's own corners; the dialog's are a hard 0.5rem upstream and stay there. */
+#starlight__search {
+  --sl-search-corners: var(--radius);
+}
+
+/*
+ * The parts of Tailwind's preflight the shadcn components assume, on the stage and on
+ * any shadcn surface that portals to `<body>` -- a popover, a select popup, a hover card, a dialog --
+ * which would otherwise get the UA styles.
+ */
+@layer sg-demo-base {
+  :is(.sg-demo, [data-slot='popover-content'], [data-slot='select-content'], [data-slot='dialog-content'], [data-slot='hover-card-content'], [data-slot$='-picker-content']),
+  :is(.sg-demo, [data-slot='popover-content'], [data-slot='select-content'], [data-slot='dialog-content'], [data-slot='hover-card-content'], [data-slot$='-picker-content']) *,
+  :is(.sg-demo, [data-slot='popover-content'], [data-slot='select-content'], [data-slot='dialog-content'], [data-slot='hover-card-content'], [data-slot$='-picker-content']) *::before,
+  :is(.sg-demo, [data-slot='popover-content'], [data-slot='select-content'], [data-slot='dialog-content'], [data-slot='hover-card-content'], [data-slot$='-picker-content']) *::after {
+    box-sizing: border-box;
+    /* The colour is part of the reset: the packages' `* { @apply border-border }` base is
+     * not imported here, and a bare `border` utility would otherwise take currentColor. */
+    border: 0 solid var(--border);
+  }
+
+  :is(.sg-demo, [data-slot='popover-content'], [data-slot='select-content'], [data-slot='dialog-content'], [data-slot='hover-card-content'], [data-slot$='-picker-content']) {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    font-size: 1rem;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    outline-color: color-mix(in oklab, var(--ring) 50%, transparent);
+  }
+
+  :is(.sg-demo, [data-slot='popover-content'], [data-slot='select-content'], [data-slot='dialog-content'], [data-slot='hover-card-content'], [data-slot$='-picker-content']) :is(h1, h2, h3, h4, h5, h6) {
+    font-size: inherit;
+    font-weight: inherit;
+    margin: 0;
+  }
+
+  :is(.sg-demo, [data-slot='popover-content'], [data-slot='select-content'], [data-slot='dialog-content'], [data-slot='hover-card-content'], [data-slot$='-picker-content']) :is(p, ul, ol, dl, figure, blockquote, pre, hr) {
+    margin: 0;
+  }
+
+  :is(.sg-demo, [data-slot='popover-content'], [data-slot='select-content'], [data-slot='dialog-content'], [data-slot='hover-card-content'], [data-slot$='-picker-content']) :is(ul, ol) {
+    list-style: none;
+    padding: 0;
+  }
+
+  :is(.sg-demo, [data-slot='popover-content'], [data-slot='select-content'], [data-slot='dialog-content'], [data-slot='hover-card-content'], [data-slot$='-picker-content']) a {
+    color: inherit;
+    text-decoration: inherit;
+  }
+
+  :is(.sg-demo, [data-slot='popover-content'], [data-slot='select-content'], [data-slot='dialog-content'], [data-slot='hover-card-content'], [data-slot$='-picker-content']) :is(button, input, optgroup, select, textarea) {
+    font: inherit;
+    color: inherit;
+    letter-spacing: inherit;
+    background-color: transparent;
+    border-radius: 0;
+    margin: 0;
+    padding: 0;
+    opacity: 1;
+  }
+
+  :is(.sg-demo, [data-slot='popover-content'], [data-slot='select-content'], [data-slot='dialog-content'], [data-slot='hover-card-content'], [data-slot$='-picker-content']) :is(button, [type='button'], [type='reset'], [type='submit']) {
+    appearance: button;
+    background-image: none;
+    cursor: default;
+  }
+
+  :is(.sg-demo, [data-slot='popover-content'], [data-slot='select-content'], [data-slot='dialog-content'], [data-slot='hover-card-content'], [data-slot$='-picker-content']) :is(button, [role='button']):not(:disabled) {
+    cursor: pointer;
+  }
+
+  :is(.sg-demo, [data-slot='popover-content'], [data-slot='select-content'], [data-slot='dialog-content'], [data-slot='hover-card-content'], [data-slot$='-picker-content']) :is(img, svg, video, canvas, audio, iframe, embed, object) {
+    display: block;
+    vertical-align: middle;
+  }
+
+  :is(.sg-demo, [data-slot='popover-content'], [data-slot='select-content'], [data-slot='dialog-content'], [data-slot='hover-card-content'], [data-slot$='-picker-content']) :is(img, video) {
+    max-width: 100%;
+    height: auto;
+  }
+
+  :is(.sg-demo, [data-slot='popover-content'], [data-slot='select-content'], [data-slot='dialog-content'], [data-slot='hover-card-content'], [data-slot$='-picker-content']) ::placeholder {
+    color: color-mix(in oklab, currentcolor 50%, transparent);
+    opacity: 1;
+  }
+
+  :is(.sg-demo, [data-slot='popover-content'], [data-slot='select-content'], [data-slot='dialog-content'], [data-slot='hover-card-content'], [data-slot$='-picker-content']) :is(code, kbd, samp, pre) {
+    font-family: var(--font-mono, ui-monospace, monospace);
+    font-size: 1em;
+    background: none;
+    border: 0;
+    padding: 0;
+  }
+}
+
+/* Content column widens with the viewport so a two-pane demo has room; prose stays at reading width. */
+@layer starlight {
+  @media (min-width: 80rem) {
+    :root { --sl-content-width: 56rem; }
+  }
+  @media (min-width: 100rem) {
+    :root { --sl-content-width: 70rem; }
+  }
+  .sl-markdown-content > :not(.sg-demo-chrome) {
+    max-width: 45rem;
+  }
+}

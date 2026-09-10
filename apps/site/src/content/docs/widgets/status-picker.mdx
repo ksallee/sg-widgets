@@ -1,0 +1,90 @@
+---
+title: StatusPicker
+description: One Flow Production Tracking status, picked from the codes a project offers.
+---
+
+import Demo from '../../../components/Demo.astro';
+
+Picks one status code for an entity type, offering only the codes the project it is scoped to allows.
+
+## Install
+
+```sh
+pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/status-picker.json
+pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/status-picker.json
+```
+
+<Demo name="status-picker" title="StatusPicker: per-project options, unknown codes, states and sizes" />
+
+## Props
+
+| prop | type | default | meaning |
+|---|---|---|---|
+| `context` | `SgContext` | required | The widget context. The options and the status table are read through it, once per page. |
+| `entityType` | `string` | required | The type whose status field is offered. |
+| `projectId` | `number` | — | Offer the codes this project allows. |
+| `projectIds` | `number[]` | — | Offer the codes every one of these projects allows. |
+| `field` | `string` | status field | A list or status field other than the type's own. |
+| `value` | `string` | — | The selected code. `bind:value` in Svelte, `value` with `onValueChange` in React. |
+| `placeholder` | `string` | `'Select a status'` | Shown with no selection. |
+| `emptyLabel` | `string` | `'No status on this field.'` | Shown when the field offers nothing. |
+| `clearable` | `boolean` | `true` | Offers a control that clears the selection. |
+| `readonly` | `boolean` | `false` | Keeps full contrast and drops the chevron, the popup and the clear control. |
+| `disabled` | `boolean` | `false` | Greys the control and takes it out of the tab order. |
+| `invalid` | `boolean` | `false` | Sets `aria-invalid` and the destructive ring. |
+| `showCode` | `boolean` | `false` | Shows the raw code instead of the label. The other one stays in the tooltip. |
+| `siteUrl` | `string` | the context's | Passed to every badge, for a sprite cell outside the status icon set. |
+| `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Heights 8, 9 and 10. |
+| `open` | `boolean` | `false` | Whether the popup is showing. Two-way in Svelte. |
+| `class` / `className` | `string` | — | Merged after the widget's own classes. |
+
+Every other attribute is spread onto the root: `id`, `aria-*`, `data-*`, key handlers and a
+`ref` to the root element.
+
+Without a project the options are the site vocabulary, which hides nothing. `projectIds` offers the
+intersection of what each project allows, in the first project's order.
+
+The root carries the size and, while the options load, `data-loading`.
+
+## Events
+
+`onValueChange` fires with the code, or with `undefined` when the selection is cleared. It also fires
+once with `undefined` when a new option set drops the selected code, which is what a project change
+does.
+
+`onOpenChange` fires when the popup opens or closes. Svelte also binds it with `bind:open`.
+
+## Slots
+
+None. The rows and the closed state are status badges.
+
+## Keyboard
+
+| key | does |
+|---|---|
+| <kbd>Space</kbd>, <kbd>Enter</kbd>, <kbd>↓</kbd> | Opens the list |
+| <kbd>↑</kbd> <kbd>↓</kbd> | Moves the highlight |
+| <kbd>Home</kbd> <kbd>End</kbd> | First and last status |
+| a–z | Jumps to the status whose label starts with the letters typed |
+| <kbd>Enter</kbd> | Selects the highlighted status and closes |
+| <kbd>Esc</kbd> | Closes and keeps the selection |
+| <kbd>Tab</kbd> | Leaves the control, or reaches the clear control when there is one |
+
+## API behaviour
+
+A project's usable statuses are `valid_values` minus `hidden_values`, read with `project_id`.
+`valid_values` is the site's whole vocabulary and is byte-identical at every scope, so reading it
+alone tells you nothing about a project (probe 009).
+
+REST does not enforce `hidden_values` on write: a hidden status writes and reads back. Subtracting is
+right for offering a choice and wrong for testing a row, so a code outside the option set still
+renders here, as itself, and stays removable (field_types/status_list).
+
+Labels come from `display_values`, and a missing key falls back to the raw code rather than dropping
+the option (probe 009).
+
+Status lists are per entity type: Version and Task overlap on five codes only, so the options are
+read per type and per field (probe 009).
+
+Project's status field is `sg_status`, a plain `list` rather than a `status_list`. There is no Status
+row behind a `list`, so those options carry no icon and no colour (entity_types/Project).

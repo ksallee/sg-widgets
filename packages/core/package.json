@@ -4,12 +4,12 @@
   "description": "Headless, framework-agnostic model of Flow Production Tracking (ShotGrid) fields, filters, statuses and a client adapter, for building widgets.",
   "type": "module",
   "sideEffects": false,
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
     }
   },
   "files": [
@@ -19,7 +19,8 @@
     "build": "tsdown src/index.ts --format esm --dts",
     "test": "vitest run",
     "test:watch": "vitest",
-    "check": "tsc --noEmit"
+    "check": "tsc --noEmit",
+    "prepare": "tsdown src/index.ts --format esm --dts"
   },
   "license": "MIT",
   "devDependencies": {

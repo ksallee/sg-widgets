@@ -1,0 +1,28 @@
+---
+title: Widgets
+description: Every widget, with a live demo of the Svelte and React implementations.
+---
+
+import Demo from '../../../components/Demo.astro';
+
+Each widget page shows the Svelte and React implementations side by side. The toolbar on an example
+sets the framework, reduced motion and the corner radius; the palette select in the header picks one
+of ten themes for the demo stages, and light or dark follows the theme select next to it. Every one
+of those choices carries to the other examples on the page and to the next page.
+
+Demos run on fixtures until you open Connect in the header, switch it to Live, give it your site and
+log in through your site's own approval page. Your session stays in this browser, this site keeps
+nothing of it on a server, and the project you pick there is the one the demos that take a project
+read.
+
+Widgets install from a registry into your project, one command per framework:
+
+```sh
+pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/status-badge.json
+pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/status-badge.json
+```
+
+Every widget that reads takes the context, built once over your client. It is what makes one page
+cost one schema read and one status table. Wire your own client, or the shipped REST one.
+
+<Demo name="hello" />

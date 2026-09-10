@@ -1,0 +1,68 @@
+---
+/**
+ * The site's two demo controls, in Starlight's header beside the search box and the
+ * theme select: a palette select, and the Connect button holding everything that says
+ * what the demos read.
+ *
+ * The palette is Starlight's own `Select`, so it is the theme select's twin. Connect is
+ * ConnectPanel.svelte, mounted into the slot below.
+ *
+ * The panel is mounted by hand rather than with `client:load`: an Astro island on the
+ * page makes Astro emit every before-hydration script, including the React refresh
+ * preamble that Demo.astro installs itself. The slot holds the trigger's height and
+ * width so the header does not shift when the panel arrives.
+ */
+import Select from '@astrojs/starlight/components/Select.astro';
+import { palettes } from './demo-prefs';
+---
+
+<span class="sg-palette">
+  <Select
+    icon="pencil"
+    label="Palette"
+    options={palettes.map((palette) => ({
+      label: palette.label,
+      value: palette.name,
+      selected: palette.name === 'default',
+    }))}
+    width="9.5em"
+  />
+</span>
+
+<div class="sg-connect-slot" data-connect-slot></div>
+
+<script>
+  /**
+   * Wires both controls. The palette writes a `sg-demo:*` key and the demos read it;
+   * Connect owns the source, the site, the login and the project.
+   */
+  import { mount } from 'svelte';
+  import { applyPrefs, setPref, watchPrefs } from './demo-prefs';
+  import ConnectPanel from './ConnectPanel.svelte';
+
+  document.addEventListener('change', (event) => {
+    const select = (event.target as HTMLElement | null)?.closest<HTMLSelectElement>('.sg-palette select');
+    if (select) setPref('palette', select.value);
+  });
+
+  applyPrefs();
+  watchPrefs();
+
+  const slot = document.querySelector<HTMLElement>('[data-connect-slot]');
+  if (slot) mount(ConnectPanel, { target: slot });
+</script>
+
+<style>
+  .sg-palette {
+    display: flex;
+    align-items: center;
+  }
+
+  /* The trigger's own size, held from the first paint so the header does not shift. */
+  .sg-connect-slot {
+    display: flex;
+    align-items: center;
+    min-width: 7rem;
+    height: 2rem;
+  }
+</style>

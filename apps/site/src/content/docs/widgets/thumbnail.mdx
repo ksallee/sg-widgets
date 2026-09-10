@@ -1,0 +1,59 @@
+---
+title: Thumbnail
+description: A row's thumbnail, with an explicit placeholder and a play overlay.
+---
+
+import Demo from '../../../components/Demo.astro';
+
+Renders the value of an image field at a fixed aspect ratio, with a glyph standing in whenever there
+is no picture to show.
+
+## Install
+
+```sh
+pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/thumbnail.json
+pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/thumbnail.json
+```
+
+<Demo name="thumbnail" title="Thumbnail: sizes, aspects, play overlay, missing and failed images" />
+
+## Props
+
+| prop | type | default | meaning |
+|---|---|---|---|
+| `src` | `string \| null` | `null` | The image field's value. |
+| `alt` | `string` | `''` | Empty by default: a thumbnail beside a labelled row is decorative. |
+| `aspect` | `'16:9' \| 'square'` | `'16:9'` | Sets the width for the chosen height. |
+| `size` | `'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl'` | `'md'` | Heights 6, 8, 10, 16 and 24. The first three sit in rows and cells; `xl` and `2xl` are for cards and detail panes. |
+| `playable` | `boolean` | `false` | Draws a centred play badge over the image. |
+| `class` / `className` | `string` | — | Merged after the widget's own classes. Set a height here for a larger frame. |
+
+The height comes from the size and the width from the aspect, so the widget never sets a fixed
+width.
+
+Three states render, and the root carries the resolved one as a data attribute: no image, still
+transcoding, and ready. A URL that fails to load falls back to the no-image glyph.
+
+The play badge does not take pointer events. Wrap the widget to make it clickable.
+
+## Events
+
+None.
+
+## Slots
+
+None.
+
+## Keyboard
+
+Not focusable.
+
+## API behaviour
+
+The value of an image field is a presigned URL that is re-signed on every read, so two reads of the
+same row return different strings and a stored one expires. Cache the row id and re-read
+(field_types/image).
+
+That value is also the only state marker there is. Null means the row never had a thumbnail, and a
+URL under the transient status path means one is still transcoding, so it is never tested for
+truthiness (field_types/image).

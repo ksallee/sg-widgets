@@ -1,0 +1,369 @@
+import { useEffect, useState, type ReactNode } from 'react';
+import type {
+  FacetValue,
+  FieldSchema,
+  FilterCondition,
+  FilterGroup,
+  Operator,
+  Scalar,
+  SgContext,
+  WireGroup,
+} from '@sg-widgets/core';
+import {
+  conditionArity,
+  conditionParts,
+  describeCondition,
+  emptyFilter,
+  facetValues,
+  findCondition,
+  setFacet,
+  toApi3Hash,
+  asFilterGroup,
+  group,
+  withoutPaths,
+} from '@sg-widgets/core';
+import { PlusIcon, XIcon } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
+import { FilterDialog } from '@/registry/sg/components/filter-dialog';
+
+export type FilterBarSize = 'sm' | 'md' | 'lg';
+
+/** Pills follow the input ladder of `docs/design-rules.md`. */
+const PILL: Record<FilterBarSize, string> = { sm: 'h-8', md: 'h-9', lg: 'h-10' };
+const PAD: Record<FilterBarSize, string> = { sm: 'px-2', md: 'px-3', lg: 'px-3' };
+/** The remove control sits inside the pill, so it takes the tighter padding. */
+const REMOVE_PAD: Record<FilterBarSize, string> = { sm: 'px-1.5', md: 'px-2', lg: 'px-2' };
+const GLYPH: Record<FilterBarSize, string> = { sm: 'size-4', md: 'size-4', lg: 'size-5' };
+/** The button step beside a pill of each height. */
+const BTN: Record<FilterBarSize, 'sm' | 'default' | 'lg'> = { sm: 'sm', md: 'default', lg: 'lg' };
+
+export interface FilterBarProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange'> {
+  /** The root element. */
+  ref?: React.Ref<HTMLDivElement>;
+
+  entityType: string;
+  /** The widget context. Every read goes through it, so widgets on a page share one cache. */
+  context: SgContext;
+  /** Field names to offer as pills, in order. */
+  facets: string[];
+  value: FilterGroup;
+  hidePaths?: string[];
+  size?: FilterBarSize;
+  disabled?: boolean;
+  /**
+   * Counts per value for one facet. Wire it to a `_summarize` grouping call.
+   * Without it the bar reads one page of rows and tallies them.
+   */
+  /** Conditions every facet query carries, such as a project scope. Never edited by the bar. */
+  baseFilter?: FilterGroup | WireGroup | null;
+  counts?: (field: string, filters: WireGroup | null) => Promise<Record<string, number>>;
+  /** Rows read for the tally when `counts` is not given. */
+  sampleSize?: number;
+  onChange?: (value: FilterGroup) => void;
+  className?: string;
+}
+
+/**
+ * Quick facets over one entity type.
+ *
+ * An untouched facet is a quiet pill naming its field; ticking a value turns it into
+ * a segmented pill reading field, operator and values, where the operator segment is
+ * a menu of the operators that field's facet can take and the values segment is the
+ * checklist. The pill adds its condition to the bound tree, and More filters opens
+ * the same tree in the full editor, so the two edit one value.
+ *
+ * Counts come from a `_summarize` grouping call when one is wired to `counts`, and
+ * otherwise from tallying one page of rows, which makes them as complete as the page
+ * size allowed.
+ */
+export function FilterBar({
+  entityType,
+  context,
+  facets,
+  value = emptyFilter(),
+  hidePaths = [],
+  size = 'md',
+  disabled = false,
+  counts,
+  baseFilter = null,
+  sampleSize = 200,
+  onChange,
+  className,
+  ref,
+  ...rest
+}: FilterBarProps) {
+  const [fields, setFields] = useState<Record<string, FieldSchema>>({});
+  const [tally, setTally] = useState<Record<string, FacetValue[]>>({});
+  const [counting, setCounting] = useState(true);
+
+  useEffect(() => {
+    let live = true;
+    void context.schema.fields(entityType).then((loaded) => {
+      if (live) setFields(loaded);
+    });
+    return () => {
+      live = false;
+    };
+  }, [context.schema, entityType]);
+
+  // Counts are read against the filter with every facet's own condition stripped, so
+  // ticking one value does not empty its neighbours. One read serves every pill.
+  const base = asFilterGroup(baseFilter);
+  const scope = JSON.stringify(toApi3Hash(base ? group('and', [base, withoutPaths(value, facets)]) : withoutPaths(value, facets)));
+
+  useEffect(() => {
+    const present = facets.map((name) => fields[name]).filter((f): f is FieldSchema => Boolean(f));
+    if (present.length === 0) return;
+    let live = true;
+    setCounting(true);
+    const filters = JSON.parse(scope) as WireGroup | null;
+    const load = async (): Promise<Record<string, FacetValue[]>> => {
+      const out: Record<string, FacetValue[]> = {};
+      if (counts) {
+        for (const field of present) {
+          const found = await counts(field.name, filters);
+          out[field.name] = facetValues([], field).map((v) => ({ ...v, count: found[v.key] ?? 0 }));
+        }
+        return out;
+      }
+      const rows = await context.client.search(entityType, {
+        filters,
+        fields: present.map((f) => f.name),
+        page: { size: sampleSize },
+      });
+      for (const field of present) out[field.name] = facetValues(rows.data, field);
+      return out;
+    };
+    void load()
+      .then((found) => {
+        if (live) setTally(found);
+      })
+      .finally(() => {
+        if (live) setCounting(false);
+      });
+    return () => {
+      live = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [context.client, entityType, fields, facets.join(','), scope, sampleSize, counts]);
+
+  const conditionOf = (name: string): FilterCondition | null => findCondition(value, name)?.condition ?? null;
+
+  const selectedOf = (name: string): Scalar[] => {
+    const found = conditionOf(name);
+    return found && Array.isArray(found.value) ? (found.value as Scalar[]) : [];
+  };
+
+  const keyOf = (v: Scalar): string => (v !== null && typeof v === 'object' ? `${v.type}:${v.id}` : String(v));
+
+  /** The list operator the checklist writes: the one the pill already holds, else `in`. */
+  const listOperator = (name: string): Operator => {
+    const found = conditionOf(name);
+    return found && Array.isArray(found.value) ? found.operator : 'in';
+  };
+
+  function toggle(name: string, option: FacetValue) {
+    const selected = selectedOf(name);
+    const next = selected.some((v) => keyOf(v) === option.key)
+      ? selected.filter((v) => keyOf(v) !== option.key)
+      : [...selected, option.value];
+    onChange?.(setFacet(value, name, next, listOperator(name)));
+  }
+
+  const facetList = (name: string): ReactNode => {
+    const selected = selectedOf(name);
+    return (
+      <PopoverContent className="w-64 p-0" align="start">
+        <Command>
+          <CommandInput placeholder="Search values…" />
+          <CommandList>
+            {counting ? (
+              <p className="text-muted-foreground py-6 text-center text-sm">Counting…</p>
+            ) : (
+              <>
+                <CommandEmpty>No value.</CommandEmpty>
+                {(tally[name] ?? []).map((option) => (
+                  <CommandItem
+                    key={option.key}
+                    value={`${option.label} ${option.key}`}
+                    data-option={option.key}
+                    onSelect={() => toggle(name, option)}
+                  >
+                    <Checkbox
+                      checked={selected.some((v) => keyOf(v) === option.key)}
+                      tabIndex={-1}
+                      aria-hidden="true"
+                    />
+                    <span className="min-w-0 flex-1 truncate">{option.label}</span>
+                    <span className="text-muted-foreground text-xs tabular-nums" data-slot="facet-count">
+                      {option.count}
+                    </span>
+                  </CommandItem>
+                ))}
+              </>
+            )}
+          </CommandList>
+        </Command>
+        {selected.length > 0 ? (
+          <div className="border-border border-t p-1">
+            <Button
+              variant="ghost"
+              size={BTN[size]}
+              className="w-full"
+              data-slot="filter-pill-clear"
+              onClick={() => onChange?.(setFacet(value, name, []))}
+            >
+              Clear
+            </Button>
+          </div>
+        ) : null}
+      </PopoverContent>
+    );
+  };
+
+  const activeCount = facets.filter((name) => Boolean(conditionOf(name))).length;
+
+  return (
+    <div
+      ref={ref}
+      data-slot="filter-bar"
+      className={cn('flex w-full min-w-0 flex-wrap items-center gap-2', className)}
+      {...rest}
+    >
+      {facets.map((name) => {
+        const field = fields[name];
+        const found = conditionOf(name);
+        const parts = found ? conditionParts(found, field) : null;
+        const selected = selectedOf(name);
+        const remove = (label: string) => (
+          <button
+            type="button"
+            disabled={disabled}
+            data-slot="filter-pill-remove"
+            aria-label={`Remove ${label} filter`}
+            className={cn(
+              'border-border text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring/50 inline-flex shrink-0 items-center border-l outline-none focus-visible:ring-3 disabled:pointer-events-none disabled:opacity-50',
+              PILL[size],
+              REMOVE_PAD[size],
+            )}
+            onClick={() => onChange?.(withoutPaths(value, [name]))}
+          >
+            <XIcon className={GLYPH[size]} />
+          </button>
+        );
+        if (!found || !parts || conditionArity(found, field?.dataType ?? '') === 'many') {
+          // One popover and one trigger across both looks, so the first tick does not close the list.
+          return (
+            <Popover key={name}>
+              <div
+                data-slot="filter-pill"
+                data-field={name}
+                data-size={size}
+                data-active={found ? 'true' : undefined}
+                role={found ? 'group' : undefined}
+                aria-label={found ? describeCondition(found, field) : undefined}
+                className={cn(
+                  'border-border inline-flex max-w-full min-w-0 items-center overflow-hidden rounded-lg border text-sm',
+                  PILL[size],
+                  found ? 'bg-background' : 'text-muted-foreground max-w-72 border-dashed',
+                )}
+              >
+                <PopoverTrigger
+                  disabled={disabled || !field}
+                  data-slot="filter-pill-trigger"
+                  className={cn(
+                    'hover:bg-muted hover:text-foreground focus-visible:ring-ring/50 inline-flex min-w-0 items-center gap-1.5 outline-none focus-visible:ring-3 focus-visible:ring-inset disabled:pointer-events-none disabled:opacity-50',
+                    PILL[size],
+                    PAD[size],
+                  )}
+                >
+                  {!found || !parts ? (
+                    <>
+                      <PlusIcon className={cn('shrink-0', GLYPH[size])} />
+                      <span className="min-w-0 truncate">{field?.displayName ?? name}</span>
+                    </>
+                  ) : (
+                    <>
+                      <span data-slot="filter-pill-field" className="shrink-0 font-medium">
+                        {parts.field}
+                      </span>
+                      {found.operator !== 'in' ? <span className="text-muted-foreground shrink-0">{parts.operator}</span> : null}
+                      <span data-slot="filter-pill-values" className="min-w-0 truncate" title={parts.value}>
+                        {parts.value}
+                      </span>
+                      {selected.length > 1 ? (
+                        <Badge variant="secondary" className="shrink-0">
+                          {selected.length}
+                        </Badge>
+                      ) : null}
+                    </>
+                  )}
+                </PopoverTrigger>
+                {found && parts ? remove(parts.field) : null}
+              </div>
+              {facetList(name)}
+            </Popover>
+          );
+        }
+        // A condition the editor wrote on an operator no checklist can hold reads as text.
+        return (
+          <div
+            key={name}
+            data-slot="filter-pill"
+            data-field={name}
+            data-size={size}
+            data-active="true"
+            role="group"
+            aria-label={describeCondition(found, field)}
+            className={cn(
+              'border-border bg-background inline-flex max-w-full min-w-0 items-center overflow-hidden rounded-lg border text-sm',
+              PILL[size],
+            )}
+          >
+            <span
+              data-slot="filter-pill-values"
+              className={cn('inline-flex min-w-0 items-center gap-1.5', PILL[size], PAD[size])}
+              title={parts.value}
+            >
+              <span data-slot="filter-pill-field" className="shrink-0 font-medium">
+                {parts.field}
+              </span>
+              <span className="text-muted-foreground shrink-0">{parts.operator}</span>
+              {parts.value ? <span className="min-w-0 truncate">{parts.value}</span> : null}
+            </span>
+            {remove(parts.field)}
+          </div>
+        );
+      })}
+
+      {activeCount > 0 ? (
+        <Button
+          variant="ghost"
+          size={BTN[size]}
+          disabled={disabled}
+          className="text-muted-foreground hover:text-foreground"
+          data-slot="filter-clear-all"
+          onClick={() => onChange?.(withoutPaths(value, facets))}
+        >
+          Clear all
+        </Button>
+      ) : null}
+
+      <FilterDialog
+        entityType={entityType}
+        context={context}
+        hidePaths={hidePaths}
+        disabled={disabled}
+        size={size}
+        label="More filters"
+        value={value}
+        onChange={(next) => onChange?.(next)}
+      />
+    </div>
+  );
+}

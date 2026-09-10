@@ -1,7 +1,15 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import type { PointerEvent as ReactPointerEvent, ReactNode, RefObject } from 'react';
 import type { ChipRow, PickerSummary, SgClient, StatusOption, StatusRecord } from '@sg-widgets/core';
-import { createSchemaService, createStatusService, matchesTokens, summariseSelection } from '@sg-widgets/core';
+import {
+  createSchemaService,
+  createStatusService,
+  holdsArmed,
+  matchesTokens,
+  pickerKeyIntent,
+  scrollHighlightedIntoView,
+  summariseSelection,
+} from '@sg-widgets/core';
 import { Combobox as ComboboxPrimitive } from '@base-ui/react';
 import { ChevronsUpDown, Search, SearchX, TriangleAlert, X } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -129,6 +137,8 @@ const PICKER_ROW =
 /** The centred line every empty, loading and error state uses. */
 const PICKER_NOTE = 'flex items-center justify-center gap-1.5 py-6 text-center text-sm';
 /** The clear control, shared by every picker in this registry. */
+/** The chip a Backspace has armed. The keyboard cursor wears the focus ring. */
+const PICKER_ARMED = 'ring-ring ring-offset-background rounded-sm ring-2 ring-offset-1';
 const PICKER_ICON_BUTTON =
   'hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring focus-visible:ring-offset-background pointer-events-auto shrink-0 rounded-sm p-0.5 opacity-70 outline-none transition-colors duration-150 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-2 motion-safe:active:scale-[0.98]';
 
@@ -275,11 +285,15 @@ export function StatusMultiPicker({
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const open = openProp ?? uncontrolledOpen;
   const setOpen = (next: boolean): void => {
+    if (!next) setArmedChip(null);
     setUncontrolledOpen(next);
     onOpenChange?.(next);
   };
   const [search, setSearch] = useState('');
+  /** The chip a Backspace has highlighted. The next one removes it. */
+  const [armedChip, setArmedChip] = useState<number | null>(null);
   const controlRef = useRef<HTMLDivElement | null>(null);
+  const listRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const badgesRef = useRef<HTMLSpanElement | null>(null);
 
@@ -336,6 +350,56 @@ export function StatusMultiPicker({
     inputRef.current?.focus({ preventScroll: true });
   }, [open, inline]);
 
+  // The search box narrows the list here, so the rows change under the highlight;
+  // the list follows it.
+  useEffect(() => {
+    if (!open) return;
+    scrollHighlightedIntoView(listRef.current);
+  }, [open, shown.length]);
+
+  // A chip removed from under the highlight takes it with it.
+  const armed = armedChip !== null && armedChip < value.length ? armedChip : null;
+
+  /**
+   * Backspace, Escape and the arrows. The primitive's own handler runs after this
+   * one, so a key this picker owns is prevented rather than shared.
+   */
+  function onKey(event: React.KeyboardEvent<HTMLInputElement>): void {
+    const intent = pickerKeyIntent(event.key, {
+      open,
+      query: search,
+      count: value.length,
+      armed,
+      editable: interactive,
+    });
+    if (!holdsArmed(event.key)) setArmedChip(null);
+    switch (intent.kind) {
+      case 'dismiss':
+        setOpen(false);
+        setSearch('');
+        return;
+      case 'arm':
+        event.preventDefault();
+        setArmedChip(intent.index);
+        return;
+      case 'remove': {
+        event.preventDefault();
+        const code = value[intent.index];
+        if (code !== undefined) onValueChange?.(value.filter((c) => c !== code));
+        return;
+      }
+      case 'follow':
+        // The highlight moves after this handler, so the list follows it a frame later.
+        requestAnimationFrame(() => scrollHighlightedIntoView(listRef.current));
+        return;
+      default:
+        // A closed picker leaves Escape alone: the primitive would clear the value.
+        if (event.key === 'Escape') {
+          (event as { preventBaseUIHandler?: () => void }).preventBaseUIHandler?.();
+        }
+    }
+  }
+
   const badge = (code: string, variant: 'both' | 'icon') => (
     <StatusBadge
       code={code}
@@ -354,8 +418,9 @@ export function StatusMultiPicker({
       key={code}
       data-slot="status-multi-picker-chip"
       data-chip=""
+      data-armed={armed === index ? 'true' : undefined}
       hidden={row.ready && index >= plan.shown.length}
-      className="flex min-w-0 shrink-0 items-center gap-1"
+      className={cn('flex min-w-0 shrink-0 items-center gap-1', armed === index && PICKER_ARMED)}
     >
       {badge(code, summary === 'icons' ? 'icon' : 'both')}
       {interactive && summary !== 'icons' ? (
@@ -434,6 +499,8 @@ export function StatusMultiPicker({
         filter={null}
         openOnInputClick={false}
         autoHighlight
+        // Down stops at the last row rather than wrapping, as it does on Bits UI.
+        loopFocus={false}
         disabled={inert}
         value={value}
         onValueChange={(next) => onValueChange?.(next)}
@@ -523,6 +590,7 @@ export function StatusMultiPicker({
               aria-label={placeholder}
               readOnly={readonly || undefined}
               placeholder={value.length > 0 ? '' : placeholder}
+              onKeyDown={onKey}
               className={PICKER_INPUT}
             />
           ) : null}
@@ -554,11 +622,12 @@ export function StatusMultiPicker({
                     data-slot="status-multi-picker-input"
                     aria-label={searchPlaceholder}
                     placeholder={searchPlaceholder}
+                    onKeyDown={onKey}
                     className={PICKER_SEARCH}
                   />
                 </div>
               )}
-              <ComboboxPrimitive.List data-slot="status-multi-picker-list" className={PICKER_LIST}>
+              <ComboboxPrimitive.List ref={listRef} data-slot="status-multi-picker-list" className={PICKER_LIST}>
                 {note ?? ((code: string) => renderRow(code))}
               </ComboboxPrimitive.List>
             </ComboboxPrimitive.Popup>

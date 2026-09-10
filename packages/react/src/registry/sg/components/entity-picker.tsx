@@ -18,9 +18,12 @@ import {
   createStatusService,
   entityKey,
   highlightRuns,
+  holdsArmed,
   isEmptyValue,
+  pickerKeyIntent,
   placeholderName,
   renderKindFor,
+  scrollHighlightedIntoView,
   withSelectedPinned,
 } from '@sg-widgets/core';
 import { Combobox as ComboboxPrimitive } from '@base-ui/react';
@@ -65,6 +68,8 @@ const PICKER_ROW =
   'data-highlighted:bg-accent data-highlighted:text-accent-foreground relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0';
 /** The centred line every empty, loading and error state uses. */
 const PICKER_NOTE = 'flex items-center justify-center gap-1.5 py-6 text-center text-sm';
+/** The chip a Backspace has armed. The keyboard cursor wears the focus ring. */
+const PICKER_ARMED = 'ring-ring ring-offset-background ring-2 ring-offset-1';
 /** The clear control, shared by every picker in this registry. */
 const PICKER_ICON_BUTTON =
   'hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring focus-visible:ring-offset-background pointer-events-auto shrink-0 rounded-sm p-0.5 opacity-70 outline-none transition-colors duration-150 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-2 motion-safe:active:scale-[0.98]';
@@ -272,11 +277,15 @@ export function EntityPicker({
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const open = openProp ?? uncontrolledOpen;
   const setOpen = (next: boolean): void => {
+    if (!next) setArmedChip(false);
     setUncontrolledOpen(next);
     onOpenChange?.(next);
   };
   const [query, setQuery] = useState('');
+  /** True once a Backspace has highlighted the chip. The next one clears it. */
+  const [armedChip, setArmedChip] = useState(false);
   const controlRef = useRef<HTMLDivElement | null>(null);
+  const listRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
   /** A press on the load-more row is not a selection, and must not close the popup. */
   const pagingRef = useRef(false);
@@ -401,6 +410,52 @@ export function EntityPicker({
     return row.type === 'HumanUser' || row.type === 'ApiUser';
   }
 
+  // Nothing to arm once the value is gone.
+  const armed = armedChip && Boolean(value);
+
+  function clear(): void {
+    onValueChange?.(null, null);
+    inputRef.current?.focus({ preventScroll: true });
+  }
+
+  /**
+   * Backspace, Escape and the arrows. The primitive's own handler runs after this
+   * one, so a key this picker owns is prevented rather than shared.
+   */
+  function onKey(event: React.KeyboardEvent<HTMLInputElement>): void {
+    const intent = pickerKeyIntent(event.key, {
+      open,
+      query,
+      count: value ? 1 : 0,
+      armed: armed ? 0 : null,
+      editable: interactive,
+    });
+    if (!holdsArmed(event.key)) setArmedChip(false);
+    switch (intent.kind) {
+      case 'dismiss':
+        setOpen(false);
+        setQuery('');
+        return;
+      case 'arm':
+        event.preventDefault();
+        setArmedChip(true);
+        return;
+      case 'remove':
+        event.preventDefault();
+        clear();
+        return;
+      case 'follow':
+        // The highlight moves after this handler, so the list follows it a frame later.
+        requestAnimationFrame(() => scrollHighlightedIntoView(listRef.current));
+        return;
+      default:
+        // A closed picker leaves Escape alone: the primitive would clear the value.
+        if (event.key === 'Escape') {
+          (event as { preventBaseUIHandler?: () => void }).preventBaseUIHandler?.();
+        }
+    }
+  }
+
   function choose(key: string): void {
     if (key === LOAD_MORE) {
       pagingRef.current = true;
@@ -415,6 +470,13 @@ export function EntityPicker({
 
   const keys = [...options.map(entityKey), ...(state.hasMore ? [LOAD_MORE] : [])];
   const byKey = new Map(options.map((row) => [entityKey(row), row]));
+
+  // A load-more page appends rows under the highlighted one, and a new query
+  // replaces them all; either way the list follows the highlight.
+  useEffect(() => {
+    if (!open) return;
+    scrollHighlightedIntoView(listRef.current);
+  }, [open, state.rows.length]);
 
   let note: ReactNode = null;
   if (state.error) {
@@ -561,6 +623,8 @@ export function EntityPicker({
         filter={null}
         openOnInputClick={false}
         autoHighlight
+        // Down stops at the last row rather than wrapping, as it does on Bits UI.
+        loopFocus={false}
         disabled={disabled}
         value={selectedKey || null}
         onValueChange={(next) => choose(next ?? '')}
@@ -601,6 +665,8 @@ export function EntityPicker({
                 entity={chipEntity}
                 thumbnail={selectedRow ? thumbOf(selectedRow) : null}
                 size={PICKER_CHIP[size]}
+                data-armed={armed ? 'true' : undefined}
+                className={armed ? PICKER_ARMED : undefined}
               />
             </span>
           ) : null}
@@ -611,6 +677,7 @@ export function EntityPicker({
             aria-label={placeholder}
             readOnly={readonly || undefined}
             placeholder={chipEntity ? searchPlaceholder : placeholder}
+            onKeyDown={onKey}
             className={PICKER_INPUT}
           />
         </div>
@@ -629,7 +696,7 @@ export function EntityPicker({
             className="isolate z-50"
           >
             <ComboboxPrimitive.Popup data-picker="entity" data-slot="entity-picker-content" className={PICKER_POPUP}>
-              <ComboboxPrimitive.List data-slot="entity-picker-list" className={PICKER_LIST}>
+              <ComboboxPrimitive.List ref={listRef} data-slot="entity-picker-list" className={PICKER_LIST}>
                 {note ?? ((key: string) => renderRow(key))}
               </ComboboxPrimitive.List>
             </ComboboxPrimitive.Popup>
@@ -643,10 +710,7 @@ export function EntityPicker({
                 type="button"
                 data-slot="entity-picker-clear"
                 aria-label="Clear the selection"
-                onClick={() => {
-                  onValueChange?.(null, null);
-                  inputRef.current?.focus({ preventScroll: true });
-                }}
+                onClick={clear}
                 className={PICKER_ICON_BUTTON}
               >
                 <X aria-hidden="true" className={PICKER_GLYPH[size]} />

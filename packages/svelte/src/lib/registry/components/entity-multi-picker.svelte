@@ -513,7 +513,7 @@
 	<Combobox.Root
 		type="multiple"
 		{disabled}
-		bind:inputValue={() => query, (next) => (query = next)}
+		inputValue={query}
 		bind:open={() => open, setOpen}
 		bind:value={() => selectedKeys, setSelected}
 	>

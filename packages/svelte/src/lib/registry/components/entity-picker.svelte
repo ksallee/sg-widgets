@@ -359,6 +359,9 @@
 		}
 		const row = options.find((option) => entityKey(option) === key);
 		if (!row) return;
+		// The primitive writes the item's label into its own copy of the input value;
+		// mirroring it here makes the clear on close a change the input sees.
+		query = row.name ?? '';
 		search.remember([row]);
 		value = { type: row.type, id: row.id, name: row.name };
 		onValueChange?.(value, row);
@@ -398,7 +401,7 @@
 		type="single"
 		allowDeselect={false}
 		{disabled}
-		bind:inputValue={() => query, (next) => (query = next)}
+		inputValue={query}
 		bind:open={() => open, setOpen}
 		bind:value={() => selectedKey, setSelected}
 	>

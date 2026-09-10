@@ -545,6 +545,9 @@ export type EditorKind =
   | 'list'
   | 'url'
   | 'color'
+  | 'status_list'
+  | 'entity'
+  | 'multi_entity'
   | 'none';
 
 const EDITOR_KIND: Readonly<Record<string, EditorKind>> = {
@@ -564,14 +567,29 @@ const EDITOR_KIND: Readonly<Record<string, EditorKind>> = {
   list: 'list',
   url: 'url',
   color: 'color',
+  status_list: 'status_list',
+  entity: 'entity',
+  multi_entity: 'multi_entity',
 };
 
 /**
- * The editor for a data type. Status and entity fields are edited by the picker
- * widgets, and the read-only types have no editor at all.
+ * The editor for a data type. The read-only types and the ones REST cannot write
+ * have no editor at all (field_types/calculated, summary, pivot_column).
  */
 export function editorKindFor(dataType: string): EditorKind {
   return EDITOR_KIND[dataType] ?? 'none';
+}
+
+/** The three kinds a picker widget owns; each needs a context to read through. */
+const PICKER_KINDS: ReadonlySet<EditorKind> = new Set<EditorKind>(['status_list', 'entity', 'multi_entity']);
+
+/**
+ * True when the editor for a data type reads the API, so the caller has to hand it
+ * a context. A status picker reads the schema and the Status table; an entity
+ * picker searches.
+ */
+export function editorNeedsContext(dataType: string): boolean {
+  return PICKER_KINDS.has(editorKindFor(dataType));
 }
 
 /** True when a data type can be edited by one of these widgets. */

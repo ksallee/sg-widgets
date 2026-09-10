@@ -5,6 +5,7 @@ import {
   formatNumberInput,
   formatTimecodeFrames,
   fromApiDateTime,
+  editorNeedsContext,
   INT32_MAX,
   INT32_MIN,
   isEditableType,
@@ -364,12 +365,28 @@ describe('editorKindFor', () => {
     expect(editorKindFor('color')).toBe('color');
   });
 
-  it('leaves the picker and read-only types with no editor', () => {
-    for (const type of ['status_list', 'entity', 'multi_entity', 'image', 'calculated', 'summary', 'pivot_column']) {
+  it('gives the three picker types an editor of their own', () => {
+    expect(editorKindFor('status_list')).toBe('status_list');
+    expect(editorKindFor('entity')).toBe('entity');
+    expect(editorKindFor('multi_entity')).toBe('multi_entity');
+    for (const type of ['status_list', 'entity', 'multi_entity']) {
+      expect(isEditableType(type)).toBe(true);
+      expect(editorNeedsContext(type)).toBe(true);
+    }
+  });
+
+  it('leaves the read-only types with no editor', () => {
+    for (const type of ['image', 'calculated', 'summary', 'pivot_column', 'tag_list', 'jsonb']) {
       expect(editorKindFor(type)).toBe('none');
       expect(isEditableType(type)).toBe(false);
     }
     expect(isEditableType('text')).toBe(true);
+  });
+
+  it('asks for a context only where the editor reads the API', () => {
+    for (const type of ['text', 'number', 'date', 'list', 'url', 'color', 'checkbox', 'calculated']) {
+      expect(editorNeedsContext(type)).toBe(false);
+    }
   });
 });
 

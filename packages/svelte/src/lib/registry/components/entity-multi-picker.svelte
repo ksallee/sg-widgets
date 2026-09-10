@@ -118,6 +118,7 @@
 </script>
 
 <script lang="ts">
+	import { tick } from 'svelte';
 	import type { HTMLAttributes } from 'svelte/elements';
 	import type { FieldSchema, StatusRecord } from '@sg-widgets/core';
 	import {
@@ -476,6 +477,10 @@
 		const rows = keys.map(rowFor).filter((row): row is PickerRow => row !== null);
 		search.remember(rows);
 		emit(rows.map((row) => ({ type: row.type, id: row.id, name: row.name })));
+		// The primitive writes the ticked item's label into its own copy of the input
+		// value, and the popup stays open, so the clear has to be a change it sees.
+		query = rows.at(-1)?.name ?? '';
+		void tick().then(() => (query = ''));
 	}
 
 	function remove(ref: EntityRef): void {

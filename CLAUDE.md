@@ -26,9 +26,12 @@ Monorepo: `packages/core` (headless TS, npm), `packages/react` (shadcn registry,
 - Drive scripts that assert return `{ verdict: "PASS ..." | "FAIL ..." }`; the exit code follows.
 - A widget that reads data runs its final `pnpm qa` pass once with `--live` as well as against the
   mock, and the PR says what the live site showed.
-- Use the browser sparingly. Typecheck, unit tests and builds catch most problems; run `pnpm qa`
-  once at the end to confirm the final state (one light and one dark shot per widget, one drive
-  with assertions), not as a loop while developing. Each run costs a dev server start and tokens.
+- `pnpm qa` comes last, not first. Read the code to learn the current state; never start a
+  browser to discover how something looks or behaves before writing the change. Write the change,
+  get `pnpm check` and `pnpm test` green, then run `pnpm qa` once to confirm (one drive with
+  assertions, one light and one dark shot per widget). If the drive fails, fix from the drive's
+  output and rerun; do not screenshot between fixes. Read a screenshot image only when a drive
+  verdict cannot answer the question. Each run costs a dev server start and tokens.
 
 ## Writing
 

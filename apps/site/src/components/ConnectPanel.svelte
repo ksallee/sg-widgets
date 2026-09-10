@@ -123,9 +123,17 @@
 	const rowClass = 'flex items-center gap-2';
 	const noteClass = 'text-sm text-muted-foreground';
 
+	/** A source pick reloads the page; the panel opens again after it so the pick reads back. */
+	const REOPEN = 'sg-connect:reopen';
+
 	function pickSource(next: DemoSource): void {
 		if (next === source) return;
 		setDemoSource(next);
+		try {
+			sessionStorage.setItem(REOPEN, '1');
+		} catch {
+			// Storage refused: the panel stays closed after the reload.
+		}
 		location.reload();
 	}
 
@@ -166,6 +174,14 @@
 	}
 
 	onMount(() => {
+		try {
+			if (sessionStorage.getItem(REOPEN)) {
+				sessionStorage.removeItem(REOPEN);
+				open = true;
+			}
+		} catch {
+			// Storage refused: nothing to reopen.
+		}
 		void prepareDemoSource().then((next) => {
 			live = next;
 			source = next.source;

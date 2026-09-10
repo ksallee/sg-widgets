@@ -10,7 +10,7 @@
 //
 // The drive file is the body of an async function receiving ({wait, $, $$, harness}). `harness.set`
 // writes the demo view's localStorage keys (framework: svelte|react|both, theme: light|dark,
-// motion: normal|reduced, palette: default|stone|..., radius: default|none|sm|md|lg|xl) and the
+// motion: normal|reduced, palette: autodesk|nova|..., radius: default|none|sm|md|lg|xl) and the
 // page re-reads them at once; the flags below set them for the initial load. --palette dresses the
 // docs chrome as well as the demos, and --dark also sets Starlight's own theme key, which is what
 // the stage follows. Whatever the body returns is printed as JSON under `result`, next to `console`

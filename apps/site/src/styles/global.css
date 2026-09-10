@@ -7,8 +7,9 @@
  * whole nova token set (`--background`, `--primary`, ...) on `:root`, restyle `body`,
  * and pull in Tailwind's preflight. Importing either would fight Starlight's own reset
  * and theme; importing both would define every token twice. So the site imports
- * neither, and the block below is the single copy of those tokens on this site. When
- * the packages change a token value, mirror it here.
+ * neither, and the block below is the single copy of the tokens on this site. The
+ * packages' own set is the `nova` palette in themes.css; when the packages change a
+ * token value, mirror it there.
  *
  * The tokens sit on `:root`, and the `--sl-*` block further down hands them to
  * Starlight, so the header, sidebar, content and code blocks wear the palette the
@@ -139,7 +140,19 @@
 }
 
 /*
- * The one copy of the shadcn tokens.
+ * The one copy of the shadcn tokens: the Autodesk palette, which the site wears by
+ * default.
+ *
+ * Weave is Autodesk's design system, the successor to the HIG, and
+ * `@weave-design/theme-data` is the token package it publishes. The values below are
+ * its light-gray medium-density theme, read from `build/json/lightGrayMediumDensityTheme`
+ * of version 1.3.1, published 2023-05-17
+ * (https://www.npmjs.com/package/@weave-design/theme-data). A Weave role that carries an
+ * alpha is flattened over the surface it sits on, since a shadcn token is opaque. The
+ * role each token comes from is named beside it; one value is tweaked, and says so.
+ *
+ * Weave names ArtifaktElement, which Autodesk licenses and does not publish, so the
+ * palette keeps the site's Geist.
  *
  * On `:root`, so the whole page reads them: Starlight's chrome through the `--sl-*`
  * mapping further down, the demo frame and a portalled popup -- both of which sit
@@ -148,38 +161,43 @@
  */
 :root,
 [data-stage] {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --background: oklch(0.9702 0 0); /* surface.level200 #f5f5f5 */
+  --foreground: oklch(0.3562 0 0); /* text.default #3c3c3c */
+  --card: oklch(1 0 0); /* surface.level100 #ffffff */
+  --card-foreground: oklch(0.3562 0 0);
+  --popover: oklch(1 0 0); /* surface.level100 */
+  --popover-foreground: oklch(0.3562 0 0);
+  --primary: oklch(0.5204 0.1316 245.2185); /* icon.on.pressed #006eaf */
+  --primary-foreground: oklch(1 0 0); /* surface.level100 */
+  --secondary: oklch(0.9491 0 0); /* surface.level250 #eeeeee */
+  --secondary-foreground: oklch(0.3562 0 0);
+  --muted: oklch(0.9491 0 0); /* surface.level250 */
+  /* indicator.hover #666666. Was text.dim rgba(60,60,60,0.7) over surface.level250,
+     oklch(0.55 0 0), tweaked because muted text read 4.18:1 on `--muted`; #666666 is the
+     nearest Weave grey that clears AA on every surface the palette has, at 4.95:1. */
+  --muted-foreground: oklch(0.5103 0 0);
+  --accent: oklch(0.9142 0.0265 226.5984); /* background.selected over surface.level200 */
+  --accent-foreground: oklch(0.3562 0 0); /* text.default */
+  --destructive: oklch(0.5763 0.2186 27.6323); /* status.error #dd2222 */
+  --destructive-foreground: oklch(1 0 0);
+  --border: oklch(0.8289 0 0); /* divider.heavyweight over surface.level200 */
+  --input: oklch(0.7905 0 0); /* border.base over surface.level200 */
+  --ring: oklch(0.6395 0.1412 238.2409); /* reference.accent #0696d7, which halo.focus tints */
+  --chart-1: oklch(0.6395 0.1412 238.2409); /* reference.accent */
+  --chart-2: oklch(0.6219 0.1464 129.3125); /* status.success #6a9728 */
+  --chart-3: oklch(0.782 0.1643 69.5839); /* status.warning #faa21b */
+  --chart-4: oklch(0.5763 0.2186 27.6323); /* status.error */
+  --chart-5: oklch(0.5999 0 0); /* reference.base #808080 */
+  /* flyout.borderRadius and modal.shell.borderRadius are 4px, which is the lg step. */
+  --radius: 0.25rem;
+  --sidebar: oklch(1 0 0); /* surface.level100 */
+  --sidebar-foreground: oklch(0.3562 0 0);
+  --sidebar-primary: oklch(0.5204 0.1316 245.2185);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.9399 0.0264 226.5839); /* background.selected over surface.level100 */
+  --sidebar-accent-foreground: oklch(0.3562 0 0);
+  --sidebar-border: oklch(0.8522 0 0); /* divider.heavyweight over surface.level100 */
+  --sidebar-ring: oklch(0.6395 0.1412 238.2409);
 }
 
 /*
@@ -192,40 +210,45 @@
  * - `[data-stage].dark` -- the demo stage's own dark class, driven by the toggle in the
  *   demo toolbar. It pins the tokens on the stage element, so a reviewer can read dark
  *   docs while QAing a light widget.
+ *
+ * Weave's dark-blue medium-density theme, from the same package and version as the light
+ * block above. Its surface ramp runs the other way: `level100` is the topmost surface and
+ * `level350` the ground, so `--background` takes the last step and a card the middle one.
  */
 :root[data-theme='dark'],
 [data-stage].dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --background: oklch(0.2369 0.0137 253.0936); /* surface.level350 #1a1f25 */
+  --foreground: oklch(0.9702 0 0); /* text.default #f5f5f5 */
+  --card: oklch(0.3244 0.0229 264.182); /* surface.level250 #2e3440 */
+  --card-foreground: oklch(0.9702 0 0);
+  --popover: oklch(0.3244 0.0229 264.182); /* surface.level250 */
+  --popover-foreground: oklch(0.9702 0 0);
+  --primary: oklch(0.7002 0.1253 232.5245); /* reference.accent #38abdf */
+  --primary-foreground: oklch(0.2369 0.0137 253.0936); /* surface.level350 */
+  --secondary: oklch(0.3846 0.0283 260.6075); /* surface.level200 #3b4453 */
+  --secondary-foreground: oklch(0.9702 0 0);
+  --muted: oklch(0.2786 0.0211 257.2774); /* surface.level300 #222933 */
+  --muted-foreground: oklch(0.7812 0.0048 257.1666); /* text.dim over surface.level300 */
+  --accent: oklch(0.426 0.0327 262.1438); /* surface.level100 #454f61 */
+  --accent-foreground: oklch(0.9702 0 0);
+  --destructive: oklch(0.6507 0.1858 23.8376); /* status.error #eb5555 */
+  --destructive-foreground: oklch(0.2369 0.0137 253.0936);
+  --border: oklch(0.4124 0.0225 252.7439); /* divider.heavyweight over surface.level350 */
+  --input: oklch(0.5704 0.0305 252.6174); /* border.base over surface.level350 */
+  --ring: oklch(0.7002 0.1253 232.5245); /* reference.accent */
+  --chart-1: oklch(0.7002 0.1253 232.5245);
+  --chart-2: oklch(0.7117 0.1513 127.6839); /* status.success #87b340 */
+  --chart-3: oklch(0.8203 0.1452 74.6168); /* status.warning #fbb549 */
+  --chart-4: oklch(0.6507 0.1858 23.8376); /* status.error */
+  --chart-5: oklch(0.7251 0.0151 268.4441); /* icon.default #a2a6b0 */
+  --sidebar: oklch(0.2786 0.0211 257.2774); /* surface.level300 */
+  --sidebar-foreground: oklch(0.9702 0 0);
+  --sidebar-primary: oklch(0.7002 0.1253 232.5245);
+  --sidebar-primary-foreground: oklch(0.2369 0.0137 253.0936);
+  --sidebar-accent: oklch(0.426 0.0327 262.1438); /* surface.level100 */
+  --sidebar-accent-foreground: oklch(0.9702 0 0);
+  --sidebar-border: oklch(0.44 0.0274 254.9808); /* divider.heavyweight over surface.level300 */
+  --sidebar-ring: oklch(0.7002 0.1253 232.5245);
 }
 
 /*

@@ -27,3 +27,4 @@ export * from './row.js';
 export * from './presentation.js';
 export * from './entity-card.js';
 export * from './tree.js';
+export * from './paging.js';

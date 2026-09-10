@@ -1,13 +1,20 @@
 ---
 title: Entity Grid
-description: Flow Production Tracking rows as EntityCard tiles, with selection and either paging or infinite scroll.
+description: Flow Production Tracking rows as EntityCard tiles, with selection and a page number, a load-more row or the scroller.
 ---
 
 import Demo from '../../../components/Demo.astro';
 
 Renders rows from an entity source as EntityCard tiles: the thumbnail fills the top of each tile, the
-status sits on it, and one metadata line runs under the name. A source in `infinite` mode loads the
-next page at the end of the scroll; one in `pages` mode draws a pagination footer.
+status sits on it, and one metadata line runs under the name.
+
+`paging` says how the set is walked, and the source follows it: `scroll` loads the next page when
+the scroller reaches the last loaded tile, `more` puts a load-more row under the tiles, and `pages`
+draws the pagination footer. The grid defaults to `scroll`. A wall of pictures is browsed rather
+than read, and the tile a reader wants is found by looking, not by page number.
+
+`more` and `scroll` append: the tiles already loaded stay and the new page lands under them. A page
+that fails leaves its tiles and puts one error line under them with a retry.
 
 ## Install
 
@@ -55,7 +62,8 @@ list; the metadata line needs whatever `subLabelField` and `secondaryField` name
 | `isRowDisabled` | `(row) => boolean` | — | True for a row the arrows skip and the selection refuses. |
 | `sort` | `SortSpec[]` | — | The source's sort, two-way, so a SortPicker drops into `header`. |
 | `filters` | `FilterNode \| WireGroup \| null` | — | The source's filter, two-way, so a FilterBar drops into `header`. |
-| `pageSizes` | `number[]` | `[25, 50, 100]` | Rows per page offered in the footer. |
+| `paging` | `'pages' \| 'more' \| 'scroll'` | `'scroll'` | How the set is walked: a page number, a load-more row, or the scroller. |
+| `pageSizes` | `number[]` | `[25, 50, 100]` | Rows per page offered in the footer. `pages` only. |
 | `maxHeight` | `string` | `'32rem'` | Height of the scrolling body. |
 | `virtualizeAfter` | `number` | `100` | Rows above which the grid draws only the tiles on screen. |
 | `emptyLabel` | `string` | `'No rows'` | Shown when the read returned nothing. |
@@ -91,6 +99,7 @@ The grid is one tab stop: Tab moves into the tile the cursor is on, and the arro
 | Left, Right | Moves the cursor one tile. |
 | Up, Down | Moves the cursor one row of tiles. |
 | Home, End | Moves to the first or the last tile. |
+| Right, Down past the last tile | In `more` and `scroll`, asks for the next page. The cursor stays where it is until the tiles arrive, then lands on the first of them. |
 | Space | Selects the tile, when the grid is selectable. |
 | Enter | Emits the select event. |
 | Enter in the page number | Goes to that page. |

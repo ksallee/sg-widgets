@@ -40,7 +40,7 @@
 {#await load()}
 	<p class="text-muted-foreground text-sm">Loading the site…</p>
 {:then { statuses }}
-	<EntityTable {source} bind:columns {statuses} {context} showCode maxHeight="22rem" />
+	<EntityTable {source} bind:columns {statuses} {context} showCode paging="more" maxHeight="22rem" />
 {:catch error}
 	<p class="text-destructive text-sm">{error.message}</p>
 {/await}

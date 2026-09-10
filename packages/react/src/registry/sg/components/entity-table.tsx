@@ -6,6 +6,7 @@ import type {
   EntityRow,
   EntitySource,
   FieldSchema,
+  PagingMode,
   RowDisabledFn,
   RowIdFn,
   SgContext,
@@ -16,8 +17,11 @@ import type {
 import {
   cellValue,
   describePaging,
+  hasFailedPage,
   idsForRefs,
   isEditableType,
+  loadsOnArrowDown,
+  nextEnabledIndex,
   preferencesOf,
   rowIdOf,
   rowIsDisabled,
@@ -25,6 +29,8 @@ import {
   sameIds,
   sameRefs,
   sameSort,
+  shouldLoadNext,
+  sourceModeFor,
 } from '@sg-widgets/core';
 import {
   columnGroupingFeature,
@@ -189,6 +195,8 @@ export interface EntityTableProps extends Omit<React.HTMLAttributes<HTMLDivEleme
   editorFor?: EditorFor;
   /** Show the programmatic field path beside the header's display name. */
   showCode?: boolean;
+  /** How the set is walked: a footer with a page number, a load-more row, or the scroller. */
+  paging?: PagingMode;
   /** Rows per page offered in the footer. `pages` mode only. */
   pageSizes?: number[];
   /** Height of the scrolling body. */
@@ -223,6 +231,8 @@ const features = tableFeatures({
 });
 
 const stateClass = 'text-muted-foreground flex items-center justify-center gap-2 py-10 text-sm';
+/** The same anatomy under the rows, at a row's height rather than a body's. */
+const errorLineClass = 'text-destructive flex items-center justify-center gap-2 text-sm';
 
 /**
  * A page of rows, one column per field path.
@@ -235,10 +245,12 @@ const stateClass = 'text-muted-foreground flex items-center justify-center gap-2
  * because a sort on a field that cannot be sorted is a silent 200 no-op
  * (026_result_order).
  *
- * In `pages` mode the footer walks the set with an explicit page number and reads
- * "n to m of N" once `_summarize` has counted it; a read carries no total of its own
- * (006_pagination, 020_summarize). In `infinite` mode the last row loads the next
- * page and the footer counts what is loaded.
+ * `paging` says how the set is walked, and the source follows it. In `pages` the footer
+ * walks with an explicit page number and reads "n to m of N" once `_summarize` has
+ * counted it; a read carries no total of its own (006_pagination, 020_summarize). In
+ * `more` a row at the bottom appends the next page, in `scroll` the scroller does, and
+ * both count what is loaded in the footer. A page that fails leaves its rows and says
+ * why at the bottom, with a retry.
  *
  * An edit writes one field through `updateRow`, which follows the write with a
  * re-read: the write's own answer is the whole record but resolves no dotted path
@@ -271,6 +283,7 @@ export function EntityTable({
   editable = false,
   editorFor,
   showCode = false,
+  paging = 'pages',
   pageSizes = [25, 50, 100],
   maxHeight = '28rem',
   virtualizeAfter = 100,
@@ -294,6 +307,11 @@ export function EntityTable({
     if (source.status === 'idle') void source.load();
   }, [source]);
   useEffect(() => {
+    // `paging` is the one prop a caller sets, so the source follows it rather than the
+    // other way round. Setting a mode it already holds is a no-op.
+    void source.setMode(sourceModeFor(paging));
+  }, [source, paging]);
+  useEffect(() => {
     // A group is only whole when the server put its rows together, so the group path
     // leads the sort. Setting it reads the first page again.
     if (groupBy && snapshot.sort[0]?.path !== groupBy) {
@@ -306,13 +324,19 @@ export function EntityTable({
   const prefs = preferencesOf(context);
   const rows = snapshot.rows;
   const sort = snapshot.sort;
-  const paging = describePaging(snapshot);
+  const pager = describePaging(snapshot);
   const rowHeight = ROW_HEIGHT[density];
   const cellClass = cn(CELL[density], TEXT[size]);
   const byPath = useMemo(() => new Map(columns.map((column) => [column.path, column])), [columns]);
 
   const rowId = (row: EntityRow): string => rowIdOf(row, getRowId);
   const rowDisabled = (row: EntityRow): boolean => rowIsDisabled(row, isRowDisabled);
+  const disabledAt = (index: number): boolean => {
+    const row = rows[index];
+    return row === undefined || rowDisabled(row);
+  };
+  /** A page that failed under rows already loaded, which the bottom line reports. */
+  const pageError = hasFailedPage(snapshot);
 
   const root = useRef<HTMLDivElement>(null);
   const [editing, setEditing] = useState<{ key: string; path: string } | null>(null);
@@ -472,6 +496,98 @@ export function EntityTable({
           slice: modelRows.slice(first.index, last.index + 1),
         };
 
+  /* scroll paging -------------------------------------------------------- */
+
+  // Rows below the window's end, headers included, so a group header only ever makes
+  // the scroller ask later.
+  const below = last ? modelRows.length - 1 - last.index : -1;
+  useEffect(() => {
+    if (!virtualized || below < 0) return;
+    if (shouldLoadNext(snapshot, { paging, lastVisible: rows.length - 1 - below })) void source.loadMore();
+  }, [source, paging, virtualized, below, snapshot, rows.length]);
+
+  // A body short enough not to be virtualised has no range to read, so the last row
+  // carries a sentinel instead.
+  // The element is held as state, not as a ref: a read that redraws the body replaces the
+  // row, and the observer has to move to the row that is on the page now.
+  const [sentinel, setSentinel] = useState<HTMLTableRowElement | null>(null);
+  const showSentinel = paging === 'scroll' && snapshot.hasMore && !pageError && snapshot.status !== 'loadingMore';
+  const snapshotLatest = useLatest(snapshot);
+  useEffect(() => {
+    const root = scrollRef.current;
+    const target = sentinel;
+    if (!root || !target) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((entry) => entry.isIntersecting)) return;
+        const state = snapshotLatest.current;
+        if (shouldLoadNext(state, { paging, lastVisible: state.rows.length - 1 })) void source.loadMore();
+      },
+      { root, rootMargin: '200px' },
+    );
+    observer.observe(target);
+    return () => observer.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [source, paging, sentinel]);
+
+  /* the cursor ----------------------------------------------------------- */
+
+  /** The row and column a cursor is waiting on, until the page it asked for lands. */
+  const [wanted, setWanted] = useState<{ index: number; column: string | null } | null>(null);
+
+  /** Put the cursor on one row, drawing it first where it is outside the window. */
+  function focusRow(index: number, column: string | null): void {
+    const at = Math.max(0, Math.min(index, rows.length - 1));
+    const row = rows[at];
+    if (!row) return;
+    const key = rowId(row);
+    const put = (): void => {
+      const tr = root.current?.querySelector<HTMLElement>(`tr[data-row-key="${CSS.escape(key)}"]`);
+      const cell = column ? tr?.querySelector<HTMLElement>(`td[data-column="${CSS.escape(column)}"][tabindex]`) : null;
+      const target = cell ?? tr?.querySelector<HTMLElement>('td[tabindex],button,input');
+      if (!target) return;
+      target.focus({ preventScroll: true });
+      target.scrollIntoView({ block: 'nearest' });
+    };
+    if (virtualized) {
+      const model = modelRows.findIndex((entry) => entry.id === key);
+      if (model >= 0) virtualizer.scrollToIndex(model);
+      requestAnimationFrame(put);
+    } else put();
+  }
+
+  /**
+   * The arrows walk one column of the body. On the last loaded row they ask for the
+   * next page instead, and the cursor stays where it is until those rows arrive.
+   */
+  function onRowsKeyDown(event: React.KeyboardEvent): void {
+    if (editing !== null || (event.key !== 'ArrowDown' && event.key !== 'ArrowUp')) return;
+    const target = event.target as HTMLElement | null;
+    const tr = target?.closest<HTMLElement>('tr[data-row-key]');
+    if (!tr) return;
+    const from = rows.findIndex((row) => rowId(row) === tr.dataset['rowKey']);
+    if (from < 0) return;
+    const column = target?.closest<HTMLElement>('td[data-column]')?.dataset['column'] ?? null;
+    event.preventDefault();
+    if (event.key === 'ArrowDown' && loadsOnArrowDown(snapshot, paging, from + 1)) {
+      setWanted({ index: from + 1, column });
+      void source.loadMore();
+      return;
+    }
+    focusRow(nextEnabledIndex(rows.length, from, event.key === 'ArrowDown' ? 1 : -1, disabledAt), column);
+  }
+
+  const focusLatest = useLatest(focusRow);
+  useEffect(() => {
+    if (!wanted) return;
+    if (snapshot.status === 'error') setWanted(null);
+    else if (rows.length > wanted.index) {
+      setWanted(null);
+      focusLatest.current(wanted.index, wanted.column);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wanted, rows, snapshot.status]);
+
   /* sorting -------------------------------------------------------------- */
 
   const sortOf = (path: string): SortSpec | undefined => sort.find((key) => key.path === path);
@@ -599,11 +715,17 @@ export function EntityTable({
 
   /* paging --------------------------------------------------------------- */
 
+  /** Read the page that failed again: the one a pager is on, or the one that was appended. */
+  function retryPage(): void {
+    if (paging === 'pages') void source.setPage(snapshot.page);
+    else void source.loadMore();
+  }
+
   function goToPage(value: string): void {
     const wanted = Number(value);
     setPageDraft('');
     if (!Number.isFinite(wanted) || wanted < 1) return;
-    void source.setPage(paging.pageCount === null ? wanted : Math.min(wanted, paging.pageCount));
+    void source.setPage(pager.pageCount === null ? wanted : Math.min(wanted, pager.pageCount));
   }
 
   /** Sticky offset for a column pinned to the start; nothing for the rest. */
@@ -779,7 +901,7 @@ export function EntityTable({
             </TableRow>
           </TableHeader>
 
-          <TableBody>
+          <TableBody onKeyDown={onRowsKeyDown}>
             {snapshot.status === 'loading' ? (
               Array.from({ length: 8 }, (_, index) => (
                 <TableRow key={index}>
@@ -790,7 +912,7 @@ export function EntityTable({
                   ))}
                 </TableRow>
               ))
-            ) : snapshot.status === 'error' ? (
+            ) : snapshot.status === 'error' && !pageError ? (
               <TableRow>
                 <TableCell colSpan={leafColumns.length}>
                   <span className={cn(stateClass, 'text-destructive')}>
@@ -992,19 +1114,38 @@ export function EntityTable({
                   );
                 })}
                 {window_.after > 0 ? <tr aria-hidden="true" style={{ height: `${window_.after}px` }} /> : null}
-                {paging.mode === 'infinite' && snapshot.hasMore ? (
+                {pageError ? (
+                  <TableRow data-slot="entity-table-page-error" className="hover:bg-transparent">
+                    <TableCell colSpan={leafColumns.length} className="p-2">
+                      <span className={errorLineClass}>
+                        <CircleAlert aria-hidden="true" className="size-4 shrink-0" />
+                        <span className="min-w-0 truncate" title={snapshot.error?.message}>
+                          {snapshot.error?.message}
+                        </span>
+                        <Button variant="outline" size="sm" onClick={retryPage}>
+                          Retry
+                        </Button>
+                      </span>
+                    </TableCell>
+                  </TableRow>
+                ) : snapshot.status === 'loadingMore' ? (
+                  <TableRow data-slot="entity-table-loading" className="hover:bg-transparent">
+                    <TableCell colSpan={leafColumns.length} className="p-2">
+                      <Skeleton className="h-4 w-full" />
+                    </TableCell>
+                  </TableRow>
+                ) : paging === 'more' && snapshot.hasMore ? (
                   <TableRow data-slot="entity-table-load-more" className="hover:bg-transparent">
                     <TableCell colSpan={leafColumns.length} className="p-2 text-center">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={snapshot.status === 'loadingMore'}
-                        onClick={() => void source.loadMore()}
-                      >
-                        {snapshot.status === 'loadingMore' ? 'Loading…' : 'Load more'}
+                      <Button variant="outline" size="sm" onClick={() => void source.loadMore()}>
+                        Load more
                       </Button>
                     </TableCell>
                   </TableRow>
+                ) : showSentinel ? (
+                  <tr ref={setSentinel} data-slot="entity-table-sentinel" aria-hidden="true">
+                    <td colSpan={leafColumns.length} />
+                  </tr>
                 ) : null}
               </>
             )}
@@ -1016,17 +1157,17 @@ export function EntityTable({
         data-slot="entity-table-footer"
         className="text-muted-foreground flex w-full min-w-0 flex-wrap items-center justify-between gap-2 text-xs"
       >
-        {paging.mode === 'pages' ? (
+        {pager.mode === 'pages' ? (
           <>
             <div data-slot="entity-table-page-size" className="flex items-center gap-2">
               <span>Rows per page</span>
               <Select
-                value={String(paging.pageSize)}
+                value={String(pager.pageSize)}
                 onValueChange={(value) => void source.setPageSize(Number(value))}
               >
                 <SelectTrigger aria-label="Rows per page" className="h-7 w-auto min-w-16">
                   <span data-slot="select-value" className="tabular-nums">
-                    {paging.pageSize}
+                    {pager.pageSize}
                   </span>
                 </SelectTrigger>
                 <SelectContent>
@@ -1040,14 +1181,14 @@ export function EntityTable({
             </div>
             <div data-slot="entity-table-pager" className="flex items-center gap-2">
               <span data-slot="entity-table-range" className="tabular-nums">
-                {paging.rangeLabel}
+                {pager.rangeLabel}
               </span>
               <Button
                 variant="outline"
                 size="icon-sm"
                 aria-label="Previous page"
-                disabled={!paging.hasPrevious || snapshot.status === 'loading'}
-                onClick={() => void source.setPage(paging.page - 1)}
+                disabled={!pager.hasPrevious || snapshot.status === 'loading'}
+                onClick={() => void source.setPage(pager.page - 1)}
               >
                 <ChevronLeft aria-hidden="true" />
               </Button>
@@ -1057,7 +1198,7 @@ export function EntityTable({
                 inputMode="numeric"
                 aria-label="Page number"
                 className="h-7 w-14 text-center tabular-nums"
-                value={pageDraft === '' ? String(paging.page) : pageDraft}
+                value={pageDraft === '' ? String(pager.page) : pageDraft}
                 onChange={(event) => setPageDraft(event.currentTarget.value)}
                 onKeyDown={(event) => {
                   if (event.key !== 'Enter') return;
@@ -1066,13 +1207,13 @@ export function EntityTable({
                 }}
                 onBlur={(event) => goToPage(event.currentTarget.value)}
               />
-              {paging.pageCount !== null ? <span className="tabular-nums">of {paging.pageCount}</span> : null}
+              {pager.pageCount !== null ? <span className="tabular-nums">of {pager.pageCount}</span> : null}
               <Button
                 variant="outline"
                 size="icon-sm"
                 aria-label="Next page"
-                disabled={!paging.hasNext || snapshot.status === 'loading'}
-                onClick={() => void source.setPage(paging.page + 1)}
+                disabled={!pager.hasNext || snapshot.status === 'loading'}
+                onClick={() => void source.setPage(pager.page + 1)}
               >
                 <ChevronRight aria-hidden="true" />
               </Button>
@@ -1081,9 +1222,8 @@ export function EntityTable({
         ) : (
           <>
             <span data-slot="entity-table-loaded" className="tabular-nums">
-              {paging.loadedLabel}
+              {pager.loadedLabel}
             </span>
-            {snapshot.status === 'loadingMore' ? <span>Loading…</span> : null}
           </>
         )}
       </div>

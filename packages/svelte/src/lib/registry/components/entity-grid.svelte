@@ -38,6 +38,7 @@
 		EntityRef,
 		EntitySource,
 		FieldSpec,
+		PagingMode,
 		RowDisabledFn,
 		RowIdFn,
 		SgContext,
@@ -48,12 +49,16 @@
 	import {
 		describePaging,
 		firstEnabledIndex,
+		hasFailedPage,
+		loadsOnArrowDown,
 		nextEnabledIndex,
 		rowIdOf,
 		rowIsDisabled,
 		rowKey,
 		sameFilters,
-		sameSort
+		sameSort,
+		shouldLoadNext,
+		sourceModeFor
 	} from '@sg-widgets/core';
 	import { Virtualizer, elementScroll, observeElementOffset, observeElementRect } from '@tanstack/virtual-core';
 	import ChevronLeft from '@lucide/svelte/icons/chevron-left';
@@ -105,9 +110,11 @@
 		/** The source's filter, two-way, so a FilterBar drops into the header. */
 		filters?: SourceFilters;
 		onFiltersChange?: (filters: SourceFilters) => void;
+		/** How the set is walked: a footer with a page number, a load-more row, or the scroller. */
+		paging?: PagingMode;
 		/** Rows per page offered in the footer. `pages` mode only. */
 		pageSizes?: number[];
-		/** Height of the scrolling body. In `infinite` mode, reaching its end asks for the next page. */
+		/** Height of the scrolling body. In `scroll` mode, reaching its end asks for the next page. */
 		maxHeight?: string;
 		/** Rows above which the grid is virtualised. */
 		virtualizeAfter?: number;
@@ -143,6 +150,7 @@
 		onSortChange,
 		filters = $bindable(),
 		onFiltersChange,
+		paging = 'scroll',
 		pageSizes = [25, 50, 100],
 		maxHeight = '32rem',
 		virtualizeAfter = 100,
@@ -161,9 +169,16 @@
 	$effect(() => {
 		if (source.status === 'idle') void source.load();
 	});
+	$effect(() => {
+		// `paging` is the one prop a caller sets, so the source follows it rather than the
+		// other way round. Setting a mode it already holds is a no-op.
+		void source.setMode(sourceModeFor(paging));
+	});
 
 	const rows = $derived(snapshot.rows);
-	const paging = $derived(describePaging(snapshot));
+	const pager = $derived(describePaging(snapshot));
+	/** A page that failed under tiles already loaded, which the bottom line reports. */
+	const pageError = $derived(hasFailedPage(snapshot));
 	// `false` still draws the media block; a path no row carries is the placeholder.
 	const imagePath = $derived(thumbnail === false ? '' : thumbnail);
 
@@ -222,7 +237,7 @@
 		const wanted = Number(value);
 		pageDraft = '';
 		if (!Number.isFinite(wanted) || wanted < 1) return;
-		void source.setPage(paging.pageCount === null ? wanted : Math.min(wanted, paging.pageCount));
+		void source.setPage(pager.pageCount === null ? wanted : Math.min(wanted, pager.pageCount));
 	}
 
 	/* keyboard ------------------------------------------------------------- */
@@ -257,6 +272,27 @@
 		} else put();
 	}
 
+	/** The tile a cursor is waiting on, until the page it asked for lands. */
+	let wanted = $state<number | null>(null);
+
+	/** Ask for the next page and hold the cursor where it is until those tiles arrive. */
+	function askForPage(to: number): boolean {
+		if (!loadsOnArrowDown(snapshot, paging, to)) return false;
+		wanted = to;
+		void source.loadMore();
+		return true;
+	}
+
+	$effect(() => {
+		const held = wanted;
+		if (held === null) return;
+		if (snapshot.status === 'error') wanted = null;
+		else if (rows.length > held) {
+			wanted = null;
+			untrack(() => focusTile(held));
+		}
+	});
+
 	function onKeydown(event: KeyboardEvent): void {
 		const target = event.target as HTMLElement | null;
 		// Chrome inside a tile, the checkbox, keeps its own keys.
@@ -267,13 +303,13 @@
 		const step = columnCount();
 		switch (event.key) {
 			case 'ArrowRight':
-				focusTile(nextEnabledIndex(rows.length, index, 1, disabledAt));
+				if (!askForPage(index + 1)) focusTile(nextEnabledIndex(rows.length, index, 1, disabledAt));
 				break;
 			case 'ArrowLeft':
 				focusTile(nextEnabledIndex(rows.length, index, -1, disabledAt));
 				break;
 			case 'ArrowDown':
-				focusTile(nextEnabledIndex(rows.length, index, step, disabledAt));
+				if (!askForPage(index + step)) focusTile(nextEnabledIndex(rows.length, index, step, disabledAt));
 				break;
 			case 'ArrowUp':
 				focusTile(nextEnabledIndex(rows.length, index, -step, disabledAt));
@@ -384,17 +420,30 @@
 		};
 	});
 
-	/* infinite scroll ------------------------------------------------------ */
-
+	/* scroll paging -------------------------------------------------------- */
 
 	$effect(() => {
+		// The virtualiser walks lines of tiles, so the row the viewport ends on is the
+		// last tile of the last line it drew.
+		void ticks;
+		if (!virtualized || paging !== 'scroll') return;
+		const items = virtualizer.getVirtualItems();
+		const last = items[items.length - 1];
+		if (!last) return;
+		const lastVisible = (last.index + 1) * Math.max(1, cols) - 1;
+		if (shouldLoadNext(snapshot, { paging, lastVisible })) void source.loadMore();
+	});
+
+	$effect(() => {
+		// A grid short enough not to be virtualised has no range to read, so the last line
+		// carries a sentinel instead.
 		const root = scrollEl;
 		const target = sentinel;
-		if (!root || !target || paging.mode !== 'infinite') return;
+		if (!root || !target || paging !== 'scroll') return;
 		const observer = new IntersectionObserver(
 			(entries) => {
-				// `loadMore` is a no-op while a read is in flight or when the last page was short.
-				if (entries.some((entry) => entry.isIntersecting)) void source.loadMore();
+				if (!entries.some((entry) => entry.isIntersecting)) return;
+				if (shouldLoadNext(snapshot, { paging, lastVisible: rows.length - 1 })) void source.loadMore();
 			},
 			{ root, rootMargin: '200px' }
 		);
@@ -402,7 +451,15 @@
 		return () => observer.disconnect();
 	});
 
+	/** Read the page that failed again: the one a pager is on, or the one that was appended. */
+	function retryPage(): void {
+		if (paging === 'pages') void source.setPage(snapshot.page);
+		else void source.loadMore();
+	}
+
 	const stateClass = 'text-muted-foreground flex items-center justify-center gap-2 py-10 text-sm';
+	/** The same anatomy under the tiles, at a row's height rather than a body's. */
+	const errorLineClass = 'text-destructive flex items-center justify-center gap-2 text-sm';
 </script>
 
 <!--
@@ -418,11 +475,12 @@
 	The grid owns the layout and the cursor: one tab stop moves into the tiles, the
 	arrows walk them, and Space selects where Enter opens.
 
-	In `infinite` mode scrolling to the end asks the source for the next page, and
+	`paging` says how the set is walked, and the source follows it. In `scroll` reaching
+	the end of the body asks for the next page, in `more` a row under the tiles does, and
 	paging stops on a short page, never on a missing `links.next`, which the API emits
-	forever (006_pagination). In `pages` mode the footer walks the set with an explicit
-	page number and reads "n to m of N" once `_summarize` has counted it
-	(020_summarize).
+	forever (006_pagination). In `pages` the footer walks the set with an explicit page
+	number and reads "n to m of N" once `_summarize` has counted it (020_summarize). A
+	page that fails leaves its tiles and says why at the bottom, with a retry.
 -->
 <div bind:this={ref} data-slot="entity-grid" class={cn('flex w-full min-w-0 flex-col gap-2', className)} {...rest}>
 	{#if header}
@@ -435,9 +493,9 @@
 		bind:this={scrollEl}
 		data-slot="entity-grid-scroll"
 		style="max-height:{maxHeight}"
-		class="border-border w-full overflow-auto rounded-md border p-3"
+		class="border-border flex w-full flex-col gap-3 overflow-auto rounded-md border p-3"
 	>
-		{#if snapshot.status === 'error'}
+		{#if snapshot.status === 'error' && !pageError}
 			<p class={cn(stateClass, 'text-destructive')}>
 				<CircleAlert aria-hidden="true" class="size-4 shrink-0" />
 				{snapshot.error?.message}
@@ -530,8 +588,22 @@
 					<div aria-hidden="true" style="grid-column:1/-1;height:{window_.after}px"></div>
 				{/if}
 			</div>
-			{#if paging.mode === 'infinite'}
-				<div bind:this={sentinel} aria-hidden="true" class="h-4"></div>
+			{#if pageError}
+				<p data-slot="entity-grid-page-error" class={errorLineClass}>
+					<CircleAlert aria-hidden="true" class="size-4 shrink-0" />
+					<span class="min-w-0 truncate" title={snapshot.error?.message}>{snapshot.error?.message}</span>
+					<Button variant="outline" size="sm" onclick={retryPage}>Retry</Button>
+				</p>
+			{:else if snapshot.status === 'loadingMore'}
+				<div data-slot="entity-grid-loading">
+					<Skeleton class="h-4 w-full" />
+				</div>
+			{:else if paging === 'more' && snapshot.hasMore}
+				<div data-slot="entity-grid-load-more" class="flex justify-center">
+					<Button variant="outline" size="sm" onclick={() => void source.loadMore()}>Load more</Button>
+				</div>
+			{:else if paging === 'scroll' && snapshot.hasMore}
+				<div bind:this={sentinel} data-slot="entity-grid-sentinel" aria-hidden="true" class="h-4"></div>
 			{/if}
 		{/if}
 	</div>
@@ -540,16 +612,16 @@
 		data-slot="entity-grid-footer"
 		class="text-muted-foreground flex w-full min-w-0 flex-wrap items-center justify-between gap-2 text-xs"
 	>
-		{#if paging.mode === 'pages'}
+		{#if pager.mode === 'pages'}
 			<div data-slot="entity-grid-page-size" class="flex items-center gap-2">
 				<span>Rows per page</span>
 				<Select.Root
 					type="single"
-					value={String(paging.pageSize)}
+					value={String(pager.pageSize)}
 					onValueChange={(value) => void source.setPageSize(Number(value))}
 				>
 					<Select.Trigger aria-label="Rows per page" class="h-7 w-auto min-w-16">
-						<span data-slot="select-value" class="tabular-nums">{paging.pageSize}</span>
+						<span data-slot="select-value" class="tabular-nums">{pager.pageSize}</span>
 					</Select.Trigger>
 					<Select.Content>
 						{#each pageSizes as option (option)}
@@ -559,13 +631,13 @@
 				</Select.Root>
 			</div>
 			<div data-slot="entity-grid-pager" class="flex items-center gap-2">
-				<span data-slot="entity-grid-range" class="tabular-nums">{paging.rangeLabel}</span>
+				<span data-slot="entity-grid-range" class="tabular-nums">{pager.rangeLabel}</span>
 				<Button
 					variant="outline"
 					size="icon-sm"
 					aria-label="Previous page"
-					disabled={!paging.hasPrevious || snapshot.status === 'loading'}
-					onclick={() => void source.setPage(paging.page - 1)}
+					disabled={!pager.hasPrevious || snapshot.status === 'loading'}
+					onclick={() => void source.setPage(pager.page - 1)}
 				>
 					<ChevronLeft aria-hidden="true" />
 				</Button>
@@ -575,7 +647,7 @@
 					inputmode="numeric"
 					aria-label="Page number"
 					class="h-7 w-14 text-center tabular-nums"
-					value={pageDraft === '' ? String(paging.page) : pageDraft}
+					value={pageDraft === '' ? String(pager.page) : pageDraft}
 					oninput={(event) => (pageDraft = event.currentTarget.value)}
 					onkeydown={(event) => {
 						if (event.key !== 'Enter') return;
@@ -584,24 +656,21 @@
 					}}
 					onblur={(event) => goToPage(event.currentTarget.value)}
 				/>
-				{#if paging.pageCount !== null}
-					<span class="tabular-nums">of {paging.pageCount}</span>
+				{#if pager.pageCount !== null}
+					<span class="tabular-nums">of {pager.pageCount}</span>
 				{/if}
 				<Button
 					variant="outline"
 					size="icon-sm"
 					aria-label="Next page"
-					disabled={!paging.hasNext || snapshot.status === 'loading'}
-					onclick={() => void source.setPage(paging.page + 1)}
+					disabled={!pager.hasNext || snapshot.status === 'loading'}
+					onclick={() => void source.setPage(pager.page + 1)}
 				>
 					<ChevronRight aria-hidden="true" />
 				</Button>
 			</div>
 		{:else}
-			<span data-slot="entity-grid-loaded" class="tabular-nums">{paging.loadedLabel}</span>
-			{#if snapshot.status === 'loadingMore'}
-				<span>Loading…</span>
-			{/if}
+			<span data-slot="entity-grid-loaded" class="tabular-nums">{pager.loadedLabel}</span>
 		{/if}
 	</div>
 

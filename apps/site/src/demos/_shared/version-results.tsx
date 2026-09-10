@@ -95,6 +95,7 @@ export function VersionResults({
           source={source}
           columns={loaded.columns}
           statuses={loaded.statuses}
+          paging="more"
           maxHeight="20rem"
           emptyLabel="No Version matches this filter"
         />

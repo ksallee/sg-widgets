@@ -79,6 +79,7 @@ export default function GroupedListDemo() {
         <GroupedList
           source={source}
           context={context}
+          paging="pages"
           groupBy={data.columns[0]!}
           labelField="content"
           subLabelField={data.columns[1]!}

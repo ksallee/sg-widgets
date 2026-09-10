@@ -19,6 +19,8 @@
 import type { EntityRow, SearchResult, SgClient } from './client.js';
 import type { EntityRef, FilterGroup, FilterNode, WireGroup } from './filter.js';
 import { condition, fromWire, group, isEmptyFilter, toApi3Hash } from './filter.js';
+import type { FieldSpec } from './row.js';
+import { pathOf } from './row.js';
 import type { SchemaService } from './schema-service.js';
 import { createSchemaService } from './schema-service.js';
 import { DISPLAY_NAME_FIELDS, displayNameOf } from './schema.js';
@@ -308,10 +310,10 @@ export interface SelectionSummary<T> {
 /**
  * What a multi picker draws for its selection.
  *
- * `chips` draws every chip and wraps. `ellipsis` keeps one line: as many whole
- * chips as the measured row fits, then `+n`, with the whole list in the title.
- * `count` draws neither and reads `3 selected`. `max` bounds the chips in either
- * chip mode; `0` means every chip. An `ellipsis` row nothing has measured yet
+ * `chips` draws every chip and wraps. `ellipsis`, the default, keeps one line: as
+ * many whole chips as the measured row fits, then `+n`, with the whole list in the
+ * title. `count` draws neither and reads `3 selected`. `max` bounds the chips in
+ * either chip mode; `0` means every chip. An `ellipsis` row nothing has measured yet
  * falls back to three chips.
  */
 export function summariseSelection<T>(
@@ -324,7 +326,7 @@ export function summariseSelection<T>(
     fit?: ChipRow | undefined;
   } = {},
 ): SelectionSummary<T> {
-  const summary = options.summary ?? 'chips';
+  const summary = options.summary ?? 'ellipsis';
   const asked = options.max ?? 0;
   const fitted =
     summary === 'ellipsis' && options.fit
@@ -362,9 +364,9 @@ export interface EntitySearchOptions {
    */
   searchFields?: SearchFieldSpec[] | ((query: string) => SearchFieldSpec[]) | undefined;
   /** Field shown right-aligned, rendered by its data type. Nothing is shown without it. */
-  secondaryField?: string | undefined;
+  secondaryField?: FieldSpec | null | undefined;
   /** Field shown under the label. Defaults to the entity type when several are searched. */
-  subLabelField?: string | undefined;
+  subLabelField?: FieldSpec | null | undefined;
   /** Field holding the thumbnail URL. `false` hides thumbnails. */
   thumbnail?: string | false | undefined;
   /** Extra fields to request, so a caller's own sub-label or secondary can be read. */
@@ -503,8 +505,10 @@ export function createEntitySearch(options: EntitySearchOptions): EntitySearch {
   function requestedFields(): string[] {
     const wanted = ['id', 'type', ...DISPLAY_NAME_FIELDS];
     if (opts.labelField) wanted.push(opts.labelField);
-    if (opts.secondaryField) wanted.push(opts.secondaryField);
-    if (opts.subLabelField) wanted.push(opts.subLabelField);
+    const secondary = pathOf(opts.secondaryField);
+    if (secondary) wanted.push(secondary);
+    const subLabel = pathOf(opts.subLabelField);
+    if (subLabel) wanted.push(subLabel);
     if (opts.thumbnail !== false) wanted.push(opts.thumbnail ?? 'image');
     wanted.push(...(opts.fields ?? []));
     return [...new Set(wanted)];

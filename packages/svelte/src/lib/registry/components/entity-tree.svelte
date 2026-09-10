@@ -23,23 +23,23 @@
 
 <script lang="ts">
 	import type { HTMLAttributes } from 'svelte/elements';
-	import type { EntityRef, SgContext, TreeFieldPlan, TreeNode, TreeRow } from '@sg-widgets/core';
+	import type { EntityRef, FieldSpec, SgContext, TreeFieldPlan, TreeNode, TreeRow } from '@sg-widgets/core';
 	import {
 		createTree,
 		hierarchyLoader,
 		hierarchySearcher,
 		isEmptyValue,
 		matchRuns,
+		pathOf,
 		resolveTreeFields,
 		TREE_STATUS_FIELDS
 	} from '@sg-widgets/core';
 	import ChevronRight from '@lucide/svelte/icons/chevron-right';
 	import CircleAlert from '@lucide/svelte/icons/circle-alert';
-	import Check from '@lucide/svelte/icons/check';
 	import Inbox from '@lucide/svelte/icons/inbox';
 	import Loader from '@lucide/svelte/icons/loader';
-	import Minus from '@lucide/svelte/icons/minus';
 	import Search from '@lucide/svelte/icons/search';
+	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
@@ -69,12 +69,12 @@
 		thumbnail?: string | false;
 		/** Field shown as the row's label. Falls back to the label the tree answers. */
 		labelField?: string;
-		/** Field shown under the label. */
-		subLabelField?: string;
+		/** The muted line under the label: a path, or a resolved column. */
+		subLabelField?: FieldSpec | null;
 		/** Muted line under the label, of the caller's own making. Wins over `subLabelField`. */
 		subLabel?: (node: TreeNode) => string;
-		/** Right-aligned field, drawn by its data type through FieldValue. */
-		secondaryField?: string;
+		/** The right-aligned value: a path, or a resolved column, drawn by its data type. */
+		secondaryField?: FieldSpec | null;
 		/** Right-aligned text of the caller's own making. Wins over `secondaryField`. */
 		secondary?: (node: TreeNode) => string;
 		/** Show the schema name beside the label on a node that stands for a type. */
@@ -134,8 +134,8 @@
 		...TREE_STATUS_FIELDS,
 		...(thumbnail === false ? [] : [thumbnail]),
 		...(labelField ? [labelField] : []),
-		...(subLabelField ? [subLabelField] : []),
-		...(secondaryField && secondaryField !== 'id' ? [secondaryField] : []),
+		...(pathOf(subLabelField) ? [pathOf(subLabelField)] : []),
+		...(pathOf(secondaryField) && pathOf(secondaryField) !== 'id' ? [pathOf(secondaryField)] : []),
 		...(fields ?? [])
 	]);
 
@@ -197,10 +197,11 @@
 		return plan;
 	}
 
-	const plan = $derived(loadPlan(typeKey, secondaryField));
+	const secondaryPath = $derived(pathOf(secondaryField));
+	const plan = $derived(loadPlan(typeKey, secondaryPath || undefined));
 	const hasSubLabel = $derived(Boolean(subLabelField || subLabel));
 	/** An id is a code, and codes are the mono treatment of `docs/design-rules.md`. */
-	const secondaryIsId = $derived(secondaryField === 'id');
+	const secondaryIsId = $derived(secondaryPath === 'id');
 
 	function labelOf(node: TreeNode): string {
 		const explicit = labelField ? node.values[labelField] : undefined;
@@ -214,8 +215,9 @@
 
 	function subLabelOf(node: TreeNode): string {
 		if (subLabel) return subLabel(node);
-		if (!subLabelField) return '';
-		const raw = node.values[subLabelField];
+		const path = pathOf(subLabelField);
+		if (!path) return '';
+		const raw = node.values[path];
 		return raw === null || raw === undefined ? '' : String(raw);
 	}
 
@@ -232,13 +234,14 @@
 	}
 
 	function secondaryValue(node: TreeNode): unknown {
-		if (!secondaryField) return null;
-		return secondaryField === 'id' ? (node.entity?.id ?? null) : node.values[secondaryField];
+		if (!secondaryPath) return null;
+		return secondaryIsId ? (node.entity?.id ?? null) : node.values[secondaryPath];
 	}
 
 	function secondaryType(node: TreeNode): string {
+		const declared = secondaryField && typeof secondaryField !== 'string' ? secondaryField.dataType : undefined;
 		const field = node.entity ? plan.secondary[node.entity.type] : null;
-		return field?.dataType ?? (secondaryIsId ? 'number' : 'text');
+		return declared ?? field?.dataType ?? (secondaryIsId ? 'number' : 'text');
 	}
 
 	/* searching --------------------------------------------------------------- */
@@ -457,19 +460,15 @@
 										engine.focus(node.path);
 										engine.toggleChecked(node.path);
 									}}
-									class={cn(
-										'flex shrink-0 items-center justify-center rounded-[4px] border transition-colors duration-150 [&>svg]:size-3.5',
-										GLYPH[size],
-										row.checked === 'unchecked'
-											? 'border-input'
-											: 'border-primary bg-primary text-primary-foreground'
-									)}
+									class="flex shrink-0 items-center"
 								>
-									{#if row.checked === 'checked'}
-										<Check />
-									{:else if row.checked === 'mixed'}
-										<Minus />
-									{/if}
+									<Checkbox
+										checked={row.checked === 'checked'}
+										indeterminate={row.checked === 'mixed'}
+										tabindex={-1}
+										aria-hidden="true"
+										class="pointer-events-none"
+									/>
 								</span>
 							{/if}
 
@@ -516,7 +515,7 @@
 
 							{#if custom}
 								<span data-slot="entity-tree-secondary" class="text-muted-foreground shrink-0 text-xs">{custom}</span>
-							{:else if secondaryField && !isEmptyValue(raw)}
+							{:else if secondaryPath && !isEmptyValue(raw)}
 								<span
 									data-slot="entity-tree-secondary"
 									class={cn(

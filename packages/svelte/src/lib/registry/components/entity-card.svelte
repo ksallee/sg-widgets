@@ -12,23 +12,17 @@
 	const NAME: Record<EntityCardSize, string> = { sm: 'text-sm', md: 'text-sm', lg: 'text-base' };
 	const ROWS: Record<EntityCardSize, string> = { sm: 'gap-y-1.5', md: 'gap-y-2', lg: 'gap-y-2' };
 	const BODY: Record<EntityCardSize, string> = { sm: 'p-2', md: 'p-2', lg: 'p-3' };
-
-	/** The path of a row-anatomy prop, whether it came as a path or as a resolved column. */
-	function pathOf(spec: string | { path: string } | null | undefined): string {
-		if (spec === null || spec === undefined) return '';
-		return typeof spec === 'string' ? spec : spec.path;
-	}
 </script>
 
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import type { HTMLAttributes } from 'svelte/elements';
 	import type {
-		CollectionColumn,
 		EntityCardColumn,
 		EntityCardModel,
 		EntityRef,
 		EntityRow,
+		FieldSpec,
 		FieldTextOptions,
 		SgClient,
 		SgContext,
@@ -43,6 +37,7 @@
 		imageState,
 		isEmptyValue,
 		loadEntityCard,
+		pathOf,
 		preferencesOf,
 		renderKindFor,
 		urlLink
@@ -82,11 +77,11 @@
 		/** Field shown as the name. Defaults to the type's own display name. `tile` only. */
 		labelField?: string | null;
 		/** The left of the tile's metadata line: a path, or a resolved column so it renders by type. */
-		subLabelField?: string | CollectionColumn | null;
+		subLabelField?: FieldSpec | null;
 		/** The caller's own sub-label. Wins over `subLabelField`. */
 		subLabel?: (row: EntityRow) => string;
 		/** The right of the tile's metadata line: a path, or a resolved column so it renders by type. */
-		secondaryField?: string | CollectionColumn | null;
+		secondaryField?: FieldSpec | null;
 		/** The caller's own text on the right of the metadata line. Wins over `secondaryField`. */
 		secondary?: (row: EntityRow) => string;
 		/** Show the row's `code` beside the name when the two differ. `tile` only. */

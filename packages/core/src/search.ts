@@ -94,6 +94,11 @@ export interface SearchHit {
   image: string | null;
   /** The row's project, `name` being its `cached_display_name`. Null on a site-wide type. */
   project: EntityRef | null;
+  /**
+   * Attributes and relationships of the second read, in one map, so a row anatomy
+   * reads any field a caller asked for. A relationship is unwrapped to its `data`.
+   */
+  values: Record<string, unknown>;
 }
 
 /** A hit with only what `_text_search` itself answers. */
@@ -105,16 +110,26 @@ export function toSearchHit(row: TextSearchRow): SearchHit {
     link: linkType && linkName ? { type: linkType, name: linkName } : null,
     image: null,
     project: null,
+    values: {},
   };
 }
 
 /**
- * Fill in the thumbnail and the project `_text_search` does not answer: one
- * `search` per type over the ids just returned. An unknown field name is dropped
- * at 200, so asking every type for `image` and `project` is safe even where the
- * type has neither (probe 003).
+ * Fill in what `_text_search` does not answer: one `search` per type over the ids
+ * just returned. An unknown field name is dropped at 200, so asking every type for
+ * `image`, `project` and whatever a row anatomy names is safe even where the type
+ * carries none of it (probe 003).
  */
-export async function hydrate(client: SgClient, rows: TextSearchRow[]): Promise<SearchHit[]> {
+export async function hydrate(
+  client: SgClient,
+  rows: TextSearchRow[],
+  options: {
+    /** Fields on top of the identity ones, for a caller's own sub-label or secondary. */
+    fields?: readonly string[] | undefined;
+    /** Field holding the label. The display-name chain answers it when absent. */
+    labelField?: string | undefined;
+  } = {},
+): Promise<SearchHit[]> {
   const hits = rows.map(toSearchHit);
   if (hits.length === 0) return hits;
   const byType = new Map<string, number[]>();
@@ -123,11 +138,12 @@ export async function hydrate(client: SgClient, rows: TextSearchRow[]): Promise<
     if (ids) ids.push(hit.ref.id);
     else byType.set(hit.ref.type, [hit.ref.id]);
   }
+  const fields = [...new Set(['id', 'image', 'project', ...DISPLAY_FIELDS, ...(options.fields ?? [])])];
   const reads = await Promise.all(
     [...byType].map(async ([type, ids]) => {
       const filters = { logical_operator: 'and' as const, conditions: [['id', 'in', ids] as WireCondition] };
       const result = await client.search(type, {
-        fields: ['id', 'image', 'project', ...DISPLAY_FIELDS],
+        fields,
         filters,
         page: { size: ids.length },
       });
@@ -140,11 +156,15 @@ export async function hydrate(client: SgClient, rows: TextSearchRow[]): Promise<
   for (const hit of hits) {
     const row = rowsById.get(`${hit.ref.type}:${hit.ref.id}`);
     if (!row) continue;
+    const values: Record<string, unknown> = { ...row.attributes };
+    for (const [name, link] of Object.entries(row.relationships)) values[name] = link?.data ?? null;
+    hit.values = values;
     const image = row.attributes['image'];
     hit.image = typeof image === 'string' ? image : null;
     const project = row.relationships['project']?.data as EntityRef | null | undefined;
     hit.project = project ?? null;
-    const name = displayNameOf(row.attributes);
+    const labelled = options.labelField === undefined ? undefined : values[options.labelField];
+    const name = typeof labelled === 'string' && labelled.length > 0 ? labelled : displayNameOf(row.attributes);
     if (name) hit.ref = { ...hit.ref, name };
   }
   return hits;

@@ -126,6 +126,26 @@
       ]
     },
     {
+      "name": "picker-row",
+      "type": "registry:component",
+      "title": "Picker Row",
+      "description": "The row every picker, search and tree draws: a picture, a highlighted label, a sub-label and a typed secondary.",
+      "dependencies": [
+        "@sg-widgets/core"
+      ],
+      "registryDependencies": [
+        "local:field-value",
+        "local:thumbnail",
+        "local:user-avatar"
+      ],
+      "files": [
+        {
+          "path": "src/lib/registry/components/picker-row.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
       "name": "entity-type-picker",
       "type": "registry:component",
       "title": "Entity Type Picker",

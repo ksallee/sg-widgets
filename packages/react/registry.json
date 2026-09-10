@@ -149,6 +149,31 @@
       ]
     },
     {
+      "name": "picker-row",
+      "type": "registry:component",
+      "title": "Picker Row",
+      "description": "The row every picker, search and tree draws: a picture, a highlighted label, a sub-label and a typed secondary.",
+      "categories": [
+        "flow-production-tracking",
+        "atom"
+      ],
+      "dependencies": [
+        "@sg-widgets/core"
+      ],
+      "registryDependencies": [
+        "https://sg-widgets.dev/r/react/field-value.json",
+        "https://sg-widgets.dev/r/react/thumbnail.json",
+        "https://sg-widgets.dev/r/react/user-avatar.json"
+      ],
+      "docs": "The six row-anatomy props of rule 9. It draws a row's contents, not its box: the caller owns the list item.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/picker-row.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
       "name": "entity-type-picker",
       "type": "registry:component",
       "title": "Entity Type Picker",

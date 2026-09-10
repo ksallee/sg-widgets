@@ -2,11 +2,6 @@
 	import type { PickerSummary } from '@sg-widgets/core';
 
 	export type StatusMultiPickerSize = 'sm' | 'md' | 'lg';
-	/**
-	 * What the control shows for the selection. `both` is the old spelling of `chips`.
-	 * `icons` drops the labels and `names` reads the labels as one line of text.
-	 */
-	export type StatusMultiPickerSummary = PickerSummary | 'icons' | 'names' | 'both';
 
 	/**
 	 * Controls follow the input ladder of `docs/design-rules.md`. `data-empty` takes the
@@ -81,7 +76,7 @@
 	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
-	import StatusBadge from '$lib/registry/components/status-badge.svelte';
+	import StatusBadge, { type StatusBadgeVariant } from '$lib/registry/components/status-badge.svelte';
 
 	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>, HTMLDivElement> & {
 		/** The widget context. The options and the status table are read through it, once per page. */
@@ -106,7 +101,9 @@
 		/** Show the raw code instead of the label. The other one stays in the tooltip. */
 		showCode?: boolean;
 		/** What the control shows for the selection. */
-		summary?: StatusMultiPickerSummary;
+		summary?: PickerSummary;
+		/** What one selected status is drawn as. Orthogonal to how many the control shows. */
+		badge?: StatusBadgeVariant;
 		/** Badges drawn before the rest becomes `+n`. `0` lets the row fit what it can. */
 		max?: number;
 		/** The site the stock sprite is served from, passed to every badge. Defaults to the context's. */
@@ -135,6 +132,7 @@
 		invalid = false,
 		showCode = false,
 		summary = 'ellipsis',
+		badge = 'both',
 		max = 0,
 		siteUrl = undefined,
 		size = 'md',
@@ -215,26 +213,22 @@
 	const shown = $derived(rows.filter((option) => matchesTokens(search, option.label, option.code)));
 	const byCode = $derived(new Map(rows.map((option) => [option.code, option])));
 
-	/** `both` is the old spelling of `chips`, and `icons` fits twice as many. */
-	const mode = $derived<PickerSummary>(
-		summary === 'both' || summary === 'icons' || summary === 'names' ? 'chips' : summary
-	);
 	/**
-	 * A badge control is a token field, with the caret beside the badges. A summary
+	 * A chip control is a token field, with the caret beside the badges. A summary
 	 * control is a trigger, and keeps its search box at the top of the popup instead.
 	 */
-	const inline = $derived(summary !== 'ellipsis' && summary !== 'count' && summary !== 'names');
+	const inline = $derived(summary === 'chips');
 
 	/** What the badges look like, so a change to any of it re-measures the row. */
 	const rowKey = $derived(
-		`${size}|${summary}|${showCode}|${value.map((code) => byCode.get(code)?.label ?? code).join(', ')}`
+		`${size}|${summary}|${badge}|${showCode}|${value.map((code) => byCode.get(code)?.label ?? code).join(', ')}`
 	);
 	let badgesEl = $state<HTMLElement | null>(null);
 	let available = $state(0);
 	let widths = $state<number[]>([]);
 	let measured = $state(false);
 	/** True once the row knows its own widths and its room, so it may be drawn. */
-	const ready = $derived(mode !== 'ellipsis' || (measured && available > 0));
+	const ready = $derived(summary !== 'ellipsis' || (measured && available > 0));
 
 	/** Every badge laid out, so a hidden one still reports the width it would take. */
 	function measure(row: HTMLElement): number[] {
@@ -254,7 +248,7 @@
 
 	$effect(() => {
 		const control = controlEl;
-		if (!control || mode !== 'ellipsis') return;
+		if (!control || summary !== 'ellipsis') return;
 		const observer = new ResizeObserver(() => (available = roomIn(control)));
 		observer.observe(control);
 		available = roomIn(control);
@@ -264,7 +258,7 @@
 	$effect(() => {
 		void rowKey;
 		const row = badgesEl;
-		if (!row || mode !== 'ellipsis') return;
+		if (!row || summary !== 'ellipsis') return;
 		widths = measure(row);
 		measured = true;
 		let live = true;
@@ -279,10 +273,11 @@
 
 	const plan = $derived(
 		summariseSelection(value, (code) => byCode.get(code)?.label ?? code, {
-			summary: mode,
-			max: summary === 'icons' ? max * 2 : max,
+			summary,
+			// A bare icon is half a badge wide, so a fixed cap fits twice as many.
+			max: badge === 'icon' ? max * 2 : max,
 			fit:
-				mode === 'ellipsis' && measured && available > 0
+				summary === 'ellipsis' && measured && available > 0
 					? { widths, available, reserve: OVERFLOW_RESERVE }
 					: undefined
 		})
@@ -388,7 +383,7 @@
 	}
 </script>
 
-{#snippet badge(code: string, variant: 'both' | 'icon')}
+{#snippet statusBadge(code: string, variant: StatusBadgeVariant)}
 	<StatusBadge
 		{code}
 		status={query.statuses.get(code) ?? null}
@@ -409,8 +404,8 @@
 		hidden={ready && index >= plan.shown.length}
 		class={cn('flex min-w-0 shrink-0 items-center gap-1', armed === index && PICKER_ARMED)}
 	>
-		{@render badge(code, summary === 'icons' ? 'icon' : 'both')}
-		{#if interactive && summary !== 'icons'}
+		{@render statusBadge(code, badge)}
+		{#if interactive && badge !== 'icon'}
 			<button
 				type="button"
 				data-slot="status-multi-picker-remove"
@@ -442,6 +437,7 @@
 	data-slot="status-multi-picker"
 	data-size={size}
 	data-summary={summary}
+	data-badge={badge}
 	data-loading={query.loading ? 'true' : undefined}
 	class={cn('relative flex w-full min-w-0 items-center', className)}
 	{...rest}
@@ -472,8 +468,6 @@
 				>
 					{#if summary === 'count'}
 						<span data-slot="status-multi-picker-count" class="truncate">{plan.countLabel}</span>
-					{:else if summary === 'names'}
-						<span data-slot="status-multi-picker-names" class="truncate">{plan.title}</span>
 					{:else}
 						<!--
 							Whole badges only: the row measures itself and hides the ones that do not
@@ -585,7 +579,7 @@
 								<span data-slot="status-multi-picker-check" class="flex h-5 shrink-0 items-center">
 									<Checkbox checked={chosen} tabindex={-1} aria-hidden="true" class="pointer-events-none" />
 								</span>
-								{@render badge(option.code, 'both')}
+								{@render statusBadge(option.code, 'both')}
 							</Combobox.Item>
 						{/each}
 					{/if}

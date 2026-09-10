@@ -1,11 +1,15 @@
 <script lang="ts" module>
 	export type FieldPickerSize = 'sm' | 'md' | 'lg';
 
-	/** Controls follow the input ladder of `docs/design-rules.md`. */
+	/**
+	 * Controls follow the input ladder of `docs/design-rules.md`. `data-empty` takes the
+	 * leading inset down one step, so an empty control is tighter than a filled one. The
+	 * height is fixed, so there is no vertical inset to take.
+	 */
 	const BOX: Record<FieldPickerSize, string> = {
-		sm: 'h-8 px-2',
-		md: 'h-9 px-3',
-		lg: 'h-10 px-3'
+		sm: 'h-8 px-2 data-empty:pl-1.5',
+		md: 'h-9 px-3 data-empty:pl-2',
+		lg: 'h-10 px-3 data-empty:pl-2'
 	};
 	const GLYPH: Record<FieldPickerSize, string> = {
 		sm: 'size-4',
@@ -360,6 +364,7 @@
 			aria-disabled={disabled ? 'true' : undefined}
 			data-readonly={readonly ? 'true' : undefined}
 			data-value={value || undefined}
+			data-empty={value === '' ? '' : undefined}
 			{disabled}
 			title={label ?? placeholder}
 			class={cn(

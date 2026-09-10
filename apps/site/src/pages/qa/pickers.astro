@@ -1,0 +1,21 @@
+---
+/**
+ * A QA harness, not a docs page: every picker control side by side, empty and filled,
+ * so `pnpm qa` can measure the pair in one drive and shoot both frameworks. It sits
+ * outside Starlight and outside the sidebar, and nothing links to it.
+ */
+import '../../styles/global.css';
+import Demo from '../../components/Demo.astro';
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>Picker controls: empty and filled</title>
+  </head>
+  <body class="sg-demo bg-background text-foreground p-4">
+    <Demo name="picker-padding" title="Picker controls: empty beside filled, at every size" />
+  </body>
+</html>

@@ -763,7 +763,8 @@
       ],
       "dependencies": [
         "@sg-widgets/core",
-        "lucide-react"
+        "lucide-react",
+        "@tanstack/react-virtual"
       ],
       "registryDependencies": [
         "https://sg-widgets.dev/r/react/entity-card.json",
@@ -791,7 +792,8 @@
       ],
       "dependencies": [
         "@sg-widgets/core",
-        "lucide-react"
+        "lucide-react",
+        "@tanstack/react-virtual"
       ],
       "registryDependencies": [
         "https://sg-widgets.dev/r/react/field-value.json",

@@ -1,15 +1,32 @@
 import type * as React from 'react';
-import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import type {
   CollectionColumn,
   EntityRef,
   EntityRow,
   EntitySource,
   FieldSpec,
+  RowDisabledFn,
+  RowIdFn,
   SgContext,
+  SortSpec,
+  SourceFilters,
   StatusRecord,
 } from '@sg-widgets/core';
-import { cellValue, describePaging, displayNameOf, groupRows, rowKey, toColumn } from '@sg-widgets/core';
+import {
+  cellValue,
+  describePaging,
+  displayNameOf,
+  groupRows,
+  rowIdOf,
+  rowIsDisabled,
+  rowKey,
+  sameFilters,
+  sameSort,
+  toColumn,
+  toggleId,
+} from '@sg-widgets/core';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { ChevronLeft, ChevronRight, CircleAlert, Inbox } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -37,6 +54,37 @@ const THUMB: Record<GroupedListSize, Record<GroupedListDensity, 'sm' | 'md' | 'l
 /** A row's text and glyphs, on the leaf ladder of `docs/design-rules.md`. */
 const TEXT: Record<GroupedListSize, string> = { sm: 'text-xs', md: 'text-sm', lg: 'text-base' };
 const GLYPH: Record<GroupedListSize, string> = { sm: 'size-3.5', md: 'size-4', lg: 'size-5' };
+/** Row heights per density, so a virtualised list can be measured before it is drawn. */
+const ROW_HEIGHT: Record<GroupedListDensity, number> = { compact: 30, default: 34 };
+
+/** What a `row` render prop is handed. It draws a row's contents, not the row's box. */
+export interface GroupedListRowContext {
+  row: EntityRow;
+  /** The row's id, as `getRowId` derives it. */
+  id: string;
+  index: number;
+  selected: boolean;
+  disabled: boolean;
+}
+
+/** What a `groupHeader` render prop is handed. It draws the header's contents. */
+export interface GroupedListGroupContext {
+  /** The value the run shares. */
+  value: unknown;
+  column: CollectionColumn;
+  /** Rows loaded under this header. */
+  count: number;
+  collapsed: boolean;
+  /** The key the `collapsed` prop names this group by. */
+  id: string;
+}
+
+/** The latest value, for an effect that must read it without depending on it. */
+function useLatest<T>(value: T): { current: T } {
+  const ref = useRef(value);
+  ref.current = value;
+  return ref;
+}
 
 export interface GroupedListProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'children' | 'onSelect'> {
   /** The rows and the order behind them. Created with core's `createEntitySource`. */
@@ -66,13 +114,38 @@ export interface GroupedListProps extends Omit<React.HTMLAttributes<HTMLDivEleme
   density?: GroupedListDensity;
   size?: GroupedListSize;
   selectable?: boolean;
+  /** The selected rows. Controlled, with the list's own selection as the fallback. */
+  selection?: EntityRef[];
   onSelectionChange?: (rows: EntityRef[]) => void;
   onSelect?: (row: EntityRow) => void;
+  /** How a row is keyed, in the DOM and in the selection. Default `Type:id`. */
+  getRowId?: RowIdFn;
+  /** True for a row that cannot be selected or reached by the keyboard. */
+  isRowDisabled?: RowDisabledFn;
+  /** Keys of the groups that are shut. Controlled, with the list's own as the fallback. */
+  collapsed?: string[];
+  onCollapsedChange?: (keys: string[]) => void;
+  /** The source's sort, so a SortPicker drops into the header. */
+  sort?: SortSpec[];
+  onSortChange?: (sort: SortSpec[]) => void;
+  /** The source's filter, so a FilterBar drops into the header. */
+  filters?: SourceFilters;
+  onFiltersChange?: (filters: SourceFilters) => void;
   /** Fixed-size leading slot, when `thumbnail` is not the one wanted: an avatar, a colour swatch. */
   leading?: (row: EntityRow) => React.ReactNode;
+  /** Draws a row's contents. Without it, the row-anatomy props draw them. */
+  row?: (context: GroupedListRowContext) => React.ReactNode;
+  /** Draws a group header's contents. */
+  groupHeader?: (context: GroupedListGroupContext) => React.ReactNode;
+  /** Region above the list. */
+  header?: React.ReactNode;
+  /** Region below the footer. */
+  footer?: React.ReactNode;
   /** Rows per page offered in the footer. `pages` mode only. */
   pageSizes?: number[];
   maxHeight?: string;
+  /** Rows and headers above which the list is virtualised. */
+  virtualizeAfter?: number;
   emptyLabel?: string;
 }
 
@@ -107,11 +180,25 @@ export function GroupedList({
   density = 'default',
   size = 'md',
   selectable = false,
+  selection: selectionProp,
   onSelectionChange,
   onSelect,
+  getRowId,
+  isRowDisabled,
+  collapsed: collapsedProp,
+  onCollapsedChange,
+  sort: sortProp,
+  onSortChange,
+  filters: filtersProp,
+  onFiltersChange,
   leading,
+  row: rowRender,
+  groupHeader,
+  header,
+  footer,
   pageSizes = [25, 50, 100],
   maxHeight = '28rem',
+  virtualizeAfter = 100,
   emptyLabel = 'No rows',
   className,
   ...rest
@@ -140,9 +227,9 @@ export function GroupedList({
   const rowClass = ROW[density];
   const subColumn = subLabelField ? toColumn(subLabelField) : null;
   const secondaryColumn = secondaryField ? toColumn(secondaryField) : null;
-  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
-  const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [pageDraft, setPageDraft] = useState('');
+  const rowId = (row: EntityRow): string => rowIdOf(row, getRowId);
+  const rowDisabled = (row: EntityRow): boolean => rowIsDisabled(row, isRowDisabled);
 
   const groups = useMemo(() => {
     let run = 0;
@@ -153,16 +240,57 @@ export function GroupedList({
     }));
   }, [rows, groupBy.path]);
 
-  useEffect(() => {
-    onSelectionChange?.(rows.filter((row) => selected[rowKey(row)]).map((row) => ({ type: row.type, id: row.id })));
-    // The callback is the caller's; the selection and the rows are what move.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selected, rows]);
+  const [ownSelection, setOwnSelection] = useState<EntityRef[]>([]);
+  const selection = selectionProp ?? ownSelection;
+  /** The selection as keys, so a row asks whether it is in it in constant time. */
+  const chosenKeys = new Set(selection.map(rowKey));
+
+  const [ownCollapsed, setOwnCollapsed] = useState<string[]>([]);
+  const collapsed = collapsedProp ?? ownCollapsed;
 
   function toggle(row: EntityRow): void {
+    if (rowDisabled(row)) return;
     const key = rowKey(row);
-    setSelected((was) => ({ ...was, [key]: !was[key] }));
+    const next = chosenKeys.has(key)
+      ? selection.filter((ref) => rowKey(ref) !== key)
+      : [...selection, { type: row.type, id: row.id }];
+    setOwnSelection(next);
+    onSelectionChange?.(next);
   }
+
+  function toggleGroup(key: string): void {
+    const next = toggleId(collapsed, key);
+    setOwnCollapsed(next);
+    onCollapsedChange?.(next);
+  }
+
+  /*
+   * The source's sort and filter, mirrored out as props so a toolbar control drops in.
+   *
+   * Each pair is one effect into the source and one out of it, and the out one reads the
+   * prop off a ref, so a change travels once and the two never write to each other.
+   */
+  const sortLatest = useLatest(sortProp);
+  useEffect(() => {
+    if (sortProp === undefined || sameSort(sortProp, source.sort)) return;
+    void source.setSort([...sortProp]);
+  }, [source, sortProp]);
+  useEffect(() => {
+    if (sortLatest.current !== undefined && sameSort(snapshot.sort, sortLatest.current)) return;
+    onSortChange?.([...snapshot.sort]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [snapshot.sort]);
+
+  const filtersLatest = useLatest(filtersProp);
+  useEffect(() => {
+    if (filtersProp === undefined || sameFilters(filtersProp, source.filters)) return;
+    void source.setFilters(filtersProp);
+  }, [source, filtersProp]);
+  useEffect(() => {
+    if (filtersLatest.current !== undefined && sameFilters(snapshot.filters, filtersLatest.current)) return;
+    onFiltersChange?.(snapshot.filters);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [snapshot.filters]);
 
   function labelOf(row: EntityRow): string {
     if (labelField) return String(cellValue(row, labelField) ?? '');
@@ -183,9 +311,64 @@ export function GroupedList({
     void source.setPage(paging.pageCount === null ? wanted : Math.min(wanted, paging.pageCount));
   }
 
+  /* virtual rows --------------------------------------------------------- */
+
+  /** Headers and rows as one stream, which is what a virtualised list walks. */
+  const flat = useMemo(() => {
+    const shut = new Set(collapsed);
+    const out: Array<{ group: (typeof groups)[number]; row: EntityRow | null }> = [];
+    for (const group of groups) {
+      out.push({ group, row: null });
+      if (!shut.has(group.key)) for (const row of group.rows) out.push({ group, row });
+    }
+    return out;
+  }, [groups, collapsed]);
+
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const virtualized = flat.length > virtualizeAfter;
+  const virtualizer = useVirtualizer({
+    count: virtualized ? flat.length : 0,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: () => ROW_HEIGHT[density],
+    overscan: 12,
+  });
+
+  const items = virtualizer.getVirtualItems();
+  const firstItem = items[0];
+  const lastItem = items[items.length - 1];
+  const window_ = !virtualized
+    ? { before: 0, after: 0, from: 0, slice: flat }
+    : !firstItem || !lastItem
+      ? { before: 0, after: 0, from: 0, slice: flat.slice(0, 30) }
+      : {
+          before: firstItem.start,
+          after: virtualizer.getTotalSize() - lastItem.end,
+          from: firstItem.index,
+          slice: flat.slice(firstItem.index, lastItem.index + 1),
+        };
+
+  /** The window as runs of one group, so a group still draws one box around its rows. */
+  const blocks: Array<{ group: (typeof groups)[number]; header: boolean; rows: EntityRow[]; from: number }> = [];
+  window_.slice.forEach((item, offset) => {
+    let last = blocks[blocks.length - 1];
+    if (!last || last.group.key !== item.group.key) {
+      last = { group: item.group, header: false, rows: [], from: window_.from + offset };
+      blocks.push(last);
+    }
+    if (item.row === null) last.header = true;
+    else last.rows.push(item.row);
+  });
+
   return (
     <div data-slot="grouped-list" className={cn('flex w-full min-w-0 flex-col gap-2', className)} {...rest}>
+      {header ? (
+        <div data-slot="grouped-list-header" className="flex w-full min-w-0 flex-wrap items-center gap-2">
+          {header}
+        </div>
+      ) : null}
+
       <div
+        ref={scrollRef}
         data-slot="grouped-list-scroll"
         style={{ maxHeight }}
         className="border-border w-full overflow-auto rounded-md border"
@@ -208,14 +391,17 @@ export function GroupedList({
           </p>
         ) : (
           <>
-            {groups.map((group) => {
-              const shut = collapsed[group.key] === true;
+            {window_.before > 0 ? <div aria-hidden="true" style={{ height: `${window_.before}px` }} /> : null}
+            {blocks.map((block) => {
+              const group = block.group;
+              const shut = collapsed.includes(group.key);
               return (
                 <div key={group.key} data-slot="grouped-list-group" data-group-key={group.key}>
+                  {block.header ? (
                   <button
                     type="button"
                     aria-expanded={!shut}
-                    onClick={() => setCollapsed((was) => ({ ...was, [group.key]: !shut }))}
+                    onClick={() => toggleGroup(group.key)}
                     className={cn(
                       'bg-muted/50 focus-visible:ring-ring focus-visible:ring-offset-background border-border sticky top-0 z-10 flex w-full items-center gap-1.5 border-b px-2 py-1.5 text-left font-medium outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
                       TEXT[size],
@@ -229,21 +415,39 @@ export function GroupedList({
                         !shut && 'rotate-90',
                       )}
                     />
-                    <span className="min-w-0 truncate">
-                      <FieldValue
-                        value={group.value}
-                        dataType={groupBy.dataType}
-                        field={groupBy.field}
-                        statuses={statuses}
-                        context={context}
-                      />
-                    </span>
-                    <span className="text-muted-foreground font-mono text-xs tabular-nums">{group.rows.length}</span>
+                    {groupHeader ? (
+                      groupHeader({
+                        value: group.value,
+                        column: groupBy,
+                        count: group.rows.length,
+                        collapsed: shut,
+                        id: group.key,
+                      })
+                    ) : (
+                      <>
+                        <span className="min-w-0 truncate">
+                          <FieldValue
+                            value={group.value}
+                            dataType={groupBy.dataType}
+                            field={groupBy.field}
+                            statuses={statuses}
+                            context={context}
+                          />
+                        </span>
+                        <span className="text-muted-foreground font-mono text-xs tabular-nums">
+                          {group.rows.length}
+                        </span>
+                      </>
+                    )}
                   </button>
-                  {!shut ? (
+                  ) : null}
+                  {block.rows.length > 0 ? (
                     <ul className="flex flex-col">
-                      {group.rows.map((row) => {
-                        const key = rowKey(row);
+                      {block.rows.map((row, offset) => {
+                        const key = rowId(row);
+                        const index = block.from + offset;
+                        const disabled = rowDisabled(row);
+                        const chosen = chosenKeys.has(rowKey(row));
                         const label = labelOf(row);
                         const code = codeOf(row);
                         const sub = subLabel ? subLabel(row) : '';
@@ -253,17 +457,24 @@ export function GroupedList({
                             key={key}
                             data-slot="grouped-list-row"
                             data-row-key={key}
-                            data-state={selected[key] ? 'selected' : undefined}
+                            data-state={chosen ? 'selected' : undefined}
+                            data-disabled={disabled ? 'true' : undefined}
                             className={cn(
                               'border-border/50 flex items-center gap-2 border-b transition-colors duration-150 last:border-b-0',
                               rowClass,
-                              selected[key] ? 'bg-accent text-accent-foreground' : 'hover:bg-muted/50',
+                              chosen ? 'bg-accent text-accent-foreground' : 'hover:bg-muted/50',
+                              disabled && 'pointer-events-none opacity-50',
                             )}
                           >
+                            {rowRender ? (
+                              rowRender({ row, id: key, index, selected: chosen, disabled })
+                            ) : (
+                              <>
                             {selectable ? (
                               <Checkbox
                                 aria-label={`Select ${label}`}
-                                checked={selected[key] === true}
+                                checked={chosen}
+                                disabled={disabled}
                                 onCheckedChange={() => toggle(row)}
                                 className="shrink-0"
                               />
@@ -280,6 +491,7 @@ export function GroupedList({
                             ) : null}
                             <button
                               type="button"
+                              disabled={disabled}
                               onClick={() => (selectable ? toggle(row) : onSelect?.(row))}
                               className="focus-visible:ring-ring focus-visible:ring-offset-background flex min-w-0 flex-1 flex-col items-start rounded-sm text-left outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
                             >
@@ -335,6 +547,8 @@ export function GroupedList({
                                 />
                               </span>
                             ) : null}
+                              </>
+                            )}
                           </li>
                         );
                       })}
@@ -343,6 +557,7 @@ export function GroupedList({
                 </div>
               );
             })}
+            {window_.after > 0 ? <div aria-hidden="true" style={{ height: `${window_.after}px` }} /> : null}
             {paging.mode === 'infinite' && snapshot.hasMore ? (
               <div data-slot="grouped-list-load-more" className="flex justify-center p-2">
                 <Button
@@ -431,6 +646,12 @@ export function GroupedList({
           </>
         )}
       </div>
+
+      {footer ? (
+        <div data-slot="grouped-list-footer-region" className="flex w-full min-w-0 flex-wrap items-center gap-2">
+          {footer}
+        </div>
+      ) : null}
     </div>
   );
 }

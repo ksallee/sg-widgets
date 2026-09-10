@@ -628,7 +628,8 @@
       "description": "Flow Production Tracking rows as EntityCard tiles, with selection, keyboard navigation and infinite scroll.",
       "dependencies": [
         "@sg-widgets/core",
-        "@lucide/svelte"
+        "@lucide/svelte",
+        "@tanstack/virtual-core"
       ],
       "registryDependencies": [
         "local:entity-card",
@@ -651,7 +652,8 @@
       "description": "Dense Flow Production Tracking rows grouped under collapsible headers with counts.",
       "dependencies": [
         "@sg-widgets/core",
-        "@lucide/svelte"
+        "@lucide/svelte",
+        "@tanstack/virtual-core"
       ],
       "registryDependencies": [
         "local:field-value",

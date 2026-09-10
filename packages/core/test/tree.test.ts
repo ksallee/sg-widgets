@@ -545,6 +545,77 @@ describe('the hierarchy loader', () => {
   });
 });
 
+describe('controlled expansion and selection', () => {
+  it('reports the open paths and opens exactly the ones it is given', async () => {
+    const { engine } = tree();
+    await engine.load();
+    expect(engine.snapshot().expanded).toEqual([ROOT]);
+
+    await engine.setExpanded([SHOTS, SEQUENCE]);
+    expect(engine.snapshot().expanded).toEqual([ROOT, SHOTS, SEQUENCE]);
+    expect(paths(engine)).toContain(SHOT);
+
+    // The list it is given is the whole truth: what is not in it shuts.
+    await engine.setExpanded([ASSETS]);
+    expect(engine.snapshot().expanded).toEqual([ROOT, ASSETS]);
+    expect(paths(engine)).not.toContain(SHOT);
+  });
+
+  it('selects exactly the paths it is given, one at a time in single mode', async () => {
+    const { engine } = tree();
+    await engine.load();
+    engine.setSelected([SHOTS, ASSETS]);
+    expect(engine.snapshot().selected).toEqual([SHOTS]);
+    engine.setSelected([]);
+    expect(engine.snapshot().selected).toEqual([]);
+  });
+});
+
+describe('a disabled node', () => {
+  /** The tree with its Assets branch disabled. */
+  function disabledTree(): TreeEngine {
+    const client = new MockClient();
+    return createTree({
+      rootPath: ROOT,
+      loader: hierarchyLoader(client),
+      disabled: (node) => node.path === ASSETS,
+    });
+  }
+
+  it('is skipped by the arrows and never takes the cursor', async () => {
+    const engine = disabledTree();
+    await engine.load();
+    expect(engine.snapshot().rows[1]?.disabled).toBe(true);
+    expect(engine.snapshot().cursor).toBe(ROOT);
+    // Assets sits between the root and Shots, and Down steps over it.
+    engine.keyDown({ key: 'ArrowDown' });
+    expect(engine.snapshot().cursor).toBe(SHOTS);
+    engine.keyDown({ key: 'ArrowUp' });
+    expect(engine.snapshot().cursor).toBe(ROOT);
+    engine.focus(ASSETS);
+    expect(engine.snapshot().cursor).toBe(ROOT);
+  });
+
+  it('refuses selection and its checkbox', async () => {
+    const engine = disabledTree();
+    await engine.load();
+    engine.select(ASSETS);
+    expect(engine.snapshot().selected).toEqual([]);
+    engine.setChecked(ASSETS, true);
+    expect(engine.snapshot().checked).toEqual([]);
+    engine.setSelected([ASSETS]);
+    expect(engine.snapshot().selected).toEqual([]);
+  });
+
+  it('is skipped by type-ahead', async () => {
+    const engine = disabledTree();
+    await engine.load();
+    // "Assets" is the only row starting with a, and it is disabled.
+    expect(engine.keyDown({ key: 'a' })).toBe(false);
+    expect(engine.snapshot().cursor).toBe(ROOT);
+  });
+});
+
 describe('what a row draws with', () => {
   it('finds the status field of a type that has one and skips the one that has not', async () => {
     const client = new MockClient();

@@ -32,13 +32,16 @@
 
 	/** The select column's id, which is never a field path. */
 	const SELECT = '__select';
+
+	/** The popups a cell editor opens. Each is portalled out of the table's own tree. */
+	const EDITOR_POPUP = '[data-slot="popover-content"],[data-slot="select-content"],[data-picker]';
 </script>
 
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import type { HTMLAttributes } from 'svelte/elements';
 	import type { EntityRef, EntityRow, EntitySource, SgContext, SortSpec, StatusRecord } from '@sg-widgets/core';
-	import { cellValue, describePaging, isEditableType, rowKey } from '@sg-widgets/core';
+	import { cellValue, describePaging, isEditableType, preferencesOf, rowKey } from '@sg-widgets/core';
 	import {
 		columnGroupingFeature,
 		columnOrderingFeature,
@@ -84,8 +87,14 @@
 		onColumnsChange?: (columns: CollectionColumn[]) => void;
 		/** `Status` rows by code, for status cells (probe 010). */
 		statuses?: Record<string, StatusRecord> | null;
-		/** The widget context. Cells render with its preferences. An entity cell links to the row's page when it carries a site. */
+		/** The widget context. Cells render with its preferences, and a cell editor reads through it. */
 		context?: SgContext;
+		/** The project the columns were resolved with. Scopes a status, list or entity cell editor. */
+		projectId?: number;
+		/** Decimals a float cell keeps. */
+		precision?: number;
+		/** Shown before the value in a currency cell. */
+		symbol?: string;
 		density?: EntityTableDensity;
 		size?: EntityTableSize;
 		/** Draws a checkbox column and reports the selection. */
@@ -117,6 +126,9 @@
 		onColumnsChange,
 		statuses = null,
 		context,
+		projectId,
+		precision,
+		symbol,
 		density = 'default',
 		size = 'md',
 		selectable = false,
@@ -153,6 +165,9 @@
 		}
 	});
 
+	// The site's preferences, so a duration, a date-time and a timecode are edited the
+	// way the site reads them.
+	const prefs = $derived(preferencesOf(context));
 	const rows = $derived(snapshot.rows);
 	const sort = $derived(snapshot.sort);
 	const paging = $derived(describePaging(snapshot));
@@ -444,12 +459,24 @@
 		openEditor(rowKey(row), column, cellValue(row, column.path));
 	}
 
+	/**
+	 * Take focus off the control before the cell closes. Its own blur handler commits
+	 * what it holds, and it runs on an editor that is still on the page, so the commit is
+	 * never on the teardown path.
+	 */
+	function releaseEditor(): void {
+		const active = document.activeElement;
+		if (active instanceof HTMLElement && ref?.contains(active)) active.blur();
+	}
+
 	function editorKeydown(event: KeyboardEvent, row: EntityRow, column: CollectionColumn): void {
 		if (event.key === 'Enter') {
 			event.preventDefault();
+			releaseEditor();
 			void commit(row, column, draft);
 		} else if (event.key === 'Escape') {
 			event.preventDefault();
+			releaseEditor();
 			editing = null;
 		}
 	}
@@ -457,6 +484,26 @@
 	function isEditing(key: string, path: string): boolean {
 		return editing?.key === key && editing.path === path;
 	}
+
+	// A press outside the open cell commits it.
+	$effect(() => {
+		const open = editing;
+		if (open === null) return;
+		const onOutside = (event: PointerEvent): void => {
+			const target = event.target as Element | null;
+			const cell = ref?.querySelector<HTMLElement>(
+				`tr[data-row-key="${CSS.escape(open.key)}"] td[data-column="${CSS.escape(open.path)}"]`
+			);
+			if (target === null || cell?.contains(target) || target.closest(EDITOR_POPUP) !== null) return;
+			releaseEditor();
+			const row = rows.find((candidate) => rowKey(candidate) === open.key);
+			const column = byPath.get(open.path);
+			if (row && column) void commit(row, column, draft);
+			else editing = null;
+		};
+		document.addEventListener('pointerdown', onOutside, true);
+		return () => document.removeEventListener('pointerdown', onOutside, true);
+	});
 
 	/* paging --------------------------------------------------------------- */
 
@@ -768,6 +815,7 @@
 													{:else}
 														<!-- The default editor is the type's own control from the field-editor item. -->
 														<div
+															data-slot="entity-table-editor"
 															role="presentation"
 															onkeydown={(event) => editorKeydown(event, row, column)}
 															{@attach (el: HTMLElement) =>
@@ -780,6 +828,13 @@
 																field={column.field}
 																{statuses}
 																{context}
+																{projectId}
+																{precision}
+																symbol={symbol ?? '$'}
+																hoursPerDay={prefs.hoursPerDay}
+																locale={prefs.locale}
+																timeZone={prefs.timeZone}
+																frameRate={prefs.frameRate}
 																mode="edit"
 																size="sm"
 															/>

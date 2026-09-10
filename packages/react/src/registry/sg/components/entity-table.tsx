@@ -10,7 +10,7 @@ import type {
   SortSpec,
   StatusRecord,
 } from '@sg-widgets/core';
-import { cellValue, describePaging, isEditableType, rowKey } from '@sg-widgets/core';
+import { cellValue, describePaging, isEditableType, preferencesOf, rowKey } from '@sg-widgets/core';
 import {
   columnGroupingFeature,
   columnOrderingFeature,
@@ -84,6 +84,9 @@ const CELL: Record<EntityTableDensity, string> = { compact: 'px-3 py-1', default
 const TEXT: Record<EntityTableSize, string> = { sm: 'text-xs', md: 'text-sm', lg: 'text-base' };
 const HEAD: Record<EntityTableSize, string> = { sm: 'h-9', md: 'h-10', lg: 'h-11' };
 
+/** The popups a cell editor opens. Each is portalled out of the table's own tree. */
+const EDITOR_POPUP = '[data-slot="popover-content"],[data-slot="select-content"],[data-picker]';
+
 /** The select column's id, which is never a field path. */
 const SELECT = '__select';
 
@@ -95,8 +98,14 @@ export interface EntityTableProps extends Omit<React.HTMLAttributes<HTMLDivEleme
   onColumnsChange?: (columns: CollectionColumn[]) => void;
   /** `Status` rows by code, for status cells (probe 010). */
   statuses?: Record<string, StatusRecord> | null;
-  /** The widget context. Cells render with its preferences. An entity cell links to the row's page when it carries a site. */
+  /** The widget context. Cells render with its preferences, and a cell editor reads through it. */
   context?: SgContext;
+  /** The project the columns were resolved with. Scopes a status, list or entity cell editor. */
+  projectId?: number;
+  /** Decimals a float cell keeps. */
+  precision?: number;
+  /** Shown before the value in a currency cell. */
+  symbol?: string;
   density?: EntityTableDensity;
   size?: EntityTableSize;
   /** Draws a checkbox column and reports the selection. */
@@ -165,6 +174,9 @@ export function EntityTable({
   onColumnsChange,
   statuses = null,
   context,
+  projectId,
+  precision,
+  symbol,
   density = 'default',
   size = 'md',
   selectable = false,
@@ -200,6 +212,9 @@ export function EntityTable({
     }
   }, [source, groupBy, snapshot.sort]);
 
+  // The site's preferences, so a duration, a date-time and a timecode are edited the
+  // way the site reads them.
+  const prefs = preferencesOf(context);
   const rows = snapshot.rows;
   const sort = snapshot.sort;
   const paging = describePaging(snapshot);
@@ -207,6 +222,7 @@ export function EntityTable({
   const cellClass = cn(CELL[density], TEXT[size]);
   const byPath = useMemo(() => new Map(columns.map((column) => [column.path, column])), [columns]);
 
+  const root = useRef<HTMLDivElement>(null);
   const [editing, setEditing] = useState<{ key: string; path: string } | null>(null);
   // Enter can arrive in the same tick as the change that produced the value, before a
   // re-render, so the committed value is read off a ref rather than off state.
@@ -377,12 +393,24 @@ export function EntityTable({
     openEditor(rowKey(row), column, cellValue(row, column.path));
   }
 
+  /**
+   * Take focus off the control before the cell closes. Its own blur handler commits
+   * what it holds, and it runs on an editor that is still on the page, so the commit is
+   * never on the teardown path.
+   */
+  function releaseEditor(): void {
+    const active = document.activeElement;
+    if (active instanceof HTMLElement && root.current?.contains(active)) active.blur();
+  }
+
   function editorKeyDown(event: React.KeyboardEvent, row: EntityRow, column: CollectionColumn): void {
     if (event.key === 'Enter') {
       event.preventDefault();
+      releaseEditor();
       void commit(row, column, draft.current);
     } else if (event.key === 'Escape') {
       event.preventDefault();
+      releaseEditor();
       setEditing(null);
     }
   }
@@ -392,6 +420,29 @@ export function EntityTable({
   };
 
   const isEditing = (key: string, path: string): boolean => editing?.key === key && editing.path === path;
+
+  // A press outside the open cell commits it.
+  const outside = useRef<(event: PointerEvent) => void>(() => {});
+  outside.current = (event: PointerEvent): void => {
+    const open = editing;
+    if (open === null) return;
+    const target = event.target as Element | null;
+    const cell = root.current?.querySelector<HTMLElement>(
+      `tr[data-row-key="${CSS.escape(open.key)}"] td[data-column="${CSS.escape(open.path)}"]`,
+    );
+    if (target === null || cell?.contains(target) || target.closest(EDITOR_POPUP) !== null) return;
+    releaseEditor();
+    const row = rows.find((candidate) => rowKey(candidate) === open.key);
+    const column = byPath.get(open.path);
+    if (row && column) void commit(row, column, draft.current);
+    else setEditing(null);
+  };
+  useEffect(() => {
+    if (editing === null) return;
+    const listener = (event: PointerEvent): void => outside.current(event);
+    document.addEventListener('pointerdown', listener, true);
+    return () => document.removeEventListener('pointerdown', listener, true);
+  }, [editing]);
 
   /* paging --------------------------------------------------------------- */
 
@@ -410,7 +461,7 @@ export function EntityTable({
   }
 
   return (
-    <div data-slot="entity-table" className={cn('flex w-full min-w-0 flex-col gap-2', className)} {...rest}>
+    <div ref={root} data-slot="entity-table" className={cn('flex w-full min-w-0 flex-col gap-2', className)} {...rest}>
       {toolbarStart || toolbarEnd ? (
         <div data-slot="entity-table-toolbar" className="flex w-full min-w-0 flex-wrap items-center justify-between gap-2">
           <div data-slot="entity-table-toolbar-start" className="flex min-w-0 flex-wrap items-center gap-2">
@@ -712,6 +763,7 @@ export function EntityTable({
                               ) : (
                                 // The default editor is the type's own control from the field-editor item.
                                 <div
+                                  data-slot="entity-table-editor"
                                   role="presentation"
                                   ref={focusEditor}
                                   onKeyDown={(event) => editorKeyDown(event, row, column)}
@@ -726,6 +778,13 @@ export function EntityTable({
                                     field={column.field}
                                     statuses={statuses}
                                     context={context}
+                                    projectId={projectId}
+                                    precision={precision}
+                                    symbol={symbol ?? '$'}
+                                    hoursPerDay={prefs.hoursPerDay}
+                                    locale={prefs.locale}
+                                    timeZone={prefs.timeZone}
+                                    frameRate={prefs.frameRate}
                                     mode="edit"
                                     size="sm"
                                   />

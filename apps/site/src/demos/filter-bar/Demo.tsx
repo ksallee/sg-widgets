@@ -4,7 +4,7 @@ import { condition, createEntitySource, emptyFilter, group, resolveColumns, toAp
 import { FilterBar } from '@/registry/sg/components/filter-bar';
 import { GroupedList } from '@/registry/sg/components/grouped-list';
 import { createDemoContext } from '../_shared/client';
-import { DemoClientProvider } from '../_shared/react';
+import { DemoContextProvider } from '../_shared/react';
 import {
   matchLabel,
   readCount,
@@ -76,11 +76,11 @@ export default function FilterBarDemo() {
   }, [source, wire]);
 
   return (
-    <DemoClientProvider client={context.client}>
+    <DemoContextProvider context={context}>
       <div className="flex min-w-0 flex-col gap-4">
         <FilterBar
           entityType="Shot"
-          client={context.client}
+          context={context}
           facets={['sg_status_list', 'sg_sequence', 'sg_shot_type']}
           baseFilter={context.live ? group('and', [condition('project', 'is', { type: 'Project', id: context.projectId })]) : null}
           value={value}
@@ -114,6 +114,6 @@ export default function FilterBarDemo() {
           )}
         </section>
       </div>
-    </DemoClientProvider>
+    </DemoContextProvider>
   );
 }

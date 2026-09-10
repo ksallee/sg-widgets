@@ -21,7 +21,7 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/entity-picker.
 | prop | type | default | meaning |
 |---|---|---|---|
 | `entityTypes` | `string[]` | required | Types to search. Several make the picker polymorphic. |
-| `client` | `SgClient` | required | Wrap it in `createQueryCache` so repeated queries cost one request. |
+| `context` | `SgContext` | required | The widget context. Every read goes through it, so widgets on a page share one cache. |
 | `value` | `EntityRef \| null` | `null` | The chosen row. Two-way in Svelte. |
 | `labelField` | `string` | display-name chain | Field holding the row label. |
 | `searchFields` | `string[] \| ((query) => string[])` | `[]` | Fields matched on top of the display-name chain. A function is called with the query. |
@@ -32,7 +32,7 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/entity-picker.
 | `thumbnail` | `string \| false` | `'image'` | Field holding the thumbnail URL. `false` hides the leading slot. |
 | `roundThumbnail` | `boolean` | `false` | Draws the thumbnail as a circle. |
 | `showCode` | `boolean` | `false` | Shows the row's `code` beside the label when the two differ. |
-| `siteUrl` | `string` | — | The site the status sprite is served from, for a secondary that is a status. |
+| `siteUrl` | `string` | the context's | The site the status sprite is served from, for a secondary that is a status. |
 | `fields` | `string[]` | `[]` | Extra fields to request. |
 | `filters` | `FilterGroup \| WireGroup \| null` | `null` | Pre-filter, merged into every search with `and`. |
 | `projectId` | `number` | — | Scopes to one project. |

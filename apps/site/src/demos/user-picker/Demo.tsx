@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { EntityRef } from '@sg-widgets/core';
 import { UserMultiPicker, UserPicker } from '@/registry/sg/components/user-picker';
-import { getDemoClient } from '../_shared/client';
+import { getDemoContext } from '../_shared/client';
 
 const group = 'flex flex-col gap-2';
 const label = 'text-muted-foreground text-xs font-medium tracking-wide uppercase';
@@ -18,7 +18,7 @@ const SIZES = [
 ] as const;
 
 export default function UserPickerDemo() {
-  const client = getDemoClient();
+  const context = getDemoContext();
 
   const [one, setOne] = useState<EntityRef | null>(null);
   const [people, setPeople] = useState<EntityRef[]>([]);
@@ -34,7 +34,7 @@ export default function UserPickerDemo() {
         <h4 className={label}>One person or script</h4>
         <div className={field}>
           <span className={caption}>One person or script, clearable</span>
-          <UserPicker client={client} value={one} onValueChange={setOne} clearable />
+          <UserPicker context={context} value={one} onValueChange={setOne} clearable />
         </div>
       </section>
 
@@ -42,7 +42,7 @@ export default function UserPickerDemo() {
         <h4 className={label}>Several, with checkbox rows</h4>
         <div className={field}>
           <span className={caption}>Several people at once</span>
-          <UserMultiPicker client={client} value={people} onValueChange={setPeople} clearable />
+          <UserMultiPicker context={context} value={people} onValueChange={setPeople} clearable />
         </div>
       </section>
 
@@ -51,7 +51,7 @@ export default function UserPickerDemo() {
         <div className={field}>
           <span className={caption}>Matched on the name, the address or the login</span>
           <UserPicker
-            client={client}
+            context={context}
             value={byAddress}
             onValueChange={setByAddress}
             placeholder="Try ada, ada.lo or @example.studio…"
@@ -63,7 +63,7 @@ export default function UserPickerDemo() {
         <h4 className={label}>People only</h4>
         <div className={field}>
           <span className={caption}>People only, no script users</span>
-          <UserPicker client={client} includeApiUsers={false} value={peopleOnly} onValueChange={setPeopleOnly} />
+          <UserPicker context={context} includeApiUsers={false} value={peopleOnly} onValueChange={setPeopleOnly} />
         </div>
       </section>
 
@@ -71,7 +71,7 @@ export default function UserPickerDemo() {
         <h4 className={label}>Inactive people included</h4>
         <div className={field}>
           <span className={caption}>Inactive people included</span>
-          <UserPicker client={client} includeInactive value={withInactive} onValueChange={setWithInactive} />
+          <UserPicker context={context} includeInactive value={withInactive} onValueChange={setWithInactive} />
         </div>
       </section>
 
@@ -79,7 +79,7 @@ export default function UserPickerDemo() {
         <h4 className={label}>Bare reference, resolved on mount</h4>
         <div className={field}>
           <span className={caption}>Type and id in, name resolved on mount</span>
-          <UserMultiPicker client={client} value={bare} onValueChange={setBare} clearable />
+          <UserMultiPicker context={context} value={bare} onValueChange={setBare} clearable />
         </div>
       </section>
 
@@ -89,20 +89,20 @@ export default function UserPickerDemo() {
           {SIZES.map(({ size, caption: sizeCaption }) => (
             <div className={field} key={size}>
               <span className={caption}>{sizeCaption}</span>
-              <UserPicker client={client} value={preset} size={size} />
+              <UserPicker context={context} value={preset} size={size} />
             </div>
           ))}
           <div className={field}>
             <span className={caption}>Disabled</span>
-            <UserPicker client={client} value={preset} disabled />
+            <UserPicker context={context} value={preset} disabled />
           </div>
           <div className={field}>
             <span className={caption}>Read-only</span>
-            <UserPicker client={client} value={preset} readonly />
+            <UserPicker context={context} value={preset} readonly />
           </div>
           <div className={field}>
             <span className={caption}>Invalid</span>
-            <UserPicker client={client} value={preset} invalid />
+            <UserPicker context={context} value={preset} invalid />
           </div>
         </div>
       </section>

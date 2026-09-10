@@ -21,8 +21,7 @@ const SIZES = [
 
 export default function EntityPickerDemo() {
   const context = useMemo(() => createDemoContext(), []);
-  const client = context.client;
-  // Its own client, so arming a failure cannot land in another demo on the page.
+  // Its own context, so arming a failure cannot land in another demo on the page.
   const [failing] = useState(() => createDemoClient());
 
   const [shot, setShot] = useState<EntityRef | null>(null);
@@ -44,7 +43,7 @@ export default function EntityPickerDemo() {
         <h4 className={label}>One shot</h4>
         <div className={field}>
           <span className={caption}>One shot, clearable</span>
-          <EntityPicker client={client} entityTypes={['Shot']} value={shot} onValueChange={setShot} clearable />
+          <EntityPicker context={context} entityTypes={['Shot']} value={shot} onValueChange={setShot} clearable />
         </div>
       </section>
 
@@ -53,7 +52,7 @@ export default function EntityPickerDemo() {
         <div className={field}>
           <span className={caption}>Status on the right of every row</span>
           <EntityPicker
-            client={client}
+            context={context}
             entityTypes={['Shot']}
             secondaryField="sg_status_list"
             value={withStatus}
@@ -68,7 +67,7 @@ export default function EntityPickerDemo() {
         <div className={field}>
           <span className={caption}>Shots, assets and sequences in one list</span>
           <EntityPicker
-            client={client}
+            context={context}
             entityTypes={['Shot', 'Asset', 'Sequence']}
             value={anything}
             onValueChange={setAnything}
@@ -83,7 +82,7 @@ export default function EntityPickerDemo() {
         <div className={field}>
           <span className={caption}>The id, rendered by the caller</span>
           <EntityPicker
-            client={client}
+            context={context}
             entityTypes={['Shot']}
             secondary={(row) => `#${row.id}`}
             value={custom}
@@ -98,7 +97,7 @@ export default function EntityPickerDemo() {
         <div className={field}>
           <span className={caption}>Scoped to one project</span>
           <EntityPicker
-            client={client}
+            context={context}
             entityTypes={['Shot']}
             projectId={context.projectFor(71)}
             value={inProject}
@@ -112,7 +111,7 @@ export default function EntityPickerDemo() {
         <h4 className={label}>Bare reference, resolved on mount</h4>
         <div className={field}>
           <span className={caption}>Type and id in, name resolved on mount</span>
-          <EntityPicker client={client} entityTypes={['Shot']} value={bare} onValueChange={setBare} clearable />
+          <EntityPicker context={context} entityTypes={['Shot']} value={bare} onValueChange={setBare} clearable />
           <button
             type="button"
             className={`${linkish} self-start`}
@@ -128,7 +127,7 @@ export default function EntityPickerDemo() {
         <div className={field}>
           <span className={caption}>Five a page</span>
           <EntityPicker
-            client={client}
+            context={context}
             entityTypes={['Shot']}
             pageSize={5}
             value={paged}
@@ -142,7 +141,7 @@ export default function EntityPickerDemo() {
         <div className={field}>
           <span className={caption}>Reads a client whose next call can be armed to fail</span>
           <EntityPicker
-            client={failing.client}
+            context={failing.context}
             entityTypes={['Shot']}
             value={failed}
             onValueChange={setFailed}
@@ -168,7 +167,7 @@ export default function EntityPickerDemo() {
           <div className={field}>
             <span className={caption}>No thumbnail</span>
             <EntityPicker
-              client={client}
+              context={context}
               entityTypes={['Shot']}
               thumbnail={false}
               value={plain}
@@ -179,7 +178,7 @@ export default function EntityPickerDemo() {
           <div className={field}>
             <span className={caption}>A sub-label, and the code beside the name</span>
             <EntityPicker
-              client={client}
+              context={context}
               entityTypes={['Version']}
               subLabelField="sg_status_list"
               secondaryField="id"
@@ -198,7 +197,7 @@ export default function EntityPickerDemo() {
           {SIZES.map(({ size, caption: sizeCaption }) => (
             <div className={field} key={size}>
               <span className={caption}>{sizeCaption}</span>
-              <EntityPicker client={client} entityTypes={['Asset']} value={preset} size={size} clearable />
+              <EntityPicker context={context} entityTypes={['Asset']} value={preset} size={size} clearable />
             </div>
           ))}
         </div>
@@ -209,15 +208,15 @@ export default function EntityPickerDemo() {
         <div className={stack}>
           <div className={field}>
             <span className={caption}>Disabled</span>
-            <EntityPicker client={client} entityTypes={['Asset']} value={preset} disabled />
+            <EntityPicker context={context} entityTypes={['Asset']} value={preset} disabled />
           </div>
           <div className={field}>
             <span className={caption}>Read-only</span>
-            <EntityPicker client={client} entityTypes={['Asset']} value={preset} readonly />
+            <EntityPicker context={context} entityTypes={['Asset']} value={preset} readonly />
           </div>
           <div className={field}>
             <span className={caption}>Invalid</span>
-            <EntityPicker client={client} entityTypes={['Asset']} value={preset} invalid />
+            <EntityPicker context={context} entityTypes={['Asset']} value={preset} invalid />
           </div>
         </div>
       </section>

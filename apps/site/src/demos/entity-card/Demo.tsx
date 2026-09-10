@@ -76,7 +76,7 @@ export default function EntityCardDemo() {
         <p className={caption}>Each pick hands the card a type and an id. The card reads the row itself.</p>
         <div className="flex max-w-sm flex-col gap-2">
           <EntityPicker
-            client={context.client}
+            context={context}
             entityTypes={['Version']}
             projectId={context.live ? context.projectId : undefined}
             placeholder="Search versions…"

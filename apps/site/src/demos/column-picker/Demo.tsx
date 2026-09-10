@@ -1,14 +1,12 @@
-import { useMemo, useState } from 'react';
-import { createSchemaService } from '@sg-widgets/core';
+import { useState } from 'react';
 import { ColumnPicker } from '@/registry/sg/components/column-picker';
-import { DemoClientProvider, useSgClient } from '../_shared/react';
+import { DemoContextProvider, useSgContext } from '../_shared/react';
 
 const label = 'text-muted-foreground text-xs';
 const LOCKED = ['code', 'sg_cut_in'];
 
 function Pickers() {
-  const client = useSgClient();
-  const schema = useMemo(() => createSchemaService(client), [client]);
+  const context = useSgContext();
   const [columns, setColumns] = useState(['code', 'sg_status_list', 'entity.Shot.sg_turnover_date']);
   const [dates, setDates] = useState(['entity.Shot.sg_turnover_date']);
   const [dual, setDual] = useState(['code', 'sg_cut_in']);
@@ -20,7 +18,7 @@ function Pickers() {
           Columns on Version: pick a field, then drag the list into order
         </span>
         <ColumnPicker
-          schema={schema}
+          context={context}
           entityType="Version"
           showCount
           value={columns}
@@ -34,7 +32,7 @@ function Pickers() {
           Dates only: links stay on the list, so a date behind one is reachable
         </span>
         <ColumnPicker
-          schema={schema}
+          context={context}
           entityType="Version"
           dataTypes="date"
           value={dates}
@@ -47,7 +45,7 @@ function Pickers() {
           Dual: the fields of the type on the left, the chosen paths on the right
         </span>
         <ColumnPicker
-          schema={schema}
+          context={context}
           entityType="Shot"
           layout="dual"
           filterableOnly
@@ -58,12 +56,12 @@ function Pickers() {
 
       <div className="flex flex-col gap-2" data-demo="disabled">
         <span className={label}>Disabled</span>
-        <ColumnPicker schema={schema} entityType="Shot" value={LOCKED} disabled />
+        <ColumnPicker context={context} entityType="Shot" value={LOCKED} disabled />
       </div>
 
       <div className="flex flex-col gap-2" data-demo="readonly">
         <span className={label}>Read-only: the chosen list alone</span>
-        <ColumnPicker schema={schema} entityType="Shot" value={LOCKED} readonly />
+        <ColumnPicker context={context} entityType="Shot" value={LOCKED} readonly />
       </div>
     </div>
   );
@@ -71,8 +69,8 @@ function Pickers() {
 
 export default function ColumnPickerDemo() {
   return (
-    <DemoClientProvider>
+    <DemoContextProvider>
       <Pickers />
-    </DemoClientProvider>
+    </DemoContextProvider>
   );
 }

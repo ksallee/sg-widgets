@@ -21,7 +21,7 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/field-picker.j
 
 | prop | type | default | meaning |
 |---|---|---|---|
-| `schema` | `SchemaService` | required | Reads the schema. Build it once per app with `createSchemaService`. |
+| `context` | `SgContext` | required | The widget context. The schema is read through it, once per page. |
 | `entityType` | `string` | required | The type the path starts on. |
 | `value` | `string` | `''` | The dotted path. Empty when nothing is chosen. |
 | `onValueChange` | `(value: string) => void` | — | Receives the new path, or the empty string on clear. |

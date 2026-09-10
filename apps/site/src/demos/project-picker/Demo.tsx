@@ -18,7 +18,6 @@ const SIZES = [
 
 export default function ProjectPickerDemo() {
   const context = useMemo(() => createDemoContext(), []);
-  const client = context.client;
   // The name is the mock's. A live project arrives bare and the picker resolves it.
   const preset: EntityRef = context.live
     ? { type: 'Project', id: context.projectId }
@@ -36,7 +35,7 @@ export default function ProjectPickerDemo() {
         <h4 className={label}>One project</h4>
         <div className={field}>
           <span className={caption}>One project, clearable</span>
-          <ProjectPicker client={client} value={one} onValueChange={setOne} clearable />
+          <ProjectPicker context={context} value={one} onValueChange={setOne} clearable />
         </div>
       </section>
 
@@ -44,7 +43,7 @@ export default function ProjectPickerDemo() {
         <h4 className={label}>Several, with checkbox rows</h4>
         <div className={field}>
           <span className={caption}>Several projects at once</span>
-          <ProjectMultiPicker client={client} value={several} onValueChange={setSeveral} clearable />
+          <ProjectMultiPicker context={context} value={several} onValueChange={setSeveral} clearable />
         </div>
       </section>
 
@@ -52,7 +51,7 @@ export default function ProjectPickerDemo() {
         <h4 className={label}>Archived projects included</h4>
         <div className={field}>
           <span className={caption}>Archived projects included</span>
-          <ProjectPicker client={client} includeArchived value={archived} onValueChange={setArchived} />
+          <ProjectPicker context={context} includeArchived value={archived} onValueChange={setArchived} />
         </div>
       </section>
 
@@ -60,7 +59,7 @@ export default function ProjectPickerDemo() {
         <h4 className={label}>Bare reference, resolved on mount</h4>
         <div className={field}>
           <span className={caption}>Type and id in, name resolved on mount</span>
-          <ProjectPicker client={client} value={bare} onValueChange={setBare} clearable />
+          <ProjectPicker context={context} value={bare} onValueChange={setBare} clearable />
         </div>
       </section>
 
@@ -70,20 +69,20 @@ export default function ProjectPickerDemo() {
           {SIZES.map(({ size, caption: sizeCaption }) => (
             <div className={field} key={size}>
               <span className={caption}>{sizeCaption}</span>
-              <ProjectPicker client={client} value={preset} size={size} />
+              <ProjectPicker context={context} value={preset} size={size} />
             </div>
           ))}
           <div className={field}>
             <span className={caption}>Disabled</span>
-            <ProjectPicker client={client} value={preset} disabled />
+            <ProjectPicker context={context} value={preset} disabled />
           </div>
           <div className={field}>
             <span className={caption}>Read-only</span>
-            <ProjectPicker client={client} value={preset} readonly />
+            <ProjectPicker context={context} value={preset} readonly />
           </div>
           <div className={field}>
             <span className={caption}>Invalid</span>
-            <ProjectPicker client={client} value={preset} invalid />
+            <ProjectPicker context={context} value={preset} invalid />
           </div>
         </div>
       </section>

@@ -43,7 +43,7 @@ A source in `infinite` mode swaps the pager for a load-more row and a count of w
 | `source` | `EntitySource` | — | The rows, the filter, the sort and the page behind them. |
 | `columns` | `CollectionColumn[]` | — | Columns in display order, from `resolveColumns`. Two-way: hiding one writes the shorter list back. |
 | `statuses` | `Record<string, StatusRecord> \| null` | `null` | Status rows by code, for status cells. |
-| `context` | `SgContext` | — | An entity cell links to the row's page when this carries a site. |
+| `context` | `SgContext` | — | The widget context. Cells render with its preferences, and an entity cell links to the row's page when it carries a site. |
 | `density` | `'compact' \| 'default'` | `'default'` | Compact halves the vertical cell padding. |
 | `selectable` | `boolean` | `false` | Draws a checkbox column. |
 | `groupBy` | `string \| null` | `null` | Collapses rows under headers of a shared value at this path. |
@@ -82,7 +82,7 @@ from its header menu removes it from the picker, and adding one there puts it ba
   onColumnsChange={setColumns}
   toolbarStart={
     <ColumnPicker
-      schema={schema}
+      context={context}
       entityType="Version"
       value={columns.map((column) => column.path)}
       onValueChange={pickColumns}

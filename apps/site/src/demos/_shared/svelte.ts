@@ -1,24 +1,23 @@
 /**
- * Svelte side of the demo client: `setContext`/`getContext` helpers.
+ * Svelte side of the demo context: `setContext`/`getContext` helpers.
  *
- * The root component of a demo calls `setDemoClient()` during init; anything below it
- * reads the client with `getSgClient()`. Both must run during component
+ * The root component of a demo calls `setDemoContext()` during init; anything below it
+ * reads the context with `getSgContext()`. Both must run during component
  * initialisation, which is Svelte's own rule for context.
  */
 import { getContext, setContext } from 'svelte';
-import type { SgClient } from '@sg-widgets/core';
-import { getDemoClient } from './client';
+import { getDemoContext, type DemoContext } from './client';
 
-const KEY = Symbol('sg-widgets:demo-client');
+const KEY = Symbol('sg-widgets:demo-context');
 
-/** Call in the root component of a demo. Defaults to the shared demo client. */
-export function setDemoClient(client: SgClient = getDemoClient()): SgClient {
-  setContext(KEY, client);
-  return client;
+/** Call in the root component of a demo. Defaults to the shared demo context. */
+export function setDemoContext(context: DemoContext = getDemoContext()): DemoContext {
+  setContext(KEY, context);
+  return context;
 }
 
-export function getSgClient(): SgClient {
-  const client = getContext<SgClient | undefined>(KEY);
-  if (!client) throw new Error('getSgClient(): the demo root must call setDemoClient() during init.');
-  return client;
+export function getSgContext(): DemoContext {
+  const context = getContext<DemoContext | undefined>(KEY);
+  if (!context) throw new Error('getSgContext(): the demo root must call setDemoContext() during init.');
+  return context;
 }

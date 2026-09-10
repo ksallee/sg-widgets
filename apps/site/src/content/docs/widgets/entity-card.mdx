@@ -24,7 +24,8 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/entity-card.js
 
 | prop | type | default | meaning |
 |---|---|---|---|
-| `context` | `SgContext` | required | The cached client, the schema service and the site url the card reads through. |
+| `context` | `SgContext` | — | The widget context: the cached client, the schema, the site url and the preferences the card reads through. |
+| `client` | `SgClient` | — | A client, for an app with no context. One context is built per client and shared. |
 | `row` | `EntityRow \| null` | `null` | A row you already read. Given, the card reads nothing. |
 | `entity` | `EntityRef \| null` | `null` | The row to read, when no row is given. |
 | `fields` | `string[]` | `[]` | Field paths for the grid, in order. Dotted paths allowed. Card only. |
@@ -32,10 +33,15 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/entity-card.js
 | `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Thumbnail 16, 16 and 24, with the gaps and name scale to match. |
 | `imagePath` | `string` | `'image'` | The image field the thumbnail comes from. |
 | `siteUrl` | `string` | the context's | The site the name and every linked row point at. |
-| `hoursPerDay` | `number` | — | The site's working day. Durations then render in days. |
-| `locale` | `string` | the runtime's | Passed through for dates. |
+| `hoursPerDay` | `number` | the context's | The site's working day. Durations then render in days. |
+| `locale` | `string` | the context's, then the runtime's | Used for dates and numbers. |
+| `timeZone` | `string` | the context's, then the runtime's | IANA zone a `date_time` is shown in. |
+| `frameRate` | `number` | the context's | Frames a second. A timecode then carries its frame digits. |
 | `emptyLabel` | `string` | `'empty'` | What a field with no value shows. |
 | `class` / `className` | `string` | — | Merged after the widget's own classes. |
+
+A card reads through a context. Given a client instead, it builds one and shares it with every
+other widget on that client.
 
 These shape the tile and are ignored by the card:
 

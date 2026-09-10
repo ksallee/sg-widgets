@@ -23,8 +23,7 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/sort-picker.js
 | prop | type | default | meaning |
 |---|---|---|---|
 | `entityType` | `string` | required | Type the field list is read on. |
-| `client` | `SgClient` | required | Reads the schema. |
-| `schema` | `SchemaService` | one built from `client` | Share one across a page. |
+| `context` | `SgContext` | required | The widget context. Every read goes through it, so widgets on a page share one cache. |
 | `value` | `SortKey[]` | `[]` | The keys, in order. Two-way in Svelte through `bind:value`. |
 | `hidePaths` | `string[]` | `[]` | Paths kept out of the field list. A pattern hides itself and everything under it. |
 | `disabled` | `boolean` | `false` | Blocks the trigger. |

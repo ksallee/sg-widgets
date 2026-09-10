@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Thumbnail } from '@/registry/sg/components/thumbnail';
-import { DemoClientProvider, useSgClient } from '../_shared/react';
-import { createDemoContext } from '../_shared/client';
+import { DemoContextProvider, useSgContext } from '../_shared/react';
 
 const group = 'flex flex-col gap-2';
 const label = 'text-muted-foreground text-xs font-medium tracking-wide uppercase';
@@ -18,22 +17,21 @@ interface Shot {
 }
 
 function FromTheSite() {
-  const client = useSgClient();
+  const context = useSgContext();
   const [shots, setShots] = useState<Shot[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let live = true;
-    const context = createDemoContext();
     const project = { type: 'Project', id: context.projectId };
     // The chosen project's own picture first, then that project's Versions that carry one.
     Promise.all([
-      client.search('Project', {
+      context.client.search('Project', {
         filters: { logical_operator: 'and', conditions: [['id', 'is', context.projectId]] },
         fields: ['name', 'image'],
         page: { size: 1 },
       }),
-      client.search('Version', {
+      context.client.search('Version', {
         filters: { logical_operator: 'and', conditions: [['project', 'is', project], ['image', 'is_not', null]] },
         fields: ['code', 'image'],
         page: { size: 3 },
@@ -56,7 +54,7 @@ function FromTheSite() {
     return () => {
       live = false;
     };
-  }, [client]);
+  }, [context]);
 
   if (error) return <p className="text-destructive text-sm">{error}</p>;
   if (!shots) return <p className="text-muted-foreground text-sm">Loading shots…</p>;
@@ -98,7 +96,7 @@ function FromTheSite() {
 
 export default function ThumbnailDemo() {
   return (
-    <DemoClientProvider>
+    <DemoContextProvider>
       <div className="flex flex-col gap-4">
         <FromTheSite />
 
@@ -112,6 +110,6 @@ export default function ThumbnailDemo() {
           </div>
         </section>
       </div>
-    </DemoClientProvider>
+    </DemoContextProvider>
   );
 }

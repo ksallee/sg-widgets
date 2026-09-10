@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { FieldSchema } from '@sg-widgets/core';
 import { FieldEditor } from '@/registry/sg/components/field-editor';
+import { getDemoContext } from '../_shared/client';
 
 function schema(
   name: string,
@@ -86,6 +87,7 @@ const toggle =
   'focus-visible:ring-offset-background active:scale-[0.98]';
 
 export default function FieldEditorDemo() {
+  const context = getDemoContext();
   const [values, setValues] = useState<Record<string, unknown>>(
     Object.fromEntries(rows.map((row) => [row.key, row.value])),
   );
@@ -131,6 +133,7 @@ export default function FieldEditorDemo() {
                     onModeChange={(next) => setModes((all) => ({ ...all, [row.key]: next }))}
                     field={row.field}
                     editable
+                    context={context}
                     precision={row.precision}
                     frameRate={row.frameRate}
                     timeZone={row.timeZone}

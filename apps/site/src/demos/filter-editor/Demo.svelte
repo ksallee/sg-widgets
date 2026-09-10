@@ -3,11 +3,11 @@
 	import { condition, group, toApi3Hash } from '@sg-widgets/core';
 	import FilterEditor from '$lib/registry/components/filter-editor.svelte';
 	import { createDemoContext } from '../_shared/client';
-	import { setDemoClient } from '../_shared/svelte';
+	import { setDemoContext } from '../_shared/svelte';
 	import VersionResults from '../_shared/version-results.svelte';
 
 	const context = createDemoContext();
-	const client = setDemoClient(context.client);
+	setDemoContext(context);
 
 	/**
 	 * A tree a person would build: a status list on the multi picker, two conditions
@@ -39,7 +39,7 @@
 </script>
 
 <div class="flex min-w-0 flex-col gap-4">
-	<FilterEditor entityType="Version" {client} bind:value hidePaths={['sg_task']} />
+	<FilterEditor entityType="Version" {context} bind:value hidePaths={['sg_task']} />
 
 	<section class="flex flex-col gap-2">
 		<h4 class="text-muted-foreground text-xs font-medium tracking-wide uppercase">api3_hash</h4>

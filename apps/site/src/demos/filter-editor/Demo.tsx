@@ -3,7 +3,7 @@ import type { FilterGroup } from '@sg-widgets/core';
 import { condition, group, toApi3Hash } from '@sg-widgets/core';
 import { FilterEditor } from '@/registry/sg/components/filter-editor';
 import { createDemoContext } from '../_shared/client';
-import { DemoClientProvider } from '../_shared/react';
+import { DemoContextProvider } from '../_shared/react';
 import { VersionResults } from '../_shared/version-results';
 
 /**
@@ -36,11 +36,11 @@ export default function FilterEditorDemo() {
   const hash = toApi3Hash(value);
 
   return (
-    <DemoClientProvider client={context.client}>
+    <DemoContextProvider context={context}>
       <div className="flex min-w-0 flex-col gap-4">
         <FilterEditor
           entityType="Version"
-          client={context.client}
+          context={context}
           value={value}
           hidePaths={['sg_task']}
           onChange={setValue}
@@ -58,6 +58,6 @@ export default function FilterEditorDemo() {
 
         <VersionResults context={context} value={value} />
       </div>
-    </DemoClientProvider>
+    </DemoContextProvider>
   );
 }

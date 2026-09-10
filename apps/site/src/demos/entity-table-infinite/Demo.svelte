@@ -3,7 +3,7 @@
 	import { condition, createEntitySource, resolveColumns } from '@sg-widgets/core';
 	import EntityTable from '$lib/registry/components/entity-table.svelte';
 	import { createDemoContext } from '../_shared/client';
-	import { setDemoClient } from '../_shared/svelte';
+	import { setDemoContext } from '../_shared/svelte';
 
 	const COLUMNS = [
 		{ path: 'code', width: 260 },
@@ -13,7 +13,7 @@
 	];
 
 	const context = createDemoContext({ counts: { versions: 320 } });
-	setDemoClient(context.client);
+	setDemoContext(context);
 
 	const source = createEntitySource({
 		client: context.client,

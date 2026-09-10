@@ -1,7 +1,6 @@
-import { Fragment, useMemo, useState } from 'react';
-import { createSchemaService } from '@sg-widgets/core';
+import { Fragment, useState } from 'react';
 import { EntityTypePicker } from '@/registry/sg/components/entity-type-picker';
-import { DemoClientProvider, useSgClient } from '../_shared/react';
+import { DemoContextProvider, useSgContext } from '../_shared/react';
 
 const PRODUCTION = ['Project', 'Sequence', 'Shot', 'Asset', 'Version', 'Task'];
 const SUMMARIES = ['chips', 'ellipsis', 'count'] as const;
@@ -16,8 +15,7 @@ const readout = 'text-muted-foreground font-mono text-xs';
 const narrow = 'max-w-80';
 
 function Pickers() {
-  const client = useSgClient();
-  const schema = useMemo(() => createSchemaService(client), [client]);
+  const context = useSgContext();
   const [one, setOne] = useState<string | null>('Shot');
   const [many, setMany] = useState<string[]>(['Version']);
 
@@ -26,7 +24,7 @@ function Pickers() {
       <div className={field} data-demo="single">
         <span className={label}>Single, allow list: the six production types</span>
         <EntityTypePicker
-          schema={schema}
+          context={context}
           value={one}
           onValueChange={(next) => setOne(next as string | null)}
           allow={PRODUCTION}
@@ -37,7 +35,7 @@ function Pickers() {
       <div className={field} data-demo="multi">
         <span className={label}>Multi, deny list: everything but the two user types</span>
         <EntityTypePicker
-          schema={schema}
+          context={context}
           multiple
           value={many}
           onValueChange={(next) => setMany((next as string[] | null) ?? [])}
@@ -55,7 +53,7 @@ function Pickers() {
               <div className={field} data-demo-summary={summary}>
                 <span className={label}>{summary}, full width</span>
                 <EntityTypePicker
-                  schema={schema}
+                  context={context}
                   multiple
                   value={PRODUCTION}
                   summary={summary}
@@ -67,7 +65,7 @@ function Pickers() {
                 <span className={label}>{summary}, at most 20rem</span>
                 <div className={narrow}>
                   <EntityTypePicker
-                    schema={schema}
+                    context={context}
                     multiple
                     value={PRODUCTION}
                     summary={summary}
@@ -86,11 +84,11 @@ function Pickers() {
         <div className={stack}>
           <div className={field}>
             <span className={label}>With the code</span>
-            <EntityTypePicker schema={schema} value="Version" allow={PRODUCTION} />
+            <EntityTypePicker context={context} value="Version" allow={PRODUCTION} />
           </div>
           <div className={field}>
             <span className={label}>Without it</span>
-            <EntityTypePicker schema={schema} value="Version" allow={PRODUCTION} showCode={false} />
+            <EntityTypePicker context={context} value="Version" allow={PRODUCTION} showCode={false} />
           </div>
         </div>
       </div>
@@ -100,23 +98,23 @@ function Pickers() {
         <div className={stack}>
           <div className={field}>
             <span className={label}>sm</span>
-            <EntityTypePicker schema={schema} value="Shot" size="sm" allow={PRODUCTION} />
+            <EntityTypePicker context={context} value="Shot" size="sm" allow={PRODUCTION} />
           </div>
           <div className={field}>
             <span className={label}>lg</span>
-            <EntityTypePicker schema={schema} value="Asset" size="lg" allow={PRODUCTION} />
+            <EntityTypePicker context={context} value="Asset" size="lg" allow={PRODUCTION} />
           </div>
           <div className={field}>
             <span className={label}>Read-only</span>
-            <EntityTypePicker schema={schema} value="Task" readonly />
+            <EntityTypePicker context={context} value="Task" readonly />
           </div>
           <div className={field}>
             <span className={label}>Invalid</span>
-            <EntityTypePicker schema={schema} value={null} invalid />
+            <EntityTypePicker context={context} value={null} invalid />
           </div>
           <div className={field}>
             <span className={label}>Disabled</span>
-            <EntityTypePicker schema={schema} value="Version" disabled />
+            <EntityTypePicker context={context} value="Version" disabled />
           </div>
         </div>
       </div>
@@ -126,8 +124,8 @@ function Pickers() {
 
 export default function EntityTypePickerDemo() {
   return (
-    <DemoClientProvider>
+    <DemoContextProvider>
       <Pickers />
-    </DemoClientProvider>
+    </DemoContextProvider>
   );
 }

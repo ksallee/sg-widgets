@@ -1,7 +1,7 @@
 import { Fragment, useState } from 'react';
 import type { EntityRef } from '@sg-widgets/core';
 import { EntityMultiPicker } from '@/registry/sg/components/entity-multi-picker';
-import { createDemoClient, getDemoClient } from '../_shared/client';
+import { createDemoClient, getDemoContext } from '../_shared/client';
 
 const group = 'flex flex-col gap-3';
 const label = 'text-muted-foreground text-xs font-medium tracking-wide uppercase';
@@ -34,8 +34,8 @@ const SUMMARIES = ['chips', 'ellipsis', 'count'] as const;
 const SIZES = ['sm', 'md', 'lg'] as const;
 
 export default function EntityMultiPickerDemo() {
-  const client = getDemoClient();
-  // Its own client, so arming a failure cannot land in another demo on the page.
+  const context = getDemoContext();
+  // Its own context, so arming a failure cannot land in another demo on the page.
   const [failing] = useState(() => createDemoClient());
 
   const [shots, setShots] = useState<EntityRef[]>([]);
@@ -64,7 +64,7 @@ export default function EntityMultiPickerDemo() {
         <h4 className={label}>Several shots</h4>
         <div className={field}>
           <EntityMultiPicker
-            client={client}
+            context={context}
             entityTypes={['Shot']}
             value={shots}
             onValueChange={setShots}
@@ -91,7 +91,7 @@ export default function EntityMultiPickerDemo() {
         <h4 className={label}>Status as secondary</h4>
         <div className={field}>
           <EntityMultiPicker
-            client={client}
+            context={context}
             entityTypes={['Shot']}
             secondaryField="sg_status_list"
             value={withStatus}
@@ -105,7 +105,7 @@ export default function EntityMultiPickerDemo() {
         <h4 className={label}>Three types at once, the type on the right</h4>
         <div className={field}>
           <EntityMultiPicker
-            client={client}
+            context={context}
             entityTypes={['Shot', 'Asset', 'Sequence']}
             value={anything}
             onValueChange={setAnything}
@@ -119,7 +119,7 @@ export default function EntityMultiPickerDemo() {
         <h4 className={label}>Custom secondary</h4>
         <div className={field}>
           <EntityMultiPicker
-            client={client}
+            context={context}
             entityTypes={['Shot']}
             secondary={(row) => `#${row.id}`}
             value={custom}
@@ -133,7 +133,7 @@ export default function EntityMultiPickerDemo() {
         <h4 className={label}>Bare references, resolved on mount</h4>
         <div className={field}>
           <EntityMultiPicker
-            client={client}
+            context={context}
             entityTypes={['Shot', 'Asset']}
             value={bare}
             onValueChange={setBare}
@@ -146,7 +146,7 @@ export default function EntityMultiPickerDemo() {
         <h4 className={label}>Two shots excluded from the results</h4>
         <div className={field}>
           <EntityMultiPicker
-            client={client}
+            context={context}
             entityTypes={['Shot']}
             exclude={alreadyThere}
             value={excluding}
@@ -160,7 +160,7 @@ export default function EntityMultiPickerDemo() {
         <h4 className={label}>Five a page, with a load more row</h4>
         <div className={field}>
           <EntityMultiPicker
-            client={client}
+            context={context}
             entityTypes={['Shot']}
             pageSize={5}
             value={paged}
@@ -173,7 +173,7 @@ export default function EntityMultiPickerDemo() {
         <h4 className={label}>Error state</h4>
         <div className={field}>
           <EntityMultiPicker
-            client={failing.client}
+            context={failing.context}
             entityTypes={['Shot']}
             value={failed}
             onValueChange={setFailed}
@@ -201,7 +201,7 @@ export default function EntityMultiPickerDemo() {
               <div className={field} data-demo-summary={summary}>
                 <span className={caption}>{summary}, full width</span>
                 <EntityMultiPicker
-                  client={client}
+                  context={context}
                   entityTypes={['Asset']}
                   value={five}
                   summary={summary}
@@ -212,7 +212,7 @@ export default function EntityMultiPickerDemo() {
                 <span className={caption}>{summary}, at most 20rem</span>
                 <div className={narrow}>
                   <EntityMultiPicker
-                    client={client}
+                    context={context}
                     entityTypes={['Asset']}
                     value={five}
                     summary={summary}
@@ -225,7 +225,7 @@ export default function EntityMultiPickerDemo() {
           <div className={field} data-demo-summary="max">
             <span className={caption}>chips, two at most</span>
             <EntityMultiPicker
-              client={client}
+              context={context}
               entityTypes={['Asset']}
               value={five}
               summary="chips"
@@ -242,7 +242,7 @@ export default function EntityMultiPickerDemo() {
           {SIZES.map((size) => (
             <div className={field} key={size}>
               <span className={caption}>{size}</span>
-              <EntityMultiPicker client={client} entityTypes={['Asset']} value={preset} size={size} clearable />
+              <EntityMultiPicker context={context} entityTypes={['Asset']} value={preset} size={size} clearable />
             </div>
           ))}
         </div>
@@ -253,15 +253,15 @@ export default function EntityMultiPickerDemo() {
         <div className={stack}>
           <div className={field}>
             <span className={caption}>Disabled</span>
-            <EntityMultiPicker client={client} entityTypes={['Asset']} value={preset} disabled />
+            <EntityMultiPicker context={context} entityTypes={['Asset']} value={preset} disabled />
           </div>
           <div className={field}>
             <span className={caption}>Read-only</span>
-            <EntityMultiPicker client={client} entityTypes={['Asset']} value={preset} readonly />
+            <EntityMultiPicker context={context} entityTypes={['Asset']} value={preset} readonly />
           </div>
           <div className={field}>
             <span className={caption}>Invalid</span>
-            <EntityMultiPicker client={client} entityTypes={['Asset']} value={preset} invalid />
+            <EntityMultiPicker context={context} entityTypes={['Asset']} value={preset} invalid />
           </div>
         </div>
       </section>

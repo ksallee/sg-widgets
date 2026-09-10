@@ -2,11 +2,9 @@
 	import type { EntityRef } from '@sg-widgets/core';
 	import EntityPicker from '$lib/registry/components/entity-picker.svelte';
 	import { createDemoClient, createDemoContext } from '../_shared/client';
-	import { setDemoClient } from '../_shared/svelte';
 
 	const context = createDemoContext();
-	const client = setDemoClient(context.client);
-	// Its own client, so arming a failure cannot land in another demo on the page.
+	// Its own context, so arming a failure cannot land in another demo on the page.
 	const failing = createDemoClient();
 
 	let shot = $state<EntityRef | null>(null);
@@ -41,7 +39,7 @@
 		<h4 class={label}>One shot</h4>
 		<div class={field}>
 			<span class={caption}>One shot, clearable</span>
-			<EntityPicker {client} entityTypes={['Shot']} bind:value={shot} clearable />
+			<EntityPicker {context} entityTypes={['Shot']} bind:value={shot} clearable />
 		</div>
 	</section>
 
@@ -50,7 +48,7 @@
 		<div class={field}>
 			<span class={caption}>Status on the right of every row</span>
 			<EntityPicker
-				{client}
+				{context}
 				entityTypes={['Shot']}
 				secondaryField="sg_status_list"
 				bind:value={withStatus}
@@ -64,7 +62,7 @@
 		<div class={field}>
 			<span class={caption}>Shots, assets and sequences in one list</span>
 			<EntityPicker
-				{client}
+				{context}
 				entityTypes={['Shot', 'Asset', 'Sequence']}
 				bind:value={anything}
 				placeholder="Search shots, assets and sequences…"
@@ -78,7 +76,7 @@
 		<div class={field}>
 			<span class={caption}>The id, rendered by the caller</span>
 			<EntityPicker
-				{client}
+				{context}
 				entityTypes={['Shot']}
 				secondary={(row) => `#${row.id}`}
 				bind:value={custom}
@@ -92,7 +90,7 @@
 		<div class={field}>
 			<span class={caption}>Scoped to one project</span>
 			<EntityPicker
-				{client}
+				{context}
 				entityTypes={['Shot']}
 				projectId={context.projectFor(71)}
 				bind:value={inProject}
@@ -105,7 +103,7 @@
 		<h4 class={label}>Bare reference, resolved on mount</h4>
 		<div class={field}>
 			<span class={caption}>Type and id in, name resolved on mount</span>
-			<EntityPicker {client} entityTypes={['Shot']} bind:value={bare} clearable />
+			<EntityPicker {context} entityTypes={['Shot']} bind:value={bare} clearable />
 			<button
 				type="button"
 				class="text-muted-foreground hover:text-foreground focus-visible:ring-ring focus-visible:ring-offset-background self-start text-sm underline underline-offset-2 outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
@@ -120,7 +118,7 @@
 		<h4 class={label}>Five a page, with a load more row</h4>
 		<div class={field}>
 			<span class={caption}>Five a page</span>
-			<EntityPicker {client} entityTypes={['Shot']} pageSize={5} bind:value={paged} />
+			<EntityPicker {context} entityTypes={['Shot']} pageSize={5} bind:value={paged} />
 		</div>
 	</section>
 
@@ -129,7 +127,7 @@
 		<div class={field}>
 			<span class={caption}>Reads a client whose next call can be armed to fail</span>
 			<EntityPicker
-				client={failing.client}
+				context={failing.context}
 				entityTypes={['Shot']}
 				bind:value={failed}
 				onError={(error) => (lastError = error.message)}
@@ -155,12 +153,12 @@
 		<div class={stack}>
 			<div class={field}>
 				<span class={caption}>No thumbnail</span>
-				<EntityPicker {client} entityTypes={['Shot']} thumbnail={false} bind:value={plain} clearable />
+				<EntityPicker {context} entityTypes={['Shot']} thumbnail={false} bind:value={plain} clearable />
 			</div>
 			<div class={field}>
 				<span class={caption}>A sub-label, and the code beside the name</span>
 				<EntityPicker
-					{client}
+					{context}
 					entityTypes={['Version']}
 					subLabelField="sg_status_list"
 					secondaryField="id"
@@ -178,7 +176,7 @@
 			{#each SIZES as { size, caption: sizeCaption } (size)}
 				<div class={field}>
 					<span class={caption}>{sizeCaption}</span>
-					<EntityPicker {client} entityTypes={['Asset']} value={preset} {size} clearable />
+					<EntityPicker {context} entityTypes={['Asset']} value={preset} {size} clearable />
 				</div>
 			{/each}
 		</div>
@@ -189,15 +187,15 @@
 		<div class={stack}>
 			<div class={field}>
 				<span class={caption}>Disabled</span>
-				<EntityPicker {client} entityTypes={['Asset']} value={preset} disabled />
+				<EntityPicker {context} entityTypes={['Asset']} value={preset} disabled />
 			</div>
 			<div class={field}>
 				<span class={caption}>Read-only</span>
-				<EntityPicker {client} entityTypes={['Asset']} value={preset} readonly />
+				<EntityPicker {context} entityTypes={['Asset']} value={preset} readonly />
 			</div>
 			<div class={field}>
 				<span class={caption}>Invalid</span>
-				<EntityPicker {client} entityTypes={['Asset']} value={preset} invalid />
+				<EntityPicker {context} entityTypes={['Asset']} value={preset} invalid />
 			</div>
 		</div>
 	</section>

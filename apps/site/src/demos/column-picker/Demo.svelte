@@ -1,9 +1,8 @@
 <script lang="ts">
-	import { createSchemaService } from '@sg-widgets/core';
 	import ColumnPicker from '$lib/registry/components/column-picker.svelte';
-	import { setDemoClient } from '../_shared/svelte';
+	import { getDemoContext } from '../_shared/client';
 
-	const schema = createSchemaService(setDemoClient());
+	const context = getDemoContext();
 
 	let columns = $state(['code', 'sg_status_list', 'entity.Shot.sg_turnover_date']);
 	let dates = $state(['entity.Shot.sg_turnover_date']);
@@ -16,7 +15,7 @@
 	<div class="flex flex-col gap-2" data-demo="columns">
 		<span class={label}>Columns on Version: pick a field, then drag the list into order</span>
 		<ColumnPicker
-			{schema}
+			{context}
 			entityType="Version"
 			showCount
 			value={columns}
@@ -28,7 +27,7 @@
 	<div class="flex flex-col gap-2" data-demo="dates">
 		<span class={label}>Dates only: links stay on the list, so a date behind one is reachable</span>
 		<ColumnPicker
-			{schema}
+			{context}
 			entityType="Version"
 			dataTypes="date"
 			value={dates}
@@ -39,7 +38,7 @@
 	<div class="flex flex-col gap-2" data-demo="dual">
 		<span class={label}>Dual: the fields of the type on the left, the chosen paths on the right</span>
 		<ColumnPicker
-			{schema}
+			{context}
 			entityType="Shot"
 			layout="dual"
 			filterableOnly
@@ -50,11 +49,11 @@
 
 	<div class="flex flex-col gap-2" data-demo="disabled">
 		<span class={label}>Disabled</span>
-		<ColumnPicker {schema} entityType="Shot" value={['code', 'sg_cut_in']} disabled />
+		<ColumnPicker {context} entityType="Shot" value={['code', 'sg_cut_in']} disabled />
 	</div>
 
 	<div class="flex flex-col gap-2" data-demo="readonly">
 		<span class={label}>Read-only: the chosen list alone</span>
-		<ColumnPicker {schema} entityType="Shot" value={['code', 'sg_cut_in']} readonly />
+		<ColumnPicker {context} entityType="Shot" value={['code', 'sg_cut_in']} readonly />
 	</div>
 </div>

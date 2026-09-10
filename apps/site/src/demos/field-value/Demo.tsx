@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { FieldSchema, StatusRecord } from '@sg-widgets/core';
 import { FieldValue } from '@/registry/sg/components/field-value';
-import { DemoClientProvider, useSgClient } from '../_shared/react';
+import { DemoContextProvider, useSgContext } from '../_shared/react';
 
 const cell = 'px-3 py-2 align-middle';
 const typeCell = 'text-muted-foreground px-3 py-2 align-middle font-mono text-xs';
@@ -78,16 +78,16 @@ function samplesFor(shot: { type: string; id: number; name: string }, image: str
 }
 
 function Values() {
-  const client = useSgClient();
+  const context = useSgContext();
   const [data, setData] = useState<Loaded | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let live = true;
     Promise.all([
-      client.statuses(),
-      client.fields('Version'),
-      client.search('Shot', { fields: ['code', 'image'], page: { size: 1 } }),
+      context.client.statuses(),
+      context.client.fields('Version'),
+      context.client.search('Shot', { fields: ['code', 'image'], page: { size: 1 } }),
     ])
       .then(([rows, fields, shots]) => {
         if (!live) return;
@@ -107,7 +107,7 @@ function Values() {
     return () => {
       live = false;
     };
-  }, [client]);
+  }, [context]);
 
   if (error) return <p className="text-destructive text-sm">{error}</p>;
   if (!data) return <p className="text-muted-foreground text-sm">Loading the site…</p>;
@@ -140,8 +140,8 @@ function Values() {
 
 export default function FieldValueDemo() {
   return (
-    <DemoClientProvider>
+    <DemoContextProvider>
       <Values />
-    </DemoClientProvider>
+    </DemoContextProvider>
   );
 }

@@ -1,9 +1,9 @@
 <script lang="ts">
 	import type { FieldSchema, StatusRecord } from '@sg-widgets/core';
 	import FieldValue from '$lib/registry/components/field-value.svelte';
-	import { setDemoClient } from '../_shared/svelte';
+	import { setDemoContext } from '../_shared/svelte';
 
-	const client = setDemoClient();
+	const context = setDemoContext();
 
 	interface Sample {
 		label: string;
@@ -16,9 +16,9 @@
 
 	async function load() {
 		const [rows, fields, shots] = await Promise.all([
-			client.statuses(),
-			client.fields('Version'),
-			client.search('Shot', { fields: ['code', 'image'], page: { size: 1 } })
+			context.client.statuses(),
+			context.client.fields('Version'),
+			context.client.search('Shot', { fields: ['code', 'image'], page: { size: 1 } })
 		]);
 		const statuses: Record<string, StatusRecord> = {};
 		for (const status of rows) statuses[status.code] = status;

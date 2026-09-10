@@ -19,7 +19,7 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/entity-tree.js
 
 ```ts
 <EntityTree
-  client={context.client}
+  context={context}
   rootPath="/Project/70"
   seedPath="/Project/70/Shot/sg_sequence/Sequence/100/id/862"
   checkable
@@ -52,7 +52,7 @@ Each level's rows are read once per type over the ids the level returned, so `su
 
 | prop | type | default | meaning |
 |---|---|---|---|
-| `client` | `SgClient` | — | Reads one level per call. Wrap it in a query cache. |
+| `context` | `SgContext` | required | The widget context. Every read goes through it, so widgets on a page share one cache. |
 | `rootPath` | `string` | — | Where the tree starts, `/Project/<id>`. |
 | `seedPath` | `string \| string[] \| null` | `null` | Opens the tree down to this path, or to the last entry of an incremental path. |
 | `checkable` | `boolean` | `false` | Draws a checkbox per node and reports the checked rows. |
@@ -68,7 +68,7 @@ Each level's rows are read once per type over the ids the level returned, so `su
 | `secondary` | `(node) => string` | — | Right-aligned text. Wins over `secondaryField`. |
 | `showCode` | `boolean` | `false` | Show the schema name beside the label on a node that stands for a type. |
 | `fields` | `string[]` | `[]` | Extra fields to request, so a caller's own sub-label or secondary can read them. |
-| `siteUrl` | `string` | — | The site the status sprite is served from. |
+| `siteUrl` | `string` | the context's | The site the status sprite is served from. |
 | `label` | `string` | `'Project hierarchy'` | Accessible name of the tree. |
 | `maxHeight` | `string` | `'24rem'` | Height of the scrolling body. |
 | `emptyLabel` | `string` | `'Nothing under this project'` | Shown when the root has no children. |

@@ -1,29 +1,28 @@
 /**
- * React side of the demo client: a provider and a hook.
+ * React side of the demo context: a provider and a hook.
  *
- * A React demo wraps its tree in `<DemoClientProvider>` and every component below it
- * reads the client with `useSgClient()`. Widgets take the client however their own API
- * says; this is only how the *demo* gets hold of one.
+ * A React demo wraps its tree in `<DemoContextProvider>` and every component below it
+ * reads the context with `useSgContext()`. Widgets take the context however their own
+ * API says; this is only how the *demo* gets hold of one.
  */
 import { createContext, useContext, type ReactNode } from 'react';
-import type { SgClient } from '@sg-widgets/core';
-import { getDemoClient } from './client';
+import { getDemoContext, type DemoContext } from './client';
 
-const SgClientContext = createContext<SgClient | null>(null);
+const SgContextContext = createContext<DemoContext | null>(null);
 
-export function DemoClientProvider({
-  client,
+export function DemoContextProvider({
+  context,
   children,
 }: {
-  /** Defaults to the shared demo client. Pass one to give a demo its own fixtures. */
-  client?: SgClient;
+  /** Defaults to the shared demo context. Pass one to give a demo its own fixtures. */
+  context?: DemoContext;
   children: ReactNode;
 }) {
-  return <SgClientContext.Provider value={client ?? getDemoClient()}>{children}</SgClientContext.Provider>;
+  return <SgContextContext.Provider value={context ?? getDemoContext()}>{children}</SgContextContext.Provider>;
 }
 
-export function useSgClient(): SgClient {
-  const client = useContext(SgClientContext);
-  if (!client) throw new Error('useSgClient() must be called inside <DemoClientProvider>.');
-  return client;
+export function useSgContext(): DemoContext {
+  const context = useContext(SgContextContext);
+  if (!context) throw new Error('useSgContext() must be called inside <DemoContextProvider>.');
+  return context;
 }

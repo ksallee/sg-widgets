@@ -11,7 +11,7 @@ import {
 import { EntityTable } from '@/registry/sg/components/entity-table';
 import { SortPicker } from '@/registry/sg/components/sort-picker';
 import { createDemoContext } from '../_shared/client';
-import { DemoClientProvider } from '../_shared/react';
+import { DemoContextProvider } from '../_shared/react';
 import { RESULT_PAGE_SIZE, scopeToProject } from '../_shared/results';
 
 const label = 'text-muted-foreground text-xs font-medium tracking-wide uppercase';
@@ -77,9 +77,9 @@ export default function SortPickerDemo() {
   }, [source, sort]);
 
   return (
-    <DemoClientProvider client={context.client}>
+    <DemoContextProvider context={context}>
       <div className="flex min-w-0 flex-col gap-4">
-        <SortPicker entityType="Shot" client={context.client} value={value} onChange={setValue} />
+        <SortPicker entityType="Shot" context={context} value={value} onChange={setValue} />
 
         <section className="flex flex-col gap-2">
           <h4 className={label}>sort</h4>
@@ -108,6 +108,6 @@ export default function SortPickerDemo() {
           )}
         </section>
       </div>
-    </DemoClientProvider>
+    </DemoContextProvider>
   );
 }

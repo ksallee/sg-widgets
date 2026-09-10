@@ -3,11 +3,11 @@
 	import { condition, emptyFilter, group, toApi3Hash } from '@sg-widgets/core';
 	import FilterDialog from '$lib/registry/components/filter-dialog.svelte';
 	import { createDemoContext } from '../_shared/client';
-	import { setDemoClient } from '../_shared/svelte';
+	import { setDemoContext } from '../_shared/svelte';
 	import VersionResults from '../_shared/version-results.svelte';
 
 	const context = createDemoContext();
-	const client = setDemoClient(context.client);
+	setDemoContext(context);
 
 	let empty = $state<FilterGroup>(emptyFilter());
 	let applied = $state<FilterGroup>(
@@ -24,12 +24,12 @@
 <div class="flex min-w-0 flex-col gap-4">
 	<section class={group_}>
 		<h4 class={label}>No filters yet, not wired to the table</h4>
-		<FilterDialog entityType="Version" {client} bind:value={empty} />
+		<FilterDialog entityType="Version" {context} bind:value={empty} />
 	</section>
 
 	<section class={group_}>
 		<h4 class={label}>Two applied, drives the table below</h4>
-		<FilterDialog entityType="Version" {client} bind:value={applied} />
+		<FilterDialog entityType="Version" {context} bind:value={applied} />
 		<pre
 			data-testid="dialog-json"
 			class="border-border bg-muted text-foreground max-h-48 overflow-auto rounded-lg border p-3 font-mono text-xs">{JSON.stringify(

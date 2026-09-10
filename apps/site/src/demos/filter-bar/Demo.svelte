@@ -4,7 +4,7 @@
 	import FilterBar from '$lib/registry/components/filter-bar.svelte';
 	import GroupedList from '$lib/registry/components/grouped-list.svelte';
 	import { createDemoContext } from '../_shared/client';
-	import { setDemoClient } from '../_shared/svelte';
+	import { setDemoContext } from '../_shared/svelte';
 	import {
 		matchLabel,
 		readCount,
@@ -20,7 +20,7 @@
 	const FIELDS = ['code', GROUP, SUB, SECONDARY];
 
 	const context = createDemoContext();
-	const client = setDemoClient(context.client);
+	setDemoContext(context);
 
 	let value = $state<FilterGroup>(emptyFilter());
 
@@ -68,7 +68,7 @@
 <div class="flex min-w-0 flex-col gap-4">
 	<FilterBar
 		entityType="Shot"
-		{client}
+		{context}
 		facets={['sg_status_list', 'sg_sequence', 'sg_shot_type']}
 		baseFilter={context.live ? group('and', [condition('project', 'is', { type: 'Project', id: context.projectId })]) : null}
 		bind:value

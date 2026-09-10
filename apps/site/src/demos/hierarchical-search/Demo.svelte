@@ -3,10 +3,8 @@
 	import HierarchicalSearch from '$lib/registry/components/hierarchical-search.svelte';
 	import EntityChip from '$lib/registry/components/entity-chip.svelte';
 	import { createDemoContext } from '../_shared/client';
-	import { setDemoClient } from '../_shared/svelte';
 
 	const context = createDemoContext();
-	const client = setDemoClient(context.client);
 
 	let picked = $state<{ leaf: EntityRef; path: EntityRef[] } | null>(null);
 </script>
@@ -17,7 +15,7 @@
 			Scoped to one project
 		</h4>
 		<HierarchicalSearch
-			{client}
+			{context}
 			rootPath={`/Project/${context.projectId}`}
 			entityTypes={['Shot', 'Asset', 'Sequence', 'Task']}
 			onSelect={(leaf, path) => (picked = { leaf, path })}

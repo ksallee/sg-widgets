@@ -6,7 +6,6 @@ import { createDemoContext } from '../_shared/client';
 
 export default function Demo() {
   const context = useMemo(() => createDemoContext(), []);
-  const client = context.client;
   const [picked, setPicked] = useState<{ leaf: EntityRef; path: EntityRef[] } | null>(null);
 
   return (
@@ -16,7 +15,7 @@ export default function Demo() {
           Scoped to one project
         </h4>
         <HierarchicalSearch
-          client={client}
+          context={context}
           rootPath={`/Project/${context.projectId}`}
           entityTypes={['Shot', 'Asset', 'Sequence', 'Task']}
           onSelect={(leaf, path) => setPicked({ leaf, path })}

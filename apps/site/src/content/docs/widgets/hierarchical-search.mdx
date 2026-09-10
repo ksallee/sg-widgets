@@ -21,7 +21,7 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/hierarchical-s
 
 | prop | type | default | meaning |
 |---|---|---|---|
-| `client` | `SgClient` | required | Where rows come from. Wrap it in `createQueryCache` once for the app. |
+| `context` | `SgContext` | required | The widget context. Every read goes through it, so widgets on a page share one cache. |
 | `rootPath` | `string` | `'/'` | Where the tree starts. `/Project/70` scopes it to that project. |
 | `entityTypes` | `string[] \| Record<string, WireCondition[] \| null>` | Shot, Asset, Sequence, Task | Types a search may end on. |
 | `placeholder` | `string` | `'Search the hierarchy…'` | Text in the search input. |

@@ -20,7 +20,7 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/global-search.
 
 | prop | type | default | meaning |
 |---|---|---|---|
-| `client` | `SgClient` | required | Where rows come from. Wrap it in `createQueryCache` once for the app. |
+| `context` | `SgContext` | required | The widget context. Every read goes through it, so widgets on a page share one cache. |
 | `entityTypes` | `string[] \| Record<string, WireCondition[] \| null>` | Asset, Shot, Sequence, Task, Version, HumanUser, Project | Types to search, with an optional filter each. |
 | `projectId` | `number \| null` | `null` | Scopes every searched type that has a `project` field. |
 | `hotkey` | `boolean` | `false` | Opens the palette on Cmd/Ctrl+K. |

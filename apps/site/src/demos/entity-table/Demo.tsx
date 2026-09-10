@@ -5,7 +5,7 @@ import { ColumnPicker } from '@/registry/sg/components/column-picker';
 import { EntityTable } from '@/registry/sg/components/entity-table';
 import { FilterDialog } from '@/registry/sg/components/filter-dialog';
 import { createDemoContext } from '../_shared/client';
-import { DemoClientProvider } from '../_shared/react';
+import { DemoContextProvider } from '../_shared/react';
 
 const WIDTHS: Record<string, number> = {
   code: 260,
@@ -87,7 +87,7 @@ export default function EntityTableDemo() {
   if (!statuses) return <p className="text-muted-foreground text-sm">Loading the site…</p>;
 
   return (
-    <DemoClientProvider client={context.client}>
+    <DemoContextProvider context={context}>
       <div className="flex w-full min-w-0 flex-col gap-3">
         <div className="flex flex-wrap items-center gap-2">
           <button type="button" className={toggle} aria-pressed={grouped} onClick={() => setGrouped(!grouped)}>
@@ -119,7 +119,7 @@ export default function EntityTableDemo() {
               {picking ? (
                 <div className="w-64">
                   <ColumnPicker
-                    schema={context.schema}
+                    context={context}
                     entityType="Version"
                     size="sm"
                     deepLinks={false}
@@ -135,8 +135,7 @@ export default function EntityTableDemo() {
           toolbarEnd={
             <FilterDialog
               entityType="Version"
-              client={context.client}
-              schema={context.schema}
+              context={context}
               value={filter}
               onChange={(next) => {
                 setFilter(next);
@@ -146,6 +145,6 @@ export default function EntityTableDemo() {
           }
         />
       </div>
-    </DemoClientProvider>
+    </DemoContextProvider>
   );
 }

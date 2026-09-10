@@ -11,7 +11,7 @@
 	import EntityTable from '$lib/registry/components/entity-table.svelte';
 	import SortPicker from '$lib/registry/components/sort-picker.svelte';
 	import { createDemoContext } from '../_shared/client';
-	import { setDemoClient } from '../_shared/svelte';
+	import { setDemoContext } from '../_shared/svelte';
 	import { RESULT_PAGE_SIZE, scopeToProject } from '../_shared/results';
 
 	const COLUMNS = [
@@ -33,7 +33,7 @@
 	}
 
 	const context = createDemoContext();
-	const client = setDemoClient(context.client);
+	setDemoContext(context);
 
 	let value = $state<SortKey[]>(INITIAL);
 
@@ -66,7 +66,7 @@
 </script>
 
 <div class="flex min-w-0 flex-col gap-4">
-	<SortPicker entityType="Shot" {client} bind:value />
+	<SortPicker entityType="Shot" {context} bind:value />
 
 	<section class="flex flex-col gap-2">
 		<h4 class={label}>sort</h4>

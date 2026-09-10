@@ -1,9 +1,8 @@
 <script lang="ts">
-	import { createSchemaService } from '@sg-widgets/core';
 	import FieldPicker from '$lib/registry/components/field-picker.svelte';
-	import { setDemoClient } from '../_shared/svelte';
+	import { getDemoContext } from '../_shared/client';
 
-	const schema = createSchemaService(setDemoClient());
+	const context = getDemoContext();
 
 	let free = $state('');
 	let dated = $state('');
@@ -18,7 +17,7 @@
 	<div class="flex flex-col gap-2" data-demo="free">
 		<span class={label}>Version, deep links on: Link asks which type, Project descends at once</span>
 		<FieldPicker
-			{schema}
+			{context}
 			entityType="Version"
 			deepLinks
 			value={free}
@@ -30,7 +29,7 @@
 	<div class="flex flex-col gap-2" data-demo="dates">
 		<span class={label}>Restricted to dates: links stay on the list so a nested date is reachable</span>
 		<FieldPicker
-			{schema}
+			{context}
 			entityType="Version"
 			deepLinks
 			dataTypes={['date', 'date_time']}
@@ -44,7 +43,7 @@
 	<div class="flex flex-col gap-2" data-demo="preset">
 		<span class={label}>A dotted value, shown as its friendly path</span>
 		<FieldPicker
-			{schema}
+			{context}
 			entityType="Version"
 			deepLinks
 			value={preset}
@@ -56,7 +55,7 @@
 	<div class="flex flex-col gap-2" data-demo="computed">
 		<span class={label}>Filterable types only, with two computed columns and a hidden path</span>
 		<FieldPicker
-			{schema}
+			{context}
 			entityType="Shot"
 			filterableOnly
 			hidePaths={['image']}
@@ -72,10 +71,10 @@
 
 	<div class="flex flex-col gap-2">
 		<span class={label}>Sizes, read-only and invalid</span>
-		<FieldPicker {schema} entityType="Shot" value="code" size="sm" />
-		<FieldPicker {schema} entityType="Shot" value="sg_status_list" size="lg" />
-		<FieldPicker {schema} entityType="Shot" value="description" readonly />
-		<FieldPicker {schema} entityType="Shot" value="" invalid />
-		<FieldPicker {schema} entityType="Shot" value="sg_cut_in" disabled />
+		<FieldPicker {context} entityType="Shot" value="code" size="sm" />
+		<FieldPicker {context} entityType="Shot" value="sg_status_list" size="lg" />
+		<FieldPicker {context} entityType="Shot" value="description" readonly />
+		<FieldPicker {context} entityType="Shot" value="" invalid />
+		<FieldPicker {context} entityType="Shot" value="sg_cut_in" disabled />
 	</div>
 </div>

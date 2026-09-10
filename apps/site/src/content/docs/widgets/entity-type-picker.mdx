@@ -21,7 +21,7 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/entity-type-pi
 
 | prop | type | default | meaning |
 |---|---|---|---|
-| `schema` | `SchemaService` | required | Reads the site's enabled types. Build it once per app with `createSchemaService`. |
+| `context` | `SgContext` | required | The widget context. The site's enabled types are read through it, once per page. |
 | `value` | `string \| string[] \| null` | `null` | A type code, or an array of them in multi mode. |
 | `multiple` | `boolean` | `false` | Keep the list open and take several types. |
 | `onValueChange` | `(value) => void` | — | Receives the code, `null` on clear, or the new array in multi mode. |

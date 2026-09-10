@@ -1,0 +1,218 @@
+---
+/**
+ * A design harness, not a docs page: every candidate for the site's title side by side,
+ * so the one to keep can be picked by looking rather than by describing. It sits outside
+ * Starlight and outside the sidebar, and nothing links to it.
+ *
+ * Each variant is shown at the size Starlight gives the site title and at a display size,
+ * on the page background and on a nav-coloured strip, and the marks that can stand alone
+ * are shown again at favicon sizes. Everything is drawn from tokens, so the three controls
+ * at the top -- palette, radius, light and dark -- redress every card at once.
+ */
+import '../../styles/global.css';
+import Wordmark from '../../components/Wordmark.astro';
+import WordmarkMark from '../../components/WordmarkMark.astro';
+import { markSizes, wordmarkMarks, wordmarkVariants } from '../../components/wordmark-variants';
+import { palettes, radii } from '../../components/demo-prefs';
+
+/*
+ * The palette and the radius on `:root` before the first paint, the same script the
+ * Starlight pages inline in their head. Read as text, not run as a module: it is the head
+ * entry, not something the page imports. This page is outside Starlight, so it also has to
+ * write light and dark itself; the second inline script below does that.
+ */
+import paletteBoot from '../../scripts/palette-boot.js?raw';
+
+/* Starlight sizes the site title at `--sl-text-h4`, which is `--sl-text-2xl` above 50rem. */
+const HEADER_SIZE = 'var(--sl-text-2xl)';
+const DISPLAY_SIZE = 'var(--sl-text-6xl)';
+
+/* The two grounds a title has to hold: the page, and the chrome strip behind the header. */
+const grounds = [
+  { id: 'page', label: 'Page', surface: 'bg-background text-foreground' },
+  { id: 'nav', label: 'Nav', surface: 'bg-sidebar text-sidebar-foreground' },
+];
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>SG Widgets: wordmark and mark variants</title>
+    <script is:inline set:html={paletteBoot} />
+    <script is:inline>
+      /* Light and dark before the first paint. Starlight's own theme script is not here. */
+      (() => {
+        let raw = null;
+        try {
+          raw = localStorage.getItem('sg-demo:theme') ?? localStorage.getItem('starlight-theme');
+        } catch {
+          raw = null; // Blocked storage: the light theme is the fallback everywhere.
+        }
+        try {
+          const parsed = JSON.parse(raw);
+          if (typeof parsed === 'string') raw = parsed;
+        } catch {
+          /* A raw string is the common spelling; keep it. */
+        }
+        document.documentElement.dataset.theme = raw === 'dark' ? 'dark' : 'light';
+      })();
+    </script>
+  </head>
+
+  <body class="sg-demo min-h-screen bg-background text-foreground">
+    <div class="mx-auto flex w-full max-w-6xl flex-col gap-6 p-6">
+      <header class="flex flex-col gap-3">
+        <h1 class="text-2xl font-medium">SG Widgets: wordmark and mark variants</h1>
+        <p class="max-w-prose text-sm text-muted-foreground">
+          Ten treatments of the site title, and the four marks that can stand alone. Nothing here is a
+          decision; it is the material for one. No third-party logo or brand asset is reproduced.
+        </p>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <label class="flex items-center gap-1.5 text-xs text-muted-foreground">
+            Palette
+            <select
+              data-palette-pick
+              class="h-8 rounded-md border border-border bg-background px-2 text-sm text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            >
+              {palettes.map((palette) => <option value={palette.name}>{palette.label}</option>)}
+            </select>
+          </label>
+
+          <label class="flex items-center gap-1.5 text-xs text-muted-foreground">
+            Radius
+            <select
+              data-radius-pick
+              class="h-8 rounded-md border border-border bg-background px-2 text-sm text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            >
+              {radii.map((radius) => <option value={radius.name}>{radius.label}</option>)}
+            </select>
+          </label>
+
+          <button
+            type="button"
+            data-theme-toggle
+            aria-pressed="false"
+            class="h-8 rounded-md border border-border bg-background px-3 text-sm font-medium text-foreground transition-colors duration-150 hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          >
+            Dark
+          </button>
+        </div>
+      </header>
+
+      <section class="grid gap-4 lg:grid-cols-2">
+        {
+          wordmarkVariants.map((variant) => (
+            <article
+              class="flex flex-col overflow-hidden rounded-lg border border-border"
+              data-variant={variant.id}
+            >
+              <div class="flex flex-col gap-1 bg-card px-4 py-3">
+                <h2 class="text-sm font-medium text-card-foreground" data-variant-label>
+                  {variant.label}
+                </h2>
+                <p class="text-xs text-muted-foreground">{variant.rationale}</p>
+              </div>
+
+              <div class="grid gap-px border-t border-border bg-border">
+                {grounds.map((ground) => (
+                  <div class={`flex flex-col gap-3 p-4 ${ground.surface}`} data-ground={ground.id}>
+                    <span class="text-xs text-muted-foreground">{ground.label}</span>
+                    <div class="flex flex-wrap items-center gap-6">
+                      <span class="flex items-center" data-size="display">
+                        <Wordmark variant={variant.id} size={DISPLAY_SIZE} />
+                      </span>
+                      <span class="flex items-center" data-size="header">
+                        <Wordmark variant={variant.id} size={HEADER_SIZE} />
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </article>
+          ))
+        }
+      </section>
+
+      <section class="flex flex-col gap-3">
+        <h2 class="text-sm font-medium">Marks alone</h2>
+        <p class="max-w-prose text-xs text-muted-foreground">
+          At 16, 24 and 32px: a favicon, a sidebar entry, a browser tab.
+        </p>
+
+        <div class="grid gap-4 lg:grid-cols-2">
+          {
+            wordmarkMarks.map((mark) => (
+              <article class="flex flex-col overflow-hidden rounded-lg border border-border" data-mark={mark.id}>
+                <div class="bg-card px-4 py-3">
+                  <h3 class="text-sm font-medium text-card-foreground">{mark.label}</h3>
+                </div>
+
+                <div class="grid gap-px border-t border-border bg-border">
+                  {grounds.map((ground) => (
+                    <div class={`flex flex-col gap-3 p-4 ${ground.surface}`} data-ground={ground.id}>
+                      <span class="text-xs text-muted-foreground">{ground.label}</span>
+                      <div class="flex items-end gap-6">
+                        {markSizes.map((px) => (
+                          <span class="flex flex-col items-center gap-1.5" data-mark-size={px}>
+                            <WordmarkMark mark={mark.id} size={`${px}px`} />
+                            <span class="text-xs tabular-nums text-muted-foreground">{px}</span>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </article>
+            ))
+          }
+        </div>
+      </section>
+    </div>
+
+    <script>
+      /**
+       * The three controls, on the same `sg-demo:*` keys the docs site uses, so
+       * `tools/qa.mjs` dresses this page with `--palette` and `--dark` without clicking.
+       * `applyPrefs` puts the palette and the radius on `:root`; light and dark is
+       * Starlight's `data-theme`, which nothing else writes on a page outside Starlight.
+       */
+      import { applyPrefs, prefs, setPref, togglePref, watchPrefs } from '../../components/demo-prefs';
+
+      function sync(): void {
+        document.documentElement.dataset.theme = prefs.theme;
+
+        const palettePick = document.querySelector<HTMLSelectElement>('[data-palette-pick]');
+        if (palettePick) palettePick.value = prefs.palette;
+
+        const radiusPick = document.querySelector<HTMLSelectElement>('[data-radius-pick]');
+        if (radiusPick) radiusPick.value = prefs.radius;
+
+        document
+          .querySelector('[data-theme-toggle]')
+          ?.setAttribute('aria-pressed', String(prefs.theme === 'dark'));
+      }
+
+      applyPrefs();
+      watchPrefs();
+      sync();
+
+      // `watchPrefs` reads the keys back on `storage`; this puts the result on the page.
+      window.addEventListener('storage', sync);
+
+      document.addEventListener('change', (event) => {
+        const target = event.target as HTMLElement | null;
+        if (target?.matches('[data-palette-pick]')) setPref('palette', (target as HTMLSelectElement).value);
+        if (target?.matches('[data-radius-pick]')) setPref('radius', (target as HTMLSelectElement).value);
+        sync();
+      });
+
+      document.querySelector('[data-theme-toggle]')?.addEventListener('click', () => {
+        togglePref('theme');
+        sync();
+      });
+    </script>
+  </body>
+</html>

@@ -62,7 +62,7 @@ export default defineConfig({
             { label: 'Overview', slug: 'widgets' },
             {
               label: 'Foundations',
-              items: ['thumbnail', 'user-avatar', 'text-editor', 'number-editor', 'checkbox-editor', 'date-editor', 'date-time-editor', 'list-select', 'url-editor', 'color-editor'].map((n) => ({ slug: `widgets/${n}` })),
+              items: ['thumbnail', 'user-avatar', 'text-editor', 'number-editor', 'checkbox-editor', 'date-editor', 'date-time-editor', 'list-select', 'list-multi-select', 'url-editor', 'color-editor'].map((n) => ({ slug: `widgets/${n}` })),
             },
             {
               label: 'Display',

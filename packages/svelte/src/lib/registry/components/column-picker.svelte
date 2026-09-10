@@ -24,7 +24,10 @@
 		friendlyFieldPath,
 		iconNameFor,
 		moveFieldPath,
+		NO_MATCH_LABEL,
+		NOTHING_CHOSEN_LABEL,
 		searchFieldOptions,
+		stateLine,
 		toggleFieldPath
 	} from '@sg-widgets/core';
 	import Braces from '@lucide/svelte/icons/braces';
@@ -64,6 +67,7 @@
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
 	import FieldPicker from '$lib/registry/components/field-picker.svelte';
+	import StateLine from '$lib/registry/components/state-line.svelte';
 	import { createSortable } from '$lib/registry/components/sortable.svelte.js';
 
 	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>, HTMLDivElement> & {
@@ -99,7 +103,14 @@
 		/** Placeholder of the field picker. */
 		placeholder?: string;
 		searchPlaceholder?: string;
+		/** Shown when nothing is chosen. */
 		emptyLabel?: string;
+		/** Shown when the search over the fields on offer matches nothing. */
+		noMatchLabel?: string;
+		/** The accessible name of the skeletons a read stands behind. */
+		loadingLabel?: string;
+		/** Shown in place of what the failed read said. */
+		errorLabel?: string;
 		availableLabel?: string;
 		chosenLabel?: string;
 		readonly?: boolean;
@@ -127,7 +138,10 @@
 		showCount = false,
 		placeholder = 'Add a column',
 		searchPlaceholder = 'Search fields…',
-		emptyLabel = 'No columns yet.',
+		emptyLabel = NOTHING_CHOSEN_LABEL,
+		noMatchLabel = NO_MATCH_LABEL,
+		loadingLabel,
+		errorLabel,
 		availableLabel = 'Available',
 		chosenLabel = 'Columns',
 		readonly = false,
@@ -451,19 +465,15 @@
 		/>
 		<Command.List>
 			{#if failure}
-				<div
-					data-slot="column-picker-error"
-					class="text-destructive flex items-center justify-center gap-1.5 py-6 text-center text-sm"
-				>
-					<TriangleAlert aria-hidden="true" class="size-4 shrink-0" />
-					<span class="truncate">{failure}</span>
-				</div>
+				<StateLine
+					state="error"
+					slotName="column-picker-error"
+					icon={TriangleAlert}
+					label={stateLine('error', { errorLabel }, failure)}
+				/>
 			{:else if choosing}
 				<Command.Empty>
-					<span class="text-muted-foreground inline-flex items-center gap-1.5">
-						<SearchX aria-hidden="true" class="size-4 shrink-0" />
-						No type matches.
-					</span>
+					<StateLine state="empty" icon={SearchX} label={noMatchLabel} pad="none" />
 				</Command.Empty>
 				{#each targets as target (target)}
 					<Command.Item
@@ -478,17 +488,19 @@
 					</Command.Item>
 				{/each}
 			{:else if fields === null}
-				<div data-slot="column-picker-loading" class="flex flex-col gap-2 p-1">
+				<div
+					data-slot="column-picker-loading"
+					class="flex flex-col gap-2 p-1"
+					aria-busy="true"
+					aria-label={stateLine('loading', { loadingLabel })}
+				>
 					{#each [0, 1, 2] as row (row)}
 						<Skeleton class="h-8 w-full" />
 					{/each}
 				</div>
 			{:else}
 				<Command.Empty>
-					<span class="text-muted-foreground inline-flex items-center gap-1.5">
-						<SearchX aria-hidden="true" class="size-4 shrink-0" />
-						No field matches.
-					</span>
+					<StateLine state="empty" icon={SearchX} label={noMatchLabel} pad="none" />
 				</Command.Empty>
 				{#each rows as row (row.path)}
 					{@const Glyph = ICONS[iconNameFor(row.dataType)] ?? FileText}
@@ -538,13 +550,7 @@
 
 {#snippet chosen()}
 	{#if value.length === 0}
-		<p
-			data-slot="column-picker-empty"
-			class="text-muted-foreground flex items-center justify-center gap-1.5 py-6 text-center text-sm"
-		>
-			<Columns3 aria-hidden="true" class="size-4 shrink-0" />
-			{emptyLabel}
-		</p>
+		<StateLine state="empty" slotName="column-picker-empty" icon={Columns3} label={emptyLabel} />
 	{:else}
 		<ol
 			data-slot="column-picker-list"
@@ -636,7 +642,7 @@
 		bind:value={adding}
 		exclude={offered}
 		clearable={false}
-		emptyLabel="No field left to add."
+		emptyLabel="No field left to add"
 		onValueChange={append}
 	/>
 {/snippet}

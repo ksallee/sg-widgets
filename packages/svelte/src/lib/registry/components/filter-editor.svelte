@@ -107,6 +107,7 @@
 		defaultCondition,
 		emptyFilter,
 		group as makeGroup,
+		NOTHING_CHOSEN_LABEL,
 		operatorMenu,
 		presetById,
 		presetIdOf,
@@ -126,6 +127,7 @@
 	import * as ToggleGroup from '$lib/components/ui/toggle-group/index.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
 	import CheckboxEditor from '$lib/registry/components/checkbox-editor.svelte';
+	import StateLine from '$lib/registry/components/state-line.svelte';
 	import ColorEditor from '$lib/registry/components/color-editor.svelte';
 	import DateEditor from '$lib/registry/components/date-editor.svelte';
 	import DateTimeEditor from '$lib/registry/components/date-time-editor.svelte';
@@ -150,6 +152,8 @@
 		hidePaths?: string[];
 		/** Scopes the status pickers to the codes one project allows. */
 		projectId?: number;
+		/** Shown when a group holds no condition. */
+		emptyLabel?: string;
 		size?: FilterEditorSize;
 		disabled?: boolean;
 		onChange?: (value: FilterGroup) => void;
@@ -165,6 +169,7 @@
 		value = $bindable(emptyFilter()),
 		hidePaths = [],
 		projectId,
+		emptyLabel = NOTHING_CHOSEN_LABEL,
 		size = 'md',
 		disabled = false,
 		onChange,
@@ -669,7 +674,7 @@
 				{/if}
 			{/each}
 			{#if node.conditions.length === 0}
-				<p class="text-muted-foreground py-6 text-center text-sm">No conditions.</p>
+				<StateLine state="empty" slotName="filter-group-empty" label={emptyLabel} />
 			{/if}
 		</div>
 		<div class="flex min-w-0 flex-wrap items-center gap-1 pl-3" data-slot="filter-foot">

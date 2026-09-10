@@ -88,6 +88,7 @@
 	import {
 		cellValue,
 		describePaging,
+		NO_ROWS_LABEL,
 		hasFailedPage,
 		idsForRefs,
 		isEditableType,
@@ -101,7 +102,8 @@
 		sameRefs,
 		sameSort,
 		shouldLoadNext,
-		sourceModeFor
+		sourceModeFor,
+		stateLine
 	} from '@sg-widgets/core';
 	import {
 		columnGroupingFeature,
@@ -121,7 +123,6 @@
 	import ArrowLeftToLine from '@lucide/svelte/icons/arrow-left-to-line';
 	import ArrowUp from '@lucide/svelte/icons/arrow-up';
 	import ArrowUpDown from '@lucide/svelte/icons/arrow-up-down';
-	import ChevronLeft from '@lucide/svelte/icons/chevron-left';
 	import ChevronRight from '@lucide/svelte/icons/chevron-right';
 	import ChevronsUpDown from '@lucide/svelte/icons/chevrons-up-down';
 	import CircleAlert from '@lucide/svelte/icons/circle-alert';
@@ -132,13 +133,13 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
-	import { Input } from '$lib/components/ui/input/index.js';
-	import * as Select from '$lib/components/ui/select/index.js';
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
 	import * as Table from '$lib/components/ui/table/index.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
+	import CollectionFooter from '$lib/registry/components/collection-footer.svelte';
 	import FieldEditor from '$lib/registry/components/field-editor.svelte';
 	import FieldValue from '$lib/registry/components/field-value.svelte';
+	import StateLine from '$lib/registry/components/state-line.svelte';
 
 	type Props = WithElementRef<Omit<HTMLAttributes<HTMLDivElement>, 'children'>, HTMLDivElement> & {
 		/** The rows, the filter, the sort and the page behind them. Created with core's `createEntitySource`. */
@@ -191,7 +192,12 @@
 		maxHeight?: string;
 		/** Rows above which the body is virtualised. */
 		virtualizeAfter?: number;
+		/** Shown when the read returned nothing. */
 		emptyLabel?: string;
+		/** The accessible name of the skeletons a read stands behind. */
+		loadingLabel?: string;
+		/** Shown in place of what the failed read said. */
+		errorLabel?: string;
 		/** Left region of the toolbar above the table. */
 		toolbarStart?: Snippet;
 		/** Right region of the toolbar above the table. */
@@ -234,7 +240,9 @@
 		pageSizes = [25, 50, 100],
 		maxHeight = '28rem',
 		virtualizeAfter = 100,
-		emptyLabel = 'No rows',
+		emptyLabel = NO_ROWS_LABEL,
+		loadingLabel,
+		errorLabel,
 		toolbarStart,
 		toolbarEnd,
 		row: rowSnippet,
@@ -291,7 +299,6 @@
 	let cellError = $state<{ key: string; path: string; message: string } | null>(null);
 	let dragging = $state<string | null>(null);
 	let dropTarget = $state<string | null>(null);
-	let pageDraft = $state('');
 
 	/* the table ------------------------------------------------------------ */
 
@@ -774,16 +781,7 @@
 		else void source.loadMore();
 	}
 
-	function goToPage(value: string): void {
-		const wanted = Number(value);
-		pageDraft = '';
-		if (!Number.isFinite(wanted) || wanted < 1) return;
-		void source.setPage(pager.pageCount === null ? wanted : Math.min(wanted, pager.pageCount));
-	}
-
-	const stateClass = 'text-muted-foreground flex items-center justify-center gap-2 py-10 text-sm';
-	/** The same anatomy under the rows, at a row's height rather than a body's. */
-	const errorLineClass = 'text-destructive flex items-center justify-center gap-2 text-sm';
+	const loadingText = $derived(stateLine('loading', { loadingLabel }));
 </script>
 
 <!--
@@ -962,7 +960,11 @@
 				</Table.Row>
 			</Table.Header>
 
-			<Table.Body onkeydown={onRowsKeydown}>
+			<Table.Body
+				onkeydown={onRowsKeydown}
+				aria-busy={snapshot.status === 'loading' ? 'true' : undefined}
+				aria-label={snapshot.status === 'loading' ? loadingText : undefined}
+			>
 				{#if snapshot.status === 'loading'}
 					{#each { length: 8 } as _, index (index)}
 						<Table.Row>
@@ -974,19 +976,18 @@
 				{:else if snapshot.status === 'error' && !pageError}
 					<Table.Row>
 						<Table.Cell colspan={layout.length}>
-							<span class={cn(stateClass, 'text-destructive')}>
-								<CircleAlert aria-hidden="true" class="size-4 shrink-0" />
-								{snapshot.error?.message}
-							</span>
+							<StateLine
+								state="error"
+								pad="table"
+								icon={CircleAlert}
+								label={stateLine('error', { errorLabel }, snapshot.error?.message)}
+							/>
 						</Table.Cell>
 					</Table.Row>
 				{:else if modelRows.length === 0}
 					<Table.Row>
 						<Table.Cell colspan={layout.length}>
-							<span class={stateClass}>
-								<Inbox aria-hidden="true" class="size-4 shrink-0" />
-								{emptyLabel}
-							</span>
+							<StateLine state="empty" pad="table" icon={Inbox} label={emptyLabel} />
 						</Table.Cell>
 					</Table.Row>
 				{:else}
@@ -1170,15 +1171,23 @@
 					{#if pageError}
 						<Table.Row data-slot="entity-table-page-error" class="hover:bg-transparent">
 							<Table.Cell colspan={layout.length} class="p-2">
-								<span class={errorLineClass}>
-									<CircleAlert aria-hidden="true" class="size-4 shrink-0" />
-									<span class="min-w-0 truncate" title={snapshot.error?.message}>{snapshot.error?.message}</span>
+								<StateLine
+									state="error"
+									pad="none"
+									icon={CircleAlert}
+									label={stateLine('error', { errorLabel }, snapshot.error?.message)}
+								>
 									<Button variant="outline" size="sm" onclick={retryPage}>Retry</Button>
-								</span>
+								</StateLine>
 							</Table.Cell>
 						</Table.Row>
 					{:else if snapshot.status === 'loadingMore'}
-						<Table.Row data-slot="entity-table-loading" class="hover:bg-transparent">
+						<Table.Row
+							data-slot="entity-table-loading"
+							class="hover:bg-transparent"
+							aria-busy="true"
+							aria-label={loadingText}
+						>
 							<Table.Cell colspan={layout.length} class="p-2">
 								<Skeleton class="h-4 w-full" />
 							</Table.Cell>
@@ -1199,69 +1208,11 @@
 		</Table.Root>
 	</div>
 
-	<div
-		data-slot="entity-table-footer"
-		class="text-muted-foreground flex w-full min-w-0 flex-wrap items-center justify-between gap-2 text-xs"
-	>
-		{#if pager.mode === 'pages'}
-			<div data-slot="entity-table-page-size" class="flex items-center gap-2">
-				<span>Rows per page</span>
-				<Select.Root
-					type="single"
-					value={String(pager.pageSize)}
-					onValueChange={(value) => void source.setPageSize(Number(value))}
-				>
-					<Select.Trigger aria-label="Rows per page" class="h-7 w-auto min-w-16">
-						<span data-slot="select-value" class="tabular-nums">{pager.pageSize}</span>
-					</Select.Trigger>
-					<Select.Content>
-						{#each pageSizes as option (option)}
-							<Select.Item value={String(option)} label={String(option)} />
-						{/each}
-					</Select.Content>
-				</Select.Root>
-			</div>
-			<div data-slot="entity-table-pager" class="flex items-center gap-2">
-				<span data-slot="entity-table-range" class="tabular-nums">{pager.rangeLabel}</span>
-				<Button
-					variant="outline"
-					size="icon-sm"
-					aria-label="Previous page"
-					disabled={!pager.hasPrevious || snapshot.status === 'loading'}
-					onclick={() => void source.setPage(pager.page - 1)}
-				>
-					<ChevronLeft aria-hidden="true" />
-				</Button>
-				<Input
-					type="number"
-					min="1"
-					inputmode="numeric"
-					aria-label="Page number"
-					class="h-7 w-14 text-center tabular-nums"
-					value={pageDraft === '' ? String(pager.page) : pageDraft}
-					oninput={(event) => (pageDraft = event.currentTarget.value)}
-					onkeydown={(event) => {
-						if (event.key !== 'Enter') return;
-						event.preventDefault();
-						goToPage(event.currentTarget.value);
-					}}
-					onblur={(event) => goToPage(event.currentTarget.value)}
-				/>
-				{#if pager.pageCount !== null}
-					<span class="tabular-nums">of {pager.pageCount}</span>
-				{/if}
-				<Button
-					variant="outline"
-					size="icon-sm"
-					aria-label="Next page"
-					disabled={!pager.hasNext || snapshot.status === 'loading'}
-					onclick={() => void source.setPage(pager.page + 1)}
-				>
-					<ChevronRight aria-hidden="true" />
-				</Button>
-			</div>
-		{:else}
-			<span data-slot="entity-table-loaded" class="tabular-nums">{pager.loadedLabel}</span>
-		{/if}
-	</div>
+	<CollectionFooter
+		{source}
+		{pager}
+		{pageSizes}
+		loading={snapshot.status === 'loading'}
+		slotName="entity-table"
+	/>
 </div>

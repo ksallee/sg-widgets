@@ -665,7 +665,7 @@ export function ColumnPicker({
       value={adding}
       exclude={offered}
       clearable={false}
-      emptyLabel="No field left to add."
+      emptyLabel="No field left to add"
       onValueChange={append}
     />
   );

@@ -38,7 +38,6 @@
 		filters = null,
 		fields = [],
 		placeholder = 'Search for a project',
-		emptyLabel = 'No project matches.',
 		open = $bindable(false),
 		ref = $bindable(null),
 		...rest
@@ -61,6 +60,5 @@
 	filters={projectFilters(includeArchived, filters)}
 	subLabelField="sg_status"
 	{placeholder}
-	{emptyLabel}
 	{...rest}
 />

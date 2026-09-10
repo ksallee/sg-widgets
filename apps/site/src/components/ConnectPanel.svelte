@@ -27,7 +27,7 @@
 		demoSession,
 		demoSiteUrl,
 		demoSource,
-		liveClient,
+		liveContext,
 		liveState,
 		logIn,
 		logOut,
@@ -106,7 +106,7 @@
 			? `Live · ${live.siteUrl || 'no site'} · ${scope}`
 			: 'The demos read fixtures. Open to point them at a site.',
 	);
-	/** The picker needs a client, so the project row shows only once live mode can read the site. */
+	/** The picker needs a context, so the project row shows only once live mode can read the site. */
 	const ready = $derived(settled && live.source === 'live' && live.problem === null);
 
 	const control =
@@ -335,7 +335,7 @@
 							<span class={labelClass}>Project</span>
 							<div class="w-full" data-live-project>
 								<ProjectPicker
-									client={liveClient()}
+									context={liveContext()}
 									size="sm"
 									placeholder="Whole site"
 									clearable

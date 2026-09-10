@@ -67,7 +67,7 @@
 		<h4 class={label}>A token field: Backspace walks the chips</h4>
 		<div class={field}>
 			<EntityMultiPicker
-				{client}
+				{context}
 				entityTypes={['Asset']}
 				summary="chips"
 				bind:value={tokens}

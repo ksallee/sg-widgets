@@ -77,7 +77,7 @@ export default function EntityMultiPickerDemo() {
         <h4 className={label}>A token field: Backspace walks the chips</h4>
         <div className={field}>
           <EntityMultiPicker
-            client={client}
+            context={context}
             entityTypes={['Asset']}
             summary="chips"
             value={tokens}

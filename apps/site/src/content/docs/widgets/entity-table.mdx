@@ -16,7 +16,7 @@ pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/entity-table.json
 pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/entity-table.json
 ```
 
-<Demo name="entity-table" title="Entity Table: 320 Versions in pages of 25, with a filter bar, a column picker and a sort picker in the toolbar. An editable cell lights up under the pointer; a double-click or Enter opens its editor." />
+<Demo name="entity-table" title="Entity Table: 320 Versions in pages of 25, with a filter bar, a column picker and a sort picker in the toolbar. Pages, Load more and Scroll switch how the set is walked. An editable cell lights up under the pointer; a double-click or Enter opens its editor." />
 
 Build the source and the columns once, then hand both to the table.
 
@@ -26,15 +26,30 @@ const source = createEntitySource({
   client: context.client,
   entityType: 'Version',
   fields: ['code', 'entity', 'sg_status_list', 'image', 'description', 'user'],
-  mode: 'pages',
   pageSize: 25,
 });
 const columns = await resolveColumns(context.schema, 'Version', ['code', 'entity', 'sg_status_list']);
 ```
 
-A source in `infinite` mode swaps the pager for a load-more row and a count of what is loaded.
+## Paging
 
-<Demo name="entity-table-infinite" title="Entity Table: the same rows in infinite mode, with the programmatic path beside each header" />
+`paging` says how the set is walked, and the source follows it, so a caller sets one prop rather
+than two.
+
+| value | the table draws |
+|---|---|
+| `pages` | The footer's pager: rows per page, a page number, and `n to m of N` once the set is counted. |
+| `more` | A load-more row under the last row. The footer counts what is loaded. |
+| `scroll` | The next page arrives when the scroller reaches the last loaded row. A skeleton row sits at the bottom while it does, and the footer counts what is loaded. |
+
+The table defaults to `pages`. A table is read as a spreadsheet, where a row's place in the set is
+part of what it means, and a caller who walks to page 12 wants to come back to it.
+
+`more` and `scroll` append: the rows already loaded stay and the new page lands under them, so a
+group that spans a page boundary stays one group and its count grows. A page that fails leaves its
+rows and puts one error line under them with a retry.
+
+<Demo name="entity-table-infinite" title="Entity Table: the same rows walked with a load-more row, with the programmatic path beside each header" />
 
 ## Props
 
@@ -59,7 +74,8 @@ A source in `infinite` mode swaps the pager for a load-more row and a count of w
 | `editable` | `boolean` | `false` | Lets an editable cell open an editor. |
 | `editorFor` | `(dataType) => Component \| null` | — | The editor a cell opens, by data type. A type it does not answer for opens FieldEditor. |
 | `showCode` | `boolean` | `false` | Show the programmatic field path beside the header's display name. |
-| `pageSizes` | `number[]` | `[25, 50, 100]` | Rows per page offered in the footer. |
+| `paging` | `'pages' \| 'more' \| 'scroll'` | `'pages'` | How the set is walked: a page number, a load-more row, or the scroller. |
+| `pageSizes` | `number[]` | `[25, 50, 100]` | Rows per page offered in the footer. `pages` only. |
 | `maxHeight` | `string` | `'28rem'` | Height of the scrolling body. |
 | `virtualizeAfter` | `number` | `100` | Rows above which the body is virtualised. |
 | `emptyLabel` | `string` | `'No rows'` | Shown when the read returned nothing. |
@@ -147,6 +163,8 @@ column list back through `columns`. Pinning sticks the column to the start of th
 | Escape in an editor | Cancels and restores the value. |
 | a press outside an editor | Commits the value. |
 | Space on a checkbox | Toggles the row, or every loaded row from the header. |
+| ArrowDown, ArrowUp in the body | Moves the cursor down or up the same column, over the rows it can land on. |
+| ArrowDown on the last loaded row | In `more` and `scroll`, asks for the next page. The cursor stays where it is until the rows arrive, then lands on the first of them. |
 | Enter in the page number | Goes to that page. |
 
 An editable cell says so: it washes to `bg-accent/50` under the pointer and under the keyboard
@@ -164,6 +182,9 @@ filters fail loudly: a field that cannot be sorted, and a name that does not exi
 with the rows in default order, so a sortable path is verified against the schema first
 (026_result_order).
 
+The cursor in the body is the focused checkbox or editable cell: a row with neither is not a place
+a cursor can be.
+
 Paging is the server's too. No total is in a read: a paged GET answers `data` and `links` alone, and
 five spellings of a count option are accepted at 200 and change nothing, so `pages` mode walks the
 set with an explicit page number and stops on a short page rather than on a missing `links.next`,
@@ -172,7 +193,8 @@ which is emitted on every page forever (006_pagination). The "of N" in the range
 the range reading "n to m" (020_summarize).
 
 Grouping collapses the loaded rows under headers, and the group path leads the source's sort so a
-group is not split across pages. A count is the rows loaded under that header.
+group is not split across pages. A count is the rows loaded under that header, and a page that
+opens on the value the last header carries grows that group rather than opening a second one.
 
 An edit writes one field with `PUT /entity/<type>/<id>`, which changes only the keys it is given and
 leaves the rest alone (put_entity_type_id). The write answers the whole record but resolves no dotted

@@ -68,6 +68,7 @@
 		<GroupedList
 			{source}
 			{context}
+			paging="pages"
 			groupBy={columns[0]!}
 			labelField="content"
 			subLabelField={columns[1]!}

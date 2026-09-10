@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { CollectionColumn, EntityRef, FilterGroup, SortKey, StatusRecord } from '@sg-widgets/core';
+	import type { CollectionColumn, EntityRef, FilterGroup, PagingMode, SortKey, StatusRecord } from '@sg-widgets/core';
 	import {
 		condition,
 		createEntitySource,
@@ -28,6 +28,11 @@
 	const PATHS = Object.keys(WIDTHS);
 	const SHOWN = ['code', 'entity', 'sg_status_list', 'image', 'description', 'user'];
 	const FACETS = ['sg_status_list'];
+	const PAGING: Array<{ value: PagingMode; label: string }> = [
+		{ value: 'pages', label: 'Pages' },
+		{ value: 'more', label: 'Load more' },
+		{ value: 'scroll', label: 'Scroll' }
+	];
 
 	const context = createDemoContext({ counts: { versions: 320 } });
 	setDemoContext(context);
@@ -53,6 +58,7 @@
 	let picking = $state(false);
 	let grouped = $state(false);
 	let compact = $state(false);
+	let paging = $state<PagingMode>('pages');
 
 	async function load(): Promise<{ statuses: Record<string, StatusRecord> }> {
 		const [resolved, table] = await Promise.all([
@@ -93,6 +99,18 @@
 			<button type="button" class={toggle} aria-pressed={compact} onclick={() => (compact = !compact)}>
 				Compact
 			</button>
+			<div class="flex flex-wrap items-center gap-2" data-testid="paging-modes">
+				{#each PAGING as mode (mode.value)}
+					<button
+						type="button"
+						class={toggle}
+						aria-pressed={paging === mode.value}
+						onclick={() => (paging = mode.value)}
+					>
+						{mode.label}
+					</button>
+				{/each}
+			</div>
 			<span class="text-muted-foreground text-xs tabular-nums" data-testid="selection-count">
 				{selected.length} selected
 			</span>
@@ -107,6 +125,7 @@
 			{context}
 			selectable
 			editable
+			{paging}
 			density={compact ? 'compact' : 'default'}
 			groupBy={grouped ? 'sg_status_list' : null}
 		>

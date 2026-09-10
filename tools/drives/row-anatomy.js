@@ -71,12 +71,14 @@ for (const framework of ['svelte', 'react']) {
   if (!box) return fail(`${framework}: no row-anatomy demo`);
   const input = $('input[data-slot="command-input"]', box);
   type(input, 'sh010');
-  const rows = await until(() => {
-    const found = $$('[data-slot="command-item"][data-entity-type="Shot"]', box);
-    return found.length > 0 ? found : null;
-  });
-  if (!rows) return fail(`${framework}: the global search returned nothing for "sh010"`);
-  const global = anatomy(rows[0]);
+  // The secondary's own data type is a schema read, so the row is read once the
+  // badge it implies has arrived rather than as soon as the rows do.
+  const first = () => box.querySelector('[data-slot="command-item"][data-entity-type="Shot"]');
+  if (!(await until(() => first()?.querySelector('[data-slot="picker-row-secondary"]')))) {
+    return fail(`${framework}: the global search returned no shot with a secondary for "sh010"`);
+  }
+  await until(() => first()?.querySelector('[data-slot="status-badge"]'));
+  const global = anatomy(first());
   seen[`${framework} global search`] = global;
   const globalBad = check(`${framework} global search`, global, { name: 'sh010', sub: 'Shot ' });
   if (globalBad) return fail(globalBad);
@@ -88,8 +90,12 @@ for (const framework of ['svelte', 'react']) {
   const treeInput = await until(() => other.querySelector('input[data-slot="command-input"]'));
   if (!treeInput) return fail(`${framework}: the hierarchical search never rendered`);
   type(treeInput, 'sh010_0010');
-  const hit = await until(() => other.querySelector('[data-slot="command-item"][data-entity-type="Shot"]'));
-  if (!hit) return fail(`${framework}: the hierarchical search returned no shot for "sh010_0010"`);
+  const hitRow = () => other.querySelector('[data-slot="command-item"][data-entity-type="Shot"]');
+  if (!(await until(() => hitRow()?.querySelector('[data-slot="picker-row-secondary"]')))) {
+    return fail(`${framework}: the hierarchical search returned no shot with a secondary for "sh010_0010"`);
+  }
+  await until(() => hitRow()?.querySelector('[data-slot="status-badge"]'));
+  const hit = hitRow();
   const hierarchical = anatomy(hit);
   hierarchical.crumbs = hit.querySelector('[data-slot="picker-row-label"]')?.getAttribute('title') ?? '';
   seen[`${framework} hierarchical search`] = hierarchical;

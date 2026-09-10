@@ -40,7 +40,8 @@ for (const framework of ['svelte', 'react']) {
   const ellipsis = { badges: badgeCount(ellipsisEl), hidden: hiddenCount(ellipsisEl), overflow: overflow(ellipsisEl) };
   const iconsEl = value(pane, 'badge-icon-5');
   const icons = { badges: badgeCount(iconsEl), removes: $$('[data-slot="status-multi-picker-remove"]', iconsEl).length };
-  const names = value(pane, 'badge-text-2').textContent.trim();
+  // The two frameworks put different whitespace between badges, so the labels are read one by one.
+  const names = $$('[data-slot="status-badge"]', value(pane, 'badge-text-2')).map((b) => b.textContent.trim());
   const count = value(pane, 'summary-count-5').textContent.trim();
   const cappedEl = value(pane, 'max-one');
   const capped = { badges: badgeCount(cappedEl), overflow: overflow(cappedEl) };
@@ -65,7 +66,7 @@ for (const framework of ['svelte', 'react']) {
   }
   if (icons.badges !== 5) failures.push(`${framework}: ${icons.badges} icon badges for five selected, wanted 5`);
   if (icons.removes !== 0) failures.push(`${framework}: icons still carry ${icons.removes} remove controls`);
-  if (names !== 'In ProgressApproved') failures.push(`${framework}: text badges read "${names}"`);
+  if (names.join('|') !== 'In Progress|Approved') failures.push(`${framework}: text badges read "${names.join('|')}"`);
   if (count !== '5 selected') failures.push(`${framework}: count read "${count}", wanted "5 selected"`);
   if (capped.badges !== 1 || capped.overflow !== '+1') {
     failures.push(`${framework}: max={1} drew ${capped.badges} badges and "${capped.overflow}"`);

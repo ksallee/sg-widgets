@@ -519,7 +519,7 @@ export function EntityGrid({
                       tabIndex={index === active ? 0 : -1}
                       data-row-key={key}
                       data-index={index}
-                      className={cn('min-w-0 outline-none', disabled && 'pointer-events-none opacity-50')}
+                      className={cn('min-w-0 outline-none', disabled && 'pointer-events-none opacity-50 [&_img]:grayscale')}
                       onFocus={() => setCursor(index)}
                       onClick={(event) => onTileClick(event, row)}
                     >
@@ -552,7 +552,7 @@ export function EntityGrid({
                     tabIndex={index === active ? 0 : -1}
                     data-row-key={key}
                     data-index={index}
-                    className={disabled ? 'pointer-events-none opacity-50' : undefined}
+                    className={disabled ? 'pointer-events-none opacity-50 [&_img]:grayscale' : undefined}
                     onFocus={() => setCursor(index)}
                     onClick={(event) => onTileClick(event, row)}
                   />

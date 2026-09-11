@@ -1,6 +1,11 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import type { ReactNode } from 'react';
-import type { SgContext, StatusOption, StatusRecord } from '@sg-widgets/core';
+import type {
+  PickerRow as PickerRowData,
+  SgContext,
+  StatusOption,
+  StatusRecord,
+} from '@sg-widgets/core';
 import { NO_ROWS_LABEL, stateLine } from '@sg-widgets/core';
 import { SearchX, TriangleAlert, X } from 'lucide-react';
 import {
@@ -12,6 +17,7 @@ import {
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import { PickerRow } from '@/registry/sg/components/picker-row';
 import { StateLine } from '@/registry/sg/components/state-line';
 import { StatusBadge } from '@/registry/sg/components/status-badge';
 
@@ -67,8 +73,12 @@ export interface StatusPickerProps extends React.HTMLAttributes<HTMLDivElement> 
   readonly?: boolean;
   disabled?: boolean;
   invalid?: boolean;
-  /** Show the raw code instead of the label. The other one stays in the tooltip. */
+  /** Draw the code as the row's right-aligned secondary, when it says more than the label. */
   showCode?: boolean;
+  /** The muted line under a row's label. */
+  subLabel?: (option: StatusOption) => string;
+  /** A row's right-aligned value, of the caller's own making. Wins over the code. */
+  secondary?: (option: StatusOption) => string;
   /** The site the stock sprite is served from, passed to every badge. Defaults to the context's. */
   siteUrl?: string;
   size?: StatusPickerSize;
@@ -146,6 +156,10 @@ function statusOptionStore(
  * (probe 009). A code the option set does not carry still renders, as itself: a row
  * may legally hold one (field_types/status_list). When a later option set drops the
  * selected code, the picker clears it and emits once.
+ *
+ * A row is the shared picker row of rule 9: the status icon as the leading glyph, the
+ * display label, and the code right-aligned. The badge stays in the control, where a
+ * status is a value rather than a row.
  */
 export function StatusPicker({
   context,
@@ -163,7 +177,9 @@ export function StatusPicker({
   readonly = false,
   disabled = false,
   invalid = false,
-  showCode = false,
+  showCode = true,
+  subLabel,
+  secondary,
   siteUrl,
   size = 'md',
   open: openProp,
@@ -220,11 +236,24 @@ export function StatusPicker({
       status={query.statuses.get(code) ?? null}
       field={badgeField}
       size={BADGE[size]}
-      label={showCode ? 'code' : 'name'}
       siteUrl={site}
       className="min-w-0"
     />
   );
+
+  /** The shared row a status is drawn as. There is no entity behind a code, so it carries no values. */
+  const rowOf = (option: StatusOption): PickerRowData => ({
+    type: 'Status',
+    id: 0,
+    name: option.label,
+    values: {},
+  });
+
+  /** The right-aligned value: the caller's, else the code when it says more than the label. */
+  const secondaryOf = (option: StatusOption): string | undefined => {
+    if (secondary) return secondary(option) || undefined;
+    return showCode && option.code !== option.label ? option.code : undefined;
+  };
 
   // The value keeps clear of the clear control, which floats over the trigger.
   const selection = (
@@ -267,8 +296,29 @@ export function StatusPicker({
     list = (
       <SelectGroup>
         {rows.map((option) => (
-          <SelectItem key={option.code} value={option.code} className="py-1.5 pl-2">
-            {badge(option.code)}
+          <SelectItem
+            key={option.code}
+            data-status-code={option.code}
+            value={option.code}
+            className="py-1.5 pl-2"
+          >
+            <PickerRow
+              row={rowOf(option)}
+              subLabel={subLabel?.(option)}
+              secondary={secondaryOf(option)}
+              size={size}
+              context={context}
+              glyph={
+                <StatusBadge
+                  code={option.code}
+                  status={query.statuses.get(option.code) ?? null}
+                  field={badgeField}
+                  variant="glyph"
+                  size={size}
+                  siteUrl={site}
+                />
+              }
+            />
           </SelectItem>
         ))}
       </SelectGroup>

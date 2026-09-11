@@ -2,6 +2,10 @@ import { Fragment, useMemo, useState } from 'react';
 import { StatusMultiPicker } from '@/registry/sg/components/status-multi-picker';
 import { createDemoContext } from '../_shared/client';
 
+/** An invented pipeline stage per code, for the row secondary a caller supplies. */
+const STAGE: Record<string, string> = { ip: 'Animation', rev: 'Review', fin: 'Delivery' };
+const stageOf = (option: { code: string }) => STAGE[option.code] ?? '';
+
 const group = 'flex flex-col gap-3';
 const label = 'text-muted-foreground text-xs font-medium tracking-wide uppercase';
 /** One control per row, at the pane's full width, with its caption above it. */
@@ -93,7 +97,9 @@ export default function StatusMultiPickerDemo() {
       </section>
 
       <section className={group}>
-        <h4 className={label}>A code the field does not carry, and the code instead of the label</h4>
+        <h4 className={label}>
+          A code the field does not carry, rows without the code, and a secondary of the caller's own
+        </h4>
         <div className={stack}>
           <div className={field} data-demo="unknown">
             <span className={caption}>A code the field does not carry</span>
@@ -105,14 +111,25 @@ export default function StatusMultiPickerDemo() {
               onValueChange={setUnknown}
             />
           </div>
-          <div className={field}>
-            <span className={caption}>The code instead of the label</span>
+          <div className={field} data-demo="no-code">
+            <span className={caption}>Rows with the label alone</span>
             <StatusMultiPicker
               context={context}
               entityType="Version"
               projectId={projectId}
               value={['ip', 'fin']}
-              showCode
+              showCode={false}
+              clearable={false}
+            />
+          </div>
+          <div className={field} data-demo="own-secondary">
+            <span className={caption}>A secondary of the caller's own, in place of the code</span>
+            <StatusMultiPicker
+              context={context}
+              entityType="Version"
+              projectId={projectId}
+              value={['ip', 'fin']}
+              secondary={stageOf}
               clearable={false}
             />
           </div>

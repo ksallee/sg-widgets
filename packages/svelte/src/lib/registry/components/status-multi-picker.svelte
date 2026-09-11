@@ -7,7 +7,7 @@
 <script lang="ts">
 	import { tick } from 'svelte';
 	import type { HTMLAttributes } from 'svelte/elements';
-	import type { SgContext, StatusOption, StatusRecord } from '@sg-widgets/core';
+	import type { PickerRow, SgContext, StatusOption, StatusRecord } from '@sg-widgets/core';
 	import {
 		holdsArmed,
 		matchesTokens,
@@ -26,6 +26,7 @@
 	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
+	import Row from '$lib/registry/components/picker-row.svelte';
 	import StateLine from '$lib/registry/components/state-line.svelte';
 	import {
 		CHIP_GAP,
@@ -72,8 +73,12 @@
 		readonly?: boolean;
 		disabled?: boolean;
 		invalid?: boolean;
-		/** Show the raw code instead of the label. The other one stays in the tooltip. */
+		/** Draw the code as the row's right-aligned secondary, when it says more than the label. */
 		showCode?: boolean;
+		/** The muted line under a row's label. */
+		subLabel?: (option: StatusOption) => string;
+		/** A row's right-aligned value, of the caller's own making. Wins over the code. */
+		secondary?: (option: StatusOption) => string;
 		/** What the control shows for the selection. */
 		summary?: PickerSummary;
 		/** What one selected status is drawn as. Orthogonal to how many the control shows. */
@@ -106,7 +111,9 @@
 		readonly = false,
 		disabled = false,
 		invalid = false,
-		showCode = false,
+		showCode = true,
+		subLabel,
+		secondary,
 		summary = 'ellipsis',
 		badge = 'both',
 		max = 0,
@@ -202,7 +209,7 @@
 
 	/** What the badges look like, so a change to any of it re-measures the row. */
 	const rowKey = $derived(
-		`${size}|${summary}|${badge}|${showCode}|${interactive}|${value.map((code) => byCode.get(code)?.label ?? code).join(', ')}`
+		`${size}|${summary}|${badge}|${interactive}|${value.map((code) => byCode.get(code)?.label ?? code).join(', ')}`
 	);
 	let badgesEl = $state<HTMLElement | null>(null);
 	let available = $state(0);
@@ -357,6 +364,17 @@
 		setSelected([]);
 		if (inline) inputEl?.focus({ preventScroll: true });
 	}
+
+	/** The shared row a status is drawn as. There is no entity behind a code, so it carries no values. */
+	function rowOf(option: StatusOption): PickerRow {
+		return { type: 'Status', id: 0, name: option.label, values: {} };
+	}
+
+	/** The right-aligned value: the caller's, else the code when it says more than the label. */
+	function secondaryOf(option: StatusOption): string | undefined {
+		if (secondary) return secondary(option) || undefined;
+		return showCode && option.code !== option.label ? option.code : undefined;
+	}
 </script>
 
 {#snippet statusBadge(code: string, variant: StatusBadgeVariant, removable: boolean)}
@@ -366,7 +384,6 @@
 		field={badgeField}
 		{variant}
 		size={BADGE[size]}
-		label={showCode ? 'code' : 'name'}
 		siteUrl={site}
 		{removable}
 		onRemove={remove}
@@ -399,6 +416,11 @@
 	A status list has no substring operator, so there is no server-side type-ahead over
 	it: the vocabulary is read once and the query input narrows it in the browser
 	(field_types/status_list).
+
+	A row is the shared picker row of rule 9, after its checkbox: the status icon as the
+	leading glyph, the display label with the matched runs bold, and the code
+	right-aligned. The badge stays in the control, where a status is a value rather than
+	a row.
 -->
 <div
 	bind:this={ref}
@@ -556,7 +578,25 @@
 								<span data-slot="status-multi-picker-check" class="flex h-5 shrink-0 items-center">
 									<Checkbox checked={chosen} tabindex={-1} aria-hidden="true" class="pointer-events-none" />
 								</span>
-								{@render statusBadge(option.code, 'both', false)}
+								<Row
+									row={rowOf(option)}
+									query={search}
+									subLabel={subLabel?.(option)}
+									secondary={secondaryOf(option)}
+									{size}
+									{context}
+								>
+									{#snippet glyph()}
+										<StatusBadge
+											code={option.code}
+											status={query.statuses.get(option.code) ?? null}
+											field={badgeField}
+											variant="glyph"
+											{size}
+											siteUrl={site}
+										/>
+									{/snippet}
+								</Row>
 							</Combobox.Item>
 						{/each}
 					{/if}

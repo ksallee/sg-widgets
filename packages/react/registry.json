@@ -4,6 +4,27 @@
   "homepage": "https://sg-widgets.dev",
   "items": [
     {
+      "name": "status-glyph",
+      "type": "registry:component",
+      "title": "Status Glyph",
+      "description": "One Flow Production Tracking status icon, from the site's own image or a cell of the stock sprite.",
+      "categories": [
+        "flow-production-tracking",
+        "atom"
+      ],
+      "dependencies": [
+        "@sg-widgets/core"
+      ],
+      "registryDependencies": [],
+      "docs": "The icon alone, at whatever size the caller draws it. Pass siteUrl for a stock cell the package does not bundle.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/status-glyph.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
       "name": "status-badge",
       "type": "registry:component",
       "title": "Status Badge",
@@ -16,7 +37,9 @@
         "@sg-widgets/core",
         "lucide-react"
       ],
-      "registryDependencies": [],
+      "registryDependencies": [
+        "https://sg-widgets.dev/r/react/status-glyph.json"
+      ],
       "docs": "Pass the resolved Status row for colour and icon, or just a field schema for the label. An unknown code renders as itself in a muted badge.",
       "files": [
         {
@@ -731,6 +754,7 @@
         "lucide-react"
       ],
       "registryDependencies": [
+        "https://sg-widgets.dev/r/react/picker-row.json",
         "https://sg-widgets.dev/r/react/state-line.json",
         "https://sg-widgets.dev/r/react/status-badge.json",
         "select",
@@ -760,6 +784,7 @@
       ],
       "registryDependencies": [
         "https://sg-widgets.dev/r/react/picker-classes.json",
+        "https://sg-widgets.dev/r/react/picker-row.json",
         "https://sg-widgets.dev/r/react/state-line.json",
         "https://sg-widgets.dev/r/react/status-badge.json",
         "checkbox",

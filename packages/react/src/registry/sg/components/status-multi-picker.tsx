@@ -1,6 +1,13 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import type { PointerEvent as ReactPointerEvent, ReactNode, RefObject } from 'react';
-import type { ChipRow, PickerSummary, SgContext, StatusOption, StatusRecord } from '@sg-widgets/core';
+import type {
+  ChipRow,
+  PickerRow as PickerRowData,
+  PickerSummary,
+  SgContext,
+  StatusOption,
+  StatusRecord,
+} from '@sg-widgets/core';
 import {
   holdsArmed,
   matchesTokens,
@@ -33,6 +40,7 @@ import {
   PICKER_SEARCH_ROW,
   PICKER_TOKEN_INPUT,
 } from '@/registry/sg/components/picker-classes';
+import { PickerRow } from '@/registry/sg/components/picker-row';
 import { StateLine } from '@/registry/sg/components/state-line';
 import { StatusBadge, type StatusBadgeVariant } from '@/registry/sg/components/status-badge';
 
@@ -136,8 +144,12 @@ export interface StatusMultiPickerProps extends React.HTMLAttributes<HTMLDivElem
   readonly?: boolean;
   disabled?: boolean;
   invalid?: boolean;
-  /** Show the raw code instead of the label. The other one stays in the tooltip. */
+  /** Draw the code as the row's right-aligned secondary, when it says more than the label. */
   showCode?: boolean;
+  /** The muted line under a row's label. */
+  subLabel?: (option: StatusOption) => string;
+  /** A row's right-aligned value, of the caller's own making. Wins over the code. */
+  secondary?: (option: StatusOption) => string;
   /** What the control shows for the selection. */
   summary?: PickerSummary;
   /** What one selected status is drawn as. Orthogonal to how many the control shows. */
@@ -224,6 +236,11 @@ function statusOptionStore(
  * A status list has no substring operator, so there is no server-side type-ahead over
  * it: the vocabulary is read once and the query input narrows it in the browser
  * (field_types/status_list).
+ *
+ * A row is the shared picker row of rule 9, after its checkbox: the status icon as the
+ * leading glyph, the display label with the matched runs bold, and the code
+ * right-aligned. The badge stays in the control, where a status is a value rather than
+ * a row.
  */
 export function StatusMultiPicker({
   context,
@@ -242,7 +259,9 @@ export function StatusMultiPicker({
   readonly = false,
   disabled = false,
   invalid = false,
-  showCode = false,
+  showCode = true,
+  subLabel,
+  secondary,
   summary = 'ellipsis',
   badge = 'both',
   max = 0,
@@ -302,7 +321,7 @@ export function StatusMultiPicker({
   const showClear = clearable && value.length > 0 && !readonly && !disabled;
 
   /** What the badges look like, so a change to any of it re-measures the row. */
-  const rowKey = `${size}|${summary}|${badge}|${showCode}|${interactive}|${value.map((code) => byCode.get(code)?.label ?? code).join(', ')}`;
+  const rowKey = `${size}|${summary}|${badge}|${interactive}|${value.map((code) => byCode.get(code)?.label ?? code).join(', ')}`;
   const row = useChipRow(summary === 'ellipsis', rowKey, controlRef, badgesRef);
   const plan = summariseSelection(value, (code) => byCode.get(code)?.label ?? code, {
     summary,
@@ -391,7 +410,6 @@ export function StatusMultiPicker({
       field={badgeField}
       variant={variant}
       size={BADGE[size]}
-      label={showCode ? 'code' : 'name'}
       siteUrl={site}
       removable={removable}
       onRemove={remove}
@@ -447,6 +465,20 @@ export function StatusMultiPicker({
     );
   }
 
+  /** The shared row a status is drawn as. There is no entity behind a code, so it carries no values. */
+  const rowOf = (option: StatusOption): PickerRowData => ({
+    type: 'Status',
+    id: 0,
+    name: option.label,
+    values: {},
+  });
+
+  /** The right-aligned value: the caller's, else the code when it says more than the label. */
+  const secondaryOf = (option: StatusOption): string | undefined => {
+    if (secondary) return secondary(option) || undefined;
+    return showCode && option.code !== option.label ? option.code : undefined;
+  };
+
   function renderRow(code: string): ReactNode {
     const option = byCode.get(code);
     if (!option) return null;
@@ -463,7 +495,24 @@ export function StatusMultiPicker({
         <span data-slot="status-multi-picker-check" className="flex h-5 shrink-0 items-center">
           <Checkbox checked={chosen} tabIndex={-1} aria-hidden="true" className="pointer-events-none" />
         </span>
-        {statusBadge(code, 'both', false)}
+        <PickerRow
+          row={rowOf(option)}
+          query={search}
+          subLabel={subLabel?.(option)}
+          secondary={secondaryOf(option)}
+          size={size}
+          context={context}
+          glyph={
+            <StatusBadge
+              code={code}
+              status={query.statuses.get(code) ?? null}
+              field={badgeField}
+              variant="glyph"
+              size={size}
+              siteUrl={site}
+            />
+          }
+        />
       </ComboboxPrimitive.Item>
     );
   }

@@ -23,12 +23,12 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/status-badge.j
 | `code` | `string` | required | The stored status code. An empty code renders nothing. |
 | `status` | `StatusRecord \| null` | `null` | The resolved Status row. Supplies the name, colour and icon. |
 | `field` | `FieldSchema \| null` | `null` | Fallback label source, through its display values. |
-| `variant` | `'both' \| 'icon' \| 'text'` | `'both'` | Icon-only keeps the label as screen-reader text and a tooltip. |
+| `variant` | `'both' \| 'icon' \| 'text' \| 'glyph'` | `'both'` | Icon-only and glyph keep the label as screen-reader text and a tooltip. |
 | `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Heights 6, 8 and 10. |
 | `color` | `boolean` | `false` | Paints the badge in the status colour instead of the neutral surface. |
 | `label` | `'name' \| 'code'` | `'name'` | Which of the two the badge shows. The other one is the tooltip. |
 | `siteUrl` | `string` | — | The site the stock sprite is served from. Needed only for a sprite cell outside the status icon set. |
-| `removable` | `boolean` | `false` | Draws a remove control inside the pill, after the label. `variant="icon"` has no room for it and ignores this. |
+| `removable` | `boolean` | `false` | Draws a remove control inside the pill, after the label. `variant="icon"` and `variant="glyph"` have no room for it and ignore this. |
 | `onRemove` | `(code: string) => void` | — | Fires with the code when the remove control is pressed. |
 | `removeLabel` | `string` | `Remove <label>` | The accessible name of the remove control. |
 | `class` / `className` | `string` | — | Merged after the widget's own classes. |
@@ -36,8 +36,13 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/status-badge.j
 The name resolves in one order: the Status row's name, then the field's display value, then the raw
 code. A code unknown to both renders as itself in the label and in the tooltip.
 
-The root carries the status code and whether it was resolved, as data attributes. An image-map icon
-carries its key on the glyph, as a data attribute. A removable badge draws its cross inside the pill
+`glyph` is the icon alone, in its own colour, with no pill around it: no border, no background and no
+inset, at the size a list row draws a glyph (4 at sm and md, 5 at lg). It is what a leading slot
+takes, where a bordered pill reads as a second surface. The label stays as the accessible name and
+the tooltip, `color` has nothing to paint, and a status with no icon to draw takes a neutral dot.
+
+The root carries the status code, the variant and whether it was resolved, as data attributes. An
+image-map icon carries its key on the glyph, as a data attribute. A removable badge draws its cross inside the pill
 after the label, in the badge's own foreground, and carries a data slot of its own.
 
 ## Events

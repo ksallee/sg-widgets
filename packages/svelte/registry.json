@@ -11,6 +11,22 @@
   },
   "items": [
     {
+      "name": "status-glyph",
+      "type": "registry:component",
+      "title": "Status Glyph",
+      "description": "One Flow Production Tracking status icon, from the site's own image or a cell of the stock sprite.",
+      "dependencies": [
+        "@sg-widgets/core"
+      ],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "src/lib/registry/components/status-glyph.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
       "name": "status-badge",
       "type": "registry:component",
       "title": "Status Badge",
@@ -19,7 +35,9 @@
         "@sg-widgets/core",
         "@lucide/svelte"
       ],
-      "registryDependencies": [],
+      "registryDependencies": [
+        "local:status-glyph"
+      ],
       "files": [
         {
           "path": "src/lib/registry/components/status-badge.svelte",
@@ -600,6 +618,7 @@
         "@lucide/svelte"
       ],
       "registryDependencies": [
+        "local:picker-row",
         "local:state-line",
         "local:status-badge",
         "select",
@@ -624,6 +643,7 @@
       ],
       "registryDependencies": [
         "local:picker-classes",
+        "local:picker-row",
         "local:state-line",
         "local:status-badge",
         "checkbox",

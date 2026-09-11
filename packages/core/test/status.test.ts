@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { foregroundFor, intersectStatuses, parseBgColor, usableStatuses } from '../src/status.js';
+import {
+  foregroundFor,
+  intersectStatuses,
+  parseBgColor,
+  statusGlyph,
+  statusPaint,
+  usableStatuses,
+} from '../src/status.js';
+import { STOCK_ICON_CELLS } from '../src/status-icons.js';
 import { displayNameOf, normalizeField, statusFieldFor } from '../src/schema.js';
 
 describe('usableStatuses', () => {
@@ -24,6 +32,45 @@ describe('colours', () => {
     expect(parseBgColor('#19761b')).toBeNull();
     expect(foregroundFor({ r: 25, g: 118, b: 27 })).toBe('white');
     expect(foregroundFor({ r: 240, g: 240, b: 240 })).toBe('black');
+  });
+  it('paints a status in its own colour with a readable ink on it', () => {
+    expect(statusPaint({ bgColor: '25,118,27' })).toEqual({ background: 'rgb(25 118 27)', foreground: '#fff' });
+    expect(statusPaint({ bgColor: '240,240,240' })?.foreground).toBe('#000');
+    expect(statusPaint({ bgColor: null })).toBeNull();
+    expect(statusPaint(null)).toBeNull();
+  });
+});
+
+describe('statusGlyph', () => {
+  it('answers one drawing per display type, and a dot for a key it cannot serve', () => {
+    expect(statusGlyph(null)).toEqual({ kind: 'none' });
+    expect(statusGlyph({ icon: null })).toEqual({ kind: 'none' });
+    expect(statusGlyph({ icon: { displayType: 'html', html: '<b>Active</b>' } })).toEqual({
+      kind: 'html',
+      html: '<b>Active</b>',
+    });
+    expect(statusGlyph({ icon: { displayType: 'image', dataUrl: 'data:image/png;base64,AA' } })).toEqual({
+      kind: 'image',
+      src: 'data:image/png;base64,AA',
+    });
+
+    const bundled = statusGlyph({ icon: { displayType: 'image_map', imageMapKey: 'icon_apr' } });
+    expect(bundled.kind).toBe('cell');
+    if (bundled.kind === 'cell') {
+      expect(bundled.cell).toEqual(STOCK_ICON_CELLS['icon_apr']);
+      expect(bundled.src).toMatch(/^data:image\/png;base64,/);
+    }
+
+    const key = 'icon_x_thin_white';
+    const served = statusGlyph({ icon: { displayType: 'image_map', imageMapKey: key } }, 'https://studio.example.com/');
+    expect(served.kind).toBe('sprite');
+    if (served.kind === 'sprite') {
+      expect(served.style.backgroundPosition).toBe(`-${STOCK_ICON_CELLS[key]!.x}px -${STOCK_ICON_CELLS[key]!.y}px`);
+    }
+    expect(statusGlyph({ icon: { displayType: 'image_map', imageMapKey: key } })).toEqual({
+      kind: 'dot',
+      imageMapKey: key,
+    });
   });
 });
 

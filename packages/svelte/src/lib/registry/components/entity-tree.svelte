@@ -607,12 +607,12 @@
 								</span>
 
 								{#if status}
-									<!-- A tree row is dense, so the status is its icon; the name stays in the badge for a reader. -->
+									<!-- A tree row is dense, so the status is the bare icon; the name stays in the badge for a reader. -->
 									<StatusBadge
 										code={status}
 										status={plan.statuses?.[status] ?? null}
 										field={node.entity ? (plan.status[node.entity.type] ?? null) : null}
-										variant="icon"
+										variant="glyph"
 										size={LEAF[size]}
 										siteUrl={site}
 										class="shrink-0"

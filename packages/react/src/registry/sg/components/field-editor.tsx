@@ -40,6 +40,9 @@ const ANCHOR = 'flex w-full min-w-0 items-center text-left outline-none';
  * The shadcn popover surface. The parts are composed here rather than through the
  * popover item so the positioner can be fixed.
  */
+/** The control the popover focused on open keeps its ring for the keyboard only. */
+const QUIET_FOCUS =
+  '[&_[data-quiet-focus]:focus-visible]:border-input [&_[data-quiet-focus]:focus-visible]:ring-0';
 const POPOVER_SURFACE =
   'z-50 flex origin-(--transform-origin) flex-col rounded-lg bg-popover text-sm text-popover-foreground shadow-md ring-1 ring-foreground/10 outline-hidden duration-100 data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95';
 
@@ -499,10 +502,16 @@ export function FieldEditor({
                 data-field-editor-popover=""
                 initialFocus={() => {
                   focusControl(content.current);
+                  // Focus the popover placed itself draws no ring; the first key gives it back.
+                  const active = document.activeElement;
+                  if (active instanceof HTMLElement && content.current?.contains(active)) active.dataset.quietFocus = '';
                   return false;
                 }}
-                onKeyDown={onEditKeyDown}
-                className={cn(POPOVER_SURFACE, 'gap-3 p-3', width)}
+                onKeyDown={(event) => {
+                  delete (event.target as HTMLElement).dataset.quietFocus;
+                  onEditKeyDown(event);
+                }}
+                className={cn(POPOVER_SURFACE, QUIET_FOCUS, 'gap-3 p-3', width)}
               >
                 {label ? (
                   <span data-slot="field-editor-label" className="text-muted-foreground text-xs">

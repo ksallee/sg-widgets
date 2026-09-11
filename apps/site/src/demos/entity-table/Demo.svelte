@@ -59,12 +59,10 @@
 	let grouped = $state(false);
 	let compact = $state(false);
 	let paging = $state<PagingMode>('pages');
-	/** `undefined` leaves each cell on its data type's own placement. */
-	let placement = $state<EditorPlacement | undefined>(undefined);
-	const PLACEMENTS: Array<{ value: EditorPlacement | undefined; label: string }> = [
-		{ value: undefined, label: 'Editors: auto' },
-		{ value: 'inline', label: 'Inline' },
-		{ value: 'popover', label: 'Popover' }
+	let placement = $state<EditorPlacement>('popover');
+	const PLACEMENTS: Array<{ value: EditorPlacement; label: string }> = [
+		{ value: 'popover', label: 'Popover editor' },
+		{ value: 'inline', label: 'Inline editor' }
 	];
 
 	async function load(): Promise<{ statuses: Record<string, StatusRecord> }> {

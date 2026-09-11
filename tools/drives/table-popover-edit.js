@@ -1,4 +1,4 @@
-// A text cell edits in a popover, a status cell edits in the cell.
+// A text cell edits in a popover, and so does a status cell: the popover is the default.
 //
 //   pnpm qa --start --path /widgets/entity-table/ --framework both --drive tools/drives/table-popover-edit.js
 //
@@ -83,20 +83,16 @@ async function run(framework) {
   await wait(300);
   seen.cancelled = cell('description').textContent.trim();
 
-  // A status cell keeps its picker in the cell.
+  // A status cell opens its picker in a popover too.
   step = `${framework}: status cell`;
   cell('sg_status_list').dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
   const status = await until(
-    () => cell('sg_status_list').querySelector('[data-slot="status-picker"]'),
-    'a status picker in the cell',
+    () => openPopover()?.querySelector('[data-slot="status-picker"]') ?? null,
+    'a status picker in the popover',
   );
-  seen.statusInCell = status !== null;
-  seen.statusPopover = openPopover() !== null;
+  seen.statusPopover = status !== null && openPopover() !== null;
   key(status.querySelector('[data-slot="select-trigger"], [data-slot="status-picker-trigger"]'), 'Escape');
-  await until(
-    () => cell('sg_status_list').querySelector('[data-slot="status-picker"]') === null || null,
-    'the status cell to close',
-  );
+  await until(() => openPopover() === null || null, 'the status popover to close');
 
   return { framework, ...seen };
 }
@@ -119,8 +115,7 @@ for (const pane of panes) {
   if (pane.cancelled !== pane.committed) {
     failures.push(`${pane.framework}: Escape left the cell reading "${pane.cancelled}"`);
   }
-  if (!pane.statusInCell) failures.push(`${pane.framework}: the status cell drew no picker`);
-  if (pane.statusPopover) failures.push(`${pane.framework}: the status cell opened a popover`);
+  if (!pane.statusPopover) failures.push(`${pane.framework}: the status cell opened no popover`);
 }
 
 const inert = warnings.filter((line) => line.includes('derived_inert'));
@@ -130,7 +125,7 @@ if (warnings.length > 0) failures.push(`${warnings.length} console warnings`);
 return {
   verdict:
     failures.length === 0
-      ? `PASS a text cell edits in a popover and a status cell in the cell, in both frameworks, 0 warnings and no derived_inert`
+      ? `PASS a text cell edits in a popover and a status cell in a popover too, in both frameworks, 0 warnings and no derived_inert`
       : `FAIL ${failures.join('; ')}`,
   panes,
   warnings: warnings.slice(0, 6),

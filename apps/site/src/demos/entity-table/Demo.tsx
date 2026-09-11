@@ -21,10 +21,9 @@ const WIDTHS: Record<string, number> = {
 const PATHS = Object.keys(WIDTHS);
 const SHOWN = ['code', 'entity', 'sg_status_list', 'image', 'description', 'user'];
 const FACETS = ['sg_status_list'];
-const PLACEMENTS: Array<{ value: EditorPlacement | undefined; label: string }> = [
-  { value: undefined, label: 'Editors: auto' },
-  { value: 'inline', label: 'Inline' },
-  { value: 'popover', label: 'Popover' },
+const PLACEMENTS: Array<{ value: EditorPlacement; label: string }> = [
+  { value: 'popover', label: 'Popover editor' },
+  { value: 'inline', label: 'Inline editor' },
 ];
 
 const PAGING: Array<{ value: PagingMode; label: string }> = [
@@ -69,8 +68,7 @@ export default function EntityTableDemo() {
   const [grouped, setGrouped] = useState(false);
   const [compact, setCompact] = useState(false);
   const [paging, setPaging] = useState<PagingMode>('pages');
-  // `undefined` leaves each cell on its data type's own placement.
-  const [placement, setPlacement] = useState<EditorPlacement | undefined>(undefined);
+  const [placement, setPlacement] = useState<EditorPlacement>('popover');
   const [selected, setSelected] = useState<EntityRef[]>([]);
   const sort = useMemo(() => toSortSpecs(sortKeys), [sortKeys]);
 

@@ -877,6 +877,25 @@
       ]
     },
     {
+      "name": "collection-control",
+      "type": "registry:component",
+      "title": "Collection Control",
+      "description": "The state and behaviour every collection shares: the source, the selection, the cursor, the virtualiser and the paging triggers.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@tanstack/virtual-core"
+      ],
+      "registryDependencies": [
+        "local:collection-source"
+      ],
+      "files": [
+        {
+          "path": "src/lib/registry/components/collection-control.svelte.ts",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
       "name": "collection-footer",
       "type": "registry:component",
       "title": "Collection Footer",
@@ -905,11 +924,10 @@
       "dependencies": [
         "@sg-widgets/core",
         "@lucide/svelte",
-        "@tanstack/svelte-table",
-        "@tanstack/virtual-core"
+        "@tanstack/svelte-table"
       ],
       "registryDependencies": [
-        "local:collection-source",
+        "local:collection-control",
         "local:collection-footer",
         "local:state-line",
         "local:field-value",
@@ -936,11 +954,10 @@
       "description": "Flow Production Tracking rows as EntityCard tiles, with selection, keyboard navigation and infinite scroll.",
       "dependencies": [
         "@sg-widgets/core",
-        "@lucide/svelte",
-        "@tanstack/virtual-core"
+        "@lucide/svelte"
       ],
       "registryDependencies": [
-        "local:collection-source",
+        "local:collection-control",
         "local:collection-footer",
         "local:state-line",
         "local:entity-card",
@@ -963,11 +980,10 @@
       "description": "Dense Flow Production Tracking rows grouped under collapsible headers with counts.",
       "dependencies": [
         "@sg-widgets/core",
-        "@lucide/svelte",
-        "@tanstack/virtual-core"
+        "@lucide/svelte"
       ],
       "registryDependencies": [
-        "local:collection-source",
+        "local:collection-control",
         "local:collection-footer",
         "local:state-line",
         "local:field-value",

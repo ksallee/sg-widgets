@@ -58,23 +58,15 @@
 	} from '@sg-widgets/core';
 	import {
 		cellValue,
-		describePaging,
 		displayNameOf,
 		groupRowsKeyed,
-		hasFailedPage,
-		loadsOnArrowDown,
 		nextEnabledIndex,
 		NO_ROWS_LABEL,
-		rowIdOf,
-		rowIsDisabled,
-		rowKey,
 		sameIds,
-		shouldLoadNext,
 		stateLine,
 		toColumn,
 		toggleId
 	} from '@sg-widgets/core';
-	import { Virtualizer, elementScroll, observeElementOffset, observeElementRect } from '@tanstack/virtual-core';
 	import ChevronRight from '@lucide/svelte/icons/chevron-right';
 	import CircleAlert from '@lucide/svelte/icons/circle-alert';
 	import Inbox from '@lucide/svelte/icons/inbox';
@@ -82,7 +74,12 @@
 	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
-	import { bindSource } from '$lib/registry/components/collection-source.svelte.js';
+	import {
+		bindCollectionBody,
+		COLLECTION_REGION,
+		COLLECTION_ROOT,
+		createCollectionControl
+	} from '$lib/registry/components/collection-control.svelte.js';
 	import CollectionFooter from '$lib/registry/components/collection-footer.svelte';
 	import FieldValue from '$lib/registry/components/field-value.svelte';
 	import StateLine from '$lib/registry/components/state-line.svelte';
@@ -202,9 +199,12 @@
 		...rest
 	}: Props = $props();
 
-	const bound = bindSource({
+	const control = createCollectionControl({
 		source: () => source,
 		paging: () => paging,
+		getRowId: () => getRowId,
+		isRowDisabled: () => isRowDisabled,
+		loadingLabel: () => loadingLabel,
 		sort: {
 			get: () => sort,
 			set: (next) => {
@@ -218,9 +218,16 @@
 				filters = next;
 				onFiltersChange?.(next);
 			}
+		},
+		selection: {
+			get: () => selection,
+			set: (next) => {
+				selection = next;
+				onSelectionChange?.(next);
+			}
 		}
 	});
-	const snapshot = $derived(bound.snapshot);
+	const snapshot = $derived(control.snapshot);
 	$effect(() => {
 		// A group is only whole when the server put its rows together, so the group path
 		// leads the sort. Setting it reads the first page again.
@@ -232,23 +239,11 @@
 		}
 	});
 
-	const rows = $derived(snapshot.rows);
-	const pager = $derived(describePaging(snapshot));
-	/** A page that failed under rows already loaded, which the bottom line reports. */
-	const pageError = $derived(hasFailedPage(snapshot));
+	const rows = $derived(control.rows);
 	const rowClass = $derived(ROW[density]);
 	const subColumn = $derived(subLabelField ? toColumn(subLabelField) : null);
 	const secondaryColumn = $derived(secondaryField ? toColumn(secondaryField) : null);
 
-	const rowId = (row: EntityRow): string => rowIdOf(row, getRowId);
-	const rowDisabled = (row: EntityRow): boolean => rowIsDisabled(row, isRowDisabled);
-	const disabledAt = (index: number): boolean => {
-		const row = rows[index];
-		return row === undefined || rowDisabled(row);
-	};
-
-	/** The selection as keys, so a row asks whether it is in it in constant time. */
-	const chosenKeys = $derived(new Set((selection ?? []).map(rowKey)));
 	/** The keys of the shut groups. The `collapsed` prop holds the same list. */
 	let shutKeys = $state<string[]>([]);
 
@@ -272,17 +267,7 @@
 		shutKeys = [...keys];
 	});
 
-	function toggle(row: EntityRow): void {
-		if (rowDisabled(row)) return;
-		const key = rowKey(row);
-		const next = chosenKeys.has(key)
-			? (selection ?? []).filter((ref) => rowKey(ref) !== key)
-			: [...(selection ?? []), { type: row.type, id: row.id }];
-		selection = next;
-		onSelectionChange?.(next);
-	}
-
-	/* virtual rows --------------------------------------------------------- */
+	/* the lines ------------------------------------------------------------ */
 
 	/** Headers and rows as one stream, which is what a virtualised list walks. */
 	const flat = $derived.by(() => {
@@ -295,65 +280,31 @@
 		return out;
 	});
 
-	let scrollEl = $state<HTMLDivElement | null>(null);
-	let sentinel = $state<HTMLDivElement | null>(null);
-	// The virtualizer notifies from inside an effect, so the counter it bumps is written
-	// and never read there.
-	let tickCount = 0;
-	let ticks = $state(0);
-	const virtualized = $derived(flat.length > virtualizeAfter);
-	const lineHeight = $derived(ROW_HEIGHT[density]);
+	const body = bindCollectionBody(control, {
+		lines: () => flat.length,
+		measured: () => flat.length,
+		lineHeight: () => ROW_HEIGHT[density],
+		overscan: 12,
+		virtualizeAfter: () => virtualizeAfter,
+		lineOfRow: (_index, _row, id) => flat.findIndex((item) => item.row !== null && control.rowId(item.row) === id),
+		// Lines below the window count headers as well, so a header only ever makes the
+		// scroller ask later.
+		lastRowOfLine: (line) => rows.length - 1 - (flat.length - 1 - line),
+		cursorTarget: (_index, _row, id) => rowLabel(id)
+	});
 
-	function bump(): void {
-		tickCount += 1;
-		ticks = tickCount;
+	/** The one control a row's cursor lands on. */
+	function rowLabel(id: string): HTMLElement | null | undefined {
+		return ref?.querySelector<HTMLElement>(
+			'li[data-row-key="' + CSS.escape(id) + '"] [data-slot="grouped-list-row-label"]'
+		);
 	}
 
-	const virtualizer = new Virtualizer<HTMLDivElement, HTMLElement>({
-		count: 0,
-		getScrollElement: () => scrollEl,
-		estimateSize: () => lineHeight,
-		overscan: 12,
-		observeElementRect,
-		observeElementOffset,
-		scrollToFn: elementScroll,
-		onChange: bump
-	});
-
-	$effect(() => virtualizer._didMount());
-	$effect(() => {
-		// Read every dependency before the call, so the effect tracks the count and the
-		// height and not the tick the virtualizer's own notification writes.
-		const count = virtualized ? flat.length : 0;
-		const size_ = lineHeight;
-		const element = scrollEl;
-		virtualizer.setOptions({
-			count,
-			getScrollElement: () => element,
-			estimateSize: () => size_,
-			overscan: 12,
-			observeElementRect,
-			observeElementOffset,
-			scrollToFn: elementScroll,
-			onChange: bump
-		});
-		virtualizer._willUpdate();
-		virtualizer.measure();
-	});
-
 	const window_ = $derived.by(() => {
-		void ticks;
-		if (!virtualized) return { before: 0, after: 0, from: 0, slice: flat };
-		const items = virtualizer.getVirtualItems();
-		const first = items[0];
-		const last = items[items.length - 1];
-		if (!first || !last) return { before: 0, after: 0, from: 0, slice: flat.slice(0, 30) };
-		return {
-			before: first.start,
-			after: virtualizer.getTotalSize() - last.end,
-			from: first.index,
-			slice: flat.slice(first.index, last.index + 1)
-		};
+		const at = body.window;
+		if (!at) return { before: 0, after: 0, from: 0, slice: flat };
+		if (at.to < at.from) return { before: 0, after: 0, from: 0, slice: flat.slice(0, 30) };
+		return { before: at.before, after: at.after, from: at.from, slice: flat.slice(at.from, at.to + 1) };
 	});
 
 	/** The window as runs of one group, so a group still draws one box around its rows. */
@@ -383,91 +334,21 @@
 		return typeof raw === 'string' && raw.length > 0 && raw !== labelOf(row) ? raw : '';
 	}
 
-	/* the cursor ----------------------------------------------------------- */
-
-	/** The row a cursor is waiting on, until the page it asked for lands. */
-	let wanted = $state<number | null>(null);
-
-	/** Put the cursor on one row, drawing it first where it is outside the window. */
-	function focusRow(index: number): void {
-		const at = Math.max(0, Math.min(index, rows.length - 1));
-		const row = rows[at];
-		if (!row) return;
-		const key = rowId(row);
-		const put = (): void => {
-			const label = ref?.querySelector<HTMLElement>(
-				`li[data-row-key="${CSS.escape(key)}"] [data-slot="grouped-list-row-label"]`
-			);
-			if (!label) return;
-			label.focus({ preventScroll: true });
-			label.scrollIntoView({ block: 'nearest' });
-		};
-		if (virtualized) {
-			const line = flat.findIndex((item) => item.row !== null && rowId(item.row) === key);
-			if (line >= 0) virtualizer.scrollToIndex(line);
-			requestAnimationFrame(put);
-		} else put();
-	}
-
 	/**
 	 * The arrows walk the rows. On the last loaded row ArrowDown asks for the next page
 	 * instead, and the cursor stays where it is until those rows arrive.
 	 */
 	function onRowKeydown(event: KeyboardEvent, row: EntityRow): void {
 		if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
-		const key = rowId(row);
-		const from = rows.findIndex((entry) => rowId(entry) === key);
+		const key = control.rowId(row);
+		const from = rows.findIndex((entry) => control.rowId(entry) === key);
 		if (from < 0) return;
 		event.preventDefault();
-		if (event.key === 'ArrowDown' && loadsOnArrowDown(snapshot, paging, from + 1)) {
-			wanted = from + 1;
-			void source.loadMore();
-			return;
-		}
-		focusRow(nextEnabledIndex(rows.length, from, event.key === 'ArrowDown' ? 1 : -1, disabledAt));
+		if (event.key === 'ArrowDown' && body.askForPage(from + 1)) return;
+		body.focusRow(nextEnabledIndex(rows.length, from, event.key === 'ArrowDown' ? 1 : -1, control.disabledAt));
 	}
 
-	$effect(() => {
-		const held = wanted;
-		if (held === null) return;
-		if (snapshot.status === 'error') wanted = null;
-		else if (rows.length > held) {
-			wanted = null;
-			untrack(() => focusRow(held));
-		}
-	});
-
-	/* scroll paging -------------------------------------------------------- */
-
-	$effect(() => {
-		// The virtualiser walks headers and rows as one stream, so the lines below the
-		// window count headers as well and a header only makes the scroller ask later.
-		void ticks;
-		if (!virtualized || paging !== 'scroll') return;
-		const items = virtualizer.getVirtualItems();
-		const last = items[items.length - 1];
-		if (!last) return;
-		const below = flat.length - 1 - last.index;
-		if (shouldLoadNext(snapshot, { paging, lastVisible: rows.length - 1 - below })) void source.loadMore();
-	});
-
-	$effect(() => {
-		// A list short enough not to be virtualised has no range to read, so the last row
-		// carries a sentinel instead.
-		const root = scrollEl;
-		const target = sentinel;
-		if (!root || !target || paging !== 'scroll') return;
-		const observer = new IntersectionObserver(
-			(entries) => {
-				if (!entries.some((entry) => entry.isIntersecting)) return;
-				if (shouldLoadNext(snapshot, { paging, lastVisible: rows.length - 1 })) void source.loadMore();
-			},
-			{ root, rootMargin: '200px' }
-		);
-		observer.observe(target);
-		return () => observer.disconnect();
-	});
-
+	const view = $derived(control.view(rows.length));
 	const loadingText = $derived(stateLine('loading', { loadingLabel }));
 </script>
 
@@ -487,27 +368,36 @@
 	either way a page whose first rows continue the last group grows that group. A page
 	that fails leaves its rows and says why at the bottom, with a retry.
 -->
-<div bind:this={ref} data-slot="grouped-list" class={cn('flex w-full min-w-0 flex-col gap-2', className)} {...rest}>
+<div bind:this={ref} data-slot="grouped-list" class={cn(COLLECTION_ROOT, className)} {...rest}>
+	{#if header}
+		<div data-slot="grouped-list-header" class={COLLECTION_REGION}>
+			{@render header()}
+		</div>
+	{/if}
+
 	<div
-		bind:this={scrollEl}
+		{@attach (el: HTMLDivElement) => {
+			body.setScroller(el);
+			return () => body.setScroller(null);
+		}}
 		data-slot="grouped-list-scroll"
 		style="max-height:{maxHeight}"
 		class="border-border w-full overflow-auto rounded-lg border"
 	>
-		{#if snapshot.status === 'error' && !pageError}
+		{#if view === 'error'}
 			<StateLine
 				state="error"
 				pad="table"
 				icon={CircleAlert}
 				label={stateLine('error', { errorLabel }, snapshot.error?.message)}
 			/>
-		{:else if snapshot.status === 'loading'}
+		{:else if view === 'loading'}
 			<div class="flex flex-col gap-2 p-2" aria-busy="true" aria-label={loadingText}>
 				{#each { length: 8 } as _, index (index)}
 					<Skeleton class="h-6 w-full" />
 				{/each}
 			</div>
-		{:else if rows.length === 0}
+		{:else if view === 'empty'}
 			<StateLine state="empty" pad="table" icon={Inbox} label={emptyLabel} />
 		{:else}
 			{#if window_.before > 0}
@@ -553,15 +443,15 @@
 					{/if}
 					{#if block.rows.length > 0}
 						<ul class="flex flex-col">
-							{#each block.rows as row, offset (rowId(row))}
-								{@const key = rowId(row)}
+							{#each block.rows as row, offset (control.rowId(row))}
+								{@const key = control.rowId(row)}
 								{@const index = block.from + offset}
-								{@const disabled = rowDisabled(row)}
+								{@const disabled = control.rowDisabled(row)}
 								{@const label = labelOf(row)}
 								{@const code = codeOf(row)}
 								{@const sub = subLabel ? subLabel(row) : ''}
 								{@const right = secondary ? secondary(row) : ''}
-								{@const chosen = chosenKeys.has(rowKey(row))}
+								{@const chosen = control.isSelected(row)}
 								<li
 									data-slot="grouped-list-row"
 									data-row-key={key}
@@ -582,7 +472,7 @@
 												aria-label="Select {label}"
 												checked={chosen}
 												{disabled}
-												onCheckedChange={() => toggle(row)}
+												onCheckedChange={() => control.toggle(row)}
 												class="shrink-0"
 											/>
 										{/if}
@@ -600,7 +490,7 @@
 											type="button"
 											data-slot="grouped-list-row-label"
 											{disabled}
-											onclick={() => (selectable ? toggle(row) : onSelect?.(row))}
+											onclick={() => (selectable ? control.toggle(row) : onSelect?.(row))}
 											onkeydown={(event) => onRowKeydown(event, row)}
 											class="focus-visible:ring-ring focus-visible:ring-offset-background flex min-w-0 flex-1 flex-col items-start rounded-sm text-left outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
 										>
@@ -662,7 +552,7 @@
 			{#if window_.after > 0}
 				<div aria-hidden="true" style="height:{window_.after}px"></div>
 			{/if}
-			{#if pageError}
+			{#if control.bottom === 'error'}
 				<StateLine
 					state="error"
 					slotName="grouped-list-page-error"
@@ -671,32 +561,40 @@
 					icon={CircleAlert}
 					label={stateLine('error', { errorLabel }, snapshot.error?.message)}
 				>
-					<Button variant="outline" size="sm" onclick={() => bound.retry()}>Retry</Button>
+					<Button variant="outline" size="sm" onclick={() => control.retry()}>Retry</Button>
 				</StateLine>
-			{:else if snapshot.status === 'loadingMore'}
+			{:else if control.bottom === 'loading'}
 				<div data-slot="grouped-list-loading" class="p-2" aria-busy="true" aria-label={loadingText}>
 					<Skeleton class="h-4 w-full" />
 				</div>
-			{:else if paging === 'more' && snapshot.hasMore}
+			{:else if control.bottom === 'more'}
 				<div data-slot="grouped-list-load-more" class="flex justify-center p-2">
 					<Button variant="outline" size="sm" onclick={() => void source.loadMore()}>Load more</Button>
 				</div>
-			{:else if paging === 'scroll' && snapshot.hasMore}
-				<div bind:this={sentinel} data-slot="grouped-list-sentinel" aria-hidden="true" class="h-4"></div>
+			{:else if control.bottom === 'sentinel'}
+				<div
+					{@attach (el: HTMLDivElement) => {
+						body.setSentinel(el);
+						return () => body.setSentinel(null);
+					}}
+					data-slot="grouped-list-sentinel"
+					aria-hidden="true"
+					class="h-4"
+				></div>
 			{/if}
 		{/if}
 	</div>
 
 	<CollectionFooter
 		{source}
-		{pager}
+		pager={control.pager}
 		{pageSizes}
 		loading={snapshot.status === 'loading'}
 		slotName="grouped-list"
 	/>
 
 	{#if footer}
-		<div data-slot="grouped-list-footer-region" class="flex w-full min-w-0 flex-wrap items-center gap-2">
+		<div data-slot="grouped-list-footer-region" class={COLLECTION_REGION}>
 			{@render footer()}
 		</div>
 	{/if}

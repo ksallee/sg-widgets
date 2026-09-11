@@ -32,7 +32,7 @@
 </script>
 
 <script lang="ts">
-	import { untrack, type Snippet } from 'svelte';
+	import type { Snippet } from 'svelte';
 	import type { HTMLAttributes } from 'svelte/elements';
 	import type {
 		EntityRef,
@@ -46,26 +46,18 @@
 		SourceFilters,
 		StatusRecord
 	} from '@sg-widgets/core';
-	import {
-		describePaging,
-		firstEnabledIndex,
-		NO_ROWS_LABEL,
-		hasFailedPage,
-		loadsOnArrowDown,
-		nextEnabledIndex,
-		rowIdOf,
-		rowIsDisabled,
-		rowKey,
-		shouldLoadNext,
-		stateLine
-	} from '@sg-widgets/core';
-	import { Virtualizer, elementScroll, observeElementOffset, observeElementRect } from '@tanstack/virtual-core';
+	import { firstEnabledIndex, NO_ROWS_LABEL, nextEnabledIndex, stateLine } from '@sg-widgets/core';
 	import CircleAlert from '@lucide/svelte/icons/circle-alert';
 	import Inbox from '@lucide/svelte/icons/inbox';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
-	import { bindSource } from '$lib/registry/components/collection-source.svelte.js';
+	import {
+		bindCollectionBody,
+		COLLECTION_REGION,
+		COLLECTION_ROOT,
+		createCollectionControl
+	} from '$lib/registry/components/collection-control.svelte.js';
 	import CollectionFooter from '$lib/registry/components/collection-footer.svelte';
 	import EntityCard from '$lib/registry/components/entity-card.svelte';
 	import StateLine from '$lib/registry/components/state-line.svelte';
@@ -168,9 +160,16 @@
 		...rest
 	}: Props = $props();
 
-	const bound = bindSource({
+	/** Tiles across, so a virtualised grid walks rows of tiles and not tiles. */
+	let cols = $state(1);
+	const across = $derived(Math.max(1, cols));
+
+	const control = createCollectionControl({
 		source: () => source,
 		paging: () => paging,
+		getRowId: () => getRowId,
+		isRowDisabled: () => isRowDisabled,
+		loadingLabel: () => loadingLabel,
 		sort: {
 			get: () => sort,
 			set: (next) => {
@@ -184,45 +183,36 @@
 				filters = next;
 				onFiltersChange?.(next);
 			}
+		},
+		selection: {
+			get: () => selection,
+			set: (next) => {
+				selection = next;
+				onSelectionChange?.(next);
+			}
 		}
 	});
-	const snapshot = $derived(bound.snapshot);
 
-	const rows = $derived(snapshot.rows);
-	const pager = $derived(describePaging(snapshot));
-	/** A page that failed under tiles already loaded, which the bottom line reports. */
-	const pageError = $derived(hasFailedPage(snapshot));
+	const snapshot = $derived(control.snapshot);
+	const rows = $derived(control.rows);
+
+	const body = bindCollectionBody(control, {
+		// A line is one row of tiles, so the threshold is still measured in rows.
+		lines: () => Math.ceil(rows.length / across),
+		measured: () => rows.length,
+		lineHeight: () => TILE_HEIGHT[size] + GAP_PX[density],
+		overscan: 4,
+		virtualizeAfter: () => virtualizeAfter,
+		lineOfRow: (index) => Math.floor(index / across),
+		lastRowOfLine: (line) => (line + 1) * across - 1,
+		cursorTarget: (index) => listEl?.querySelector<HTMLElement>(`[data-index="${index}"]`)
+	});
 	// `false` still draws the media block; a path no row carries is the placeholder.
 	const imagePath = $derived(thumbnail === false ? '' : thumbnail);
-
-	const rowId = (row: EntityRow): string => rowIdOf(row, getRowId);
-	const disabledAt = (index: number): boolean => {
-		const row = rows[index];
-		return row === undefined || rowIsDisabled(row, isRowDisabled);
-	};
-
-
-	/** The selection as keys, so a row asks whether it is in it in constant time. */
-	const chosenKeys = $derived(new Set((selection ?? []).map(rowKey)));
-
-	function toggle(row: EntityRow): void {
-		if (rowIsDisabled(row, isRowDisabled)) return;
-		const key = rowKey(row);
-		const next = chosenKeys.has(key)
-			? (selection ?? []).filter((ref) => rowKey(ref) !== key)
-			: [...(selection ?? []), { type: row.type, id: row.id }];
-		selection = next;
-		onSelectionChange?.(next);
-	}
 
 	/* keyboard ------------------------------------------------------------- */
 
 	let listEl = $state<HTMLDivElement | null>(null);
-	let cursor = $state(0);
-	/** The one tab stop, which never lands on a disabled row. */
-	const active = $derived(
-		rows.length === 0 ? -1 : firstEnabledIndex(rows.length, Math.min(cursor, rows.length - 1), 1, disabledAt)
-	);
 
 	/** How many tiles a row holds, read off the track list `auto-fill` resolved to. */
 	function columnCount(): number {
@@ -231,119 +221,6 @@
 		return Math.max(1, tracks.length);
 	}
 
-	function focusTile(index: number): void {
-		const next = Math.max(0, Math.min(index, rows.length - 1));
-		cursor = next;
-		const put = (): void => {
-			const el = listEl?.querySelector<HTMLElement>(`[data-index="${next}"]`);
-			if (!el) return;
-			el.focus({ preventScroll: true });
-			el.scrollIntoView({ block: 'nearest' });
-		};
-		// A tile outside the virtual window has to be drawn before it can take focus.
-		if (virtualized) {
-			virtualizer.scrollToIndex(Math.floor(next / Math.max(1, cols)));
-			requestAnimationFrame(put);
-		} else put();
-	}
-
-	/** The tile a cursor is waiting on, until the page it asked for lands. */
-	let wanted = $state<number | null>(null);
-
-	/** Ask for the next page and hold the cursor where it is until those tiles arrive. */
-	function askForPage(to: number): boolean {
-		if (!loadsOnArrowDown(snapshot, paging, to)) return false;
-		wanted = to;
-		void source.loadMore();
-		return true;
-	}
-
-	$effect(() => {
-		const held = wanted;
-		if (held === null) return;
-		if (snapshot.status === 'error') wanted = null;
-		else if (rows.length > held) {
-			wanted = null;
-			untrack(() => focusTile(held));
-		}
-	});
-
-	function onKeydown(event: KeyboardEvent): void {
-		const target = event.target as HTMLElement | null;
-		// Chrome inside a tile, the checkbox, keeps its own keys.
-		if (!target || target !== target.closest('[data-index]')) return;
-		const index = Number(target.dataset['index']);
-		if (!Number.isInteger(index)) return;
-		const row = rows[index];
-		const step = columnCount();
-		switch (event.key) {
-			case 'ArrowRight':
-				if (!askForPage(index + 1)) focusTile(nextEnabledIndex(rows.length, index, 1, disabledAt));
-				break;
-			case 'ArrowLeft':
-				focusTile(nextEnabledIndex(rows.length, index, -1, disabledAt));
-				break;
-			case 'ArrowDown':
-				if (!askForPage(index + step)) focusTile(nextEnabledIndex(rows.length, index, step, disabledAt));
-				break;
-			case 'ArrowUp':
-				focusTile(nextEnabledIndex(rows.length, index, -step, disabledAt));
-				break;
-			case 'Home':
-				focusTile(firstEnabledIndex(rows.length, 0, 1, disabledAt));
-				break;
-			case 'End':
-				focusTile(firstEnabledIndex(rows.length, rows.length - 1, -1, disabledAt));
-				break;
-			case ' ':
-				if (selectable && row) toggle(row);
-				break;
-			case 'Enter':
-				if (row && !disabledAt(index)) onSelect?.(row);
-				break;
-			default:
-				return;
-		}
-		event.preventDefault();
-	}
-
-	function onTileClick(event: MouseEvent, row: EntityRow): void {
-		const target = event.target as HTMLElement | null;
-		if (target?.closest('[data-slot="entity-card-selection"],[data-slot="entity-card-actions"]')) return;
-		onSelect?.(row);
-	}
-
-	let scrollEl = $state<HTMLDivElement | null>(null);
-	let sentinel = $state<HTMLDivElement | null>(null);
-
-	/* virtual rows --------------------------------------------------------- */
-
-	/** Tiles across, so a virtualised grid walks rows of tiles and not tiles. */
-	let cols = $state(1);
-	// The virtualizer notifies from inside an effect, so the counter it bumps is written
-	// and never read there.
-	let tickCount = 0;
-	let ticks = $state(0);
-	const virtualized = $derived(rows.length > virtualizeAfter);
-	const lineHeight = $derived(TILE_HEIGHT[size] + GAP_PX[density]);
-
-	function bump(): void {
-		tickCount += 1;
-		ticks = tickCount;
-	}
-
-	const virtualizer = new Virtualizer<HTMLDivElement, HTMLDivElement>({
-		count: 0,
-		getScrollElement: () => scrollEl,
-		estimateSize: () => lineHeight,
-		overscan: 4,
-		observeElementRect,
-		observeElementOffset,
-		scrollToFn: elementScroll,
-		onChange: bump
-	});
-
-	$effect(() => virtualizer._didMount());
 	$effect(() => {
 		const list = listEl;
 		if (!list) return;
@@ -358,74 +235,67 @@
 		observer.observe(list);
 		return () => observer.disconnect();
 	});
-	$effect(() => {
-		// Read every dependency before the call, so the effect tracks the counts and the
-		// height and not the tick the virtualizer's own notification writes.
-		const count = virtualized ? Math.ceil(rows.length / Math.max(1, cols)) : 0;
-		const size_ = lineHeight;
-		const element = scrollEl;
-		virtualizer.setOptions({
-			count,
-			getScrollElement: () => element,
-			estimateSize: () => size_,
-			overscan: 4,
-			observeElementRect,
-			observeElementOffset,
-			scrollToFn: elementScroll,
-			onChange: bump
-		});
-		virtualizer._willUpdate();
-		virtualizer.measure();
-	});
 
-	/** The rows on screen, with the space the ones above and below take. */
+	function onKeydown(event: KeyboardEvent): void {
+		const target = event.target as HTMLElement | null;
+		// Chrome inside a tile, the checkbox, keeps its own keys.
+		if (!target || target !== target.closest('[data-index]')) return;
+		const index = Number(target.dataset['index']);
+		if (!Number.isInteger(index)) return;
+		const row = rows[index];
+		const step = columnCount();
+		const disabledAt = control.disabledAt;
+		switch (event.key) {
+			case 'ArrowRight':
+				if (!body.askForPage(index + 1)) body.focusRow(nextEnabledIndex(rows.length, index, 1, disabledAt));
+				break;
+			case 'ArrowLeft':
+				body.focusRow(nextEnabledIndex(rows.length, index, -1, disabledAt));
+				break;
+			case 'ArrowDown':
+				if (!body.askForPage(index + step)) body.focusRow(nextEnabledIndex(rows.length, index, step, disabledAt));
+				break;
+			case 'ArrowUp':
+				body.focusRow(nextEnabledIndex(rows.length, index, -step, disabledAt));
+				break;
+			case 'Home':
+				body.focusRow(firstEnabledIndex(rows.length, 0, 1, disabledAt));
+				break;
+			case 'End':
+				body.focusRow(firstEnabledIndex(rows.length, rows.length - 1, -1, disabledAt));
+				break;
+			case ' ':
+				if (selectable && row) control.toggle(row);
+				break;
+			case 'Enter':
+				if (row && !control.disabledAt(index)) onSelect?.(row);
+				break;
+			default:
+				return;
+		}
+		event.preventDefault();
+	}
+
+	function onTileClick(event: MouseEvent, row: EntityRow): void {
+		const target = event.target as HTMLElement | null;
+		if (target?.closest('[data-slot="entity-card-selection"],[data-slot="entity-card-actions"]')) return;
+		onSelect?.(row);
+	}
+
+	/** The tiles on screen, with the space the ones above and below take. */
 	const window_ = $derived.by(() => {
-		void ticks;
-		if (!virtualized) return { before: 0, after: 0, from: 0, slice: rows };
-		const items = virtualizer.getVirtualItems();
-		const first = items[0];
-		const last = items[items.length - 1];
-		const across = Math.max(1, cols);
-		if (!first || !last) return { before: 0, after: 0, from: 0, slice: rows.slice(0, across * 4) };
+		const at = body.window;
+		if (!at) return { before: 0, after: 0, from: 0, slice: rows };
+		if (at.to < at.from) return { before: 0, after: 0, from: 0, slice: rows.slice(0, across * 4) };
 		return {
-			before: first.start,
-			after: virtualizer.getTotalSize() - last.end,
-			from: first.index * across,
-			slice: rows.slice(first.index * across, (last.index + 1) * across)
+			before: at.before,
+			after: at.after,
+			from: at.from * across,
+			slice: rows.slice(at.from * across, (at.to + 1) * across)
 		};
 	});
 
-	/* scroll paging -------------------------------------------------------- */
-
-	$effect(() => {
-		// The virtualiser walks lines of tiles, so the row the viewport ends on is the
-		// last tile of the last line it drew.
-		void ticks;
-		if (!virtualized || paging !== 'scroll') return;
-		const items = virtualizer.getVirtualItems();
-		const last = items[items.length - 1];
-		if (!last) return;
-		const lastVisible = (last.index + 1) * Math.max(1, cols) - 1;
-		if (shouldLoadNext(snapshot, { paging, lastVisible })) void source.loadMore();
-	});
-
-	$effect(() => {
-		// A grid short enough not to be virtualised has no range to read, so the last line
-		// carries a sentinel instead.
-		const root = scrollEl;
-		const target = sentinel;
-		if (!root || !target || paging !== 'scroll') return;
-		const observer = new IntersectionObserver(
-			(entries) => {
-				if (!entries.some((entry) => entry.isIntersecting)) return;
-				if (shouldLoadNext(snapshot, { paging, lastVisible: rows.length - 1 })) void source.loadMore();
-			},
-			{ root, rootMargin: '200px' }
-		);
-		observer.observe(target);
-		return () => observer.disconnect();
-	});
-
+	const view = $derived(control.view(rows.length));
 	const loadingText = $derived(stateLine('loading', { loadingLabel }));
 </script>
 
@@ -449,27 +319,30 @@
 	number and reads "n to m of N" once `_summarize` has counted it (020_summarize). A
 	page that fails leaves its tiles and says why at the bottom, with a retry.
 -->
-<div bind:this={ref} data-slot="entity-grid" class={cn('flex w-full min-w-0 flex-col gap-2', className)} {...rest}>
+<div bind:this={ref} data-slot="entity-grid" class={cn(COLLECTION_ROOT, className)} {...rest}>
 	{#if header}
-		<div data-slot="entity-grid-header" class="flex w-full min-w-0 flex-wrap items-center gap-2">
+		<div data-slot="entity-grid-header" class={COLLECTION_REGION}>
 			{@render header()}
 		</div>
 	{/if}
 
 	<div
-		bind:this={scrollEl}
+		{@attach (el: HTMLDivElement) => {
+			body.setScroller(el);
+			return () => body.setScroller(null);
+		}}
 		data-slot="entity-grid-scroll"
 		style="max-height:{maxHeight}"
 		class="border-border flex w-full flex-col gap-3 overflow-auto rounded-lg border p-3"
 	>
-		{#if snapshot.status === 'error' && !pageError}
+		{#if view === 'error'}
 			<StateLine
 				state="error"
 				pad="table"
 				icon={CircleAlert}
 				label={stateLine('error', { errorLabel }, snapshot.error?.message)}
 			/>
-		{:else if snapshot.status === 'loading'}
+		{:else if view === 'loading'}
 			<div
 				aria-busy="true"
 				aria-label={loadingText}
@@ -484,7 +357,7 @@
 					</div>
 				{/each}
 			</div>
-		{:else if rows.length === 0}
+		{:else if view === 'empty'}
 			<StateLine state="empty" pad="table" icon={Inbox} label={emptyLabel} />
 		{:else}
 			<div
@@ -500,11 +373,11 @@
 				{#if window_.before > 0}
 					<div aria-hidden="true" style="grid-column:1/-1;height:{window_.before}px"></div>
 				{/if}
-				{#each window_.slice as row, offset (rowId(row))}
+				{#each window_.slice as row, offset (control.rowId(row))}
 					{@const index = window_.from + offset}
-					{@const key = rowId(row)}
-					{@const chosen = chosenKeys.has(rowKey(row))}
-					{@const disabled = disabledAt(index)}
+					{@const key = control.rowId(row)}
+					{@const chosen = control.isSelected(row)}
+					{@const disabled = control.disabledAt(index)}
 					{#if card}
 						<!-- svelte-ignore a11y_click_events_have_key_events -->
 						<div
@@ -513,14 +386,14 @@
 							aria-selected={chosen}
 							aria-disabled={disabled ? 'true' : undefined}
 							data-disabled={disabled ? 'true' : undefined}
-							tabindex={index === active ? 0 : -1}
+							tabindex={index === body.active ? 0 : -1}
 							data-row-key={key}
 							data-index={index}
 							class={cn('min-w-0 outline-none', disabled && 'pointer-events-none opacity-50 [&_img]:grayscale')}
-							onfocusin={() => (cursor = index)}
+							onfocusin={() => body.setCursor(index)}
 							onclick={(event) => onTileClick(event, row)}
 						>
-							{@render card({ row, id: key, index, selected: chosen, disabled, active: index === active })}
+							{@render card({ row, id: key, index, selected: chosen, disabled, active: index === body.active })}
 						</div>
 					{:else}
 						<EntityCard
@@ -538,16 +411,16 @@
 							{selectable}
 							{size}
 							selected={chosen}
-							onSelectedChange={() => toggle(row)}
+							onSelectedChange={() => control.toggle(row)}
 							role="option"
 							aria-selected={chosen}
 							aria-disabled={disabled ? 'true' : undefined}
 							data-disabled={disabled ? 'true' : undefined}
-							tabindex={index === active ? 0 : -1}
+							tabindex={index === body.active ? 0 : -1}
 							data-row-key={key}
 							data-index={index}
 							class={disabled ? 'pointer-events-none opacity-50 [&_img]:grayscale' : undefined}
-							onfocusin={() => (cursor = index)}
+							onfocusin={() => body.setCursor(index)}
 							onclick={(event) => onTileClick(event, row)}
 						/>
 					{/if}
@@ -556,7 +429,7 @@
 					<div aria-hidden="true" style="grid-column:1/-1;height:{window_.after}px"></div>
 				{/if}
 			</div>
-			{#if pageError}
+			{#if control.bottom === 'error'}
 				<StateLine
 					state="error"
 					slotName="entity-grid-page-error"
@@ -564,32 +437,40 @@
 					icon={CircleAlert}
 					label={stateLine('error', { errorLabel }, snapshot.error?.message)}
 				>
-					<Button variant="outline" size="sm" onclick={() => bound.retry()}>Retry</Button>
+					<Button variant="outline" size="sm" onclick={() => control.retry()}>Retry</Button>
 				</StateLine>
-			{:else if snapshot.status === 'loadingMore'}
+			{:else if control.bottom === 'loading'}
 				<div data-slot="entity-grid-loading" aria-busy="true" aria-label={loadingText}>
 					<Skeleton class="h-4 w-full" />
 				</div>
-			{:else if paging === 'more' && snapshot.hasMore}
+			{:else if control.bottom === 'more'}
 				<div data-slot="entity-grid-load-more" class="flex justify-center">
 					<Button variant="outline" size="sm" onclick={() => void source.loadMore()}>Load more</Button>
 				</div>
-			{:else if paging === 'scroll' && snapshot.hasMore}
-				<div bind:this={sentinel} data-slot="entity-grid-sentinel" aria-hidden="true" class="h-4"></div>
+			{:else if control.bottom === 'sentinel'}
+				<div
+					{@attach (el: HTMLDivElement) => {
+						body.setSentinel(el);
+						return () => body.setSentinel(null);
+					}}
+					data-slot="entity-grid-sentinel"
+					aria-hidden="true"
+					class="h-4"
+				></div>
 			{/if}
 		{/if}
 	</div>
 
 	<CollectionFooter
 		{source}
-		{pager}
+		pager={control.pager}
 		{pageSizes}
 		loading={snapshot.status === 'loading'}
 		slotName="entity-grid"
 	/>
 
 	{#if footer}
-		<div data-slot="entity-grid-footer-region" class="flex w-full min-w-0 flex-wrap items-center gap-2">
+		<div data-slot="entity-grid-footer-region" class={COLLECTION_REGION}>
 			{@render footer()}
 		</div>
 	{/if}

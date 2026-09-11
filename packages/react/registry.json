@@ -1068,6 +1068,30 @@
       ]
     },
     {
+      "name": "collection-control",
+      "type": "registry:component",
+      "title": "Collection Control",
+      "description": "The state and behaviour every collection shares: the source, the selection, the cursor, the virtualiser and the paging triggers.",
+      "categories": [
+        "flow-production-tracking",
+        "collection"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "@tanstack/react-virtual"
+      ],
+      "registryDependencies": [
+        "https://sg-widgets.dev/r/react/collection-source.json"
+      ],
+      "docs": "useCollectionControl answers the source and the selection; useCollectionBody wires the virtualiser, the cursor and the scroll trigger over one layout.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/collection-control.ts",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
       "name": "collection-footer",
       "type": "registry:component",
       "title": "Collection Footer",
@@ -1105,11 +1129,10 @@
       "dependencies": [
         "@sg-widgets/core",
         "lucide-react",
-        "@tanstack/react-table",
-        "@tanstack/react-virtual"
+        "@tanstack/react-table"
       ],
       "registryDependencies": [
-        "https://sg-widgets.dev/r/react/collection-source.json",
+        "https://sg-widgets.dev/r/react/collection-control.json",
         "https://sg-widgets.dev/r/react/collection-footer.json",
         "https://sg-widgets.dev/r/react/state-line.json",
         "https://sg-widgets.dev/r/react/field-value.json",
@@ -1141,11 +1164,10 @@
       ],
       "dependencies": [
         "@sg-widgets/core",
-        "lucide-react",
-        "@tanstack/react-virtual"
+        "lucide-react"
       ],
       "registryDependencies": [
-        "https://sg-widgets.dev/r/react/collection-source.json",
+        "https://sg-widgets.dev/r/react/collection-control.json",
         "https://sg-widgets.dev/r/react/collection-footer.json",
         "https://sg-widgets.dev/r/react/state-line.json",
         "https://sg-widgets.dev/r/react/entity-card.json",
@@ -1173,11 +1195,10 @@
       ],
       "dependencies": [
         "@sg-widgets/core",
-        "lucide-react",
-        "@tanstack/react-virtual"
+        "lucide-react"
       ],
       "registryDependencies": [
-        "https://sg-widgets.dev/r/react/collection-source.json",
+        "https://sg-widgets.dev/r/react/collection-control.json",
         "https://sg-widgets.dev/r/react/collection-footer.json",
         "https://sg-widgets.dev/r/react/state-line.json",
         "https://sg-widgets.dev/r/react/field-value.json",

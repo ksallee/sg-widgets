@@ -8,10 +8,13 @@ import {
   rowIdOf,
   rowIsDisabled,
   sameFilters,
+  selectableRefs,
+  selectionState,
   sameIds,
   sameRefs,
   sameSort,
   toggleId,
+  toggleRef,
   toSortKeys,
   toSortSpecs,
 } from '../src/collection-state.js';
@@ -121,5 +124,36 @@ describe('mirroring a source', () => {
     ]);
     expect(toSortKeys(specs)).toEqual(keys);
     expect(toSortSpecs([{ field: '', direction: 'asc' }])).toEqual([]);
+  });
+});
+
+describe('a selection over loaded rows', () => {
+  const locked = (candidate: EntityRow): boolean => candidate.attributes['locked'] === true;
+
+  it('adds a row it does not hold and drops one it does', () => {
+    const one = toggleRef([], { type: 'Version', id: 1 });
+    expect(one).toEqual([{ type: 'Version', id: 1 }]);
+    expect(toggleRef(one, { type: 'Version', id: 1 })).toEqual([]);
+    expect(toggleRef(one, { type: 'Version', id: 2 })).toEqual([
+      { type: 'Version', id: 1 },
+      { type: 'Version', id: 2 },
+    ]);
+  });
+
+  it('reads a header checkbox as all, some or neither', () => {
+    expect(selectionState(rows, [])).toEqual({ all: false, some: false });
+    expect(selectionState(rows, [{ type: 'Version', id: 1 }])).toEqual({ all: false, some: true });
+    expect(selectionState(rows, rows.map((r) => ({ type: r.type, id: r.id })))).toEqual({ all: true, some: true });
+    expect(selectionState([], [])).toEqual({ all: false, some: false });
+  });
+
+  it('leaves a disabled row out of both readings', () => {
+    const open = [
+      { type: 'Version', id: 1 },
+      { type: 'Version', id: 3 },
+    ];
+    expect(selectionState(rows, open, locked)).toEqual({ all: true, some: true });
+    expect(selectableRefs(rows, locked)).toEqual(open);
+    expect(selectionState([rows[1] as EntityRow], [], locked)).toEqual({ all: false, some: false });
   });
 });

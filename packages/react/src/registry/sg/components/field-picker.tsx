@@ -6,6 +6,7 @@ import {
   friendlyFieldPath,
   iconNameFor,
   NO_MATCH_LABEL,
+  pickerKeyIntent,
   searchFieldOptions,
   stateLine,
 } from '@sg-widgets/core';
@@ -204,6 +205,11 @@ export function FieldPicker({
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const open = openProp ?? uncontrolledOpen;
   const setOpen = (next: boolean): void => {
+    // The query goes with the list, so the next open starts on the whole set.
+    if (!next) {
+      setSearch('');
+      setHighlighted('');
+    }
     setUncontrolledOpen(next);
     onOpenChange?.(next);
   };
@@ -332,6 +338,20 @@ export function FieldPicker({
   }
 
   function onKeys(event: KeyboardEvent<HTMLDivElement>): void {
+    // One value, so an empty query takes Backspace down to nothing in a press.
+    const intent = pickerKeyIntent(event.key, {
+      open,
+      query: search,
+      count: value === '' ? 0 : 1,
+      armed: null,
+      editable: !readonly && !disabled,
+      multiple: false,
+    });
+    if (intent.kind === 'remove') {
+      event.preventDefault();
+      onValueChange?.('');
+      return;
+    }
     if (event.key === 'ArrowRight') {
       if (choosing) {
         if (cursor) {

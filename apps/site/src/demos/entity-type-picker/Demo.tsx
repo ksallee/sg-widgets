@@ -18,6 +18,10 @@ function Pickers() {
   const context = useSgContext();
   const [one, setOne] = useState<string | null>('Shot');
   const [many, setMany] = useState<string[]>(['Version']);
+  /** One value per summary demo, so every control on the page takes an edit. */
+  const [shown, setShown] = useState<Record<string, string[]>>({});
+  const shownAt = (at: string) => shown[at] ?? PRODUCTION;
+  const showAt = (at: string, next: string[]) => setShown({ ...shown, [at]: next });
 
   return (
     <div className="flex flex-col gap-4">
@@ -55,7 +59,8 @@ function Pickers() {
                 <EntityTypePicker
                   context={context}
                   multiple
-                  value={PRODUCTION}
+                  value={shownAt(summary)}
+                  onValueChange={(next) => showAt(summary, (next as string[] | null) ?? [])}
                   summary={summary}
                   allow={PRODUCTION}
                   clearable={false}
@@ -67,7 +72,8 @@ function Pickers() {
                   <EntityTypePicker
                     context={context}
                     multiple
-                    value={PRODUCTION}
+                    value={shownAt(`${summary}-narrow`)}
+                    onValueChange={(next) => showAt(`${summary}-narrow`, (next as string[] | null) ?? [])}
                     summary={summary}
                     allow={PRODUCTION}
                     clearable={false}

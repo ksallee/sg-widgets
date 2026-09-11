@@ -98,10 +98,16 @@ None.
 | `Right` | Descend into the highlighted field, or pick the highlighted target type. |
 | `Left` | Go back one level, or cancel the choice of target type. |
 | `Enter` | Choose the highlighted field. On a field that can only be descended into, descends. |
+| `Backspace` | In an empty search box, clears the value. |
 | `Escape` | Close, keeping the value. |
 
-The search box clears on every hop and on every selection, and the control is never remounted, so
-focus stays where you are typing.
+The search box clears on every hop, on every selection and on every close, and the control is never
+remounted, so focus stays where you are typing.
+
+The control is the Popover and the Command list rather than the picker base: a field list walks a
+path through links, so its popup carries a breadcrumb and its rows descend, which the base's flat
+list does not. It keeps the picker contract of design rule 7 all the same, and
+`tools/drives/picker-contract.js` is the proof.
 
 ## API behaviour
 

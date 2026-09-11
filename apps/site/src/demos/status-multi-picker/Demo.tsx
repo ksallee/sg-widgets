@@ -31,6 +31,10 @@ export default function StatusMultiPickerDemo() {
   const [shared, setShared] = useState<string[]>([]);
   const [project, setProject] = useState<string[]>(['Active', 'Bidding']);
   const [unknown, setUnknown] = useState<string[]>(['zz_retired', 'rev']);
+  /** One value per summary demo, so every control on the page takes an edit. */
+  const [shown, setShown] = useState<Record<string, string[]>>({});
+  const shownAt = (at: string) => shown[at] ?? FIVE;
+  const showAt = (at: string, next: string[]) => setShown({ ...shown, [at]: next });
 
   return (
     <div className="flex flex-col gap-4">
@@ -147,7 +151,8 @@ export default function StatusMultiPickerDemo() {
                   context={context}
                   entityType="Version"
                   projectId={projectId}
-                  value={FIVE}
+                  value={shownAt(`${mode}-5`)}
+                  onValueChange={(next) => showAt(`${mode}-5`, next)}
                   summary={mode}
                   clearable={false}
                 />
@@ -159,7 +164,8 @@ export default function StatusMultiPickerDemo() {
                     context={context}
                     entityType="Version"
                     projectId={projectId}
-                    value={FIVE}
+                    value={shownAt(`${mode}-narrow`)}
+                    onValueChange={(next) => showAt(`${mode}-narrow`, next)}
                     summary={mode}
                     clearable={false}
                   />

@@ -234,6 +234,7 @@ export function ListPicker({
           onOpenChange={setOpen}
           query={search}
           onQueryChange={setSearch}
+          onRemoveAt={clear}
           onClear={clear}
           loading={loading}
           error={loadError}

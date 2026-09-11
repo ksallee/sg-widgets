@@ -1,5 +1,5 @@
 import type * as React from 'react';
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type {
   CollectionColumn,
   EditorPlacement,
@@ -28,12 +28,9 @@ import {
   preferencesOf,
   rowIdOf,
   rowIsDisabled,
-  sameFilters,
   sameIds,
   sameRefs,
-  sameSort,
   shouldLoadNext,
-  sourceModeFor,
   stateLine,
 } from '@sg-widgets/core';
 import {
@@ -75,6 +72,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
+import { useCollectionSource, useLatest } from '@/registry/sg/components/collection-source';
 import { CollectionFooter } from '@/registry/sg/components/collection-footer';
 import { FieldEditor } from '@/registry/sg/components/field-editor';
 import { FieldValue } from '@/registry/sg/components/field-value';
@@ -146,13 +144,6 @@ export interface EntityTableGroupContext {
   count: number;
   expanded: boolean;
   id: string;
-}
-
-/** The latest value, for an effect that must read it without depending on it. */
-function useLatest<T>(value: T): { current: T } {
-  const ref = useRef(value);
-  ref.current = value;
-  return ref;
 }
 
 export interface EntityTableProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'children'> {
@@ -313,19 +304,15 @@ export function EntityTable({
 }: EntityTableProps) {
   /* state ---------------------------------------------------------------- */
 
-  const snapshot = useSyncExternalStore(
-    useCallback((listener: () => void) => source.subscribe(listener), [source]),
-    () => source.snapshot(),
-    () => source.snapshot(),
-  );
-  useEffect(() => {
-    if (source.status === 'idle') void source.load();
-  }, [source]);
-  useEffect(() => {
-    // `paging` is the one prop a caller sets, so the source follows it rather than the
-    // other way round. Setting a mode it already holds is a no-op.
-    void source.setMode(sourceModeFor(paging));
-  }, [source, paging]);
+  const bound = useCollectionSource({
+    source,
+    paging,
+    sort: sortProp,
+    onSortChange,
+    filters: filtersProp,
+    onFiltersChange,
+  });
+  const snapshot = bound.snapshot;
   useEffect(() => {
     // A group is only whole when the server put its rows together, so the group path
     // leads the sort. Setting it reads the first page again.
@@ -446,28 +433,6 @@ export function EntityTable({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [collapsed]);
-
-  const sortLatest = useLatest(sortProp);
-  useEffect(() => {
-    if (sortProp === undefined || sameSort(sortProp, source.sort)) return;
-    void source.setSort([...sortProp]);
-  }, [source, sortProp]);
-  useEffect(() => {
-    if (sortLatest.current !== undefined && sameSort(snapshot.sort, sortLatest.current)) return;
-    onSortChange?.([...snapshot.sort]);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [snapshot.sort]);
-
-  const filtersLatest = useLatest(filtersProp);
-  useEffect(() => {
-    if (filtersProp === undefined || sameFilters(filtersProp, source.filters)) return;
-    void source.setFilters(filtersProp);
-  }, [source, filtersProp]);
-  useEffect(() => {
-    if (filtersLatest.current !== undefined && sameFilters(snapshot.filters, filtersLatest.current)) return;
-    onFiltersChange?.(snapshot.filters);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [snapshot.filters]);
 
   /** Leaf columns in render order: pinned to the start first, the rest as ordered. */
   const rank = (id: string, pinned: false | 'start' | 'end'): number =>
@@ -742,12 +707,6 @@ export function EntityTable({
   }, [editing]);
 
   /* paging --------------------------------------------------------------- */
-
-  /** Read the page that failed again: the one a pager is on, or the one that was appended. */
-  function retryPage(): void {
-    if (paging === 'pages') void source.setPage(snapshot.page);
-    else void source.loadMore();
-  }
 
   /** Sticky offset for a column pinned to the start; nothing for the rest. */
   function pinStyle(column: (typeof leafColumns)[number]): React.CSSProperties | undefined {
@@ -1153,7 +1112,7 @@ export function EntityTable({
                         icon={CircleAlert}
                         label={stateLine('error', { errorLabel }, snapshot.error?.message)}
                       >
-                        <Button variant="outline" size="sm" onClick={retryPage}>
+                        <Button variant="outline" size="sm" onClick={() => bound.retry()}>
                           Retry
                         </Button>
                       </StateLine>

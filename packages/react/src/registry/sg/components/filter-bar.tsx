@@ -29,16 +29,19 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
+import {
+  CONTROL_GLYPH,
+  CONTROL_HEIGHT,
+  CONTROL_PAD,
+  type ControlSize,
+} from '@/registry/sg/components/control-classes';
+import { useEntityFields } from '@/registry/sg/components/entity-fields';
 import { FilterDialog } from '@/registry/sg/components/filter-dialog';
 
-export type FilterBarSize = 'sm' | 'md' | 'lg';
+export type FilterBarSize = ControlSize;
 
-/** Pills follow the input ladder of `docs/design-rules.md`. */
-const PILL: Record<FilterBarSize, string> = { sm: 'h-8', md: 'h-9', lg: 'h-10' };
-const PAD: Record<FilterBarSize, string> = { sm: 'px-2', md: 'px-3', lg: 'px-3' };
 /** The remove control sits inside the pill, so it takes the tighter padding. */
 const REMOVE_PAD: Record<FilterBarSize, string> = { sm: 'px-1.5', md: 'px-2', lg: 'px-2' };
-const GLYPH: Record<FilterBarSize, string> = { sm: 'size-4', md: 'size-4', lg: 'size-5' };
 /** The button step beside a pill of each height. */
 const BTN: Record<FilterBarSize, 'sm' | 'default' | 'lg'> = { sm: 'sm', md: 'default', lg: 'lg' };
 
@@ -97,19 +100,9 @@ export function FilterBar({
   ref,
   ...rest
 }: FilterBarProps) {
-  const [fields, setFields] = useState<Record<string, FieldSchema>>({});
+  const fields = useEntityFields(context, entityType);
   const [tally, setTally] = useState<Record<string, FacetValue[]>>({});
   const [counting, setCounting] = useState(true);
-
-  useEffect(() => {
-    let live = true;
-    void context.schema.fields(entityType).then((loaded) => {
-      if (live) setFields(loaded);
-    });
-    return () => {
-      live = false;
-    };
-  }, [context.schema, entityType]);
 
   // Counts are read against the filter with every facet's own condition stripped, so
   // ticking one value does not empty its neighbours. One read serves every pill.
@@ -248,12 +241,12 @@ export function FilterBar({
             aria-label={`Remove ${label} filter`}
             className={cn(
               'border-border text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring/50 inline-flex shrink-0 items-center border-l outline-none focus-visible:ring-3 disabled:pointer-events-none disabled:opacity-50',
-              PILL[size],
+              CONTROL_HEIGHT[size],
               REMOVE_PAD[size],
             )}
             onClick={() => onChange?.(withoutPaths(value, [name]))}
           >
-            <XIcon className={GLYPH[size]} />
+            <XIcon className={CONTROL_GLYPH[size]} />
           </button>
         );
         if (!found || !parts || conditionArity(found, field?.dataType ?? '') === 'many') {
@@ -269,7 +262,7 @@ export function FilterBar({
                 aria-label={found ? describeCondition(found, field) : undefined}
                 className={cn(
                   'border-border inline-flex max-w-full min-w-0 items-center overflow-hidden rounded-lg border text-sm',
-                  PILL[size],
+                  CONTROL_HEIGHT[size],
                   found ? 'bg-background' : 'text-muted-foreground max-w-72 border-dashed',
                 )}
               >
@@ -278,13 +271,13 @@ export function FilterBar({
                   data-slot="filter-pill-trigger"
                   className={cn(
                     'hover:bg-muted hover:text-foreground focus-visible:ring-ring/50 inline-flex min-w-0 items-center gap-1.5 outline-none focus-visible:ring-3 focus-visible:ring-inset disabled:pointer-events-none disabled:opacity-50',
-                    PILL[size],
-                    PAD[size],
+                    CONTROL_HEIGHT[size],
+                    CONTROL_PAD[size],
                   )}
                 >
                   {!found || !parts ? (
                     <>
-                      <PlusIcon className={cn('shrink-0', GLYPH[size])} />
+                      <PlusIcon className={cn('shrink-0', CONTROL_GLYPH[size])} />
                       <span className="min-w-0 truncate">{field?.displayName ?? name}</span>
                     </>
                   ) : (
@@ -322,12 +315,12 @@ export function FilterBar({
             aria-label={describeCondition(found, field)}
             className={cn(
               'border-border bg-background inline-flex max-w-full min-w-0 items-center overflow-hidden rounded-lg border text-sm',
-              PILL[size],
+              CONTROL_HEIGHT[size],
             )}
           >
             <span
               data-slot="filter-pill-values"
-              className={cn('inline-flex min-w-0 items-center gap-1.5', PILL[size], PAD[size])}
+              className={cn('inline-flex min-w-0 items-center gap-1.5', CONTROL_HEIGHT[size], CONTROL_PAD[size])}
               title={parts.value}
             >
               <span data-slot="filter-pill-field" className="shrink-0 font-medium">

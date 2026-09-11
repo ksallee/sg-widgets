@@ -3,19 +3,15 @@ import { useState } from 'react';
 import { initialsOf, nameHue } from '@sg-widgets/core';
 import { Bot } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { LEAF_GLYPH, type LeafSize } from '@/registry/sg/components/leaf-classes';
 
-export type UserAvatarSize = 'sm' | 'md' | 'lg';
+export type UserAvatarSize = LeafSize;
 
 /** Avatars follow the same ladder as thumbnails (`docs/design-rules.md`). */
 const BOX: Record<UserAvatarSize, string> = {
   sm: 'size-6 text-xs',
   md: 'size-8 text-sm',
   lg: 'size-10 text-sm',
-};
-const GLYPH: Record<UserAvatarSize, string> = {
-  sm: 'size-4',
-  md: 'size-4',
-  lg: 'size-5',
 };
 
 /**
@@ -84,7 +80,7 @@ export function UserAvatar({
       >
         {apiUser ? (
           <>
-            <Bot aria-hidden="true" className={GLYPH[size]} />
+            <Bot aria-hidden="true" className={LEAF_GLYPH[size]} />
             <span className="sr-only">{name}</span>
           </>
         ) : src ? (

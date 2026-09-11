@@ -38,6 +38,7 @@
         "lucide-react"
       ],
       "registryDependencies": [
+        "https://sg-widgets.dev/r/react/leaf-classes.json",
         "https://sg-widgets.dev/r/react/status-glyph.json"
       ],
       "docs": "Pass the resolved Status row for colour and icon, or just a field schema for the label. An unknown code renders as itself in a muted badge.",
@@ -62,6 +63,8 @@
         "lucide-react"
       ],
       "registryDependencies": [
+        "https://sg-widgets.dev/r/react/entity-glyphs.json",
+        "https://sg-widgets.dev/r/react/leaf-classes.json",
         "https://sg-widgets.dev/r/react/entity-card.json",
         "hover-card"
       ],
@@ -87,6 +90,7 @@
         "lucide-react"
       ],
       "registryDependencies": [
+        "https://sg-widgets.dev/r/react/entity-glyphs.json",
         "https://sg-widgets.dev/r/react/state-line.json",
         "https://sg-widgets.dev/r/react/status-badge.json",
         "https://sg-widgets.dev/r/react/thumbnail.json",
@@ -136,7 +140,9 @@
         "@sg-widgets/core",
         "lucide-react"
       ],
-      "registryDependencies": [],
+      "registryDependencies": [
+        "https://sg-widgets.dev/r/react/leaf-classes.json"
+      ],
       "docs": "Initials come from core's initialsOf so both frameworks derive them identically.",
       "files": [
         {
@@ -220,6 +226,29 @@
       ]
     },
     {
+      "name": "search-skeleton",
+      "type": "registry:component",
+      "title": "Search Skeleton",
+      "description": "The rows a search widget draws while its read is in flight.",
+      "categories": [
+        "flow-production-tracking",
+        "search"
+      ],
+      "dependencies": [
+        "@sg-widgets/core"
+      ],
+      "registryDependencies": [
+        "skeleton"
+      ],
+      "docs": "Shaped like the rows it stands in for: a leading slot, a label and a sub-label.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/search-skeleton.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
       "name": "picker-classes",
       "type": "registry:component",
       "title": "Picker Classes",
@@ -236,6 +265,112 @@
       "files": [
         {
           "path": "src/registry/sg/components/picker-classes.ts",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "control-classes",
+      "type": "registry:component",
+      "title": "Control Classes",
+      "description": "The height, inset and glyph ladder every non-picker control in this registry wears.",
+      "categories": [
+        "flow-production-tracking",
+        "atom"
+      ],
+      "dependencies": [
+        "@sg-widgets/core"
+      ],
+      "registryDependencies": [],
+      "docs": "Class strings only. Import what a control needs; the ladder is the design rules'.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/control-classes.ts",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "leaf-classes",
+      "type": "registry:component",
+      "title": "Leaf Classes",
+      "description": "The ladder and the remove control every badge, chip and avatar in this registry wears.",
+      "categories": [
+        "flow-production-tracking",
+        "atom"
+      ],
+      "dependencies": [
+        "@sg-widgets/core"
+      ],
+      "registryDependencies": [],
+      "docs": "Class strings only. A leaf atom sits on the thumbnail ladder, not the control one.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/leaf-classes.ts",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "entity-glyphs",
+      "type": "registry:component",
+      "title": "Entity Glyphs",
+      "description": "A glyph per entity type, with the tag every unlisted type takes.",
+      "categories": [
+        "flow-production-tracking",
+        "atom"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react"
+      ],
+      "registryDependencies": [],
+      "docs": "entityGlyph(type) answers an icon component. A type it does not name takes the tag.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/entity-glyphs.ts",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "field-error",
+      "type": "registry:component",
+      "title": "Field Error",
+      "description": "The line a field editor shows under its control when a parse fails.",
+      "categories": [
+        "flow-production-tracking",
+        "editor"
+      ],
+      "dependencies": [
+        "@sg-widgets/core"
+      ],
+      "registryDependencies": [],
+      "docs": "Pass the message and the caller errorMessage renderer; nothing is drawn without a message.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/field-error.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "editor-calendar",
+      "type": "registry:component",
+      "title": "Editor Calendar",
+      "description": "The calendar day the date editors hand the Calendar primitive.",
+      "categories": [
+        "flow-production-tracking",
+        "editor"
+      ],
+      "dependencies": [
+        "@sg-widgets/core"
+      ],
+      "registryDependencies": [],
+      "docs": "Converts between YYYY-MM-DD and the Date the calendar takes.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/editor-calendar.ts",
           "type": "registry:component"
         }
       ]
@@ -386,6 +521,8 @@
         "lucide-react"
       ],
       "registryDependencies": [
+        "https://sg-widgets.dev/r/react/field-error.json",
+        "https://sg-widgets.dev/r/react/control-classes.json",
         "input",
         "textarea"
       ],
@@ -411,6 +548,8 @@
         "lucide-react"
       ],
       "registryDependencies": [
+        "https://sg-widgets.dev/r/react/field-error.json",
+        "https://sg-widgets.dev/r/react/control-classes.json",
         "button",
         "input"
       ],
@@ -436,6 +575,8 @@
         "lucide-react"
       ],
       "registryDependencies": [
+        "https://sg-widgets.dev/r/react/field-error.json",
+        "https://sg-widgets.dev/r/react/control-classes.json",
         "switch"
       ],
       "docs": "The type is two-state and never null, so the control has no empty state.",
@@ -460,6 +601,9 @@
         "lucide-react"
       ],
       "registryDependencies": [
+        "https://sg-widgets.dev/r/react/editor-calendar.json",
+        "https://sg-widgets.dev/r/react/field-error.json",
+        "https://sg-widgets.dev/r/react/control-classes.json",
         "input",
         "button",
         "calendar",
@@ -487,6 +631,9 @@
         "lucide-react"
       ],
       "registryDependencies": [
+        "https://sg-widgets.dev/r/react/editor-calendar.json",
+        "https://sg-widgets.dev/r/react/field-error.json",
+        "https://sg-widgets.dev/r/react/control-classes.json",
         "input",
         "button",
         "calendar",
@@ -565,6 +712,8 @@
         "lucide-react"
       ],
       "registryDependencies": [
+        "https://sg-widgets.dev/r/react/field-error.json",
+        "https://sg-widgets.dev/r/react/control-classes.json",
         "input"
       ],
       "docs": "Web links only. Uploads mint an Attachment through a separate flow.",
@@ -589,6 +738,8 @@
         "lucide-react"
       ],
       "registryDependencies": [
+        "https://sg-widgets.dev/r/react/field-error.json",
+        "https://sg-widgets.dev/r/react/control-classes.json",
         "input"
       ],
       "docs": "Takes r,g,b or a hex code and emits the decimal triple the field stores.",
@@ -638,6 +789,27 @@
       ]
     },
     {
+      "name": "entity-fields",
+      "type": "registry:component",
+      "title": "Entity Fields",
+      "description": "One entity type's fields, read through the context and kept.",
+      "categories": [
+        "flow-production-tracking",
+        "filter"
+      ],
+      "dependencies": [
+        "@sg-widgets/core"
+      ],
+      "registryDependencies": [],
+      "docs": "useEntityFields(context, entityType) answers the fields by name, empty until the read lands.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/entity-fields.ts",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
       "name": "filter-editor",
       "type": "registry:component",
       "title": "Filter Editor",
@@ -651,6 +823,7 @@
         "lucide-react"
       ],
       "registryDependencies": [
+        "https://sg-widgets.dev/r/react/entity-fields.json",
         "https://sg-widgets.dev/r/react/state-line.json",
         "button",
         "select",
@@ -693,6 +866,7 @@
         "lucide-react"
       ],
       "registryDependencies": [
+        "https://sg-widgets.dev/r/react/control-classes.json",
         "badge",
         "button",
         "dialog",
@@ -720,6 +894,8 @@
         "lucide-react"
       ],
       "registryDependencies": [
+        "https://sg-widgets.dev/r/react/entity-fields.json",
+        "https://sg-widgets.dev/r/react/control-classes.json",
         "badge",
         "button",
         "checkbox",
@@ -823,6 +999,27 @@
       ]
     },
     {
+      "name": "collection-source",
+      "type": "registry:component",
+      "title": "Collection Source",
+      "description": "The binding between a collection and the source behind it: its snapshot, its mode and its two-way sort and filter.",
+      "categories": [
+        "flow-production-tracking",
+        "collection"
+      ],
+      "dependencies": [
+        "@sg-widgets/core"
+      ],
+      "registryDependencies": [],
+      "docs": "useCollectionSource answers the snapshot and a retry for a failed page.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/collection-source.ts",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
       "name": "collection-footer",
       "type": "registry:component",
       "title": "Collection Footer",
@@ -864,6 +1061,7 @@
         "@tanstack/react-virtual"
       ],
       "registryDependencies": [
+        "https://sg-widgets.dev/r/react/collection-source.json",
         "https://sg-widgets.dev/r/react/collection-footer.json",
         "https://sg-widgets.dev/r/react/state-line.json",
         "https://sg-widgets.dev/r/react/field-value.json",
@@ -899,6 +1097,7 @@
         "@tanstack/react-virtual"
       ],
       "registryDependencies": [
+        "https://sg-widgets.dev/r/react/collection-source.json",
         "https://sg-widgets.dev/r/react/collection-footer.json",
         "https://sg-widgets.dev/r/react/state-line.json",
         "https://sg-widgets.dev/r/react/entity-card.json",
@@ -930,6 +1129,7 @@
         "@tanstack/react-virtual"
       ],
       "registryDependencies": [
+        "https://sg-widgets.dev/r/react/collection-source.json",
         "https://sg-widgets.dev/r/react/collection-footer.json",
         "https://sg-widgets.dev/r/react/state-line.json",
         "https://sg-widgets.dev/r/react/field-value.json",
@@ -962,6 +1162,7 @@
         "lucide-react"
       ],
       "registryDependencies": [
+        "https://sg-widgets.dev/r/react/collection-source.json",
         "https://sg-widgets.dev/r/react/state-line.json",
         "https://sg-widgets.dev/r/react/field-value.json",
         "https://sg-widgets.dev/r/react/status-badge.json",
@@ -1097,6 +1298,8 @@
         "lucide-react"
       ],
       "registryDependencies": [
+        "https://sg-widgets.dev/r/react/search-skeleton.json",
+        "https://sg-widgets.dev/r/react/control-classes.json",
         "https://sg-widgets.dev/r/react/state-line.json",
         "https://sg-widgets.dev/r/react/entity-chip.json",
         "https://sg-widgets.dev/r/react/picker-row.json",
@@ -1128,6 +1331,8 @@
         "lucide-react"
       ],
       "registryDependencies": [
+        "https://sg-widgets.dev/r/react/search-skeleton.json",
+        "https://sg-widgets.dev/r/react/entity-glyphs.json",
         "https://sg-widgets.dev/r/react/state-line.json",
         "https://sg-widgets.dev/r/react/picker-row.json",
         "command",
@@ -1155,6 +1360,8 @@
         "lucide-react"
       ],
       "registryDependencies": [
+        "https://sg-widgets.dev/r/react/search-skeleton.json",
+        "https://sg-widgets.dev/r/react/control-classes.json",
         "https://sg-widgets.dev/r/react/state-line.json",
         "https://sg-widgets.dev/r/react/entity-chip.json",
         "https://sg-widgets.dev/r/react/picker-row.json",

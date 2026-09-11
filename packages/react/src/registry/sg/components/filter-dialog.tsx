@@ -14,17 +14,15 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
+import { CONTROL_BOX, CONTROL_GLYPH, type ControlSize } from '@/registry/sg/components/control-classes';
 import {
   FilterEditor,
   type FieldChooserArgs,
   type ValueEditorArgs,
 } from '@/registry/sg/components/filter-editor';
 
-export type FilterDialogSize = 'sm' | 'md' | 'lg';
+export type FilterDialogSize = ControlSize;
 
-/** Controls follow the input ladder of `docs/design-rules.md`. */
-const BOX: Record<FilterDialogSize, string> = { sm: 'h-8 px-2', md: 'h-9 px-3', lg: 'h-10 px-3' };
-const GLYPH: Record<FilterDialogSize, string> = { sm: 'size-4', md: 'size-4', lg: 'size-5' };
 /** The icon-button step beside a control of each height. */
 const ICON: Record<FilterDialogSize, 'icon-sm' | 'icon' | 'icon-lg'> = {
   sm: 'icon-sm',
@@ -125,12 +123,12 @@ export function FilterDialog({
           data-size={size}
           className={cn(
             'border-border bg-background hover:bg-muted focus-visible:border-ring focus-visible:ring-ring/50 inline-flex shrink-0 items-center gap-1.5 rounded-lg border text-sm font-medium outline-none focus-visible:ring-3 disabled:pointer-events-none disabled:opacity-50',
-            BOX[size],
+            CONTROL_BOX[size],
           )}
         >
           {active > 0 ? (
             <>
-              <PencilIcon className={GLYPH[size]} />
+              <PencilIcon className={CONTROL_GLYPH[size]} />
               {label ?? 'Edit filters'}
               <Badge variant="secondary" data-slot="filter-count">
                 {active}
@@ -138,7 +136,7 @@ export function FilterDialog({
             </>
           ) : (
             <>
-              <ListFilterIcon className={GLYPH[size]} />
+              <ListFilterIcon className={CONTROL_GLYPH[size]} />
               {label ?? 'Add filters'}
             </>
           )}

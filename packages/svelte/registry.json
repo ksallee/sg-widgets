@@ -469,6 +469,7 @@
         "@lucide/svelte"
       ],
       "registryDependencies": [
+        "local:control-classes",
         "local:field-error",
         "switch"
       ],

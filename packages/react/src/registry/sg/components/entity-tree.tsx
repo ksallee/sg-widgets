@@ -28,6 +28,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import { useLatest } from '@/registry/sg/components/collection-source';
 import { FieldValue } from '@/registry/sg/components/field-value';
 import { StateLine } from '@/registry/sg/components/state-line';
 import { StatusBadge } from '@/registry/sg/components/status-badge';
@@ -58,13 +59,6 @@ export interface EntityTreeRowContext {
   disabled: boolean;
   /** True when the search placed this row, or its label holds every word. */
   match: boolean;
-}
-
-/** The latest value, for an effect that must read it without depending on it. */
-function useLatest<T>(value: T): { current: T } {
-  const ref = useRef(value);
-  ref.current = value;
-  return ref;
 }
 
 export interface EntityTreeProps extends DivProps {

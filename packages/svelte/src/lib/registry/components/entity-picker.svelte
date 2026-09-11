@@ -91,7 +91,7 @@
 		withSelectedPinned
 	} from '@sg-widgets/core';
 	import { Combobox } from 'bits-ui';
-	import ChevronsUpDown from '@lucide/svelte/icons/chevrons-up-down';
+	import ChevronDown from '@lucide/svelte/icons/chevron-down';
 	import SearchX from '@lucide/svelte/icons/search-x';
 	import TriangleAlert from '@lucide/svelte/icons/triangle-alert';
 	import X from '@lucide/svelte/icons/x';
@@ -105,6 +105,7 @@
 		PICKER_CHIP,
 		PICKER_CONTROL,
 		PICKER_GLYPH,
+	PICKER_TRAILING,
 		PICKER_ICON_BUTTON,
 		PICKER_INPUT,
 		PICKER_LIST,
@@ -510,7 +511,7 @@
 		</Combobox.Portal>
 
 		{#if !readonly}
-			<div class="pointer-events-none absolute right-2 flex items-center gap-1">
+			<div class={cn('pointer-events-none absolute top-0 right-2 flex items-center gap-1', PICKER_TRAILING[size])}>
 				{#if showClear}
 					<button
 						type="button"
@@ -526,9 +527,9 @@
 					data-slot="entity-picker-trigger"
 					aria-label="Show the options"
 					{disabled}
-					class="pointer-events-auto shrink-0 outline-none"
+					class={PICKER_ICON_BUTTON}
 				>
-					<ChevronsUpDown aria-hidden="true" class={cn('shrink-0 opacity-50', PICKER_GLYPH[size])} />
+					<ChevronDown aria-hidden="true" class={PICKER_GLYPH[size]} />
 				</Combobox.Trigger>
 			</div>
 		{/if}

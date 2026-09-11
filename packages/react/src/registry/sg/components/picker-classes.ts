@@ -10,14 +10,28 @@
 export type PickerSize = 'sm' | 'md' | 'lg';
 
 /**
- * The box a control sits in. `data-empty` takes the leading and the vertical inset
- * down one step, so an empty control is tighter than a filled one; `min-h` holds the
- * ladder and the trailing inset stays reserve for the clear and open controls.
+ * The box a control sits in. A filled control's leading inset matches the room above and
+ * below its chip, so the chip sits evenly inside the border; `data-empty` gives the
+ * reading inset of a plain input back, and takes the vertical inset down one step.
+ * `min-h` holds the ladder and the trailing inset stays reserve for the clear and open
+ * controls.
  */
 export const PICKER_BOX: Record<PickerSize, string> = {
-  sm: 'min-h-8 px-2 py-1 data-empty:pl-1.5 data-empty:py-0.5',
-  md: 'min-h-9 px-3 py-1 data-empty:pl-2 data-empty:py-0.5',
-  lg: 'min-h-10 px-3 py-1 data-empty:pl-2 data-empty:py-0.5'
+  sm: 'min-h-8 pr-2 pl-[5px] py-1 data-empty:pl-1.5 data-empty:py-0.5',
+  md: 'min-h-9 pr-3 pl-[5px] py-1 data-empty:pl-2 data-empty:py-0.5',
+  lg: 'min-h-10 pr-3 pl-1 py-1 data-empty:pl-2 data-empty:py-0.5'
+};
+
+/**
+ * The trailing controls ride the first row of the control: they centre on a control that
+ * holds one line and stay with that row when the value wraps below it. Only md stretches
+ * past its chip row to hold the ladder, so one height cannot serve both states there; it
+ * takes the ladder, which is exact on one line and 2px high when the value wraps.
+ */
+export const PICKER_TRAILING: Record<PickerSize, string> = {
+  sm: 'h-8',
+  md: 'h-9',
+  lg: 'h-10'
 };
 
 /** The glyphs inside a control. */
@@ -28,7 +42,7 @@ export const PICKER_CHIP: Record<PickerSize, 'sm' | 'md'> = { sm: 'sm', md: 'sm'
 
 /** The bordered field the chips and the query input sit in. */
 export const PICKER_CONTROL =
-  'border-input bg-background has-[:focus-visible]:ring-ring has-[:focus-visible]:ring-offset-background has-aria-invalid:border-destructive has-aria-invalid:ring-destructive/20 dark:has-aria-invalid:ring-destructive/40 data-invalid:border-destructive data-invalid:ring-destructive/20 dark:data-invalid:ring-destructive/40 relative flex w-full min-w-0 flex-wrap items-center gap-1.5 rounded-md border text-sm transition-colors duration-150 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-offset-2 has-aria-invalid:ring-2 data-invalid:ring-2';
+  'border-input bg-background hover:bg-muted/30 has-[:focus-visible]:ring-ring has-[:focus-visible]:ring-offset-background has-aria-invalid:border-destructive has-aria-invalid:ring-destructive/20 dark:has-aria-invalid:ring-destructive/40 data-invalid:border-destructive data-invalid:ring-destructive/20 dark:data-invalid:ring-destructive/40 relative flex w-full min-w-0 flex-wrap items-center gap-1.5 rounded-md border text-sm transition-colors duration-150 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-offset-2 has-aria-invalid:ring-2 data-invalid:ring-2';
 
 /** The combobox input of a single picker: no box of its own, it borrows the control's. */
 export const PICKER_INPUT =

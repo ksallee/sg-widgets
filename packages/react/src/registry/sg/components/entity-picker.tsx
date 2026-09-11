@@ -24,7 +24,7 @@ import {
 } from '@sg-widgets/core';
 import { Combobox as ComboboxPrimitive } from '@base-ui/react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ChevronsUpDown, SearchX, TriangleAlert, X } from 'lucide-react';
+import { ChevronDown, SearchX, TriangleAlert, X } from 'lucide-react';
 import { EntityChip } from '@/registry/sg/components/entity-chip';
 import {
   PICKER_ARMED,
@@ -32,6 +32,7 @@ import {
   PICKER_CHIP,
   PICKER_CONTROL,
   PICKER_GLYPH,
+  PICKER_TRAILING,
   PICKER_ICON_BUTTON,
   PICKER_INPUT,
   PICKER_LIST,
@@ -547,7 +548,7 @@ export function EntityPicker({
         </ComboboxPrimitive.Portal>
 
         {readonly ? null : (
-          <div className="pointer-events-none absolute right-2 flex items-center gap-1">
+          <div className={cn('pointer-events-none absolute top-0 right-2 flex items-center gap-1', PICKER_TRAILING[size])}>
             {showClear ? (
               <button
                 type="button"
@@ -563,9 +564,9 @@ export function EntityPicker({
               data-slot="entity-picker-trigger"
               aria-label="Show the options"
               disabled={disabled}
-              className="pointer-events-auto shrink-0 outline-none"
+              className={PICKER_ICON_BUTTON}
             >
-              <ChevronsUpDown aria-hidden="true" className={cn('shrink-0 opacity-50', PICKER_GLYPH[size])} />
+              <ChevronDown aria-hidden="true" className={PICKER_GLYPH[size]} />
             </ComboboxPrimitive.Trigger>
           </div>
         )}

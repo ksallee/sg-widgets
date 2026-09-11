@@ -15,7 +15,7 @@ import {
   CalendarClock,
   ChevronLeft,
   ChevronRight,
-  ChevronsUpDown,
+  ChevronDown,
   CircleDollarSign,
   CircleDot,
   FileText,
@@ -69,6 +69,13 @@ const GLYPH: Record<FieldPickerSize, string> = {
   sm: 'size-4',
   md: 'size-4',
   lg: 'size-5',
+};
+
+/** The trailing controls ride the first row, so they stay with it when the value wraps. */
+const TRAILING: Record<FieldPickerSize, string> = {
+  sm: 'h-8',
+  md: 'h-9',
+  lg: 'h-10'
 };
 
 const ICONS: Record<string, typeof Type> = {
@@ -368,7 +375,7 @@ export function FieldPicker({
           disabled={disabled}
           title={label ?? placeholder}
           className={cn(
-            'border-input bg-background focus-visible:ring-ring focus-visible:ring-offset-background aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 flex w-full min-w-0 items-center rounded-md border text-sm outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 aria-invalid:ring-2',
+            'border-input bg-background hover:bg-muted/30 focus-visible:ring-ring focus-visible:ring-offset-background aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 flex w-full min-w-0 items-center rounded-md border text-sm outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 aria-invalid:ring-2',
             BOX[size],
             readonly ? 'pr-3' : showClear ? 'pr-14' : 'pr-8',
           )}
@@ -541,7 +548,7 @@ export function FieldPicker({
       </Popover>
 
       {!readonly ? (
-        <div className="pointer-events-none absolute right-2 flex items-center gap-1">
+        <div className={cn('pointer-events-none absolute top-0 right-2 flex items-center gap-1', TRAILING[size])}>
           {showClear ? (
             <button
               type="button"
@@ -553,7 +560,7 @@ export function FieldPicker({
               <X aria-hidden="true" className={GLYPH[size]} />
             </button>
           ) : null}
-          <ChevronsUpDown aria-hidden="true" className={cn('shrink-0 opacity-50', GLYPH[size])} />
+          <ChevronDown aria-hidden="true" className={cn('shrink-0 opacity-50', GLYPH[size])} />
         </div>
       ) : null}
     </div>

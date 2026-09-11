@@ -5,6 +5,7 @@ import type { FieldSchema } from '../src/schema.js';
 import {
   currentType,
   deriveFieldOptions,
+  entityTypeOptions,
   fieldPathOf,
   filterEntityTypes,
   friendlyFieldPath,
@@ -54,6 +55,40 @@ describe('filterEntityTypes', () => {
     expect(filterEntityTypes(types, { allow: ['Shot', 'Asset'] }).map((t) => t.name)).toEqual(['Shot', 'Asset']);
     expect(filterEntityTypes(types, { deny: ['HumanUser'] }).map((t) => t.name)).toEqual(['Shot', 'Asset']);
     expect(filterEntityTypes(types, { allow: ['Shot', 'Asset'], deny: ['Asset'] }).map((t) => t.name)).toEqual(['Shot']);
+  });
+});
+
+describe('entityTypeOptions', () => {
+  const types = [
+    { name: 'Shot', displayName: 'Shot' },
+    { name: 'Asset', displayName: 'Asset' },
+    { name: 'HumanUser', displayName: 'Person' },
+  ];
+
+  it('offers nothing while the read is in flight', () => {
+    const options = entityTypeOptions(null);
+    expect(options.types).toEqual([]);
+    expect(options.shown).toEqual([]);
+    expect(options.labelOf('Shot')).toBe('Shot');
+  });
+
+  it('narrows the derived list by the query, on display name or code', () => {
+    expect(entityTypeOptions(types, { query: 'person' }).shown.map((t) => t.name)).toEqual(['HumanUser']);
+    expect(entityTypeOptions(types, { query: 'humanuser' }).shown.map((t) => t.name)).toEqual(['HumanUser']);
+    expect(entityTypeOptions(types, { query: '' }).shown).toHaveLength(3);
+  });
+
+  it('searches what allow and deny left', () => {
+    const options = entityTypeOptions(types, { deny: ['HumanUser'] });
+    expect(options.types.map((t) => t.name)).toEqual(['Shot', 'Asset']);
+    expect(options.shown.map((t) => t.name)).toEqual(['Shot', 'Asset']);
+  });
+
+  it('labels a code by its display name, and an absent one by itself', () => {
+    const options = entityTypeOptions(types);
+    expect(options.labelOf('HumanUser')).toBe('Person');
+    expect(options.labelOf('CustomEntity07')).toBe('CustomEntity07');
+    expect(entityTypeOptions(types, { deny: ['HumanUser'] }).labelOf('HumanUser')).toBe('HumanUser');
   });
 });
 

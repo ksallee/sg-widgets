@@ -4,6 +4,32 @@
   "homepage": "https://sg-widgets.dev",
   "items": [
     {
+      "name": "command",
+      "type": "registry:ui",
+      "title": "Command",
+      "description": "A list that is always open, always in place and always holds a highlight, over Base UI's Autocomplete.",
+      "categories": [
+        "flow-production-tracking",
+        "atom"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "@base-ui/react",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "dialog",
+        "input-group"
+      ],
+      "docs": "The search box, the list with its edge fades, the group, the row, the live region and the dialog shell every search widget and field list in this registry is drawn with.",
+      "files": [
+        {
+          "path": "src/components/ui/command.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
       "name": "status-glyph",
       "type": "registry:component",
       "title": "Status Glyph",
@@ -442,7 +468,7 @@
       "registryDependencies": [
         "https://sg-widgets.dev/r/react/search-skeleton.json",
         "https://sg-widgets.dev/r/react/state-line.json",
-        "command",
+        "https://sg-widgets.dev/r/react/command.json",
         "skeleton"
       ],
       "docs": "The debounce, the ticket that drops a stale answer, the page and its load-more row, and the list with its error, loading and empty blocks.",
@@ -521,7 +547,7 @@
       "registryDependencies": [
         "https://sg-widgets.dev/r/react/state-line.json",
         "popover",
-        "command",
+        "https://sg-widgets.dev/r/react/command.json",
         "skeleton"
       ],
       "docs": "Emits ShotGrid's dotted path. Only single entity fields are descended into; a path through a multi-entity field reads back nothing.",
@@ -570,7 +596,7 @@
         "https://sg-widgets.dev/r/react/state-line.json",
         "button",
         "checkbox",
-        "command",
+        "https://sg-widgets.dev/r/react/command.json",
         "skeleton",
         "https://sg-widgets.dev/r/react/field-picker.json",
         "https://sg-widgets.dev/r/react/sortable.json"
@@ -1025,7 +1051,7 @@
         "badge",
         "button",
         "checkbox",
-        "command",
+        "https://sg-widgets.dev/r/react/command.json",
         "popover",
         "select",
         "https://sg-widgets.dev/r/react/filter-dialog.json"
@@ -1493,7 +1519,7 @@
         "https://sg-widgets.dev/r/react/control-classes.json",
         "https://sg-widgets.dev/r/react/entity-chip.json",
         "https://sg-widgets.dev/r/react/picker-row.json",
-        "command",
+        "https://sg-widgets.dev/r/react/command.json",
         "dialog",
         "button",
         "kbd"
@@ -1523,7 +1549,7 @@
         "https://sg-widgets.dev/r/react/search-control.json",
         "https://sg-widgets.dev/r/react/entity-glyphs.json",
         "https://sg-widgets.dev/r/react/picker-row.json",
-        "command"
+        "https://sg-widgets.dev/r/react/command.json"
       ],
       "docs": "Browses one level per call and searches by matching words, then asking where each hit sits. Emits the row picked and the path that reaches it.",
       "files": [

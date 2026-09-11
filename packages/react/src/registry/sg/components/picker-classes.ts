@@ -47,7 +47,7 @@ export const PICKER_CHIP: Record<PickerSize, 'sm' | 'md'> = { sm: 'sm', md: 'sm'
 
 /** The bordered field the chips and the query input sit in. */
 export const PICKER_CONTROL =
-  'border-input bg-background hover:bg-muted/30 has-[:focus-visible]:ring-ring has-[:focus-visible]:ring-offset-background has-aria-invalid:border-destructive has-aria-invalid:ring-destructive/20 dark:has-aria-invalid:ring-destructive/40 data-invalid:border-destructive data-invalid:ring-destructive/20 dark:data-invalid:ring-destructive/40 relative flex w-full min-w-0 flex-wrap items-center gap-1.5 rounded-md border text-sm transition-colors duration-150 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-offset-2 has-aria-invalid:ring-2 data-invalid:ring-2';
+  'border-input bg-background hover:bg-muted/30 has-[:focus-visible]:ring-ring has-[:focus-visible]:ring-offset-background has-aria-invalid:border-destructive has-aria-invalid:ring-destructive/20 dark:has-aria-invalid:ring-destructive/40 data-invalid:border-destructive data-invalid:ring-destructive/20 dark:data-invalid:ring-destructive/40 relative flex w-full min-w-0 flex-wrap items-center gap-1.5 rounded-lg border text-sm transition-colors duration-150 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-offset-2 has-aria-invalid:ring-2 data-invalid:ring-2';
 
 /** The combobox input of a single picker: no box of its own, it borrows the control's. */
 export const PICKER_INPUT =
@@ -97,4 +97,4 @@ export const PICKER_ARMED = 'ring-ring ring-offset-background ring-2 ring-offset
 
 /** A chosen code in the control. A code is not a row, so it has no thumbnail. */
 export const PICKER_TEXT_CHIP =
-  'bg-muted text-foreground flex h-6 min-w-0 shrink-0 items-center gap-1.5 rounded-sm px-1.5 text-xs';
+  'bg-muted text-foreground flex h-6 min-w-0 shrink-0 items-center gap-1.5 rounded-md px-1.5 text-xs';

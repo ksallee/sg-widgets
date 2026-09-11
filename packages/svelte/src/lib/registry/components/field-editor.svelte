@@ -17,7 +17,7 @@
 
 	/** The display half, which is also the popover's anchor. */
 	const DISPLAY =
-		'focus-visible:ring-ring focus-visible:ring-offset-background hover:bg-accent hover:text-accent-foreground flex w-full min-w-0 cursor-text items-center rounded-md px-2 py-1.5 transition-colors duration-150 outline-none focus-visible:ring-2 focus-visible:ring-offset-2';
+		'focus-visible:ring-ring focus-visible:ring-offset-background hover:bg-accent hover:text-accent-foreground flex w-full min-w-0 cursor-text items-center rounded-sm px-2 py-1.5 transition-colors duration-150 outline-none focus-visible:ring-2 focus-visible:ring-offset-2';
 
 	/** The same anchor where the caller draws the value itself, as a table cell does. */
 	const ANCHOR = 'flex w-full min-w-0 items-center text-left outline-none';

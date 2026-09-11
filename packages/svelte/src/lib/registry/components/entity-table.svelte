@@ -843,7 +843,7 @@
 		bind:this={scrollEl}
 		data-slot="entity-table-scroll"
 		style="max-height:{maxHeight}"
-		class="border-border relative w-full overflow-auto rounded-md border [&>[data-slot=table-container]]:overflow-visible"
+		class="border-border relative w-full overflow-auto rounded-lg border [&>[data-slot=table-container]]:overflow-visible"
 	>
 		<Table.Root style="table-layout:fixed;width:{totalWidth}px">
 			<colgroup>

@@ -461,7 +461,7 @@ export function EntityGrid({
         ref={scrollRef}
         data-slot="entity-grid-scroll"
         style={{ maxHeight }}
-        className="border-border flex w-full flex-col gap-3 overflow-auto rounded-md border p-3"
+        className="border-border flex w-full flex-col gap-3 overflow-auto rounded-lg border p-3"
       >
         {snapshot.status === 'error' && !pageError ? (
           <StateLine

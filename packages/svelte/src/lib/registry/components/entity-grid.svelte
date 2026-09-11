@@ -490,7 +490,7 @@
 		bind:this={scrollEl}
 		data-slot="entity-grid-scroll"
 		style="max-height:{maxHeight}"
-		class="border-border flex w-full flex-col gap-3 overflow-auto rounded-md border p-3"
+		class="border-border flex w-full flex-col gap-3 overflow-auto rounded-lg border p-3"
 	>
 		{#if snapshot.status === 'error' && !pageError}
 			<StateLine

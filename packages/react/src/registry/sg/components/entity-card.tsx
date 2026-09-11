@@ -439,7 +439,7 @@ export function EntityCard({
         data-size={size}
         data-state={selected ? 'selected' : undefined}
         className={cn(
-          'group/tile border-border bg-card focus-visible:ring-ring focus-visible:ring-offset-background relative flex w-full min-w-0 flex-col overflow-hidden rounded-md border text-left outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2',
+          'group/tile border-border bg-card focus-visible:ring-ring focus-visible:ring-offset-background relative flex w-full min-w-0 flex-col overflow-hidden rounded-lg border text-left outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2',
           selected && 'bg-accent text-accent-foreground',
           className,
         )}

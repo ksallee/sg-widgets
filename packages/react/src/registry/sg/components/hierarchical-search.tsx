@@ -398,7 +398,7 @@ export function HierarchicalSearch({
   return (
     <div ref={ref} data-slot="hierarchical-search" className={cn('w-full', className)} {...rest}>
       {/* Server-side matching only, so the list never filters what came back. */}
-      <Command shouldFilter={false} className="border-border rounded-md border" onKeyDown={onKeydown}>
+      <Command shouldFilter={false} className="border-border rounded-lg border" onKeyDown={onKeydown}>
         <CommandInput value={query} placeholder={placeholder} onValueChange={setQuery} />
         <CommandList data-sg-search-list>
           {failure !== null ? (

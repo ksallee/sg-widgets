@@ -10,9 +10,9 @@
 	 * clear and open controls.
 	 */
 	const BOX: Record<ContextSelectorSize, string> = {
-		sm: 'min-h-8 px-2 py-0.5 data-empty:pl-1.5 data-empty:py-0',
-		md: 'min-h-9 px-3 py-1 data-empty:pl-2 data-empty:py-0.5',
-		lg: 'min-h-10 px-3 py-0.5 data-empty:pl-2 data-empty:py-0'
+		sm: 'min-h-8 pr-2 pl-[5px] py-0.5 data-empty:pl-1.5 data-empty:py-0',
+		md: 'min-h-9 pr-3 pl-[5px] py-1 data-empty:pl-2 data-empty:py-0.5',
+		lg: 'min-h-10 pr-3 pl-1 py-0.5 data-empty:pl-2 data-empty:py-0'
 	};
 	const GLYPH: Record<ContextSelectorSize, string> = { sm: 'size-4', md: 'size-4', lg: 'size-5' };
 	/** A chip inside a control sits one step down the leaf ladder. */

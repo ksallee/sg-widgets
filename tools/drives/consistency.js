@@ -13,8 +13,12 @@
 //   picker chrome. Rows and the icon buttons inside a control take 0.6, chips and badges
 //   0.8, surfaces the full step.
 //
-//   A control's leading inset is 8/12/12, which rule 3 pins for a picker (`pl-3` at md)
-//   and sixteen of the controls already draw; the shadcn `px-2.5` is the minority.
+//   A control whose value is plain text has a leading inset of 8/12/12, the reading inset
+//   rule 3 pins and sixteen of the controls already draw; the shadcn `px-2.5` is the
+//   minority. A control that holds a chip or a badge insets it to the room above and
+//   below that value instead, which is rule 3's own wording, so the drive measures that
+//   room rather than naming a number. It allows 2px either way: the registry sets 5 at sm
+//   and md, off the 4/6 scale, so a chip reads level with the trailing controls.
 //
 //   A row's gap is 8: its leading slot is a thumbnail or an avatar, an item beside the
 //   label rather than a glyph inside it. A glyph inside a chip, a badge or a control
@@ -93,6 +97,12 @@ function leading(box) {
     a.getBoundingClientRect().left <= b.getBoundingClientRect().left ? a : b,
   );
   return px(getComputedStyle(first).paddingLeft);
+}
+
+/** The chip or badge a control draws its value as, if it draws one. */
+function chipValue(box) {
+  const chip = box.querySelector(`${CHIP},${TEXT_CHIP}`);
+  return chip && chip.getBoundingClientRect().height > 0 ? chip : null;
 }
 
 /** True when the element renders text itself rather than handing it to a child. */
@@ -183,7 +193,15 @@ for (const pane of $$('[data-pane]')) {
     if (box) {
       const s = getComputedStyle(box);
       check(widget, framework, `control ${size}`, 'height', LADDER[size], Math.round(box.getBoundingClientRect().height));
-      check(widget, framework, `control ${size}`, 'leading-inset', INSET[size], leading(box));
+      // A filled control that holds a chip insets it to the room above and below it. An
+      // empty one, and a control whose value is text, keep the reading inset.
+      const value = box.hasAttribute('data-empty') ? null : chipValue(box);
+      if (value) {
+        const room = value.getBoundingClientRect().top - box.getBoundingClientRect().top - px(s.borderTopWidth);
+        check(widget, framework, `control ${size}`, 'leading-inset', Math.round(room), leading(box), 2.01);
+      } else {
+        check(widget, framework, `control ${size}`, 'leading-inset', INSET[size], leading(box));
+      }
       // A control that declares no gap has nothing to space: a bare input, or a box whose
       // leading glyph carries its own inset.
       const gap = inlineGap(box);

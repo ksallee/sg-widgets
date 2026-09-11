@@ -33,6 +33,7 @@ const CHIP_VALUED = new Set([
   'status-multi-picker',
   'entity-type-picker',
   'entity-type-multi-picker',
+  'context-selector',
 ]);
 
 const px = (value) => Math.round(parseFloat(value) * 100) / 100;

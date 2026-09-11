@@ -32,6 +32,7 @@ import {
   PICKER_SEARCH,
   PICKER_SEARCH_ROW,
   PICKER_TEXT_CHIP,
+  PICKER_TEXT_CHIP_BOX,
   PICKER_TOKEN_INPUT,
 } from '@/registry/sg/components/picker-classes';
 import { StateLine } from '@/registry/sg/components/state-line';
@@ -416,7 +417,7 @@ export function EntityTypePicker({
                   data-chip=""
                   data-armed={armed === index ? 'true' : undefined}
                   hidden={row.ready && index >= plan.shown.length}
-                  className={cn(PICKER_TEXT_CHIP, armed === index && PICKER_ARMED)}
+                  className={cn(PICKER_TEXT_CHIP, PICKER_TEXT_CHIP_BOX[size], armed === index && PICKER_ARMED)}
                 >
                   <span className="truncate">{labelOf(code)}</span>
                   {multiple && interactive ? (

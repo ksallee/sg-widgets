@@ -25,6 +25,17 @@ A renamed widget keeps its old name as a deprecated item for one release: the ol
 module that re-exports the new one, names the new item as its only `registryDependencies` entry,
 and says "Deprecated" in its description. Its docs page keeps its URL and points at the new one.
 
+One item per registry, `sg-widgets`, is the whole set: it carries no file and names every other
+item in `registryDependencies`, so a consumer installs everything in one command.
+
+```sh
+pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/sg-widgets.json
+pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/sg-widgets.json
+```
+
+It is the first entry of each `registry.json` and a new item is added to its list in the same
+change that adds the item.
+
 ## 2. Where the source lives
 
 | | path on disk | imported in source as | installs to |

@@ -647,6 +647,22 @@
       ]
     },
     {
+      "name": "entity-fields",
+      "type": "registry:component",
+      "title": "Entity Fields",
+      "description": "One entity type's fields, read through the context and kept.",
+      "dependencies": [
+        "@sg-widgets/core"
+      ],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "src/lib/registry/components/entity-fields.svelte.ts",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
       "name": "filter-editor",
       "type": "registry:component",
       "title": "Filter Editor",
@@ -656,6 +672,7 @@
         "@lucide/svelte"
       ],
       "registryDependencies": [
+        "local:entity-fields",
         "local:state-line",
         "button",
         "select",
@@ -716,6 +733,7 @@
         "@lucide/svelte"
       ],
       "registryDependencies": [
+        "local:entity-fields",
         "local:control-classes",
         "badge",
         "button",
@@ -804,6 +822,22 @@
       ]
     },
     {
+      "name": "collection-source",
+      "type": "registry:component",
+      "title": "Collection Source",
+      "description": "The binding between a collection and the source behind it: its snapshot, its mode and its two-way sort and filter.",
+      "dependencies": [
+        "@sg-widgets/core"
+      ],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "src/lib/registry/components/collection-source.svelte.ts",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
       "name": "collection-footer",
       "type": "registry:component",
       "title": "Collection Footer",
@@ -836,6 +870,7 @@
         "@tanstack/virtual-core"
       ],
       "registryDependencies": [
+        "local:collection-source",
         "local:collection-footer",
         "local:state-line",
         "local:field-value",
@@ -866,6 +901,7 @@
         "@tanstack/virtual-core"
       ],
       "registryDependencies": [
+        "local:collection-source",
         "local:collection-footer",
         "local:state-line",
         "local:entity-card",
@@ -892,6 +928,7 @@
         "@tanstack/virtual-core"
       ],
       "registryDependencies": [
+        "local:collection-source",
         "local:collection-footer",
         "local:state-line",
         "local:field-value",

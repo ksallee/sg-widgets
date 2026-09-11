@@ -47,6 +47,7 @@
 	import * as Command from '$lib/components/ui/command/index.js';
 	import * as Popover from '$lib/components/ui/popover/index.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
+	import { entityFields } from '$lib/registry/components/entity-fields.svelte.js';
 	import FilterDialog from '$lib/registry/components/filter-dialog.svelte';
 
 	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>, HTMLDivElement> & {
@@ -89,17 +90,11 @@
 		...rest
 	}: Props = $props();
 
-	let fields = $state<Record<string, FieldSchema>>({});
-
-	$effect(() => {
-		let live = true;
-		void context.schema.fields(entityType).then((loaded) => {
-			if (live) fields = loaded;
-		});
-		return () => {
-			live = false;
-		};
-	});
+	const schemaFields = entityFields(
+		() => context,
+		() => entityType
+	);
+	const fields = $derived(schemaFields.current);
 
 	// Counts are read against the filter with every facet's own condition stripped, so
 	// ticking one value does not empty its neighbours. One read serves every pill.

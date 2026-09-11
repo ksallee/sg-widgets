@@ -91,6 +91,7 @@
 		NO_ROWS_LABEL,
 		hasFailedPage,
 		editorPlacementFor,
+		errorText,
 		idsForRefs,
 		isEditableType,
 		loadsOnArrowDown,
@@ -98,12 +99,9 @@
 		preferencesOf,
 		rowIdOf,
 		rowIsDisabled,
-		sameFilters,
 		sameIds,
 		sameRefs,
-		sameSort,
 		shouldLoadNext,
-		sourceModeFor,
 		stateLine
 	} from '@sg-widgets/core';
 	import {
@@ -137,6 +135,7 @@
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
 	import * as Table from '$lib/components/ui/table/index.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
+	import { bindSource } from '$lib/registry/components/collection-source.svelte.js';
 	import CollectionFooter from '$lib/registry/components/collection-footer.svelte';
 	import FieldEditor from '$lib/registry/components/field-editor.svelte';
 	import FieldValue from '$lib/registry/components/field-value.svelte';
@@ -265,18 +264,25 @@
 
 	/* state ---------------------------------------------------------------- */
 
-	// The source is the store; the snapshot is the value a template reads.
-	// svelte-ignore state_referenced_locally
-	let snapshot = $state(source.snapshot());
-	$effect(() => source.subscribe(() => (snapshot = source.snapshot())));
-	$effect(() => {
-		if (source.status === 'idle') void source.load();
+	const bound = bindSource({
+		source: () => source,
+		paging: () => paging,
+		sort: {
+			get: () => sort,
+			set: (next) => {
+				sort = next;
+				onSortChange?.(next);
+			}
+		},
+		filters: {
+			get: () => filters,
+			set: (next) => {
+				filters = next;
+				onFiltersChange?.(next);
+			}
+		}
 	});
-	$effect(() => {
-		// `paging` is the one prop a caller sets, so the source follows it rather than the
-		// other way round. Setting a mode it already holds is a no-op.
-		void source.setMode(sourceModeFor(paging));
-	});
+	const snapshot = $derived(bound.snapshot);
 	$effect(() => {
 		// A group is only whole when the server put its rows together, so the group path
 		// leads the sort. Setting it reads the first page again.
@@ -409,30 +415,6 @@
 		untrack(() => {
 			for (const row of groupHeaders) if (row.getIsExpanded() === shut.has(row.id)) row.toggleExpanded(!shut.has(row.id));
 		});
-	});
-
-	$effect(() => {
-		const wanted = sort;
-		if (wanted === undefined || sameSort(wanted, untrack(() => snapshot.sort))) return;
-		void source.setSort([...wanted]);
-	});
-	$effect(() => {
-		const current = snapshot.sort;
-		if (sameSort(current, untrack(() => sort ?? []))) return;
-		sort = [...current];
-		onSortChange?.(sort);
-	});
-
-	$effect(() => {
-		const wanted = filters;
-		if (wanted === undefined || sameFilters(wanted, untrack(() => snapshot.filters))) return;
-		void source.setFilters(wanted);
-	});
-	$effect(() => {
-		const current = snapshot.filters;
-		if (sameFilters(current, untrack(() => filters ?? null))) return;
-		filters = current;
-		onFiltersChange?.(current);
 	});
 
 	/**
@@ -673,7 +655,7 @@
 		} catch (error) {
 			// The write is refused, so the cell goes back to what the row still holds and
 			// says why beside it.
-			cellError = { key, path: column.path, message: error instanceof Error ? error.message : String(error) };
+			cellError = { key, path: column.path, message: errorText(error) };
 		}
 	}
 
@@ -797,12 +779,6 @@
 	});
 
 	/* paging --------------------------------------------------------------- */
-
-	/** Read the page that failed again: the one a pager is on, or the one that was appended. */
-	function retryPage(): void {
-		if (paging === 'pages') void source.setPage(snapshot.page);
-		else void source.loadMore();
-	}
 
 	const loadingText = $derived(stateLine('loading', { loadingLabel }));
 </script>
@@ -1209,7 +1185,7 @@
 									icon={CircleAlert}
 									label={stateLine('error', { errorLabel }, snapshot.error?.message)}
 								>
-									<Button variant="outline" size="sm" onclick={retryPage}>Retry</Button>
+									<Button variant="outline" size="sm" onclick={() => bound.retry()}>Retry</Button>
 								</StateLine>
 							</Table.Cell>
 						</Table.Row>

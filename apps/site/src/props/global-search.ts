@@ -1,0 +1,45 @@
+import type { PropsFile } from './_types';
+
+export default {
+  extends: { name: 'search-control', omit: ['load', 'query', 'onQueryChange', 'request', 'enabled', 'readsEmpty', 'paging', 'debounceMs', 'shell', 'commandClass', 'onKeyDown', 'title', 'description', 'errorSlot', 'loadingSlot', 'emptySlot', 'skeletonLines', 'skeletonLead', 'rows', 'empty'] },
+  props: [
+    { name: 'context', type: '`SgContext`', default: 'required', meaning: 'The widget context. Every read goes through it, so widgets on a page share one cache.' },
+    { name: 'entityTypes', type: '`string[] | Record<string, WireCondition[] | null>`', default: 'Asset, Shot, Sequence, Task, Version, HumanUser, Project', meaning: 'Types to search, with an optional filter each.' },
+    { name: 'projectId', type: '`number | null`', default: '`null`', meaning: 'Scopes every searched type that has a `project` field.' },
+    { name: 'thumbnail', type: '`string | false`', default: '`\'image\'`', meaning: 'Field holding the thumbnail URL. `false` hides the leading slot.' },
+    { name: 'labelField', type: '`string`', default: 'display-name chain', meaning: 'Field holding the row label.' },
+    { name: 'subLabelField', type: '`string | CollectionColumn | null`', default: '`null`', meaning: 'The muted line under the label. A resolved column renders it by type.' },
+    { name: 'subLabel', type: '`(hit) => string`', default: '—', meaning: 'The muted line of your own. Wins over `subLabelField`.' },
+    { name: 'secondaryField', type: '`string | CollectionColumn | null`', default: '`null`', meaning: 'The right-aligned value, drawn by its data type.' },
+    { name: 'secondary', type: '`(hit) => string`', default: '—', meaning: 'Right-aligned text of your own. Wins over `secondaryField`.' },
+    { name: 'showCode', type: '`boolean`', default: '`false`', meaning: 'Shows the row\'s `code` beside the label when the two differ.' },
+    { name: 'fields', type: '`string[]`', default: '`[]`', meaning: 'Extra fields to request, so your own sub-label or secondary can read them.' },
+    { name: 'hotkey', type: '`boolean`', default: '`false`', meaning: 'Opens the palette on Cmd/Ctrl+K.' },
+    { name: 'inline', type: '`boolean`', default: '`false`', meaning: 'Renders a combobox in the page instead of a dialog.' },
+    { name: 'open', type: '`boolean`', default: '`false`', meaning: 'Whether the dialog is open.' },
+    { name: 'recents', type: '`EntityRef[]`', default: '`[]`', meaning: 'Rows picked before, newest first, shown on an empty query.' },
+    { name: 'recentLimit', type: '`number`', default: '`5`', meaning: 'How many recents survive a pick.' },
+    { name: 'placeholder', type: '`string`', default: '`\'Search…\'`', meaning: 'Text in the search input.' },
+    { name: 'emptyLabel', type: '`string`', default: '`\'No match\'`', meaning: 'Shown when a query matches nothing.' },
+    { name: 'loadingLabel', type: '`string`', default: '`\'Loading…\'`', meaning: 'Names the skeletons a read stands behind, for a screen reader.' },
+    { name: 'errorLabel', type: '`string`', default: '—', meaning: 'Shown in place of what the failed read said.' },
+    { name: 'label', type: '`string`', default: '`\'Search\'`', meaning: 'Text on the trigger.' },
+    { name: 'size', type: '`\'sm\' | \'md\' | \'lg\'`', default: '`\'md\'`', meaning: 'Trigger heights 8, 9 and 10, and the row\'s leading slot.' },
+    { name: 'class / className', type: '`string`', default: '—', meaning: 'Merged after the widget\'s own classes.' },
+  ],
+  events: [
+    { name: 'onSelect', payload: '`EntityRef`', when: 'A row was picked.' },
+    { name: 'onRecentsChange', payload: '`EntityRef[]`', when: 'The recents list changed, the pick first.' },
+    { name: 'onOpenChange', payload: '`boolean`', when: 'The dialog opened or closed. Svelte also binds it with `bind:open`.' },
+  ],
+  slots: [
+    { name: 'trigger', receives: '`{ open }`, a function that opens the dialog. Replaces the default button.' },
+  ],
+  keyboard: [
+    { key: '`Cmd/Ctrl` `K`', does: 'Opens and closes the palette, when `hotkey` is on.' },
+    { key: '`Down` / `Up`', does: 'Moves through the results, across group headings.' },
+    { key: '`Enter`', does: 'Picks the highlighted row, or loads the next page on the last row.' },
+    { key: '`Escape`', does: 'Closes the palette.' },
+    { key: '`Tab`', does: 'Reaches the trigger; inside the palette focus stays in the input.' },
+  ],
+} satisfies PropsFile;

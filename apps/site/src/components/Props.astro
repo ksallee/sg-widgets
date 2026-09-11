@@ -1,0 +1,126 @@
+---
+/**
+ * One table of a registry item's surface, drawn from its props file.
+ *
+ * `<Props name="user-multi-picker" />` draws every prop the widget takes: its own
+ * rows first, then its base's, an override where the base's row sat. An inherited
+ * row names the item it comes from and links to that row on its page. `kind` picks
+ * the table: props, events, slots or keyboard.
+ *
+ * Every row carries an id -- `prop-size`, `event-onValueChange`, `slot-row`,
+ * `key-3` -- so a row on one page addresses the same row on another. An item drawn
+ * on a page of its own uses those ids bare; one drawn as a section of another item's
+ * page prefixes them with its own name.
+ */
+import { resolve, type Kind } from '../props/_resolve';
+import type { EventRow, KeyRow, PropRow, SlotRow } from '../props/_types';
+
+interface Props {
+  /** The registry item, as it is named in the registry and under src/props/. */
+  name: string;
+  kind?: Kind;
+}
+
+const { name, kind = 'props' } = Astro.props;
+const rows = resolve(name, kind);
+
+/** Inline markdown of a cell: code spans, links and `kbd`, on escaped text. */
+function inline(text: string | undefined): string {
+  if (!text) return '';
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
+    .replace(/&lt;(\/?kbd)&gt;/g, '<$1>');
+}
+
+const headers: Record<Kind, string[]> = {
+  props: ['prop', 'type', 'default', 'meaning'],
+  events: ['event', 'payload', 'when'],
+  slots: ['slot', 'receives', 'draws'],
+  keyboard: ['key', 'does'],
+};
+
+const hasReact = kind === 'slots' && rows.some((entry) => (entry.row as SlotRow).react);
+const hasReceives = kind === 'slots' && rows.some((entry) => (entry.row as SlotRow).receives);
+const hasDraws = kind === 'slots' && rows.some((entry) => (entry.row as SlotRow).draws);
+const columns =
+  kind === 'slots'
+    ? [
+        'slot',
+        ...(hasReact ? ['React'] : []),
+        ...(hasReceives ? ['receives'] : []),
+        ...(hasDraws ? ['draws'] : []),
+      ]
+    : headers[kind];
+
+/** The cells of one row, left to right, already inlined. */
+function cells(row: PropRow | EventRow | SlotRow | KeyRow): string[] {
+  if (kind === 'props') {
+    const prop = row as PropRow;
+    return [inline(prop.type), inline(prop.default), inline(prop.meaning)];
+  }
+  if (kind === 'events') {
+    const event = row as EventRow;
+    return [inline(event.payload), inline(event.when)];
+  }
+  if (kind === 'slots') {
+    const slot = row as SlotRow;
+    return [
+      ...(hasReact ? [inline(slot.react ?? slot.name)] : []),
+      ...(hasReceives ? [inline(slot.receives)] : []),
+      ...(hasDraws ? [inline(slot.draws)] : []),
+    ];
+  }
+  return [inline((row as KeyRow).does)];
+}
+
+function head(row: PropRow | EventRow | SlotRow | KeyRow): string {
+  if ('key' in row) return inline(row.key);
+  return row.name
+    .split('/')
+    .map((part) => `<code>${part.trim()}</code>`)
+    .join(' / ');
+}
+---
+
+<table data-props={name} data-props-kind={kind}>
+  <thead>
+    <tr>{columns.map((column) => <th>{column}</th>)}</tr>
+  </thead>
+  <tbody>
+    {
+      rows.map((entry) => (
+        <tr id={entry.id} data-props-owner={entry.owner}>
+          <td>
+            <Fragment set:html={head(entry.row)} />
+            {entry.href && (
+              <a class="sg-props-from" href={entry.href}>
+                {entry.owner}
+              </a>
+            )}
+          </td>
+          {cells(entry.row).map((cell) => (
+            <td set:html={cell} />
+          ))}
+        </tr>
+      ))
+    }
+  </tbody>
+</table>
+
+<style>
+  /* The table is Starlight's own; only the origin link is ours. */
+  .sg-props-from {
+    display: block;
+    font-size: var(--sl-text-xs);
+    color: var(--muted-foreground);
+    text-decoration: none;
+  }
+
+  .sg-props-from:hover {
+    text-decoration: underline;
+  }
+</style>

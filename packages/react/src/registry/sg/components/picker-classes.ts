@@ -130,8 +130,13 @@ export const PICKER_ROW =
 export const PICKER_ICON_BUTTON =
   "hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring focus-visible:ring-offset-background pointer-events-auto shrink-0 rounded-sm p-0.5 opacity-70 outline-none transition-colors duration-150 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-2 motion-safe:active:scale-[0.98] pointer-coarse:relative pointer-coarse:before:absolute pointer-coarse:before:top-1/2 pointer-coarse:before:left-1/2 pointer-coarse:before:size-11 pointer-coarse:before:-translate-x-1/2 pointer-coarse:before:-translate-y-1/2 pointer-coarse:before:content-['']";
 
-/** The chip a Backspace has armed: the focus ring, inset so the chip row's clipping and the control's edge never cut it. */
-export const PICKER_ARMED = 'ring-ring ring-2 ring-inset';
+/**
+ * The chip the caret is on: the focus ring, drawn as an overlay so a chip's own fill never
+ * covers it, inset so the chip row's clipping and the control's edge never cut it, and the
+ * browser's outline off, since the ring is the focus mark.
+ */
+export const PICKER_ARMED =
+  "relative outline-none after:pointer-events-none after:absolute after:inset-0 after:rounded-[inherit] after:ring-2 after:ring-ring after:ring-inset after:content-['']";
 
 /** A chosen code in the control. A code is not a row, so it has no thumbnail. */
 export const PICKER_TEXT_CHIP =

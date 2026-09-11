@@ -313,7 +313,7 @@ export function StatusMultiPicker({
               data-chip=""
               data-armed={armed ? 'true' : undefined}
               hidden={hidden}
-              className={cn('flex min-w-0 shrink-0 items-center', armed && cn(PICKER_ARMED, 'rounded-sm'))}
+              className={cn('flex min-w-0 shrink-0 items-center', armed && cn(PICKER_ARMED, 'rounded-md'))}
             >
               <StatusBadge
                 code={code}

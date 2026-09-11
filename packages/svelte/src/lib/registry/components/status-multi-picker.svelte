@@ -282,7 +282,7 @@
 				data-chip=""
 				data-armed={armed ? 'true' : undefined}
 				{hidden}
-				class={cn('flex min-w-0 shrink-0 items-center', armed && cn(PICKER_ARMED, 'rounded-sm'))}
+				class={cn('flex min-w-0 shrink-0 items-center', armed && cn(PICKER_ARMED, 'rounded-md'))}
 			>
 				<StatusBadge
 					{code}

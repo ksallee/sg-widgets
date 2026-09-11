@@ -596,3 +596,28 @@ export function editorNeedsContext(dataType: string): boolean {
 export function isEditableType(dataType: string): boolean {
   return editorKindFor(dataType) !== 'none';
 }
+
+/** Where a cell's editor opens: in the cell, or in a popover anchored to it. */
+export type EditorPlacement = 'inline' | 'popover';
+
+/**
+ * Kinds that stay in the cell. A checkbox is one press, and a status, a list or a
+ * single entity opens a popup of its own, so a second surface around them adds
+ * nothing.
+ */
+const INLINE_KINDS: ReadonlySet<EditorKind> = new Set<EditorKind>([
+  'checkbox',
+  'status_list',
+  'entity',
+  'list',
+  'none',
+]);
+
+/**
+ * Where the editor for a data type opens when the caller names no placement.
+ * Everything typed into, and the multi-entity picker, takes the room a popover
+ * has; the rest stays in the cell.
+ */
+export function editorPlacementFor(dataType: string): EditorPlacement {
+  return INLINE_KINDS.has(editorKindFor(dataType)) ? 'inline' : 'popover';
+}

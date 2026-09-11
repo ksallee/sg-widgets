@@ -93,7 +93,9 @@ notes.push(`hiding a column left ${heads().length} headers of ${before}`);
 const cell = bodyRows()[0].querySelector('td[data-column="description"]');
 cell.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
 await wait(300);
-const input = cell.querySelector('input, textarea');
+// The description cell opens its editor in a popover, portalled out of the cell.
+const popover = $$('[data-field-editor-popover]').find((el) => el.checkVisibility()) ?? cell;
+const input = cell.querySelector('input, textarea') ?? popover.querySelector('input, textarea');
 if (!input) return { verdict: 'FAIL no editor opened on the description cell', notes };
 const typed = 'edited in place by qa';
 const setter = Object.getOwnPropertyDescriptor(input.constructor.prototype, 'value').set;

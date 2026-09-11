@@ -22,9 +22,16 @@ function press(el) {
   }
 }
 
-// A press on the page body, which is what closes an open editor.
+// A press on the page body, which is what closes an open editor. The whole sequence:
+// a cell listens for the pointer going down, a popover for the press that follows.
 function pressOutside() {
-  document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0, pointerType: 'mouse' }));
+  for (const type of ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click']) {
+    document.body.dispatchEvent(
+      type.startsWith('pointer')
+        ? new PointerEvent(type, { bubbles: true, cancelable: true, button: 0, pointerType: 'mouse' })
+        : new MouseEvent(type, { bubbles: true, cancelable: true, view: window, button: 0 }),
+    );
+  }
 }
 
 function setValue(el, text) {
@@ -55,6 +62,12 @@ function openSurfaces() {
 function within(selector) {
   return openSurfaces().flatMap((surface) => (surface.matches(selector) ? [surface] : $$(selector, surface)));
 }
+
+// A text cell opens its editor in a popover, portalled out of the cell; a picker cell
+// opens it in the cell.
+const editorInput = (cell) =>
+  cell.querySelector('input, textarea') ??
+  ($$('[data-field-editor-popover]').find((el) => el.checkVisibility()) ?? cell).querySelector('input, textarea');
 
 const fieldList = () => within('[data-picker="field"]')[0] ?? null;
 const fieldItems = () => (fieldList() ? $$('[data-slot="command-item"]', fieldList()) : []);
@@ -107,7 +120,7 @@ async function run(framework) {
   step = `${framework}: commit on Enter`;
   const typed = `edited by qa ${framework}`;
   cell('description').dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
-  const input = await until(() => cell('description').querySelector('input, textarea'), 'the text editor');
+  const input = await until(() => editorInput(cell('description')), 'the text editor');
   input.focus();
   setValue(input, typed);
   await wait(120);
@@ -119,7 +132,7 @@ async function run(framework) {
   step = `${framework}: commit on an outside press`;
   const alsoTyped = `${typed} again`;
   cell('description').dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
-  const second = await until(() => cell('description').querySelector('input, textarea'), 'the text editor again');
+  const second = await until(() => editorInput(cell('description')), 'the text editor again');
   second.focus();
   setValue(second, alsoTyped);
   await wait(120);

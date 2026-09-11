@@ -470,7 +470,9 @@
         "local:color-editor",
         "local:status-picker",
         "local:entity-picker",
-        "local:entity-multi-picker"
+        "local:entity-multi-picker",
+        "button",
+        "popover"
       ],
       "files": [
         {

@@ -198,6 +198,33 @@
       ]
     },
     {
+      "name": "picker-control",
+      "type": "registry:component",
+      "title": "Picker Control",
+      "description": "The control box and popup shell every picker in this registry is built on.",
+      "categories": [
+        "flow-production-tracking",
+        "atom"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte",
+        "bits-ui"
+      ],
+      "registryDependencies": [
+        "local:picker-classes",
+        "local:state-line",
+        "skeleton"
+      ],
+      "docs": "The control and the popup of every picker: the box and its states, the press rule, the keyboard model, inline against summary, and the popup shell.",
+      "files": [
+        {
+          "path": "src/lib/registry/components/picker-control.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
       "name": "entity-type-picker",
       "type": "registry:component",
       "title": "Entity Type Picker",
@@ -208,9 +235,8 @@
         "bits-ui"
       ],
       "registryDependencies": [
+        "local:picker-control",
         "local:picker-classes",
-        "local:state-line",
-        "skeleton",
         "checkbox"
       ],
       "files": [
@@ -414,13 +440,13 @@
       "description": "Several values of a list field, chosen from its valid values with checkboxes.",
       "dependencies": [
         "@sg-widgets/core",
-        "@lucide/svelte"
+        "@lucide/svelte",
+        "bits-ui"
       ],
       "registryDependencies": [
-        "badge",
-        "checkbox",
-        "command",
-        "popover"
+        "local:picker-control",
+        "local:picker-classes",
+        "checkbox"
       ],
       "files": [
         {
@@ -638,16 +664,14 @@
       "description": "Several Flow Production Tracking statuses, picked from the codes a project offers.",
       "dependencies": [
         "@sg-widgets/core",
-        "@lucide/svelte",
         "bits-ui"
       ],
       "registryDependencies": [
+        "local:picker-control",
         "local:picker-classes",
         "local:picker-row",
-        "local:state-line",
         "local:status-badge",
-        "checkbox",
-        "skeleton"
+        "checkbox"
       ],
       "files": [
         {
@@ -794,15 +818,13 @@
       "description": "One Flow Production Tracking entity, chosen by server-side search across one or more types.",
       "dependencies": [
         "@sg-widgets/core",
-        "@lucide/svelte",
         "bits-ui"
       ],
       "registryDependencies": [
+        "local:picker-control",
         "local:picker-classes",
-        "local:state-line",
         "local:entity-chip",
-        "local:picker-row",
-        "skeleton"
+        "local:picker-row"
       ],
       "files": [
         {
@@ -818,16 +840,14 @@
       "description": "Several Flow Production Tracking entities, chosen by server-side search, with checkbox rows and removable chips.",
       "dependencies": [
         "@sg-widgets/core",
-        "@lucide/svelte",
         "bits-ui"
       ],
       "registryDependencies": [
+        "local:picker-control",
         "local:picker-classes",
-        "local:state-line",
         "local:entity-chip",
         "local:picker-row",
-        "checkbox",
-        "skeleton"
+        "checkbox"
       ],
       "files": [
         {

@@ -241,6 +241,33 @@
       ]
     },
     {
+      "name": "picker-control",
+      "type": "registry:component",
+      "title": "Picker Control",
+      "description": "The control box and popup shell every picker in this registry is built on.",
+      "categories": [
+        "flow-production-tracking",
+        "atom"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react",
+        "@base-ui/react"
+      ],
+      "registryDependencies": [
+        "https://sg-widgets.dev/r/react/picker-classes.json",
+        "https://sg-widgets.dev/r/react/state-line.json",
+        "skeleton"
+      ],
+      "docs": "The control and the popup of every picker: the box and its states, the press rule, the keyboard model, inline against summary, and the popup shell.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/picker-control.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
       "name": "entity-type-picker",
       "type": "registry:component",
       "title": "Entity Type Picker",
@@ -255,9 +282,8 @@
         "@base-ui/react"
       ],
       "registryDependencies": [
+        "https://sg-widgets.dev/r/react/picker-control.json",
         "https://sg-widgets.dev/r/react/picker-classes.json",
-        "https://sg-widgets.dev/r/react/state-line.json",
-        "skeleton",
         "checkbox"
       ],
       "docs": "Takes a SchemaService. `allow` and `deny` narrow the derived options, so changing them re-filters with no second call.",
@@ -509,13 +535,13 @@
       ],
       "dependencies": [
         "@sg-widgets/core",
-        "lucide-react"
+        "lucide-react",
+        "@base-ui/react"
       ],
       "registryDependencies": [
-        "badge",
-        "checkbox",
-        "command",
-        "popover"
+        "https://sg-widgets.dev/r/react/picker-control.json",
+        "https://sg-widgets.dev/r/react/picker-classes.json",
+        "checkbox"
       ],
       "docs": "With a project id the field's hidden values are subtracted, which REST does not do on write.",
       "files": [
@@ -779,16 +805,14 @@
       ],
       "dependencies": [
         "@sg-widgets/core",
-        "lucide-react",
         "@base-ui/react"
       ],
       "registryDependencies": [
+        "https://sg-widgets.dev/r/react/picker-control.json",
         "https://sg-widgets.dev/r/react/picker-classes.json",
         "https://sg-widgets.dev/r/react/picker-row.json",
-        "https://sg-widgets.dev/r/react/state-line.json",
         "https://sg-widgets.dev/r/react/status-badge.json",
-        "checkbox",
-        "skeleton"
+        "checkbox"
       ],
       "docs": "Pass a cached SgClient. Selections outside the option set keep a row of their own rather than being dropped.",
       "files": [
@@ -965,15 +989,13 @@
       ],
       "dependencies": [
         "@sg-widgets/core",
-        "lucide-react",
         "@base-ui/react"
       ],
       "registryDependencies": [
+        "https://sg-widgets.dev/r/react/picker-control.json",
         "https://sg-widgets.dev/r/react/picker-classes.json",
-        "https://sg-widgets.dev/r/react/state-line.json",
         "https://sg-widgets.dev/r/react/entity-chip.json",
-        "https://sg-widgets.dev/r/react/picker-row.json",
-        "skeleton"
+        "https://sg-widgets.dev/r/react/picker-row.json"
       ],
       "docs": "Server-side search only. Pass a cached client; a query past minQueryLength becomes one contains condition per word.",
       "files": [
@@ -994,16 +1016,14 @@
       ],
       "dependencies": [
         "@sg-widgets/core",
-        "lucide-react",
         "@base-ui/react"
       ],
       "registryDependencies": [
+        "https://sg-widgets.dev/r/react/picker-control.json",
         "https://sg-widgets.dev/r/react/picker-classes.json",
-        "https://sg-widgets.dev/r/react/state-line.json",
         "https://sg-widgets.dev/r/react/entity-chip.json",
         "https://sg-widgets.dev/r/react/picker-row.json",
-        "checkbox",
-        "skeleton"
+        "checkbox"
       ],
       "docs": "Selected rows stay pinned to the end of the option list, so they can be unticked whatever the query.",
       "files": [

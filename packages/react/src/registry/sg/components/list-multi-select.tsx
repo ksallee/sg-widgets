@@ -1,26 +1,21 @@
 import type * as React from 'react';
 import { useState } from 'react';
+import type { ReactNode } from 'react';
 import type { FieldSchema } from '@sg-widgets/core';
-import { statusLabel, usableStatuses } from '@sg-widgets/core';
-import { ChevronDownIcon, SearchX } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { matchesTokens, statusLabel, usableStatuses } from '@sg-widgets/core';
+import { Combobox as ComboboxPrimitive } from '@base-ui/react';
+import { X } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import {
+  PICKER_ARMED,
+  PICKER_ROW,
+  PICKER_TEXT_CHIP,
+  PICKER_TEXT_CHIP_BOX,
+} from '@/registry/sg/components/picker-classes';
+import { PickerControl } from '@/registry/sg/components/picker-control';
 import { cn } from '@/lib/utils';
 
 export type ListMultiSelectSize = 'sm' | 'md' | 'lg';
-
-/** The control ladder of `docs/design-rules.md`: 8 / 9 / 10. */
-const BOX: Record<ListMultiSelectSize, string> = {
-  sm: 'h-8',
-  md: 'h-9',
-  lg: 'h-10',
-};
-
-/** The trigger, matching the select trigger of each registry. */
-const TRIGGER =
-  'border-input bg-background hover:bg-muted focus-visible:ring-ring focus-visible:ring-offset-background aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 flex w-full min-w-0 items-center justify-between gap-1.5 rounded-lg border px-3 text-sm outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 aria-invalid:ring-2';
 
 export interface ListMultiSelectProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'defaultValue'> {
   /** The chosen values, each one of the field's valid values (field_types/list). */
@@ -79,29 +74,58 @@ export function ListMultiSelect({
 }: ListMultiSelectProps) {
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const open = openProp ?? uncontrolledOpen;
+  const setOpen = (next: boolean): void => {
+    setUncontrolledOpen(next);
+    onOpenChange?.(next);
+  };
+  const [search, setSearch] = useState('');
 
   const options =
     projectId === undefined
       ? (field?.validValues ?? []).map((code) => ({ code, label: statusLabel(field ?? {}, code) }))
       : usableStatuses(field ?? {});
+  // The vocabulary is one read, so the search box narrows it here.
+  const shown = options.filter((option) => matchesTokens(search, option.label, option.code));
+  const interactive = !readonly && !disabled;
 
   // A row may hold a value outside the offered set; that is a legal stored value, so
   // it is shown as itself rather than dropped (probe 009).
   const labelOf = (code: string): string => options.find((option) => option.code === code)?.label ?? code;
 
-  const label = value.length === 0 ? placeholder : value.map(labelOf).join(', ');
-
-  const toggle = (code: string): void => {
-    const next = value.includes(code) ? value.filter((c) => c !== code) : [...value, code];
+  const emit = (next: string[]): void => {
     onErrorChange?.(null);
     onValueChange?.(next);
   };
 
-  const setOpen = (next: boolean): void => {
-    const wanted = readonly || disabled ? false : next;
-    setUncontrolledOpen(wanted);
-    onOpenChange?.(wanted);
+  const remove = (code: string): void => emit(value.filter((c) => c !== code));
+
+  const removeAt = (index: number): void => {
+    const code = value[index];
+    if (code !== undefined) remove(code);
   };
+
+  const byCode = new Map(options.map((option) => [option.code, option]));
+
+  function renderItem(code: string): ReactNode {
+    const option = byCode.get(code);
+    if (!option) return null;
+    const chosen = value.includes(code);
+    return (
+      <ComboboxPrimitive.Item
+        key={code}
+        data-slot="list-multi-select-option"
+        data-option={code}
+        data-checked={chosen ? 'true' : undefined}
+        value={code}
+        className={PICKER_ROW}
+      >
+        <span data-slot="list-multi-select-check" className="flex h-5 shrink-0 items-center">
+          <Checkbox checked={chosen} tabIndex={-1} aria-hidden="true" className="pointer-events-none" />
+        </span>
+        <span className="min-w-0 flex-1 truncate">{option.label}</span>
+      </ComboboxPrimitive.Item>
+    );
+  }
 
   return (
     <div
@@ -110,55 +134,65 @@ export function ListMultiSelect({
       className={cn('flex w-full min-w-0 flex-col gap-2', className)}
       {...rest}
     >
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger
-          data-slot="list-multi-select-trigger"
-          role="combobox"
-          aria-expanded={open}
-          aria-invalid={invalid ? 'true' : undefined}
-          aria-label={field?.displayName}
-          aria-required={field?.mandatory}
-          data-empty={value.length === 0 ? '' : undefined}
-          disabled={disabled || readonly}
-          title={label}
-          className={cn(TRIGGER, BOX[size])}
-        >
-          <span className={cn('min-w-0 truncate', value.length === 0 && 'text-muted-foreground')}>{label}</span>
-          {value.length > 0 ? (
-            <Badge variant="secondary" className="shrink-0">
-              {value.length}
-            </Badge>
-          ) : (
-            <ChevronDownIcon aria-hidden="true" className="text-muted-foreground size-4 shrink-0" />
-          )}
-        </PopoverTrigger>
-
-        <PopoverContent align="start" className="w-64 gap-0 overflow-hidden p-0">
-          <Command>
-            <CommandInput placeholder={searchPlaceholder} />
-            <CommandList>
-              <CommandEmpty>
-                <span className="text-muted-foreground inline-flex items-center gap-1.5">
-                  <SearchX aria-hidden="true" className="size-4 shrink-0" />
-                  {emptyLabel}
-                </span>
-              </CommandEmpty>
-              {options.map((option) => (
-                <CommandItem
-                  key={option.code}
-                  value={`${option.label} ${option.code}`}
-                  data-option={option.code}
-                  data-checked={value.includes(option.code) ? 'true' : undefined}
-                  onSelect={() => toggle(option.code)}
-                >
-                  <Checkbox checked={value.includes(option.code)} tabIndex={-1} aria-hidden="true" />
-                  <span className="min-w-0 flex-1 truncate">{option.label}</span>
-                </CommandItem>
-              ))}
-            </CommandList>
-          </Command>
-        </PopoverContent>
-      </Popover>
+      <div className="relative flex w-full min-w-0 items-center">
+        <PickerControl
+          slot="list-multi-select"
+          picker="list"
+          multiple
+          anchored
+          keys={value}
+          onSelect={emit}
+          labels={value.map(labelOf)}
+          items={shown.map((option) => option.code)}
+          renderItem={renderItem}
+          renderChip={(index, armed, hidden) => {
+            const code = value[index];
+            if (code === undefined) return null;
+            return (
+              <span
+                key={code}
+                data-slot="list-multi-select-chip"
+                data-chip=""
+                data-armed={armed ? 'true' : undefined}
+                hidden={hidden}
+                className={cn(PICKER_TEXT_CHIP, PICKER_TEXT_CHIP_BOX[size], armed && PICKER_ARMED)}
+              >
+                <span className="truncate">{labelOf(code)}</span>
+                {interactive ? (
+                  <button
+                    type="button"
+                    data-slot="list-multi-select-remove"
+                    aria-label={`Remove ${labelOf(code)}`}
+                    onClick={() => remove(code)}
+                    className="hover:text-foreground focus-visible:ring-ring focus-visible:ring-offset-background shrink-0 rounded-sm opacity-60 outline-none transition-colors duration-150 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-2 motion-safe:active:scale-[0.98]"
+                  >
+                    <X aria-hidden="true" className="size-3" />
+                  </button>
+                ) : null}
+              </span>
+            );
+          }}
+          chipRow
+          inline={false}
+          clearable={false}
+          size={size}
+          disabled={disabled}
+          readonly={readonly}
+          invalid={invalid}
+          placeholder={placeholder}
+          searchPlaceholder={searchPlaceholder}
+          open={open}
+          onOpenChange={setOpen}
+          query={search}
+          onQueryChange={setSearch}
+          onRemoveAt={removeAt}
+          empty={shown.length === 0}
+          emptyLabel={emptyLabel}
+          triggerLabel="Show the values"
+          overflowLabel={`Show all ${value.length} values`}
+          controlProps={{ 'aria-label': field?.displayName, 'aria-required': field?.mandatory }}
+        />
+      </div>
       {error
         ? (errorMessage?.(error) ?? (
             <p data-slot="field-editor-error" className="text-destructive text-xs">

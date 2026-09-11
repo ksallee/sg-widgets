@@ -153,7 +153,7 @@ export default function EntityTableDemo() {
           onColumnsChange={setColumns}
           selection={selected}
           onSelectionChange={setSelected}
-          filters={filter}
+          filters={scope ? group('and', [scope, filter]) : filter}
           sort={sort}
           statuses={statuses}
           context={context}

@@ -23,8 +23,8 @@ function setValue(el, text) {
   el.dispatchEvent(new Event('input', { bubbles: true }));
 }
 
-function key(el, name) {
-  el.dispatchEvent(new KeyboardEvent('keydown', { key: name, bubbles: true, cancelable: true }));
+function key(el, name, init = {}) {
+  el.dispatchEvent(new KeyboardEvent('keydown', { key: name, bubbles: true, cancelable: true, ...init }));
 }
 
 async function until(find, label) {
@@ -65,7 +65,9 @@ async function run(framework) {
   input.focus();
   setValue(input, typed);
   await wait(120);
-  key(input, 'Enter');
+  // A text field in a popover is a textarea: Enter adds a line, Ctrl with Enter commits.
+  seen.textarea = input.tagName === 'TEXTAREA';
+  key(input, 'Enter', { ctrlKey: true });
   await until(() => cell('description').textContent.trim() === typed || null, `the cell to read "${typed}"`);
   await until(() => openPopover() === null || null, 'the popover to close');
   seen.committed = cell('description').textContent.trim();
@@ -111,6 +113,7 @@ for (const pane of panes) {
   if (pane.label !== 'Description') failures.push(`${pane.framework}: the popover label reads "${pane.label}"`);
   if (pane.buttons !== 'cancel and save') failures.push(`${pane.framework}: the footer held "${pane.buttons}"`);
   if (pane.inCell) failures.push(`${pane.framework}: the text editor stayed in the cell`);
+  if (!pane.textarea) failures.push(`${pane.framework}: the description opened in a one-line input`);
   if (!pane.committed.startsWith('popover edit by qa')) failures.push(`${pane.framework}: Enter did not commit`);
   if (pane.cancelled !== pane.committed) {
     failures.push(`${pane.framework}: Escape left the cell reading "${pane.cancelled}"`);

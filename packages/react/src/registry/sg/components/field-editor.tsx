@@ -42,7 +42,7 @@ const ANCHOR = 'flex w-full min-w-0 items-center text-left outline-none';
  */
 /** The control the popover focused on open keeps its ring for the keyboard only. */
 const QUIET_FOCUS =
-  '[&_[data-quiet-focus]:focus-visible]:border-input [&_[data-quiet-focus]:focus-visible]:ring-0';
+  '[&_[data-quiet-focus]:focus-visible]:border-input [&_[data-quiet-focus]:focus-visible]:ring-0 [&_:has([data-quiet-focus]:focus-visible)]:border-input [&_:has([data-quiet-focus]:focus-visible)]:ring-0 [&_:has([data-quiet-focus]:focus-visible)]:ring-offset-0 [&_[data-quiet-focus]:focus-visible]:ring-offset-0';
 const POPOVER_SURFACE =
   'z-50 flex origin-(--transform-origin) flex-col rounded-lg bg-popover text-sm text-popover-foreground shadow-md ring-1 ring-foreground/10 outline-hidden duration-100 data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95';
 
@@ -161,7 +161,7 @@ export function FieldEditor({
   projectId,
   timeZone,
   locale,
-  multiline = false,
+  multiline,
   size = 'md',
   disabled = false,
   readonly = false,
@@ -195,6 +195,8 @@ export function FieldEditor({
   const editing = current === 'edit' && hasEditor;
 
   const popover = editorPlacement === 'popover';
+  // A text field is a textarea where there is room for one: in a popover, unless the caller says.
+  const textarea = kind === 'text' && (multiline ?? popover);
   /** The field's own name, over the control. */
   const label = field?.displayName ?? field?.name ?? '';
   /** A multi-entity list needs the room; everything else reads in the narrow one. */
@@ -303,7 +305,9 @@ export function FieldEditor({
     const inPopupControl = target?.closest('[data-slot$="-trigger"],[role="combobox"]') != null;
     // The editor commits on the same Enter, and its handler runs first on the way up.
     // The toggle waits a frame so that commit has settled before the control goes.
-    if (event.key === 'Enter' && !inPopupControl && liveError.current === null && !(multiline && kind === 'text')) {
+    // A textarea keeps Enter for a new line and commits on Cmd or Ctrl with it.
+    const commits = event.key === 'Enter' && (!textarea || event.metaKey || event.ctrlKey);
+    if (commits && !inPopupControl && liveError.current === null) {
       requestAnimationFrame(() => {
         if (alive.current) leave();
       });
@@ -371,7 +375,7 @@ export function FieldEditor({
         <TextEditor
           value={value as string | null}
           onValueChange={emit}
-          multiline={multiline}
+          multiline={textarea}
           onErrorChange={noteError}
           placeholder={placeholder}
           {...shared}

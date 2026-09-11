@@ -373,24 +373,29 @@ export function EntityCard({
                 />
               </span>
             ) : null}
-            {model.status ? (
-              <StatusBadge
-                code={model.status.code}
-                status={table[model.status.code] ?? null}
-                field={model.status.field}
-                variant="icon"
-                size="sm"
-                siteUrl={site}
-                className="bg-background/80 border-transparent shadow-sm"
-              />
-            ) : null}
           </span>
-          {actions ? (
+          {/* The status keeps the right corner; the actions appear beside it, never over it. */}
+          {actions || model.status ? (
             <span
-              data-slot="entity-card-actions"
-              className={cn('absolute top-2 right-2 flex items-center gap-1.5', revealClass, hiddenClass)}
+              data-slot="entity-card-overlay-end"
+              className="absolute top-2 right-2 flex max-w-[calc(100%-1rem)] items-center gap-1.5"
             >
-              {actions}
+              {actions ? (
+                <span data-slot="entity-card-actions" className={cn('flex items-center gap-1.5', revealClass, hiddenClass)}>
+                  {actions}
+                </span>
+              ) : null}
+              {model.status ? (
+                <StatusBadge
+                  code={model.status.code}
+                  status={table[model.status.code] ?? null}
+                  field={model.status.field}
+                  variant="icon"
+                  size="sm"
+                  siteUrl={site}
+                  className="bg-background/80 border-transparent shadow-sm"
+                />
+              ) : null}
             </span>
           ) : null}
         </div>

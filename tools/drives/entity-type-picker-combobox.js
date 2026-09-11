@@ -1,8 +1,13 @@
-// Drive the entity-type picker on the Combobox primitives: the list opens from the
-// field, the query narrows it in the browser, and the summary modes read the same in
-// both frameworks.
+// Drive the entity-type pickers on the Combobox primitives: the list opens from the
+// field, the query narrows it in the browser, and the multi picker's summary modes
+// read the same in both frameworks.
 //
-//   pnpm qa --start --path /widgets/entity-type-picker/ --framework both --drive tools/drives/entity-type-picker-combobox.js
+// The pair keeps one page each, so each clause runs on the page that draws it: the
+// field on the single page and on the multi picker's token field, the summary modes
+// on the multi page.
+//
+//   pnpm qa --start --path /widgets/entity-type-picker/       --framework both --drive tools/drives/entity-type-picker-combobox.js
+//   pnpm qa --start --path /widgets/entity-type-multi-picker/ --framework both --drive tools/drives/entity-type-picker-combobox.js
 
 const failures = [];
 const seen = {};
@@ -30,8 +35,15 @@ async function until(read, timeoutMs = 8000) {
   }
 }
 
-const popup = () => $('[data-picker="entity-type"]');
-const rows = () => $$('[data-picker="entity-type"] [data-slot="entity-type-picker-option"]');
+/** Either picker's popup: the single answers to `entity-type`, the multi to `entity-type-multi`. */
+const POPUP = '[data-picker="entity-type"],[data-picker="entity-type-multi"]';
+const OPTION = '[data-slot="entity-type-picker-option"]';
+const popup = () => $(POPUP);
+const rows = () => $$(`[data-picker="entity-type"] ${OPTION},[data-picker="entity-type-multi"] ${OPTION}`);
+
+/** The token field each page draws: the single control, or the multi under `chips`. */
+const FIELD =
+  '[data-demo="single"] [data-slot="entity-type-picker-input"],[data-demo-summary="chips"] [data-slot="entity-type-picker-input"]';
 
 /** Chips the control actually shows. The ones past the fit stay in the DOM, hidden. */
 function summaryOf(pane, mode) {
@@ -45,11 +57,13 @@ function summaryOf(pane, mode) {
   };
 }
 
+let summaries = false;
+
 for (const framework of ['svelte', 'react']) {
   const pane = $(`[data-pane="${framework}"]`);
   if (!pane || pane.offsetParent === null) continue;
 
-  const input = $('[data-demo="single"] [data-slot="entity-type-picker-input"]', pane);
+  const input = $(FIELD, pane);
   if (!input) {
     failures.push(`${framework}: the control has no query input`);
     continue;
@@ -73,10 +87,15 @@ for (const framework of ['svelte', 'react']) {
   input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
   await until(() => !popup());
 
+  seen[framework] = { types: all.length, narrowed: codes };
+
+  if (!$('[data-demo="summary"]', pane)) continue;
+  summaries = true;
+
   const chips = summaryOf(pane, 'chips');
   const ellipsis = summaryOf(pane, 'ellipsis');
   const count = summaryOf(pane, 'count');
-  seen[framework] = { types: all.length, narrowed: codes, chips, ellipsis, count };
+  Object.assign(seen[framework], { chips, ellipsis, count });
 
   if (chips?.chips !== 6) failures.push(`${framework}: chips drew ${chips?.chips} of 6`);
   if ((ellipsis?.chips ?? 0) === 0) failures.push(`${framework}: ellipsis drew no chip at all`);
@@ -97,7 +116,7 @@ await wait(300);
 return {
   verdict:
     failures.length === 0
-      ? 'PASS the field opens the list, the query narrows it, and the summary modes read the same'
+      ? `PASS the field opens the list and the query narrows it${summaries ? ', and the summary modes read the same' : ''}`
       : `FAIL ${failures.join('; ')}`,
   seen,
 };

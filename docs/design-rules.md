@@ -142,6 +142,13 @@ every picker page, in both frameworks. A picker that keeps a primitive meets the
 the same; its docs page says in one line why it keeps the primitive, and the drive is the proof
 it behaves alike.
 
+A search widget is not built from the command primitive either. `search-control`, one item per
+package, is the query lifecycle — the pause before a query is asked for, the ticket that drops an
+answer the next query replaced, the page and its load-more row, and the highlight across that page
+— and the list it feeds: the error line, the skeletons shaped like the rows they stand in for, the
+empty line, and the rows. A search supplies the read behind it and draws its own rows, and declares
+the base as a registry dependency.
+
 ## 8. Checklist for a PR
 
 1. No margins on flex or grid children.

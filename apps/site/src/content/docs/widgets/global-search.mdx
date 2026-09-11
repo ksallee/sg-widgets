@@ -5,7 +5,8 @@ description: A command palette that searches Flow Production Tracking by name ac
 
 import Demo from '../../../components/Demo.astro';
 
-Searches several entity types at once by name and emits the row you pick.
+Searches several entity types at once by name and emits the row you pick. It is a wrapper over
+[`search-control`](/widgets/search-control/), which owns the debounce, the paging and the list.
 
 ## Install
 

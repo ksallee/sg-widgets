@@ -6,7 +6,8 @@ description: A drill-down over the Flow Production Tracking navigation tree, wit
 import Demo from '../../../components/Demo.astro';
 
 Walks the navigation tree level by level, or searches it, and emits the row you pick with the path
-that reaches it.
+that reaches it. It is a wrapper over [`search-control`](/widgets/search-control/), which owns the
+debounce and the list.
 
 ## Install
 

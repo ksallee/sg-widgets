@@ -427,6 +427,33 @@
       ]
     },
     {
+      "name": "search-control",
+      "type": "registry:component",
+      "title": "Search Control",
+      "description": "The query lifecycle and the list every search widget in this registry is built on.",
+      "categories": [
+        "flow-production-tracking",
+        "atom"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "https://sg-widgets.dev/r/react/search-skeleton.json",
+        "https://sg-widgets.dev/r/react/state-line.json",
+        "command",
+        "skeleton"
+      ],
+      "docs": "The debounce, the ticket that drops a stale answer, the page and its load-more row, and the list with its error, loading and empty blocks.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/search-control.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
       "name": "entity-type-picker",
       "type": "registry:component",
       "title": "Entity Type Picker",
@@ -1416,16 +1443,14 @@
         "lucide-react"
       ],
       "registryDependencies": [
-        "https://sg-widgets.dev/r/react/search-skeleton.json",
+        "https://sg-widgets.dev/r/react/search-control.json",
         "https://sg-widgets.dev/r/react/control-classes.json",
-        "https://sg-widgets.dev/r/react/state-line.json",
         "https://sg-widgets.dev/r/react/entity-chip.json",
         "https://sg-widgets.dev/r/react/picker-row.json",
         "command",
         "dialog",
         "button",
-        "kbd",
-        "skeleton"
+        "kbd"
       ],
       "docs": "One text search covers every configured type. Results are grouped by type with the matched words in bold; Cmd/Ctrl+K opens it when hotkey is on.",
       "files": [
@@ -1449,12 +1474,10 @@
         "lucide-react"
       ],
       "registryDependencies": [
-        "https://sg-widgets.dev/r/react/search-skeleton.json",
+        "https://sg-widgets.dev/r/react/search-control.json",
         "https://sg-widgets.dev/r/react/entity-glyphs.json",
-        "https://sg-widgets.dev/r/react/state-line.json",
         "https://sg-widgets.dev/r/react/picker-row.json",
-        "command",
-        "skeleton"
+        "command"
       ],
       "docs": "Browses one level per call and searches by matching words, then asking where each hit sits. Emits the row picked and the path that reaches it.",
       "files": [
@@ -1478,14 +1501,12 @@
         "lucide-react"
       ],
       "registryDependencies": [
-        "https://sg-widgets.dev/r/react/search-skeleton.json",
+        "https://sg-widgets.dev/r/react/search-control.json",
         "https://sg-widgets.dev/r/react/control-classes.json",
-        "https://sg-widgets.dev/r/react/state-line.json",
         "https://sg-widgets.dev/r/react/entity-chip.json",
         "https://sg-widgets.dev/r/react/picker-row.json",
         "https://sg-widgets.dev/r/react/hierarchical-search.json",
-        "popover",
-        "skeleton"
+        "popover"
       ],
       "docs": "Installs HierarchicalSearch alongside it. Assigned tasks are one search on Task filtered by task_assignees.",
       "files": [

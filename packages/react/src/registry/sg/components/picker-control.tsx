@@ -277,17 +277,24 @@ export function PickerControl({
   }, [armedChip, labels.length]);
 
   // The caret sits on one chip of the row at a time, and the row keeps it out of the
-  // tab order, so Tab still leaves the control.
-  useEffect(() => {
+  // tab order, so Tab still leaves the control. Before paint, so a removed chip hands
+  // the caret straight to its neighbour.
+  useLayoutEffect(() => {
     focusChip(chipsRef.current, armed);
   }, [armed, labels.length]);
 
+  /** The caret leaves the chips when it leaves the widget, and not before. */
+  function releaseChips(): void {
+    setTimeout(() => {
+      const active = document.activeElement;
+      if (active === inputRef.current || controlRef.current?.contains(active)) return;
+      setArmedChip(null);
+    }, 0);
+  }
+
   function setOpen(next: boolean): void {
     const wanted = interactive ? next : false;
-    if (!wanted) {
-      setArmedChip(null);
-      onQueryChange('');
-    }
+    if (!wanted) onQueryChange('');
     onOpenChange(wanted);
   }
 
@@ -342,6 +349,11 @@ export function PickerControl({
       editable: interactive,
       multiple,
     });
+    /** The primitive reads a chip key as its own and would close the popup over it. */
+    const keepKey = (): void => (event as { preventBaseUIHandler?: () => void }).preventBaseUIHandler?.();
+    if (intent.kind === 'focus' || intent.kind === 'remove' || intent.kind === 'type' || intent.kind === 'open') {
+      keepKey();
+    }
     switch (intent.kind) {
       case 'dismiss':
         if (armed !== null) toInput();
@@ -375,9 +387,7 @@ export function PickerControl({
         return;
       default:
         // A closed picker leaves Escape alone: the primitive would clear the value.
-        if (event.key === 'Escape') {
-          (event as { preventBaseUIHandler?: () => void }).preventBaseUIHandler?.();
-        }
+        if (event.key === 'Escape') keepKey();
     }
   }
 
@@ -431,6 +441,7 @@ export function PickerControl({
       ref={controlRef}
       data-slot={`${slot}-control`}
       onPointerDown={openFromControl}
+      onBlur={releaseChips}
       role="group"
       aria-disabled={inert ? 'true' : undefined}
       data-multiple={multiple ? 'true' : undefined}

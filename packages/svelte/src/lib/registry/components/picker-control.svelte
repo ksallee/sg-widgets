@@ -291,10 +291,7 @@
 			return;
 		}
 		const wanted = interactive ? next : false;
-		if (!wanted) {
-			query = '';
-			armed = null;
-		}
+		if (!wanted) query = '';
 		if (wanted === open) return;
 		open = wanted;
 		onOpenChange?.(open);
@@ -320,6 +317,15 @@
 		row.addEventListener('keydown', onKey);
 		return () => row.removeEventListener('keydown', onKey);
 	});
+
+	/** The caret leaves the chips when it leaves the widget, and not before. */
+	function releaseChips(): void {
+		setTimeout(() => {
+			const active = document.activeElement;
+			if (active === inputEl || controlEl?.contains(active)) return;
+			armed = null;
+		}, 0);
+	}
 
 	/** The caret back in the input, and the chip row released. */
 	function toInput(): void {
@@ -422,6 +428,7 @@
 		bind:this={controlEl}
 		data-slot={`${slot}-control`}
 		onpointerdown={openFromControl}
+		onfocusout={releaseChips}
 		role="group"
 		aria-disabled={inert ? 'true' : undefined}
 		data-multiple={multiple ? 'true' : undefined}

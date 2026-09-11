@@ -4,6 +4,7 @@ description: The ordered sort keys of a query, and the sort string they serialis
 ---
 
 import Demo from '../../../components/Demo.astro';
+import Props from '../../../components/Props.astro';
 
 An ordered list of sort keys. Each is a field and a direction; the list serialises to the `sort`
 string `_search` takes. Fields are chosen with FieldPicker, which descends through links, so a key
@@ -24,27 +25,14 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/sort-picker.js
 
 ## Props
 
-| prop | type | default | meaning |
-|---|---|---|---|
-| `entityType` | `string` | required | Type the field list is read on. |
-| `context` | `SgContext` | required | The widget context. Every read goes through it, so widgets on a page share one cache. |
-| `value` | `SortKey[]` | `[]` | The keys, in order. Two-way in Svelte through `bind:value`. |
-| `hidePaths` | `string[]` | `[]` | Paths kept out of the field list. A pattern hides itself and everything under it. |
-| `paths` | `string[]` | — | Only these paths are offered, so a table's toolbar sorts on the columns it shows. A link stays in the list while an offered path runs through it. |
-| `disabled` | `boolean` | `false` | Blocks the trigger. |
-| `open` | `boolean` | `false` | Whether the popover is showing. Two-way in Svelte. |
-| `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Trigger heights 8, 9 and 10. |
-| `class` / `className` | `string` | — | Merged after the widget's own classes. |
+<Props name="sort-picker" />
 
 Every other attribute is spread onto the root: `id`, `aria-*`, `data-*`, key handlers and a
 `ref` to the root element.
 
 ## Events
 
-| event | payload | when |
-|---|---|---|
-| `onChange` | `SortKey[]`, `string` | The keys and the `sort` string changed, on every edit. Svelte also binds it with `bind:value`. |
-| `onOpenChange` | `boolean` | The popover opened or closed. Svelte also binds it with `bind:open`. |
+<Props name="sort-picker" kind="events" />
 
 ## Slots
 
@@ -52,19 +40,7 @@ None.
 
 ## Keyboard
 
-| key | does |
-|---|---|
-| `Enter`, `Space` | Opens the list, and toggles a direction or a move control inside it. |
-| `Tab` | Moves through each key's grip, direction, move and remove controls, then to the field search. |
-| `Arrow` keys | Move the cursor in the field list, and between ascending and descending. |
-| `Right arrow` | Descends into the highlighted link in the field picker. |
-| `Left arrow` | Goes back one level in the field picker. |
-| `Space`, `Enter` on the grip | Picks the key up for the arrow keys. |
-| `Up`, `Down` while carrying a key | Move it one place. |
-| `Space`, `Enter` while carrying a key | Drop it where it is. |
-| `Escape` while carrying a key | Put it back where it was. |
-| `Alt` + `Up`, `Alt` + `Down` | Move the key holding focus one place. |
-| `Escape` | Closes the list. |
+<Props name="sort-picker" kind="keyboard" />
 
 A key is also reordered by dragging its grip: the key lifts and the ones it passes shift to open a
 gap. Every step is announced in a live region.

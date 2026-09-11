@@ -4,6 +4,7 @@ description: Several projects, chosen by server-side search, with the project th
 ---
 
 import Demo from '../../../components/Demo.astro';
+import Props from '../../../components/Props.astro';
 
 Searches projects on the server, showing each one's thumbnail and status, and binds the ones you
 tick.
@@ -21,12 +22,7 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/project-multi-
 
 ## Props
 
-Every prop of [EntityMultiPicker](/widgets/entity-multi-picker/) except `entityTypes`, plus:
-
-| prop | type | default | meaning |
-|---|---|---|---|
-| `value` | `EntityRef[]` | `[]` | The chosen projects, in the order they were ticked. Two-way in Svelte. |
-| `includeArchived` | `boolean` | `false` | Offer projects whose `archived` checkbox is set. |
+<Props name="project-multi-picker" />
 
 `placeholder` defaults to `Search for projects`. `summary` and `max` set what the control shows for
 the selection, as on every other multi picker.
@@ -39,11 +35,7 @@ query. Each selection is also a chip in the control, with its own remove control
 
 ## Events
 
-| event | payload | when |
-|---|---|---|
-| `onValueChange` | `EntityRef[]`, `PickerRow[]` | The selection changed. |
-| `onError` | `Error` | A read failed. The list shows it inline as well. |
-| `onOpenChange` | `boolean` | The popup opened or closed. Svelte also binds it with `bind:open`. |
+<Props name="project-multi-picker" kind="events" />
 
 ## Slots
 
@@ -51,8 +43,7 @@ None.
 
 ## Keyboard
 
-The same as [EntityMultiPicker](/widgets/entity-multi-picker/): `Backspace` in an empty query arms
-the last chip and a second press removes it, and the list stays open across ticks.
+<Props name="project-multi-picker" kind="keyboard" />
 
 ## API behaviour
 

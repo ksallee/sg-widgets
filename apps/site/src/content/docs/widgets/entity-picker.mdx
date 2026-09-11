@@ -4,6 +4,7 @@ description: One Flow Production Tracking entity, chosen by server-side search a
 ---
 
 import Demo from '../../../components/Demo.astro';
+import Props from '../../../components/Props.astro';
 
 Searches one or more entity types on the server as you type, and binds the row you choose.
 
@@ -20,40 +21,7 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/entity-picker.
 
 ## Props
 
-| prop | type | default | meaning |
-|---|---|---|---|
-| `entityTypes` | `string[]` | required | Types to search. Several make the picker polymorphic. |
-| `context` | `SgContext` | required | The widget context. Every read goes through it, so widgets on a page share one cache. |
-| `value` | `EntityRef \| null` | `null` | The chosen row. Two-way in Svelte. |
-| `labelField` | `string` | display-name chain | Field holding the row label. |
-| `searchFields` | `string[] \| ((query) => string[])` | `[]` | Fields matched on top of the display-name chain. A function is called with the query. |
-| `secondaryField` | `string \| CollectionColumn \| null` | `null` | Field shown right-aligned, drawn by its data type. A resolved column renders it by type. |
-| `secondary` | `(row) => string` | — | Right-aligned text of your own. Wins over `secondaryField`. |
-| `subLabelField` | `string \| CollectionColumn \| null` | `null` | Field shown under the label. A resolved column renders it by type. |
-| `subLabel` | `(row) => string` | the type, when several are searched | Computes the sub-label. |
-| `thumbnail` | `string \| false` | `'image'` | Field holding the thumbnail URL. `false` hides the leading slot. |
-| `roundThumbnail` | `boolean` | `false` | Draws the thumbnail as a circle. |
-| `showCode` | `boolean` | `false` | Shows the row's `code` beside the label when the two differ. |
-| `siteUrl` | `string` | the context's | The site the status sprite is served from, for a secondary that is a status. |
-| `fields` | `string[]` | `[]` | Extra fields to request. |
-| `filters` | `FilterGroup \| WireGroup \| null` | `null` | Pre-filter, merged into every search with `and`. |
-| `projectId` | `number` | — | Scopes to one project. |
-| `exclude` | `EntityRef[]` | `[]` | Rows kept out of the results. |
-| `minQueryLength` | `number` | `0` | Under it the query carries no name condition. |
-| `pageSize` | `number` | `20` | Rows a page, with a load more row under them. |
-| `placeholder` | `string` | `'Search for an entity'` | Shown in the control while nothing is chosen. |
-| `searchPlaceholder` | `string` | `'Search…'` | Shown in the query input once something is chosen. |
-| `emptyLabel` | `string` | `'No match'` | Shown when a query matches nothing. |
-| `loadingLabel` | `string` | `'Loading…'` | Names the skeletons a read stands behind, for a screen reader. |
-| `errorLabel` | `string` | — | Shown in place of what the failed read said. |
-| `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Heights 8, 9 and 10. |
-| `disabled` | `boolean` | `false` | |
-| `readonly` | `boolean` | `false` | Keeps full contrast and drops the affordances. |
-| `invalid` | `boolean` | `false` | Sets `aria-invalid` and the destructive ring. |
-| `clearable` | `boolean` | `true` | Shows the clear control. |
-| `debounceMs` | `number` | `250` | Wait after the last keystroke before searching. |
-| `open` | `boolean` | `false` | Whether the popup is showing. Two-way in Svelte. |
-| `class` / `className` | `string` | — | Merged after the widget's own classes. |
+<Props name="entity-picker" />
 
 Every other attribute is spread onto the root: `id`, `aria-*`, `data-*`, key handlers and a
 `ref` to the root element.
@@ -74,11 +42,7 @@ The picker is `w-full`; wrap it in a sized container.
 
 ## Events
 
-| event | payload | when |
-|---|---|---|
-| `onValueChange` | `EntityRef \| null`, `PickerRow \| null` | A row was chosen, or the clear control was pressed. |
-| `onError` | `Error` | A read failed. The list shows it inline as well. |
-| `onOpenChange` | `boolean` | The popup opened or closed. Svelte also binds it with `bind:open`. |
+<Props name="entity-picker" kind="events" />
 
 ## Slots
 
@@ -87,15 +51,7 @@ code beside it, sub-label, right-aligned secondary.
 
 ## Keyboard
 
-| key | does |
-|---|---|
-| any text | Opens the list and searches the server. |
-| `Enter`, `Space` | On the chevron, opens the list. |
-| `Up`, `Down` | Moves the highlight through the rows and keeps it in view, including across a load more page. The last row holds it rather than wrapping. |
-| `Enter` | Chooses the highlighted row, or loads the next page on the load more row. |
-| `Backspace` | In an empty search box, clears the value. |
-| `Escape` | Closes the list and clears the query. On a closed picker it does nothing. |
-| `Tab` | Moves to the clear control, then the chevron, then out. |
+<Props name="entity-picker" kind="keyboard" />
 
 ## API behaviour
 

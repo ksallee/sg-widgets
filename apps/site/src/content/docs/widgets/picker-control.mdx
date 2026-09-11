@@ -4,6 +4,7 @@ description: The control box and popup shell every picker is built on.
 ---
 
 import Demo from '../../../components/Demo.astro';
+import Props from '../../../components/Props.astro';
 
 The box a picker's value sits in, and the popup its rows come from. A picker built on it supplies its
 query, its rows, its row renderer and its chip.
@@ -76,60 +77,11 @@ same variables; it is read as a reference and not installed.
 
 ## Props
 
-| prop | type | default | meaning |
-|---|---|---|---|
-| `slot` | `string` | — | The `data-slot` prefix every part of this picker carries. |
-| `picker` | `string` | — | The `data-picker` the popup carries. |
-| `multiple` | `boolean` | `false` | Several keys may be chosen at once. |
-| `keys` | `string[]` | — | The chosen keys, in order. A single picker passes none or one. |
-| `onSelect` | `(keys: string[]) => void` | — | The keys the primitive settled on. The load-more row never reaches it. |
-| `labels` | `string[]` | — | One label per chosen key. The summary, the title and the measured row read it. |
-| `items` | `string[]` | — | React: the item keys the list offers, in order. |
-| `rowCount` | `number` | `0` | Svelte: the rows on show, so a changed list follows the highlight. |
-| `chipKeys` | `string[]` | index and label | Svelte: a stable key per chip, so a removal does not redraw the row. |
-| `chipsSlot` | `string` | `<slot>-chips` | The `data-slot` of the chip row. |
-| `summary` | `'chips' \| 'ellipsis' \| 'count'` | `'chips'` | What the control shows for the selection. |
-| `max` | `number` | `0` | Chips drawn before the rest becomes `+n`. `0` fits what the row can. |
-| `chipRow` | `boolean` | `false` | The value is a measured row of chips rather than one chip. |
-| `inline` | `boolean` | `true` | The control holds the caret. A summary control keeps it in the popup. |
-| `tokenInput` | `boolean` | `true` | The caret gives its room to the chips. |
-| `inputPlaceholder` | `string` | — | What the caret shows. |
-| `rowKey` | `string` | size, summary and labels | What the chips look like, so a change re-measures the row. |
-| `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Control height. |
-| `disabled` | `boolean` | `false` | |
-| `inert` | `boolean` | `disabled` | The primitive takes no input. Wider than disabled: a loading picker is inert too. |
-| `readonly` | `boolean` | `false` | |
-| `invalid` | `boolean` | `false` | |
-| `clearable` | `boolean` | `true` | The clear control is drawn once something is chosen. |
-| `placeholder` | `string` | `''` | |
-| `searchPlaceholder` | `string` | `'Search…'` | |
-| `open` | `boolean` | `false` | Whether the popup is showing. Two-way in Svelte. |
-| `onOpenChange` | `(open: boolean) => void` | — | |
-| `query` | `string` | `''` | What the caret holds. Two-way in Svelte. |
-| `onQueryChange` | `(query: string) => void` | — | React: called when the caret changes. |
-| `onRemoveAt` | `(index: number) => void` | — | Remove the chip at `index`. Backspace walks the row through it. |
-| `onClear` | `() => void` | — | |
-| `anchored` | `boolean` | `false` | The popup is as wide as the control it hangs off. |
-| `loading` | `boolean` | `false` | Skeleton rows in place of the list. |
-| `error` | `string \| null` | `null` | The error line in place of the list. |
-| `empty` | `boolean` | `false` | The empty line in place of the list. |
-| `emptyLabel` | `string` | `'No match'` | |
-| `loadingLabel` | `string` | `'Loading…'` | The accessible name of the skeletons. |
-| `errorLabel` | `string` | what the read said | Shown in place of the failed read's own message. |
-| `hasMore` | `boolean` | `false` | A further page is there to be read, and the load-more row is drawn. |
-| `onLoadMore` | `() => void` | — | Called by a press on the load-more row. |
-| `clearLabel` | `string` | `'Clear the selection'` | |
-| `triggerLabel` | `string` | `'Show the options'` | |
-| `overflowLabel` | `string` | `'Show all n selected'` | The accessible name of the `+n` pill. |
-| `itemToStringLabel` | `(value: string) => string` | — | React: what the primitive writes into the input for an item. |
-| `controlProps` | `Record<string, unknown>` | — | Attributes the control carries on top of the shared ones. |
+<Props name="picker-control" />
 
 ## Slots
 
-| Svelte | React | receives | draws |
-|---|---|---|---|
-| `chip` | `renderChip` | the chip's index, whether the caret is on it, whether the row hides it | One chip of the value. The chip under the caret wears the focus ring; a hidden one keeps its width. |
-| `rows` | `renderItem` | nothing in Svelte, the item key in React | The rows of the list, as items of the primitive. |
+<Props name="picker-control" kind="slots" />
 
 A chip carries `data-chip` so the measured row can weigh it, and `data-armed` while it holds the
 caret, so every picker's chip says the same thing. The base takes every chip out of the tab order
@@ -170,15 +122,7 @@ takes no press and no key.
 
 ## Keyboard
 
-| key | does |
-|---|---|
-| `ArrowDown` / `ArrowUp` | Moves the highlight, and the list scrolls it into view. |
-| `Enter` | Takes the highlighted row. A multi picker keeps the popup open. |
-| `Escape` | Closes the popup and clears the query. On a closed picker it does nothing. |
-| `Backspace` | In an empty query: takes the caret to the last chip of a multi picker; clears a single one. |
-| `ArrowLeft` / `ArrowRight` | On a chip, walks the row. `ArrowRight` past the last chip returns to the input. |
-| `Delete` | On a chip, removes it and leaves the caret on its neighbour. |
-| `Tab` | Leaves the control. |
+<Props name="picker-control" kind="keyboard" />
 
 ## Composing a wrapper
 
@@ -203,22 +147,7 @@ The row opens on an indicator column, which is a fixed width whether or not the 
 label sits at one x down the whole list. A multi picker puts its checkbox there and a single picker a
 tick on the row it holds.
 
-| prop | type | default | meaning |
-|---|---|---|---|
-| `row` | `PickerRow` | — | The row to draw: the reference, its label and the values a read answered. |
-| `query` | `string` | `''` | The query whose matched runs are bold. |
-| `crumbs` | `string[]` | `[]` | Crumbs drawn before the label, muted and separated by `›`. |
-| `thumbnail` | `string \| false` | `'image'` | Field holding the thumbnail URL. `false` hides the leading slot. |
-| `roundThumbnail` | `boolean` | `false` | |
-| `showCode` | `boolean` | `false` | Show the row's code beside the label when the two differ. |
-| `subLabelField` | `FieldSpec \| null` | `null` | The muted line under the label: a path, or a resolved column. |
-| `subLabel` | `string` | — | The muted line of the caller's own making. Wins over `subLabelField`. |
-| `secondaryField` | `FieldSpec \| null` | `null` | The right-aligned value: a path, or a resolved column so it renders by its type. |
-| `secondary` | `string` | — | Right-aligned text of the caller's own making. Wins over `secondaryField`. |
-| `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Picture and text ladder. |
-| `context` | `SgContext` | — | The secondary's schema and the status table are read through it. |
-| `siteUrl` | `string` | the context's | The site the status sprite is served from. |
-| `indicatorSlot` | `string` | `'picker-row-indicator'` | The `data-slot` the indicator column carries. |
+<Props name="picker-row" />
 
 Two slots, `glyph` and `indicator` in both frameworks. `glyph` is drawn in the leading slot when the
 row carries no picture; a row whose type is a person draws an avatar there instead. `indicator` is

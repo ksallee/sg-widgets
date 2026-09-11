@@ -4,6 +4,7 @@ description: 'A url field as a web link: address and name.'
 ---
 
 import Demo from '../../../components/Demo.astro';
+import Props from '../../../components/Props.astro';
 
 Edits a url field as a web link. Uploads are not in scope.
 
@@ -28,20 +29,7 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/url-editor.jso
 
 ## Props
 
-| prop | type | default | meaning |
-|---|---|---|---|
-| `value` | `UrlValue \| null` | `null` | The stored object. Two-way in Svelte. |
-| `onValueChange` | `(value: UrlWriteValue \| null) => void` | — | Called when either input commits. |
-| `field` | `FieldSchema \| null` | `null` | Supplies the accessible label and the required flag. |
-| `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Control height. |
-| `disabled` | `boolean` | `false` | |
-| `readonly` | `boolean` | `false` | |
-| `invalid` | `boolean` | `false` | Forced invalid state. |
-| `error` | `string \| null` | `null` | A message from the caller, shown in place of the parse error. |
-| `onErrorChange` | `(error: string \| null) => void` | — | Called when the parse error appears or clears. |
-| `placeholder` | `string` | an example address | Placeholder of the address input. |
-| `namePlaceholder` | `string` | `'Name'` | Placeholder of the name input. |
-| `class` / `className` | `string` | — | Merged after the widget's own classes. |
+<Props name="url-editor" />
 
 A value whose link type is local carries paths and no address. The control shows a line saying so and
 takes no input.
@@ -56,11 +44,7 @@ takes no input.
 
 ## Keyboard
 
-| key | does |
-|---|---|
-| `Enter` | Commits both inputs. |
-| `Escape` | Restores the stored value. |
-| `Tab` | Moves between address and name. |
+<Props name="url-editor" kind="keyboard" />
 
 ## API behaviour
 

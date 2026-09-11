@@ -4,6 +4,7 @@ description: Several people and script accounts, chosen by server-side search ac
 ---
 
 import Demo from '../../../components/Demo.astro';
+import Props from '../../../components/Props.astro';
 
 Searches people, and optionally script accounts, on the server, and binds the rows you tick.
 
@@ -20,13 +21,7 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/user-multi-pic
 
 ## Props
 
-Every prop of [EntityMultiPicker](/widgets/entity-multi-picker/) except `entityTypes`, plus:
-
-| prop | type | default | meaning |
-|---|---|---|---|
-| `value` | `EntityRef[]` | `[]` | The chosen people, in the order they were ticked. Two-way in Svelte. |
-| `includeApiUsers` | `boolean` | `true` | Search script accounts alongside people. |
-| `includeInactive` | `boolean` | `false` | Offer people whose status is `dis`. |
+<Props name="user-multi-picker" />
 
 `placeholder` defaults to `Search for people`. `summary` and `max` set what the control shows for
 the selection, as on every other multi picker.
@@ -42,11 +37,7 @@ query. Each selection is also a chip in the control, with its own remove control
 
 ## Events
 
-| event | payload | when |
-|---|---|---|
-| `onValueChange` | `EntityRef[]`, `PickerRow[]` | The selection changed. |
-| `onError` | `Error` | A read failed. The list shows it inline as well. |
-| `onOpenChange` | `boolean` | The popup opened or closed. Svelte also binds it with `bind:open`. |
+<Props name="user-multi-picker" kind="events" />
 
 ## Slots
 
@@ -54,8 +45,7 @@ None.
 
 ## Keyboard
 
-The same as [EntityMultiPicker](/widgets/entity-multi-picker/): `Backspace` in an empty query arms
-the last chip and a second press removes it, and the list stays open across ticks.
+<Props name="user-multi-picker" kind="keyboard" />
 
 ## API behaviour
 

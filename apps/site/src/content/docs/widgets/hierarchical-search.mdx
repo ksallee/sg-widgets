@@ -4,6 +4,7 @@ description: A drill-down over the Flow Production Tracking navigation tree, wit
 ---
 
 import Demo from '../../../components/Demo.astro';
+import Props from '../../../components/Props.astro';
 
 Walks the navigation tree level by level, or searches it, and emits the row you pick with the path
 that reaches it. It is a wrapper over [`search-control`](/widgets/search-control/), which owns the
@@ -20,26 +21,7 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/hierarchical-s
 
 ## Props
 
-| prop | type | default | meaning |
-|---|---|---|---|
-| `context` | `SgContext` | required | The widget context. Every read goes through it, so widgets on a page share one cache. |
-| `rootPath` | `string` | `'/'` | Where the tree starts. `/Project/70` scopes it to that project. |
-| `entityTypes` | `string[] \| Record<string, WireCondition[] \| null>` | Shot, Asset, Sequence, Task | Types a search may end on. |
-| `thumbnail` | `string \| false` | `'image'` | Field holding the thumbnail URL. A row with no picture falls back to its type glyph. |
-| `labelField` | `string` | — | Field holding the row label. |
-| `subLabelField` | `string \| CollectionColumn \| null` | `null` | The muted line under the label. A resolved column renders it by type. |
-| `subLabel` | `(row) => string` | — | The muted line of your own. Wins over `subLabelField`. |
-| `secondaryField` | `string \| CollectionColumn \| null` | `null` | The right-aligned value, drawn by its data type. |
-| `secondary` | `(row) => string` | — | Right-aligned text of your own. Wins over `secondaryField`. |
-| `showCode` | `boolean` | `false` | Shows the row's `code` beside the label when the two differ. |
-| `fields` | `string[]` | `[]` | Extra fields to request, so your own sub-label or secondary can read them. |
-| `placeholder` | `string` | `'Search the hierarchy…'` | Text in the search input. |
-| `emptyLabel` | `string` | `'No rows'` | Shown when a level holds nothing. |
-| `noMatchLabel` | `string` | `'No match'` | Shown when a query matches nothing. |
-| `loadingLabel` | `string` | `'Loading…'` | Names the skeletons a read stands behind, for a screen reader. |
-| `errorLabel` | `string` | — | Shown in place of what the failed read said. |
-| `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Row text, leading slot and glyphs. |
-| `class` / `className` | `string` | — | Merged after the widget's own classes. |
+<Props name="hierarchical-search" />
 
 Every other attribute is spread onto the root: `id`, `aria-*`, `data-*`, key handlers and a
 `ref` to the root element.
@@ -57,9 +39,7 @@ is not one of these types opens instead of being picked.
 
 ## Events
 
-| event | payload | when |
-|---|---|---|
-| `onSelect` | `EntityRef`, `EntityRef[]` | A row was picked. The second argument is every row its path runs through, root first. |
+<Props name="hierarchical-search" kind="events" />
 
 ## Slots
 
@@ -67,13 +47,7 @@ None.
 
 ## Keyboard
 
-| key | does |
-|---|---|
-| `Down` / `Up` | Moves through the level. |
-| `Enter` | Picks the row, or opens it when it is not a searchable type. |
-| `Right` | Opens the level below the row. |
-| `Left` / `Backspace` | Goes back up one level. |
-| `Escape` | Clears the query. |
+<Props name="hierarchical-search" kind="keyboard" />
 
 `Backspace` goes up only when the query is empty; otherwise it edits the query.
 

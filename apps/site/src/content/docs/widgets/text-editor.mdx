@@ -4,6 +4,7 @@ description: A text field as an input, or a textarea when the field is multi-lin
 ---
 
 import Demo from '../../../components/Demo.astro';
+import Props from '../../../components/Props.astro';
 
 Edits a text field and emits the string the API stores.
 
@@ -27,21 +28,7 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/text-editor.js
 
 ## Props
 
-| prop | type | default | meaning |
-|---|---|---|---|
-| `value` | `string \| null` | `null` | The stored string. Two-way in Svelte. |
-| `onValueChange` | `(value: string \| null) => void` | — | Called when the input commits. |
-| `field` | `FieldSchema \| null` | `null` | Supplies the accessible label and the required flag. |
-| `multiline` | `boolean` | `false` | Renders a textarea. |
-| `rows` | `number` | `3` | Rows of the textarea. |
-| `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Control height. |
-| `disabled` | `boolean` | `false` | |
-| `readonly` | `boolean` | `false` | |
-| `invalid` | `boolean` | `false` | Forced invalid state. |
-| `error` | `string \| null` | `null` | A message from the caller, shown in place of the parse error. |
-| `onErrorChange` | `(error: string \| null) => void` | — | Called when the parse error appears or clears. |
-| `placeholder` | `string` | — | |
-| `class` / `className` | `string` | — | Merged after the widget's own classes. |
+<Props name="text-editor" />
 
 ## Events
 
@@ -54,11 +41,7 @@ control.
 
 ## Keyboard
 
-| key | does |
-|---|---|
-| `Enter` | Commits, on a single-line input. |
-| `Escape` | Restores the stored value. |
-| `Tab` | Commits by leaving the control. |
+<Props name="text-editor" kind="keyboard" />
 
 ## API behaviour
 

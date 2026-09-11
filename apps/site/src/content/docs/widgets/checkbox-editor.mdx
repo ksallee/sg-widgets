@@ -4,6 +4,7 @@ description: A checkbox field as an editable switch.
 ---
 
 import Demo from '../../../components/Demo.astro';
+import Props from '../../../components/Props.astro';
 
 Edits a checkbox field with the shadcn switch.
 
@@ -27,21 +28,11 @@ There is no third state, and no way to clear the field.
 
 ## Props
 
-| prop | type | default | meaning |
-|---|---|---|---|
-| `value` | `boolean` | `false` | The stored boolean. Two-way in Svelte. |
-| `onValueChange` | `(value: boolean) => void` | — | Called on every change. |
-| `field` | `FieldSchema \| null` | `null` | Supplies the accessible label. |
-| `labels` | `{ on: string; off: string }` | `{ on: 'Yes', off: 'No' }` | The word shown beside the switch. |
-| `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Row height. |
-| `disabled` | `boolean` | `false` | |
-| `readonly` | `boolean` | `false` | Keeps full contrast and refuses the change. |
-| `invalid` | `boolean` | `false` | |
-| `error` | `string \| null` | `null` | A message from the caller. |
-| `placeholder` | `string` | — | Used as the accessible label when there is no field. |
-| `class` / `className` | `string` | — | Merged after the widget's own classes. |
+<Props name="checkbox-editor" />
 
 ## Events
+
+<Props name="checkbox-editor" kind="events" />
 
 `onValueChange` fires as soon as the switch moves. There is nothing to commit. `onErrorChange` fires
 with `null` on that same change, so a message the caller set clears when the field is answered.
@@ -52,10 +43,7 @@ with `null` on that same change, so a message the caller set clears when the fie
 
 ## Keyboard
 
-| key | does |
-|---|---|
-| `Space` | Toggles the switch. |
-| `Tab` | Moves off the control. |
+<Props name="checkbox-editor" kind="keyboard" />
 
 ## API behaviour
 

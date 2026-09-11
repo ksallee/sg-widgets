@@ -4,6 +4,7 @@ description: A row's thumbnail, with an explicit placeholder and a play overlay.
 ---
 
 import Demo from '../../../components/Demo.astro';
+import Props from '../../../components/Props.astro';
 
 Renders the value of an image field at a fixed aspect ratio, with a glyph standing in whenever there
 is no picture to show.
@@ -19,14 +20,7 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/thumbnail.json
 
 ## Props
 
-| prop | type | default | meaning |
-|---|---|---|---|
-| `src` | `string \| null` | `null` | The image field's value. |
-| `alt` | `string` | `''` | Empty by default: a thumbnail beside a labelled row is decorative. |
-| `aspect` | `'16:9' \| 'square'` | `'16:9'` | Sets the width for the chosen height. |
-| `size` | `'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl'` | `'md'` | Heights 6, 8, 10, 16 and 24. The first three sit in rows and cells; `xl` and `2xl` are for cards and detail panes. |
-| `playable` | `boolean` | `false` | Draws a centred play badge over the image. |
-| `class` / `className` | `string` | — | Merged after the widget's own classes. Set a height here for a larger frame. |
+<Props name="thumbnail" />
 
 The height comes from the size and the width from the aspect, so the widget never sets a fixed
 width.

@@ -4,6 +4,7 @@ description: One project, chosen by server-side search, with the project thumbna
 ---
 
 import Demo from '../../../components/Demo.astro';
+import Props from '../../../components/Props.astro';
 
 Searches projects on the server, showing each one's thumbnail and status.
 
@@ -23,23 +24,13 @@ the `project-multi-picker` item instead; this note stands for one release.
 
 ## Props
 
-Every prop of [EntityPicker](/widgets/entity-picker/) except `entityTypes`, plus:
-
-| prop | type | default | meaning |
-|---|---|---|---|
-| `includeArchived` | `boolean` | `false` | Offer projects whose `archived` checkbox is set. |
-
-`placeholder` defaults to `Search for a project`.
+<Props name="project-picker" />
 
 The sub-label is the project's status, so an active project can be told from a bidding one.
 
 ## Events
 
-| event | payload | when |
-|---|---|---|
-| `onValueChange` | `EntityRef`, `PickerRow` | The selection changed. |
-| `onError` | `Error` | A read failed. The list shows it inline as well. |
-| `onOpenChange` | `boolean` | The popup opened or closed. Svelte also binds it with `bind:open`. |
+<Props name="project-picker" kind="events" />
 
 ## Slots
 
@@ -47,7 +38,7 @@ None.
 
 ## Keyboard
 
-The same as [EntityPicker](/widgets/entity-picker/).
+<Props name="project-picker" kind="keyboard" />
 
 ## API behaviour
 

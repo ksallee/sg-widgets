@@ -4,6 +4,7 @@ description: One field of an entity type, chosen through a searchable list that 
 ---
 
 import Demo from '../../../components/Demo.astro';
+import Props from '../../../components/Props.astro';
 
 Picks one field of an entity type and emits its dotted path, descending through linked types on the
 way.
@@ -26,35 +27,7 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/field-picker.j
 
 ## Props
 
-| prop | type | default | meaning |
-|---|---|---|---|
-| `context` | `SgContext` | required | The widget context. The schema is read through it, once per page. |
-| `entityType` | `string` | required | The type the path starts on. |
-| `value` | `string` | `''` | The dotted path. Empty when nothing is chosen. |
-| `onValueChange` | `(value: string) => void` | — | Receives the new path, or the empty string on clear. |
-| `deepLinks` | `boolean` | `false` | Allow descending through entity fields. |
-| `showCode` | `boolean` | `false` | Show the programmatic name beside the display name in each row. |
-| `maxDepth` | `number` | `2` | How many hops a path may take. |
-| `dataTypes` | `string \| string[]` | — | Data types a field must have to be selected. |
-| `validTypes` | `string[]` | — | A field is selectable only if it links one of these. |
-| `exclude` | `string[]` | — | Full dotted paths to drop. |
-| `hidePaths` | `string[]` | — | Dotted prefixes to drop, along with everything beneath them. |
-| `filterableOnly` | `boolean` | `false` | Drop the data types the API refuses in a filter. |
-| `extraFields` | `{ name, displayName? }[]` | — | Synthetic entries offered at the root only, labelled `computed`. |
-| `filter` | `(field, path) => boolean` | — | Your own visibility test over the schema and the candidate's full path. |
-| `closeOnSelect` | `boolean` | `true` | Off keeps the popover open for the next pick. |
-| `placeholder` | `string` | `'Select a field'` | Shown while nothing is chosen. |
-| `searchPlaceholder` | `string` | `'Search fields…'` | Shown in the search box. |
-| `emptyLabel` | `string` | `'No match'` | Shown when the search matches nothing. |
-| `loadingLabel` | `string` | `'Loading…'` | Names the skeletons a read stands behind, for a screen reader. |
-| `errorLabel` | `string` | — | Shown in place of what the failed read said. |
-| `clearable` | `boolean` | `true` | Show the clear control once a field is chosen. |
-| `readonly` | `boolean` | `false` | Keeps full contrast and removes the chevron and the clear control. |
-| `disabled` | `boolean` | `false` | |
-| `invalid` | `boolean` | `false` | Applies the invalid ring and `aria-invalid`. |
-| `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | |
-| `open` | `boolean` | `false` | Whether the popover is showing. Two-way in Svelte. |
-| `className` / `class` | `string` | — | Merged after the widget's own classes. |
+<Props name="field-picker" />
 
 Every other attribute is spread onto the root: `id`, `aria-*`, `data-*`, key handlers and a
 `ref` to the root element.
@@ -83,10 +56,7 @@ one.
 
 ## Events
 
-| event | payload | when |
-|---|---|---|
-| `onValueChange` | `string` | A field is chosen, or the clear control is pressed, which sends the empty string. |
-| `onOpenChange` | `boolean` | The popover opened or closed. Svelte also binds it with `bind:open`. |
+<Props name="field-picker" kind="events" />
 
 ## Slots
 
@@ -94,15 +64,7 @@ None.
 
 ## Keyboard
 
-| key | does |
-|---|---|
-| `Enter`, `Space` | On the closed control, opens it. |
-| `Down`, `Up` | Move the cursor through the rows. |
-| `Right` | Descend into the highlighted field, or pick the highlighted target type. |
-| `Left` | Go back one level, or cancel the choice of target type. |
-| `Enter` | Choose the highlighted field. On a field that can only be descended into, descends. |
-| `Backspace` | In an empty search box, clears the value. |
-| `Escape` | Close, keeping the value. |
+<Props name="field-picker" kind="keyboard" />
 
 The search box clears on every hop, on every selection and on every close, and the control is never
 remounted, so focus stays where you are typing.

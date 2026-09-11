@@ -4,6 +4,7 @@ description: Several entity types of a site, chosen from a searchable list with 
 ---
 
 import Demo from '../../../components/Demo.astro';
+import Props from '../../../components/Props.astro';
 
 Picks any number of entity types of a site, from a searchable list of everything the site has
 enabled.
@@ -21,15 +22,7 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/entity-type-mu
 
 ## Props
 
-Every prop of [EntityTypePicker](/widgets/entity-type-picker/), with the value as an array, plus:
-
-| prop | type | default | meaning |
-|---|---|---|---|
-| `value` | `string[]` | `[]` | The chosen type codes, in the order they were ticked. Two-way in Svelte. |
-| `onValueChange` | `(value) => void` | — | Receives the new array, empty on clear. |
-| `placeholder` | `string` | `'Select entity types'` | Shown while nothing is chosen. |
-| `summary` | `'chips' \| 'ellipsis' \| 'count'` | `'ellipsis'` | What the control shows for the selection. |
-| `max` | `number` | `0` | Chips drawn before the rest becomes `+n`. `0` lets the row fit what it can. |
+<Props name="entity-type-multi-picker" />
 
 Every row carries a checkbox and the list stays open across selections. Each selection is a chip in
 the control, with its own remove control.
@@ -47,10 +40,7 @@ caller narrowing the set sees the list change with no second call.
 
 ## Events
 
-| event | payload | when |
-|---|---|---|
-| `onValueChange` | `string[]` | A type is ticked or unticked, or the clear control is pressed. |
-| `onOpenChange` | `boolean` | The popup opened or closed. Svelte also binds it with `bind:open`. |
+<Props name="entity-type-multi-picker" kind="events" />
 
 ## Slots
 
@@ -58,15 +48,7 @@ None.
 
 ## Keyboard
 
-| key | does |
-|---|---|
-| any text | Narrows the rows, from the caret under `chips` and from the popup's search box otherwise. |
-| `Enter`, `Space` | On the chevron, opens the list. |
-| `Down`, `Up` | Move the cursor through the rows and keep it in view. The last row holds it rather than wrapping. |
-| `Enter` | Ticks or unticks the highlighted type. The list stays open. |
-| `Backspace` | In an empty search box, highlights the last chip. A second one removes it. Any other key releases it. |
-| `Escape` | Close, keeping the value and clearing the query. On a closed picker it does nothing. |
-| `Tab` | Moves through the chips' remove controls, then `+n`, the clear control and the chevron. |
+<Props name="entity-type-multi-picker" kind="keyboard" />
 
 ## API behaviour
 

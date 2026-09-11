@@ -4,6 +4,7 @@ description: Flow Production Tracking rows as EntityCard tiles, with selection a
 ---
 
 import Demo from '../../../components/Demo.astro';
+import Props from '../../../components/Props.astro';
 
 Renders rows from an entity source as EntityCard tiles: the thumbnail fills the top of each tile, the
 status sits on it, and one metadata line runs under the name.
@@ -43,68 +44,23 @@ list; the metadata line needs whatever `subLabelField` and `secondaryField` name
 
 ## Props
 
-| prop | type | default | meaning |
-|---|---|---|---|
-| `source` | `EntitySource` | — | The rows and the paging behind them. |
-| `context` | `SgContext` | required | The widget context. Every tile reads its schema, its statuses and its links through it. |
-| `thumbnail` | `string \| false` | `'image'` | Field holding the thumbnail URL. `false` leaves every tile on the placeholder. |
-| `labelField` | `string \| null` | `null` | Field shown as the tile's name. Defaults to the type's display name. |
-| `subLabelField` | `string \| CollectionColumn \| null` | `null` | The left of the metadata line. A resolved column renders it by type. |
-| `subLabel` | `(row) => string` | — | The caller's own sub-label. Wins over `subLabelField`. |
-| `secondaryField` | `string \| CollectionColumn \| null` | `null` | The right of the metadata line. |
-| `secondary` | `(row) => string` | — | The caller's own text on the right. Wins over `secondaryField`. |
-| `showCode` | `boolean` | `false` | Show the row's `code` beside the name when the two differ. |
-| `statuses` | `Record<string, StatusRecord> \| null` | `null` | Status rows by code. Read through the context when not given. |
-| `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Tile size and column minimum: 160, 224 or 288 pixels. |
-| `selectable` | `boolean` | `false` | Draws a checkbox on each tile. |
-| `selection` | `EntityRef[]` | `[]` | The selected rows, two-way. Names loaded rows only. |
-| `getRowId` | `(row) => string` | — | How a row is keyed, in the DOM and in the selection. Default `Type:id`. |
-| `isRowDisabled` | `(row) => boolean` | — | True for a row the arrows skip and the selection refuses. |
-| `sort` | `SortSpec[]` | — | The source's sort, two-way, so a SortPicker drops into `header`. |
-| `filters` | `FilterNode \| WireGroup \| null` | — | The source's filter, two-way, so a FilterBar drops into `header`. |
-| `paging` | `'pages' \| 'more' \| 'scroll'` | `'scroll'` | How the set is walked: a page number, a load-more row, or the scroller. |
-| `pageSizes` | `number[]` | `[25, 50, 100]` | Rows per page offered in the footer. `pages` only. |
-| `maxHeight` | `string` | `'32rem'` | Height of the scrolling body. |
-| `virtualizeAfter` | `number` | `100` | Rows above which the grid draws only the tiles on screen. |
-| `emptyLabel` | `string` | `'No rows'` | Shown when the read returned nothing. |
-| `loadingLabel` | `string` | `'Loading…'` | Names the skeletons a read stands behind, for a screen reader. |
-| `errorLabel` | `string` | — | Shown in place of what the failed read said. |
-| `density` | `'compact' \| 'default'` | `'default'` | Compact halves the gap between tiles. |
-| `class` / `className` | `string` | — | Merged after the widget's own classes. |
+<Props name="entity-grid" />
 
 Nothing is on the metadata line by default, and the row's id is never on it.
 
 ## Events
 
-| event | payload | when |
-|---|---|---|
-| `onSelectionChange` | `EntityRef[]` | The selection changed. |
-| `onSelect` | `EntityRow` | A tile was activated, by click or by Enter. |
-| `onSortChange` | `SortSpec[]` | The source's sort changed. |
-| `onFiltersChange` | `FilterNode \| WireGroup \| null` | The source's filter changed. |
+<Props name="entity-grid" kind="events" />
 
 ## Slots
 
-| slot | receives | meaning |
-|---|---|---|
-| `card` | `{ row, id, index, selected, disabled, active }` | Draws one grid cell. The grid keeps the cell's box, its tab stop and its keys. |
-| `header` | — | Region above the grid. |
-| `footer` | — | Region below the footer. |
+<Props name="entity-grid" kind="slots" />
 
 ## Keyboard
 
 The grid is one tab stop: Tab moves into the tile the cursor is on, and the arrows walk from there.
 
-| key | does |
-|---|---|
-| Tab | Moves into the grid, then out of it. |
-| Left, Right | Moves the cursor one tile. |
-| Up, Down | Moves the cursor one row of tiles. |
-| Home, End | Moves to the first or the last tile. |
-| Right, Down past the last tile | In `more` and `scroll`, asks for the next page. The cursor stays where it is until the tiles arrive, then lands on the first of them. |
-| Space | Selects the tile, when the grid is selectable. |
-| Enter | Emits the select event. |
-| Enter in the page number | Goes to that page. |
+<Props name="entity-grid" kind="keyboard" />
 
 A disabled row takes no keys and no click: the arrows step over it and the cursor never lands on it.
 

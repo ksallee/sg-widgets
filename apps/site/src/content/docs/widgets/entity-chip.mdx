@@ -4,6 +4,7 @@ description: A linked Flow Production Tracking row as a compact chip.
 ---
 
 import Demo from '../../../components/Demo.astro';
+import Props from '../../../components/Props.astro';
 
 Renders one linked row as a chip, an inline link or bare text, with a type glyph or thumbnail, its
 name, an optional remove control and an optional hover card.
@@ -21,20 +22,7 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/entity-chip.js
 
 ## Props
 
-| prop | type | default | meaning |
-|---|---|---|---|
-| `entity` | `EntityRef` | required | Type, id and optional name, as an entity field returns it. |
-| `thumbnail` | `string \| null` | `null` | Replaces the type glyph. |
-| `variant` | `'chip' \| 'link' \| 'text'` | `'chip'` | Boxed chip, inline link, or the bare name. |
-| `href` | `string \| ((ref) => string \| null)` | the row's page on the site | Where the chip points. |
-| `siteUrl` | `string` | the context's | The site the row's own page lives on. |
-| `preview` | `string[]` | — | Field paths shown in a hover card. Needs a context. |
-| `context` | `SgContext` | — | The widget context, for the site url and for the hover card's read. |
-| `client` | `SgClient` | — | A client, for an app with no context. One context is built per client and shared. |
-| `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Heights 6, 8 and 10 for the chip; the type scale for the others. |
-| `removable` | `boolean` | `false` | Shows the remove control. |
-| `removeLabel` | `string` | derived from the name | Accessible name for the remove control. |
-| `class` / `className` | `string` | — | Merged after the widget's own classes. |
+<Props name="entity-chip" />
 
 With no `href` and a site to work from, the chip addresses the row's own page,
 `<site>/detail/<Type>/<id>`, and opens it in a new tab. A url you pass yourself belongs to your own
@@ -53,10 +41,7 @@ The root carries the entity type, id and variant as data attributes.
 
 ## Events
 
-| event | payload | when |
-|---|---|---|
-| `onClick` | `MouseEvent` | The content was pressed. It renders as a button. Ignored when a link is set. Svelte spells it `onclick`, as it does every DOM event. |
-| `onRemove` | `EntityRef` | The remove control was pressed. |
+<Props name="entity-chip" kind="events" />
 
 ## Slots
 
@@ -64,11 +49,7 @@ None.
 
 ## Keyboard
 
-| key | does |
-|---|---|
-| `Tab` | Moves to the link or button, then to the remove control. |
-| `Enter` | Follows the link, or activates the button. |
-| `Space` | Activates the button or the remove control. |
+<Props name="entity-chip" kind="keyboard" />
 
 An inert chip takes no focus.
 
@@ -91,3 +72,10 @@ return path. Site measurement, pending a corpus card.
 
 The hover card is shadcn's own, installed unmodified: Base UI's Preview Card (`@base-ui/react`
 1.8.0) in React, Bits UI's Link Preview (`bits-ui` 2.19.1) in Svelte.
+
+## EntityGlyphs
+
+The glyph a chip shows for a type with no thumbnail. A stock site has 114 entity types and any
+number of custom ones, so the map covers the types a widget meets constantly — Shot, Asset,
+Sequence, Version, Task, HumanUser, Project, Note, PublishedFile — and everything else falls back to
+a tag. It is a plain map from type name to icon: a caller with a custom type adds an entry.

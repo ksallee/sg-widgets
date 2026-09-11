@@ -4,6 +4,7 @@ description: One Flow Production Tracking row as a card, or as a thumbnail-first
 ---
 
 import Demo from '../../../components/Demo.astro';
+import Props from '../../../components/Props.astro';
 
 Renders one row as a card: its thumbnail, name, type, status and a grid of the field paths you name.
 Give the card a row you hold, or a reference and it reads the row itself. The tile variant reads the
@@ -22,42 +23,13 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/entity-card.js
 
 ## Props
 
-| prop | type | default | meaning |
-|---|---|---|---|
-| `context` | `SgContext` | — | The widget context: the cached client, the schema, the site url and the preferences the card reads through. |
-| `client` | `SgClient` | — | A client, for an app with no context. One context is built per client and shared. |
-| `row` | `EntityRow \| null` | `null` | A row you already read. Given, the card reads nothing. |
-| `entity` | `EntityRef \| null` | `null` | The row to read, when no row is given. |
-| `fields` | `string[]` | `[]` | Field paths for the grid, in order. Dotted paths allowed. Card only. |
-| `variant` | `'card' \| 'tile'` | `'card'` | The stacked surface, or the thumbnail-first tile. |
-| `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Thumbnail 16, 16 and 24, with the gaps and name scale to match. |
-| `imagePath` | `string` | `'image'` | The image field the thumbnail comes from. |
-| `siteUrl` | `string` | the context's | The site the name and every linked row point at. |
-| `hoursPerDay` | `number` | the context's | The site's working day. Durations then render in days. |
-| `locale` | `string` | the context's, then the runtime's | Used for dates and numbers. |
-| `timeZone` | `string` | the context's, then the runtime's | IANA zone a `date_time` is shown in. |
-| `frameRate` | `number` | the context's | Frames a second. A timecode then carries its frame digits. |
-| `emptyLabel` | `string` | `'empty'` | What a field with no value shows. |
-| `errorLabel` | `string` | — | Shown in place of what the failed read said. |
-| `class` / `className` | `string` | — | Merged after the widget's own classes. |
+<Props name="entity-card" />
 
 A card reads through a context. Given a client instead, it builds one and shares it with every
 other widget on that client.
 
 These shape the tile and are ignored by the card:
 
-| prop | type | default | meaning |
-|---|---|---|---|
-| `labelField` | `string \| null` | `null` | Field shown as the name. Defaults to the type's display name. |
-| `subLabelField` | `string \| CollectionColumn \| null` | `null` | The left of the metadata line. A resolved column renders it by type. |
-| `subLabel` | `(row) => string` | — | Your own sub-label. Wins over `subLabelField`. |
-| `secondaryField` | `string \| CollectionColumn \| null` | `null` | The right of the metadata line. |
-| `secondary` | `(row) => string` | — | Your own text on the right. Wins over `secondaryField`. |
-| `showCode` | `boolean` | `false` | Show the row's `code` beside the name when the two differ. |
-| `statuses` | `Record<string, StatusRecord> \| null` | `null` | Status rows by code. Read through the context when not given. |
-| `selectable` | `boolean` | `false` | Draws the selection checkbox on the thumbnail. |
-| `selected` | `boolean` | `false` | Paints the tile as selected. |
-| `actions` | snippet / node | — | Controls in the thumbnail's top-right corner. |
 
 Nothing is on the metadata line by default, and the row's id is never on it. The tile takes its
 selected state rather than holding one, and it spreads whatever attributes and handlers it is given
@@ -91,23 +63,15 @@ The root fills its container and carries the size as a data attribute.
 
 ## Events
 
-| event | payload | when |
-|---|---|---|
-| `onSelectedChange` | `boolean` | The tile's checkbox was toggled. |
+<Props name="entity-card" kind="events" />
 
 ## Slots
 
-| slot | where |
-|---|---|
-| `actions` | The thumbnail's top-right corner, on hover or focus. Tile only. |
+<Props name="entity-card" kind="slots" />
 
 ## Keyboard
 
-| key | does |
-|---|---|
-| `Tab` | On a card, moves to the name, when a site url is known, then to any link inside a field value. On a tile, moves to the checkbox and to the actions. |
-| `Enter` | Opens the row's page on the site, in a new tab. |
-| `Space` | Toggles the checkbox it is on. |
+<Props name="entity-card" kind="keyboard" />
 
 Nothing else in the card takes focus. A tile is focusable only once whoever lays it out gives it a
 tab index; EntityGrid does, and owns the arrow keys.

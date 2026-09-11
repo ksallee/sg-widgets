@@ -34,12 +34,13 @@ async function glimpse(fn, ms = 4000) {
 }
 
 // Base UI opens on a click, Bits UI on pointerdown, and neither answers the other.
+/** One press, the way a mouse makes one: a second pointerdown would toggle the list shut again. */
 function press(el) {
-  for (const type of ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click']) {
-    el.dispatchEvent(new MouseEvent(type, { bubbles: true, button: 0 }));
-  }
-  el.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0, pointerType: 'mouse' }));
-  el.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, button: 0, pointerType: 'mouse' }));
+  el.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, button: 0, pointerType: 'mouse' }));
+  el.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 0 }));
+  el.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, cancelable: true, button: 0, pointerType: 'mouse' }));
+  el.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true, button: 0 }));
+  el.click();
 }
 
 function type(input, text) {

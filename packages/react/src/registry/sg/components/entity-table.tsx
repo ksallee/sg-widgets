@@ -2,6 +2,7 @@ import type * as React from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import type {
   CollectionColumn,
+  EditorPlacement,
   EntityRef,
   EntityRow,
   EntitySource,
@@ -17,6 +18,7 @@ import type {
 import {
   cellValue,
   describePaging,
+  editorPlacementFor,
   hasFailedPage,
   idsForRefs,
   isEditableType,
@@ -194,6 +196,11 @@ export interface EntityTableProps extends Omit<React.HTMLAttributes<HTMLDivEleme
   /** Opens an editor on a double-click or Enter in an editable cell. */
   editable?: boolean;
   editorFor?: EditorFor;
+  /**
+   * Where every cell editor opens. A column carrying its own `editorPlacement`
+   * wins over it; with neither, the data type decides.
+   */
+  editorPlacement?: EditorPlacement;
   /** Show the programmatic field path beside the header's display name. */
   showCode?: boolean;
   /** How the set is walked: a footer with a page number, a load-more row, or the scroller. */
@@ -284,6 +291,7 @@ export function EntityTable({
   onFiltersChange,
   editable = false,
   editorFor,
+  editorPlacement,
   showCode = false,
   paging = 'pages',
   pageSizes = [25, 50, 100],
@@ -344,7 +352,7 @@ export function EntityTable({
   const pageError = hasFailedPage(snapshot);
 
   const root = useRef<HTMLDivElement>(null);
-  const [editing, setEditing] = useState<{ key: string; path: string } | null>(null);
+  const [editing, setEditing] = useState<{ key: string; path: string; placement: EditorPlacement } | null>(null);
   // Enter can arrive in the same tick as the change that produced the value, before a
   // re-render, so the committed value is read off a ref rather than off state.
   const draft = useRef<unknown>(null);
@@ -635,12 +643,17 @@ export function EntityTable({
     return Boolean(editorFor?.(column.dataType)) || isEditableType(column.dataType);
   }
 
+  /** The column's own placement, then the table's, then the data type's. */
+  function placementFor(column: CollectionColumn): EditorPlacement {
+    return column.editorPlacement ?? editorPlacement ?? editorPlacementFor(column.dataType);
+  }
+
   function openEditor(key: string, column: CollectionColumn, row: EntityRow, value: unknown): void {
     if (!canEditColumn(column, row)) return;
     setCellError(null);
     draft.current = value;
     setDraftValue(value);
-    setEditing({ key, path: column.path });
+    setEditing({ key, path: column.path, placement: placementFor(column) });
   }
 
   async function commit(row: EntityRow, column: CollectionColumn, value: unknown): Promise<void> {
@@ -692,13 +705,21 @@ export function EntityTable({
     element?.querySelector<HTMLElement>('input,textarea,button')?.focus({ preventScroll: true });
   };
 
+  /** A popover editor drives its own close and reports it; the cell commits what it holds. */
+  function editorClosed(row: EntityRow, column: CollectionColumn, mode: 'display' | 'edit'): void {
+    if (mode !== 'display' || placementFor(column) !== 'popover') return;
+    releaseEditor();
+    void commit(row, column, draft.current);
+  }
+
   const isEditing = (key: string, path: string): boolean => editing?.key === key && editing.path === path;
 
-  // A press outside the open cell commits it.
+  // A press outside the open cell commits it. A popover editor dismisses itself and
+  // reports the close, so the cell listens only for the editor drawn in it.
   const outside = useRef<(event: PointerEvent) => void>(() => {});
   outside.current = (event: PointerEvent): void => {
     const open = editing;
-    if (open === null) return;
+    if (open === null || open.placement === 'popover') return;
     const target = event.target as Element | null;
     const cell = root.current?.querySelector<HTMLElement>(
       `tr[data-row-key="${CSS.escape(open.key)}"] td[data-column="${CSS.escape(open.path)}"]`,
@@ -1064,8 +1085,10 @@ export function EntityTable({
                                   <div
                                     data-slot="entity-table-editor"
                                     role="presentation"
-                                    ref={focusEditor}
-                                    onKeyDown={(event) => editorKeyDown(event, row, column)}
+                                    ref={placementFor(column) === 'inline' ? focusEditor : undefined}
+                                    onKeyDown={(event) =>
+                                      placementFor(column) === 'inline' && editorKeyDown(event, row, column)
+                                    }
                                   >
                                     <FieldEditor
                                       value={draftValue}
@@ -1085,6 +1108,8 @@ export function EntityTable({
                                       timeZone={prefs.timeZone}
                                       frameRate={prefs.frameRate}
                                       mode="edit"
+                                      onModeChange={(next) => editorClosed(row, column, next)}
+                                      editorPlacement={placementFor(column)}
                                       size="sm"
                                     />
                                   </div>

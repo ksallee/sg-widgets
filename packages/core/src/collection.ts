@@ -16,6 +16,7 @@
  * sort path against the schema before offering it (026_result_order).
  */
 import type { EntityRow, SearchResult, SgClient } from './client.js';
+import type { EditorPlacement } from './edit.js';
 import { isSortable } from './filter-ux.js';
 import { isNumericType } from './field-types.js';
 import type { EntityRef, FilterNode, WireGroup } from './filter.js';
@@ -439,6 +440,8 @@ export interface ColumnSpec {
   field?: FieldSchema | null;
   /** Override the sortability the data type implies. */
   sortable?: boolean;
+  /** Override where this column's editor opens. */
+  editorPlacement?: EditorPlacement;
 }
 
 /** A column with every question answered, which is what a collection widget takes. */
@@ -454,6 +457,8 @@ export interface CollectionColumn {
   sortable: boolean;
   /** The schema of the field the path lands on, for a status label out of `display_values`. */
   field: FieldSchema | null;
+  /** Where this column's editor opens. Absent leaves it to the data type. */
+  editorPlacement?: EditorPlacement;
 }
 
 /**
@@ -485,6 +490,7 @@ export async function resolveColumns(
         field,
       };
       if (spec.width !== undefined) column.width = spec.width;
+      if (spec.editorPlacement !== undefined) column.editorPlacement = spec.editorPlacement;
       return column;
     }),
   );

@@ -53,6 +53,7 @@ search to that project.
 | `mode` | `'display' \| 'edit'` | `'display'` | Which half is showing. Two-way in Svelte, controlled in React. |
 | `onModeChange` | `(mode) => void` | — | Called when the toggle moves. |
 | `editable` | `boolean` | `false` | Turns the display half into a control that opens the editor. |
+| `editorPlacement` | `'inline' \| 'popover'` | `'inline'` | Where the editor opens: in place of the value, or in a popover anchored to it. |
 | `statuses` | `Record<string, StatusRecord> \| null` | `null` | Status rows by code, for the display half. |
 | `context` | `SgContext` | — | The widget context: the site preferences, and what the display half reads. |
 | `hoursPerDay` | `number` | the context's | The site's working day, for durations. |
@@ -90,8 +91,13 @@ search to that project.
 | `Escape` | Cancels the edit and returns to the display half. |
 | `Tab` | Commits and returns to the display half, unless focus stays inside a popup the editor opened. |
 | a press outside | Commits and returns to the display half. |
+| `Escape`, `Enter` in a popover | Cancels and commits as they do in place; Save and Cancel do the same with the pointer. |
 
 Enter keeps the textarea of a multi-line text field open; leave it with `Tab`.
+
+With `editorPlacement="popover"` the value stays where it is and the editor opens under it: the
+field's name, the control, then Cancel and Save. The popover is `w-72`, or `w-96` for a multi-entity
+field. Focus lands in the control and returns to the value when the popover closes.
 
 On a field whose editor is a button over a popup — a date, a date-time, a list, a status — Enter
 opens the popup. On an entity field Enter chooses the highlighted row. Either way the value commits

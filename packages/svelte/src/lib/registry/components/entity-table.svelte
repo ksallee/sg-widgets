@@ -1,6 +1,6 @@
 <script lang="ts" module>
 	import type { Component } from 'svelte';
-	import type { CollectionColumn, EntityRow, FieldSchema } from '@sg-widgets/core';
+	import type { CollectionColumn, EditorPlacement, EntityRow, FieldSchema } from '@sg-widgets/core';
 
 	export type EntityTableDensity = 'compact' | 'default';
 	export type EntityTableSize = 'sm' | 'md' | 'lg';
@@ -90,6 +90,7 @@
 		describePaging,
 		NO_ROWS_LABEL,
 		hasFailedPage,
+		editorPlacementFor,
 		idsForRefs,
 		isEditableType,
 		loadsOnArrowDown,
@@ -182,6 +183,11 @@
 		/** Opens an editor on a double-click or Enter in an editable cell. */
 		editable?: boolean;
 		editorFor?: EditorFor;
+		/**
+		 * Where every cell editor opens. A column carrying its own `editorPlacement`
+		 * wins over it; with neither, the data type decides.
+		 */
+		editorPlacement?: EditorPlacement;
 		/** Show the programmatic field path beside the header's display name. */
 		showCode?: boolean;
 		/** How the set is walked: a footer with a page number, a load-more row, or the scroller. */
@@ -235,6 +241,7 @@
 		onFiltersChange,
 		editable = false,
 		editorFor,
+		editorPlacement,
 		showCode = false,
 		paging = 'pages',
 		pageSizes = [25, 50, 100],
@@ -294,7 +301,7 @@
 	/** A page that failed under rows already loaded, which the bottom line reports. */
 	const pageError = $derived(hasFailedPage(snapshot));
 
-	let editing = $state<{ key: string; path: string } | null>(null);
+	let editing = $state<{ key: string; path: string; placement: EditorPlacement } | null>(null);
 	let draft = $state<unknown>(null);
 	let cellError = $state<{ key: string; path: string; message: string } | null>(null);
 	let dragging = $state<string | null>(null);
@@ -640,11 +647,16 @@
 		return Boolean(editorFor?.(column.dataType)) || isEditableType(column.dataType);
 	}
 
+	/** The column's own placement, then the table's, then the data type's. */
+	function placementFor(column: CollectionColumn): EditorPlacement {
+		return column.editorPlacement ?? editorPlacement ?? editorPlacementFor(column.dataType);
+	}
+
 	function openEditor(key: string, column: CollectionColumn, row: EntityRow, value: unknown): void {
 		if (!canEditColumn(column, row)) return;
 		cellError = null;
 		draft = value;
-		editing = { key, path: column.path };
+		editing = { key, path: column.path, placement: placementFor(column) };
 	}
 
 	async function commit(row: EntityRow, column: CollectionColumn, value: unknown): Promise<void> {
@@ -692,14 +704,22 @@
 		}
 	}
 
+	/** A popover editor drives its own close and reports it; the cell commits what it holds. */
+	function editorClosed(row: EntityRow, column: CollectionColumn, mode: 'display' | 'edit'): void {
+		if (mode !== 'display' || placementFor(column) !== 'popover') return;
+		releaseEditor();
+		void commit(row, column, draft);
+	}
+
 	function isEditing(key: string, path: string): boolean {
 		return editing?.key === key && editing.path === path;
 	}
 
-	// A press outside the open cell commits it.
+	// A press outside the open cell commits it. A popover editor dismisses itself and
+	// reports the close, so the cell listens only for the editor drawn in it.
 	$effect(() => {
 		const open = editing;
-		if (open === null) return;
+		if (open === null || open.placement === 'popover') return;
 		const onOutside = (event: PointerEvent): void => {
 			const target = event.target as Element | null;
 			const cell = ref?.querySelector<HTMLElement>(
@@ -1109,12 +1129,17 @@
 															/>
 														{:else}
 															<!-- The default editor is the type's own control from the field-editor item. -->
+															{@const placement = placementFor(column)}
 															<div
 																data-slot="entity-table-editor"
 																role="presentation"
-																onkeydown={(event) => editorKeydown(event, row, column)}
+																onkeydown={(event) => placement === 'inline' && editorKeydown(event, row, column)}
 																{@attach (el: HTMLElement) =>
-																	el.querySelector<HTMLElement>('input,textarea,button')?.focus({ preventScroll: true })}
+																	placement === 'inline'
+																		? el
+																				.querySelector<HTMLElement>('input,textarea,button')
+																				?.focus({ preventScroll: true })
+																		: undefined}
 															>
 																<FieldEditor
 																	value={draft}
@@ -1131,6 +1156,8 @@
 																	timeZone={prefs.timeZone}
 																	frameRate={prefs.frameRate}
 																	mode="edit"
+																	onModeChange={(next) => editorClosed(row, column, next)}
+																	editorPlacement={placement}
 																	size="sm"
 																/>
 															</div>

@@ -1,6 +1,7 @@
 <script lang="ts" module>
 	import type {
 		EditorKind,
+		EditorPlacement,
 		EntityRef,
 		FieldSchema,
 		SgContext,
@@ -12,6 +13,14 @@
 
 	export type FieldEditorMode = 'display' | 'edit';
 	export type FieldEditorSize = 'sm' | 'md' | 'lg';
+	export type FieldEditorPlacement = EditorPlacement;
+
+	/** The display half, which is also the popover's anchor. */
+	const DISPLAY =
+		'focus-visible:ring-ring focus-visible:ring-offset-background hover:bg-accent hover:text-accent-foreground flex w-full min-w-0 cursor-text items-center rounded-md px-2 py-1.5 transition-colors duration-150 outline-none focus-visible:ring-2 focus-visible:ring-offset-2';
+
+	/** The same anchor where the caller draws the value itself, as a table cell does. */
+	const ANCHOR = 'flex w-full min-w-0 items-center text-left outline-none';
 
 	/** The popups an editor opens. Each is portalled out of the widget's own tree. */
 	const POPUP = '[data-slot="popover-content"],[data-slot="select-content"],[data-picker]';
@@ -53,10 +62,12 @@
 </script>
 
 <script lang="ts">
-	import { onDestroy, type Snippet } from 'svelte';
+	import { onMount, onDestroy, type Snippet } from 'svelte';
 	import type { HTMLAttributes } from 'svelte/elements';
 	import { editorKindFor, preferencesOf } from '@sg-widgets/core';
 	import { cn, type WithElementRef } from '$lib/utils.js';
+	import { Button } from '$lib/components/ui/button/index.js';
+	import * as Popover from '$lib/components/ui/popover/index.js';
 	import CheckboxEditor from '$lib/registry/components/checkbox-editor.svelte';
 	import ColorEditor from '$lib/registry/components/color-editor.svelte';
 	import DateEditor from '$lib/registry/components/date-editor.svelte';
@@ -82,6 +93,8 @@
 		onModeChange?: (mode: FieldEditorMode) => void;
 		/** Display mode turns into edit mode on click or Enter. */
 		editable?: boolean;
+		/** Where the editor opens: in place, or in a popover anchored to the display half. */
+		editorPlacement?: FieldEditorPlacement;
 		/** `Status` rows by code, for the display half (probe 010). */
 		statuses?: Record<string, StatusRecord> | null;
 		/** The widget context: the site preferences, and what the display half reads. */
@@ -126,6 +139,7 @@
 		mode = $bindable('display'),
 		onModeChange,
 		editable = false,
+		editorPlacement = 'inline',
 		statuses = null,
 		context,
 		hoursPerDay,
@@ -166,8 +180,15 @@
 	const hasEditor = $derived(canDraw(kind, String(type), context, field));
 	const canEdit = $derived(hasEditor && !disabled && !readonly);
 	const editing = $derived(mode === 'edit' && hasEditor);
+	const popover = $derived(editorPlacement === 'popover');
+	/** The field's own name, over the control. */
+	const label = $derived(field?.displayName ?? field?.name ?? '');
+	/** A multi-entity list needs the room; everything else reads in the narrow one. */
+	const width = $derived(kind === 'multi_entity' ? 'w-96' : 'w-72');
 
 	let display = $state<HTMLElement | null>(null);
+	let anchor = $state<HTMLButtonElement | null>(null);
+	let content = $state<HTMLElement | null>(null);
 	let original = $state<unknown>(null);
 	// The editor below reports its parse error here. An edit session stays open while
 	// one stands, because invalid input emits nothing and would otherwise be dropped.
@@ -186,6 +207,14 @@
 		session = null;
 	});
 
+	// A caller can mount this already in edit mode, as a table cell does, and the
+	// teardown paths below read the session rather than the props.
+	onMount(() => {
+		if (!editing) return;
+		original = value;
+		session = { editable, root: ref };
+	});
+
 	function noteError(next: string | null): void {
 		liveError = next;
 		onErrorChange?.(next);
@@ -202,6 +231,8 @@
 		original = value;
 		session = { editable, root: ref };
 		setMode('edit');
+		// A popover focuses its own control in onOpenAutoFocus.
+		if (popover) return;
 		// The control does not exist until the toggle has rendered.
 		requestAnimationFrame(() => {
 			if (!alive) return;
@@ -209,24 +240,37 @@
 		});
 	}
 
-	function leave(): void {
+	function close(restore: boolean): void {
 		if (mode === 'display') return;
 		// Focus comes off the control before the control goes, so its own blur handler
-		// commits what it holds while the editor is still on the page.
+		// commits what it holds while the editor is still on the page. The popover's
+		// control is portalled, so it is looked for there too.
 		const active = document.activeElement;
-		if (active instanceof HTMLElement && ref?.contains(active)) active.blur();
+		if (active instanceof HTMLElement && (ref?.contains(active) || content?.contains(active))) active.blur();
+		// A cancel undoes what that blur emitted, so a caller holding a draft has the
+		// value the session opened on.
+		if (restore) emit(original);
 		session = null;
 		liveError = null;
 		setMode('display');
 		requestAnimationFrame(() => {
-			if (alive) display?.focus({ preventScroll: true });
+			if (alive) (display ?? anchor)?.focus({ preventScroll: true });
 		});
 	}
 
+	function leave(): void {
+		close(false);
+	}
+
 	function cancel(): void {
-		// Nothing has been emitted yet: an editor emits on Enter or on losing focus.
-		value = original;
-		leave();
+		close(true);
+	}
+
+	/** The popover is open exactly while the session is. */
+	function setPopoverOpen(next: boolean): void {
+		if (next === editing) return;
+		if (next) enter();
+		else leave();
 	}
 
 	function onDisplayKeydown(event: KeyboardEvent): void {
@@ -252,9 +296,9 @@
 		if (event.key === 'Escape') cancel();
 	}
 
-	// A press outside the session commits and closes it.
+	// A press outside the session commits and closes it. A popover dismisses itself.
 	$effect(() => {
-		if (!editing || !editable) return;
+		if (!editing || !editable || popover) return;
 		const onOutside = (event: PointerEvent): void => {
 			const target = event.target as Element | null;
 			if (target === null || ref?.contains(target) || target.closest(POPUP) !== null) return;
@@ -295,13 +339,91 @@
 	data-slot="field-editor"
 	data-data-type={type}
 	data-mode={editing ? 'edit' : 'display'}
+	data-placement={editorPlacement}
 	data-size={size}
 	class={cn('flex w-full min-w-0 flex-col gap-2', className)}
 	onkeydown={editing ? onEditKeydown : undefined}
 	onfocusout={editing ? onEditFocusOut : undefined}
 	{...rest}
 >
-	{#if editing}
+	{#if editing && !popover}
+		{@render control()}
+	{:else if popover && (editing || (editable && canEdit))}
+		<Popover.Root bind:open={() => editing, setPopoverOpen}>
+			<Popover.Trigger
+				bind:ref={anchor}
+				data-slot="field-editor-display"
+				aria-label={field?.displayName ? `Edit ${field.displayName}` : 'Edit'}
+				class={cn(editable ? DISPLAY : ANCHOR)}
+			>
+				{@render shown()}
+			</Popover.Trigger>
+			<!-- Fixed: the cell under the editor scrolls with the table body, and an absolute
+			     wrapper would stay where the page was when it opened. -->
+			<Popover.Content
+				bind:ref={content}
+				data-field-editor-popover=""
+				strategy="fixed"
+				align="start"
+				onOpenAutoFocus={(event) => {
+					event.preventDefault();
+					content
+						?.querySelector<HTMLElement>('input, textarea, [data-slot$="-trigger"]')
+						?.focus({ preventScroll: true });
+				}}
+				onEscapeKeydown={(event) => {
+					event.preventDefault();
+					cancel();
+				}}
+				onkeydown={onEditKeydown}
+				class={cn('gap-3 p-3', width)}
+			>
+				{#if label}
+					<span data-slot="field-editor-label" class="text-muted-foreground text-xs">{label}</span>
+				{/if}
+				{@render control()}
+				<div class="flex items-center justify-end gap-2">
+					<Button data-slot="field-editor-cancel" variant="ghost" size="sm" onclick={cancel}>Cancel</Button>
+					<Button data-slot="field-editor-save" size="sm" onclick={leave}>Save</Button>
+				</div>
+			</Popover.Content>
+		</Popover.Root>
+	{:else if editable && canEdit}
+		<span
+			bind:this={display}
+			role="button"
+			tabindex="0"
+			data-slot="field-editor-display"
+			aria-label={field?.displayName ? `Edit ${field.displayName}` : 'Edit'}
+			class={DISPLAY}
+			onclick={enter}
+			onkeydown={onDisplayKeydown}
+		>
+			{@render shown()}
+		</span>
+	{:else}
+		{@render shown()}
+	{/if}
+</div>
+
+{#snippet shown()}
+		<FieldValue
+			{value}
+			dataType={String(type)}
+			{field}
+			{statuses}
+			{context}
+			hoursPerDay={prefs.hoursPerDay}
+			locale={prefs.locale}
+			timeZone={prefs.timeZone}
+			frameRate={prefs.frameRate}
+			{precision}
+			currencySymbol={symbol ?? '$'}
+			{emptyLabel}
+		/>
+{/snippet}
+
+{#snippet control()}
 		{#if kind === 'text'}
 			<TextEditor
 				value={value as string | null}
@@ -453,46 +575,4 @@
 				{invalid}
 			/>
 		{/if}
-	{:else if editable && canEdit}
-		<span
-			bind:this={display}
-			role="button"
-			tabindex="0"
-			data-slot="field-editor-display"
-			aria-label={field?.displayName ? `Edit ${field.displayName}` : 'Edit'}
-			class="focus-visible:ring-ring focus-visible:ring-offset-background hover:bg-accent hover:text-accent-foreground flex w-full min-w-0 cursor-text items-center rounded-md px-2 py-1.5 transition-colors duration-150 outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
-			onclick={enter}
-			onkeydown={onDisplayKeydown}
-		>
-			<FieldValue
-				{value}
-				dataType={String(type)}
-				{field}
-				{statuses}
-				{context}
-				hoursPerDay={prefs.hoursPerDay}
-				locale={prefs.locale}
-				timeZone={prefs.timeZone}
-				frameRate={prefs.frameRate}
-				{precision}
-				currencySymbol={symbol ?? '$'}
-				{emptyLabel}
-			/>
-		</span>
-	{:else}
-		<FieldValue
-			{value}
-			dataType={String(type)}
-			{field}
-			{statuses}
-			{context}
-			hoursPerDay={prefs.hoursPerDay}
-			locale={prefs.locale}
-			timeZone={prefs.timeZone}
-			frameRate={prefs.frameRate}
-			{precision}
-			currencySymbol={symbol ?? '$'}
-			{emptyLabel}
-		/>
-	{/if}
-</div>
+{/snippet}

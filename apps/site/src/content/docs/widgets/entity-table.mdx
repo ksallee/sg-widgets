@@ -16,7 +16,7 @@ pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/entity-table.json
 pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/entity-table.json
 ```
 
-<Demo name="entity-table" title="Entity Table: 320 Versions in pages of 25, with a filter bar, a column picker and a sort picker in the toolbar. Pages, Load more and Scroll switch how the set is walked. An editable cell lights up under the pointer; a double-click or Enter opens its editor." />
+<Demo name="entity-table" title="Entity Table: 320 Versions in pages of 25, with a filter bar, a column picker and a sort picker in the toolbar. Pages, Load more and Scroll switch how the set is walked. An editable cell lights up under the pointer; a double-click or Enter opens its editor, in a popover on the description cell and in the cell itself on the status one." />
 
 Build the source and the columns once, then hand both to the table.
 
@@ -73,6 +73,7 @@ rows and puts one error line under them with a retry.
 | `filters` | `FilterNode \| WireGroup \| null` | — | The source's filter, two-way. |
 | `editable` | `boolean` | `false` | Lets an editable cell open an editor. |
 | `editorFor` | `(dataType) => Component \| null` | — | The editor a cell opens, by data type. A type it does not answer for opens FieldEditor. |
+| `editorPlacement` | `'inline' \| 'popover'` | per data type | Where every cell editor opens. A column's own `editorPlacement` wins over it. |
 | `showCode` | `boolean` | `false` | Show the programmatic field path beside the header's display name. |
 | `paging` | `'pages' \| 'more' \| 'scroll'` | `'pages'` | How the set is walked: a page number, a load-more row, or the scroller. |
 | `pageSizes` | `number[]` | `[25, 50, 100]` | Rows per page offered in the footer. `pages` only. |
@@ -147,6 +148,17 @@ status cell opens StatusPicker, an entity cell EntityPicker and a multi-entity c
 EntityMultiPicker, each reading through `context`. The cell editor takes `projectId`, `precision`,
 `symbol` and the context's site preferences.
 
+The editor opens where the data type reads best. A checkbox, a status, a list and a single entity
+open in the cell; everything typed into — text, the numbers, a date, a date-time, a colour, a web
+link — and a multi-entity field open in a popover anchored to the cell, carrying the field's name,
+the control and Cancel and Save. `editorPlacement` on the table forces one or the other everywhere,
+and `editorPlacement` on a column spec forces it for that column.
+
+| data type | opens |
+|---|---|
+| `checkbox`, `status_list`, `list`, `entity` | in the cell |
+| `text`, `number`, `float`, `percent`, `currency`, `duration`, `timecode`, `date`, `date_time`, `color`, `url`, `multi_entity` | in a popover |
+
 ## Column menu
 
 Every header carries a menu: sort ascending, sort descending, clear sort, hide column, and pin left.
@@ -164,6 +176,7 @@ column list back through `columns`. Pinning sticks the column to the start of th
 | Enter in an editor | Commits the value. |
 | Escape in an editor | Cancels and restores the value. |
 | a press outside an editor | Commits the value. |
+| Enter, Escape, Save, Cancel in a popover editor | The same: Enter and Save commit, Escape and Cancel restore. |
 | Space on a checkbox | Toggles the row, or every loaded row from the header. |
 | ArrowDown, ArrowUp in the body | Moves the cursor down or up the same column, over the rows it can land on. |
 | ArrowDown on the last loaded row | In `more` and `scroll`, asks for the next page. The cursor stays where it is until the rows arrive, then lands on the first of them. |

@@ -561,7 +561,8 @@
       ],
       "dependencies": [
         "@sg-widgets/core",
-        "lucide-react"
+        "lucide-react",
+        "@base-ui/react"
       ],
       "registryDependencies": [
         "https://sg-widgets.dev/r/react/field-value.json",
@@ -575,7 +576,9 @@
         "https://sg-widgets.dev/r/react/color-editor.json",
         "https://sg-widgets.dev/r/react/status-picker.json",
         "https://sg-widgets.dev/r/react/entity-picker.json",
-        "https://sg-widgets.dev/r/react/entity-multi-picker.json"
+        "https://sg-widgets.dev/r/react/entity-multi-picker.json",
+        "button",
+        "popover"
       ],
       "docs": "Installs FieldValue, the eight typed editors and the three pickers alongside it.",
       "files": [

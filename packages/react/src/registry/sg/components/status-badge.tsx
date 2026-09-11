@@ -122,7 +122,7 @@ export function StatusBadge({
       style={style}
       className={cn(
         'border-border bg-background inline-flex max-w-full min-w-0 items-center rounded-md border px-1.5 align-middle text-xs font-medium',
-        showRemove ? 'gap-1' : 'gap-1.5',
+        'gap-1.5',
         BOX[size],
         variant === 'icon' && 'justify-center',
         rgb && 'border-transparent ring-1 ring-current/10 ring-inset',

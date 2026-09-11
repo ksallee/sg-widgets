@@ -424,7 +424,7 @@
 				aria-label={searchPlaceholder}
 				aria-busy={snap.searching ? true : undefined}
 				data-slot="entity-tree-search"
-				class="pe-8"
+				class="h-9 px-3 pe-8"
 			/>
 			{#if snap.searching}
 				<Loader
@@ -438,7 +438,7 @@
 	<div
 		data-slot="entity-tree-scroll"
 		style="max-height:{maxHeight}"
-		class="border-border w-full overflow-auto rounded-md border p-1"
+		class="border-border w-full overflow-auto rounded-lg border p-1"
 	>
 		{#if snap.status === 'error'}
 			<StateLine
@@ -507,7 +507,7 @@
 							tabindex={row.focused && !disabled ? 0 : -1}
 							onclick={() => activate(row)}
 							class={cn(
-								'focus-visible:ring-ring focus-visible:ring-offset-background flex min-w-0 cursor-default gap-1.5 rounded-md outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2',
+								'focus-visible:ring-ring focus-visible:ring-offset-background flex min-w-0 cursor-default gap-2 rounded-sm outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2',
 								ROW[density],
 								TEXT[size],
 								hasSubLabel ? 'items-start' : 'items-center',

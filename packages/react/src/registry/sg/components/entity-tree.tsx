@@ -440,7 +440,7 @@ export function EntityTree({
             aria-label={searchPlaceholder}
             aria-busy={snap.searching ? true : undefined}
             data-slot="entity-tree-search"
-            className="pe-8"
+            className="h-9 px-3 pe-8"
           />
           {snap.searching ? (
             <Loader
@@ -454,7 +454,7 @@ export function EntityTree({
       <div
         data-slot="entity-tree-scroll"
         style={{ maxHeight }}
-        className="border-border w-full overflow-auto rounded-md border p-1"
+        className="border-border w-full overflow-auto rounded-lg border p-1"
       >
         {snap.status === 'error' ? (
           <StateLine
@@ -526,7 +526,7 @@ export function EntityTree({
                     tabIndex={row.focused && !row.disabled ? 0 : -1}
                     onClick={() => activate(row)}
                     className={cn(
-                      'focus-visible:ring-ring focus-visible:ring-offset-background flex min-w-0 cursor-default gap-1.5 rounded-md outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2',
+                      'focus-visible:ring-ring focus-visible:ring-offset-background flex min-w-0 cursor-default gap-2 rounded-sm outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2',
                       ROW[density],
                       TEXT[size],
                       hasSubLabel ? 'items-start' : 'items-center',

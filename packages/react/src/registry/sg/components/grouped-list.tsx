@@ -485,7 +485,7 @@ export function GroupedList({
         ref={scrollRef}
         data-slot="grouped-list-scroll"
         style={{ maxHeight }}
-        className="border-border w-full overflow-auto rounded-md border"
+        className="border-border w-full overflow-auto rounded-lg border"
       >
         {snapshot.status === 'error' && !pageError ? (
           <StateLine

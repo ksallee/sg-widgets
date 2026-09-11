@@ -518,7 +518,7 @@
 		bind:this={scrollEl}
 		data-slot="grouped-list-scroll"
 		style="max-height:{maxHeight}"
-		class="border-border w-full overflow-auto rounded-md border"
+		class="border-border w-full overflow-auto rounded-lg border"
 	>
 		{#if snapshot.status === 'error' && !pageError}
 			<StateLine

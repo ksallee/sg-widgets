@@ -417,7 +417,7 @@ export function GlobalSearch({
         {...rest}
       >
         {/* Server-side matching only, so the list never filters what came back. */}
-        <Command shouldFilter={false} className="border-border rounded-md border">
+        <Command shouldFilter={false} className="border-border rounded-lg border">
           {body}
         </Command>
       </div>

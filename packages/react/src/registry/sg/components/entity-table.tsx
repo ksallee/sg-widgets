@@ -770,7 +770,7 @@ export function EntityTable({
         ref={scrollRef}
         data-slot="entity-table-scroll"
         style={{ maxHeight }}
-        className="border-border relative w-full overflow-auto rounded-md border [&>[data-slot=table-container]]:overflow-visible"
+        className="border-border relative w-full overflow-auto rounded-lg border [&>[data-slot=table-container]]:overflow-visible"
       >
         <Table style={{ tableLayout: 'fixed', width: `${totalWidth}px` }}>
           <colgroup>

@@ -370,7 +370,7 @@
 -->
 <div bind:this={ref} data-slot="hierarchical-search" class={cn('w-full', className)} {...rest}>
 	<!-- Server-side matching only, so the list never filters what came back. -->
-	<Command.Root shouldFilter={false} bind:value={cursor} class="border-border rounded-md border" onkeydown={onKeydown}>
+	<Command.Root shouldFilter={false} bind:value={cursor} class="border-border rounded-lg border" onkeydown={onKeydown}>
 		<Command.Input value={query} {placeholder} oninput={(e) => setQuery(e.currentTarget.value)} />
 		<Command.List data-sg-search-list>
 			{#if failure !== null}

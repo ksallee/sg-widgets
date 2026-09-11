@@ -55,7 +55,7 @@ const HEADER: Record<EntityCardSize, string> = { sm: 'gap-2', md: 'gap-3', lg: '
 const STACK: Record<EntityCardSize, string> = { sm: 'gap-2', md: 'gap-3', lg: 'gap-4' };
 const NAME: Record<EntityCardSize, string> = { sm: 'text-sm', md: 'text-sm', lg: 'text-base' };
 const ROWS: Record<EntityCardSize, string> = { sm: 'gap-y-1.5', md: 'gap-y-2', lg: 'gap-y-2' };
-const BODY: Record<EntityCardSize, string> = { sm: 'p-2', md: 'p-2', lg: 'p-3' };
+const BODY: Record<EntityCardSize, string> = { sm: 'p-3', md: 'p-3', lg: 'p-4' };
 
 /**
  * A glyph per entity type. A stock site has 114 types plus any number of custom
@@ -439,7 +439,7 @@ export function EntityCard({
         data-size={size}
         data-state={selected ? 'selected' : undefined}
         className={cn(
-          'group/tile border-border bg-card focus-visible:ring-ring focus-visible:ring-offset-background relative flex w-full min-w-0 flex-col overflow-hidden rounded-md border text-left outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2',
+          'group/tile border-border bg-card focus-visible:ring-ring focus-visible:ring-offset-background relative flex w-full min-w-0 flex-col overflow-hidden rounded-lg border text-left outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2',
           selected && 'bg-accent text-accent-foreground',
           className,
         )}

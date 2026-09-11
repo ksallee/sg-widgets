@@ -44,6 +44,7 @@
 		PICKER_SEARCH,
 		PICKER_SEARCH_ROW,
 		PICKER_TEXT_CHIP,
+		PICKER_TEXT_CHIP_BOX,
 		PICKER_TOKEN_INPUT
 	} from '$lib/registry/components/picker-classes.js';
 
@@ -355,7 +356,7 @@
 							data-chip=""
 							data-armed={armed === index ? 'true' : undefined}
 							hidden={ready && index >= plan.shown.length}
-							class={cn(PICKER_TEXT_CHIP, armed === index && PICKER_ARMED)}
+							class={cn(PICKER_TEXT_CHIP, PICKER_TEXT_CHIP_BOX[size], armed === index && PICKER_ARMED)}
 						>
 							<span class="truncate">{labelOf(code)}</span>
 							{#if multiple && interactive}

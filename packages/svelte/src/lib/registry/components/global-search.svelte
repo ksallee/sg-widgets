@@ -407,7 +407,7 @@
 		{...rest}
 	>
 		<!-- Server-side matching only, so the list never filters what came back. -->
-		<Command.Root shouldFilter={false} bind:value={cursor} class="border-border rounded-md border">
+		<Command.Root shouldFilter={false} bind:value={cursor} class="border-border rounded-lg border">
 			{@render body()}
 		</Command.Root>
 	</div>

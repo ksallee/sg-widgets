@@ -50,7 +50,7 @@
 				value={String(pager.pageSize)}
 				onValueChange={(value) => void source.setPageSize(Number(value))}
 			>
-				<Select.Trigger aria-label="Rows per page" class="h-7 w-auto min-w-16">
+				<Select.Trigger aria-label="Rows per page" class="h-8 w-auto min-w-16">
 					<span data-slot="select-value" class="tabular-nums">{pager.pageSize}</span>
 				</Select.Trigger>
 				<Select.Content>
@@ -64,7 +64,7 @@
 			<span data-slot="{slotName}-range" class="tabular-nums">{pager.rangeLabel}</span>
 			<Button
 				variant="outline"
-				size="icon-sm"
+				size="icon"
 				aria-label="Previous page"
 				disabled={!pager.hasPrevious || loading}
 				onclick={() => void source.setPage(pager.page - 1)}
@@ -76,7 +76,7 @@
 				min="1"
 				inputmode="numeric"
 				aria-label="Page number"
-				class="h-7 w-14 text-center tabular-nums"
+				class="h-8 w-14 text-center tabular-nums"
 				value={pageDraft === '' ? String(pager.page) : pageDraft}
 				oninput={(event) => (pageDraft = event.currentTarget.value)}
 				onkeydown={(event) => {
@@ -91,7 +91,7 @@
 			{/if}
 			<Button
 				variant="outline"
-				size="icon-sm"
+				size="icon"
 				aria-label="Next page"
 				disabled={!pager.hasNext || loading}
 				onclick={() => void source.setPage(pager.page + 1)}

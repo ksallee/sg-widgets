@@ -210,6 +210,7 @@
 			bind:query={search}
 			onRemoveAt={removeAt}
 			onClear={() => emit([])}
+			count={shown.length}
 			empty={shown.length === 0}
 			{emptyLabel}
 			{clearLabel}
@@ -252,9 +253,6 @@
 						label={option.label}
 						class={PICKER_ROW}
 					>
-						<span data-slot={`${slot}-check`} class="flex h-5 shrink-0 items-center">
-							<Checkbox checked={chosen} tabindex={-1} aria-hidden="true" class="pointer-events-none" />
-						</span>
 						<Row
 							row={{ type: LIST_ROW_TYPE, id: 0, name: option.label, values: {} }}
 							query={searchable ? search : ''}
@@ -262,7 +260,12 @@
 							subLabel={subLabel?.(option)}
 							secondary={secondaryOf(option)}
 							{size}
-						/>
+							indicatorSlot={`${slot}-check`}
+						>
+							{#snippet indicator()}
+								<Checkbox checked={chosen} tabindex={-1} aria-hidden="true" class="pointer-events-none" />
+							{/snippet}
+						</Row>
 					</Combobox.Item>
 				{/each}
 			{/snippet}

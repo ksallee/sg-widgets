@@ -2,9 +2,26 @@ import type * as React from 'react';
 import type { ReactNode } from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { RequestGate } from '@sg-widgets/core';
-import { errorText, NO_MATCH_LABEL, queryPlan, requestGate, SEARCH_DEBOUNCE_MS, searchView, stateLine } from '@sg-widgets/core';
+import {
+  errorText,
+  listStatus,
+  NO_MATCH_LABEL,
+  queryPlan,
+  requestGate,
+  searchKeyIntent,
+  SEARCH_DEBOUNCE_MS,
+  searchView,
+  stateLine,
+} from '@sg-widgets/core';
 import { Search, TriangleAlert } from 'lucide-react';
-import { Command, CommandDialog, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import {
+  Command,
+  CommandDialog,
+  CommandInput,
+  CommandItem,
+  CommandList,
+  CommandStatus,
+} from '@/components/ui/command';
 import { SearchSkeleton } from '@/registry/sg/components/search-skeleton';
 import { StateLine } from '@/registry/sg/components/state-line';
 
@@ -39,10 +56,6 @@ export interface SearchControlProps<T> {
   paging?: boolean;
   /** The pause before a typed query is asked for. */
   debounceMs?: number;
-  /** A row's key, which is what the list and the highlight are addressed by. */
-  keyOf?: (item: T) => string;
-  /** The row the highlight lands on ahead of the first result, if any. */
-  leadKey?: string;
   shell?: SearchShell;
   /** Classes on the command box. */
   commandClass?: string;
@@ -79,8 +92,8 @@ export interface SearchControlProps<T> {
  *
  * The debounce, the ticket that drops an answer the next query replaced, the page and
  * its load-more row, the highlight across a page, and the list itself: the error line,
- * the skeletons, the empty line and the rows. A wrapper supplies the read behind it
- * and draws its own rows.
+ * the skeletons, the empty line, the rows and the live row that says what the list is
+ * doing. A wrapper supplies the read behind it and draws its own rows.
  */
 export function SearchControl<T>({
   load,
@@ -91,8 +104,6 @@ export function SearchControl<T>({
   readsEmpty = false,
   paging = false,
   debounceMs = SEARCH_DEBOUNCE_MS,
-  keyOf,
-  leadKey = '',
   shell = 'command',
   commandClass,
   onKeyDown,
@@ -118,14 +129,16 @@ export function SearchControl<T>({
   const [failure, setFailure] = useState<string | null>(null);
   /** True from the first frame where a read is already on its way, so nothing flashes empty. */
   const [loading, setLoading] = useState(() => enabled && queryPlan(query, readsEmpty) !== 'clear');
-  /** The highlighted row. cmdk owns it between pages; a new page moves it to its first row. */
-  const [cursor, setCursor] = useState('');
 
   const [gate] = useState<RequestGate>(() => requestGate());
   const loadRef = useRef(load);
   loadRef.current = load;
-  const keyOfRef = useRef(keyOf);
-  keyOfRef.current = keyOf;
+  const queryRef = useRef(query);
+  queryRef.current = query;
+  const changeRef = useRef(onQueryChange);
+  changeRef.current = onQueryChange;
+  /** Held as state, so the listener below is attached when a dialog shell mounts its box. */
+  const [inputEl, setInputEl] = useState<HTMLInputElement | null>(null);
 
   const run = useCallback(
     async (text: string, nextPage: number): Promise<void> => {
@@ -138,11 +151,6 @@ export function SearchControl<T>({
         setItems((current) => (nextPage === 1 ? answer.items : [...current, ...answer.items]));
         setPage(nextPage);
         setHasMore(answer.hasMore ?? false);
-        const lead = nextPage > 1 ? answer.items[0] : undefined;
-        // A page lands under the row that asked for it: the highlight moves to its first
-        // row, so the list stays where the reader was instead of returning to the top.
-        const key = keyOfRef.current;
-        if (lead !== undefined && key) setCursor(key(lead));
       } catch (error) {
         if (!gate.holds(ticket)) return;
         setFailure(errorText(error));
@@ -182,10 +190,23 @@ export function SearchControl<T>({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query, request, enabled]);
 
-  const firstKey = leadKey || (items[0] !== undefined && keyOf ? keyOf(items[0]) : '');
+  /**
+   * Escape is the search box's business only while the query has text: the first press
+   * clears the query and the rows and leaves the caret where it is, and the second is
+   * the shell's, which is what closes a dialog or a popover. The listener is the
+   * element's own, so the press never reaches the shell while the box owns it.
+   */
   useEffect(() => {
-    setCursor(firstKey);
-  }, [firstKey]);
+    if (!inputEl) return;
+    const onKey = (event: KeyboardEvent): void => {
+      if (searchKeyIntent(event.key, { query: queryRef.current }).kind !== 'clear') return;
+      event.preventDefault();
+      event.stopPropagation();
+      changeRef.current?.('');
+    };
+    inputEl.addEventListener('keydown', onKey);
+    return () => inputEl.removeEventListener('keydown', onKey);
+  }, [inputEl]);
 
   const view = searchView({
     error: failure,
@@ -194,41 +215,54 @@ export function SearchControl<T>({
     asked: readsEmpty || query.trim().length > 0,
   });
 
-  const body =
-    view === 'error' ? (
-      <StateLine
-        state="error"
-        slotName={errorSlot ?? undefined}
-        icon={TriangleAlert}
-        label={stateLine('error', { errorLabel }, failure)}
-      />
-    ) : view === 'loading' ? (
-      <SearchSkeleton
-        slotName={loadingSlot ?? undefined}
-        lines={skeletonLines}
-        lead={skeletonLead}
-        label={stateLine('loading', { loadingLabel })}
-      />
-    ) : view === 'empty' ? (
-      (empty ?? <StateLine state="empty" slotName={emptySlot ?? undefined} icon={Search} label={emptyLabel} />)
-    ) : (
-      <>
-        {rows({ items, query, loading })}
-        {paging && hasMore ? (
-          <CommandItem value="load-more" data-slot="search-load-more" onSelect={() => void run(query, page + 1)}>
-            <span className="text-muted-foreground flex-1 text-center text-sm">
-              {loading ? 'Loading…' : 'Load more'}
-            </span>
-          </CommandItem>
-        ) : null}
-      </>
-    );
+  const status = (
+    <CommandStatus data-slot="search-status">
+      {listStatus(
+        { loading, count: items.length, error: failure, asked: readsEmpty || query.trim().length > 0 },
+        { emptyLabel, loadingLabel, errorLabel },
+      )}
+    </CommandStatus>
+  );
+
+  const body = (
+    <>
+      {status}
+      {view === 'error' ? (
+        <StateLine
+          state="error"
+          slotName={errorSlot ?? undefined}
+          icon={TriangleAlert}
+          label={stateLine('error', { errorLabel }, failure)}
+        />
+      ) : view === 'loading' ? (
+        <SearchSkeleton
+          slotName={loadingSlot ?? undefined}
+          lines={skeletonLines}
+          lead={skeletonLead}
+          label={stateLine('loading', { loadingLabel })}
+        />
+      ) : view === 'empty' ? (
+        (empty ?? <StateLine state="empty" slotName={emptySlot ?? undefined} icon={Search} label={emptyLabel} />)
+      ) : (
+        <>
+          {rows({ items, query, loading })}
+          {paging && hasMore ? (
+            <CommandItem value="load-more" data-slot="search-load-more" onSelect={() => void run(query, page + 1)}>
+              <span className="text-muted-foreground flex-1 text-center text-sm">
+                {loading ? 'Loading…' : 'Load more'}
+              </span>
+            </CommandItem>
+          ) : null}
+        </>
+      )}
+    </>
+  );
 
   if (shell === 'bare') return body;
 
   const inside = (
     <>
-      <CommandInput value={query} placeholder={placeholder} onValueChange={onQueryChange} />
+      <CommandInput ref={setInputEl} placeholder={placeholder} />
       <CommandList data-sg-search-list>{body}</CommandList>
     </>
   );
@@ -237,7 +271,7 @@ export function SearchControl<T>({
     return (
       <CommandDialog open={open} onOpenChange={onOpenChange} title={title} description={description}>
         {/* Server-side matching only, so the list never filters what came back. */}
-        <Command shouldFilter={false} value={cursor} onValueChange={setCursor}>
+        <Command shouldFilter={false} query={query} onQueryChange={onQueryChange}>
           {inside}
         </Command>
       </CommandDialog>
@@ -248,8 +282,8 @@ export function SearchControl<T>({
     /* Server-side matching only, so the list never filters what came back. */
     <Command
       shouldFilter={false}
-      value={cursor}
-      onValueChange={setCursor}
+      query={query}
+      onQueryChange={onQueryChange}
       className={commandClass}
       onKeyDown={onKeyDown ? (event) => onKeyDown(event, items) : undefined}
     >

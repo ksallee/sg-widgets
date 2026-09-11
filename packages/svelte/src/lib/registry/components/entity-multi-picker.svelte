@@ -339,6 +339,7 @@
 		onClear={() => emit([])}
 		loading={snap.loading && options.length === 0}
 		error={snap.error?.message ?? null}
+		count={options.length}
 		empty={options.length === 0}
 		{emptyLabel}
 		{loadingLabel}
@@ -376,9 +377,6 @@
 					label={row.name}
 					class={cn(PICKER_ROW, hasSubLabel && 'items-start')}
 				>
-					<span data-slot="entity-picker-check" class="flex h-5 shrink-0 items-center">
-						<Checkbox checked={chosen} tabindex={-1} aria-hidden="true" class="pointer-events-none" />
-					</span>
 					<Row
 						{row}
 						query={snap.query}
@@ -392,7 +390,12 @@
 						{size}
 						{context}
 						siteUrl={site}
-					/>
+						indicatorSlot="entity-picker-check"
+					>
+						{#snippet indicator()}
+							<Checkbox checked={chosen} tabindex={-1} aria-hidden="true" class="pointer-events-none" />
+						{/snippet}
+					</Row>
 				</Combobox.Item>
 			{/each}
 		{/snippet}

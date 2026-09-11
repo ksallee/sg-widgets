@@ -460,16 +460,14 @@ export function ColumnPicker({
       <Command
         shouldFilter={false}
         loop
-        value={cursor}
-        onValueChange={setHighlighted}
+        items={values}
+        query={search}
+        onQueryChange={setSearch}
+        onItemHighlighted={(next) => setHighlighted(typeof next === 'string' ? next : '')}
         onKeyDown={onListKeys}
         className="gap-2 bg-transparent p-0"
       >
-        <CommandInput
-          value={search}
-          onValueChange={setSearch}
-          placeholder={choosing ? 'Which type?' : searchPlaceholder}
-        />
+        <CommandInput placeholder={choosing ? 'Which type?' : searchPlaceholder} />
         <CommandList>
           {failure ? (
             <StateLine

@@ -42,10 +42,6 @@
 	/** Leaf types a drill-down usually ends on. */
 	export const HIERARCHICAL_SEARCH_TYPES = ['Shot', 'Asset', 'Sequence', 'Task'];
 
-	/** A row is addressed by its tree path. */
-	function nodeKey(row: HierarchicalSearchRow): string {
-		return row.nodePath;
-	}
 </script>
 
 <script lang="ts">
@@ -144,7 +140,6 @@
 
 	const searching = $derived(query.trim().length > 0);
 	const trail = $derived(level.crumbs);
-	const leadKey = $derived(!searching && trail.length > 0 ? 'up' : '');
 
 	$effect(() => {
 		level = { path: rootPath, crumbs: [] };
@@ -279,8 +274,9 @@
 		}
 		if (event.key !== 'ArrowRight') return;
 		const root = event.currentTarget as HTMLElement | null;
-		// cmdk marks an unselected row `data-selected="false"` where bits-ui omits it; `aria-selected` is the same in both.
-		const nodePath = root?.querySelector('[data-slot="command-item"][aria-selected="true"]')?.getAttribute('data-node-path');
+		const nodePath = root
+			?.querySelector('[data-slot="command-item"][data-highlighted]')
+			?.getAttribute('data-node-path');
 		const item = items.find((r) => r.nodePath === nodePath);
 		if (!item?.hasChildren) return;
 		event.preventDefault();
@@ -365,8 +361,6 @@
 		emptyLabel={searching ? noMatchLabel : emptyLabel}
 		{loadingLabel}
 		{errorLabel}
-		keyOf={nodeKey}
-		{leadKey}
 		skeletonLead={cn('shrink-0', LEAD[size])}
 		{rows}
 	/>

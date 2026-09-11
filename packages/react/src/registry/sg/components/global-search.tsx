@@ -182,7 +182,6 @@ export function GlobalSearch({
 
   const order = useMemo(() => Object.keys(searchTypeMap(entityTypes)), [entityTypes]);
   const showRecents = query.trim().length === 0 && recents.length > 0;
-  const leadKey = showRecents && recents[0] ? `recent:${keyOf(recents[0])}` : '';
 
   /** The rows the answer holds, under one heading per type, in the order asked for. */
   function groupsOf(hits: SearchHit[]): GlobalSearchGroup[] {
@@ -321,8 +320,6 @@ export function GlobalSearch({
       loadingLabel={loadingLabel}
       errorLabel={errorLabel}
       paging
-      keyOf={hitKey}
-      leadKey={leadKey}
       rows={rows}
     />
   );

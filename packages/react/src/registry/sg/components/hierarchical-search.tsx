@@ -63,11 +63,6 @@ export const HIERARCHICAL_SEARCH_TYPES = ['Shot', 'Asset', 'Sequence', 'Task'];
 /** A stable empty list, so the default never changes what a callback depends on. */
 const EMPTY_FIELDS: string[] = [];
 
-/** A row is addressed by its tree path. */
-function nodeKey(row: HierarchicalSearchRow): string {
-  return row.nodePath;
-}
-
 /** A level is a folder; a row takes its type's own glyph. */
 function glyphFor(row: HierarchicalSearchRow) {
   return row.ref ? entityGlyph(row.ref.type) : Folder;
@@ -321,8 +316,7 @@ export function HierarchicalSearch({
     }
     if (event.key !== 'ArrowRight') return;
     const root = event.currentTarget;
-    // cmdk marks an unselected row `data-selected="false"` where bits-ui omits it; `aria-selected` is the same in both.
-    const nodePath = root.querySelector('[data-slot="command-item"][aria-selected="true"]')?.getAttribute('data-node-path');
+    const nodePath = root.querySelector('[data-slot="command-item"][data-highlighted]')?.getAttribute('data-node-path');
     const item = items.find((r) => r.nodePath === nodePath);
     if (!item?.hasChildren) return;
     event.preventDefault();
@@ -401,8 +395,6 @@ export function HierarchicalSearch({
         emptyLabel={searching ? noMatchLabel : emptyLabel}
         loadingLabel={loadingLabel}
         errorLabel={errorLabel}
-        keyOf={nodeKey}
-        leadKey={!searching && trail.length > 0 ? 'up' : ''}
         skeletonLead={cn('shrink-0', LEAD[size])}
         rows={rows}
       />

@@ -85,6 +85,7 @@
 	import { Combobox } from 'bits-ui';
 	import EntityChip from '$lib/registry/components/entity-chip.svelte';
 	import PickerControl from '$lib/registry/components/picker-control.svelte';
+	import Check from '@lucide/svelte/icons/check';
 	import Row from '$lib/registry/components/picker-row.svelte';
 	import { PICKER_ARMED, PICKER_CHIP, PICKER_ROW } from '$lib/registry/components/picker-classes.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
@@ -293,6 +294,7 @@
 		onClear={clear}
 		loading={snap.loading && options.length === 0}
 		error={snap.error?.message ?? null}
+		count={options.length}
 		empty={options.length === 0}
 		{emptyLabel}
 		{loadingLabel}
@@ -337,7 +339,11 @@
 						{size}
 						{context}
 						siteUrl={site}
-					/>
+					>
+						{#snippet indicator()}
+							{#if chosen}<Check aria-hidden="true" class="size-4" />{/if}
+						{/snippet}
+					</Row>
 				</Combobox.Item>
 			{/each}
 		{/snippet}

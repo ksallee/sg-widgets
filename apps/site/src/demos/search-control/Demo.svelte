@@ -53,7 +53,6 @@
 		throw new Error('The crew list is not answering.');
 	}
 
-	const memberKey = (item: Member): string => item.id;
 
 	let picked = $state('Nothing yet');
 
@@ -92,7 +91,6 @@
 			commandClass="border-border rounded-lg border"
 			placeholder="Search the crew…"
 			emptyLabel="No one by that name"
-			keyOf={memberKey}
 			paging
 			rows={found}
 		/>

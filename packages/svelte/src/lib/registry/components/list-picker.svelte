@@ -17,6 +17,7 @@
 	import { matchesTokens, NO_ROWS_LABEL, statusLabel, usableStatuses } from '@sg-widgets/core';
 	import { Combobox } from 'bits-ui';
 	import PickerControl from '$lib/registry/components/picker-control.svelte';
+	import Check from '@lucide/svelte/icons/check';
 	import Row from '$lib/registry/components/picker-row.svelte';
 	import { PICKER_ROW } from '$lib/registry/components/picker-classes.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
@@ -214,6 +215,7 @@
 			onClear={clear}
 			{loading}
 			error={loadError}
+			count={shown.length}
 			empty={shown.length === 0}
 			{emptyLabel}
 			{loadingLabel}
@@ -248,6 +250,9 @@
 							secondary={secondaryOf(option)}
 							{size}
 						>
+							{#snippet indicator()}
+								{#if option.code === value}<Check aria-hidden="true" class="size-4" />{/if}
+							{/snippet}
 							{#snippet glyph()}
 								{@render mark?.(option)}
 							{/snippet}

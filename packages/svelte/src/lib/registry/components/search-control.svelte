@@ -17,12 +17,14 @@
 
 <script lang="ts" generics="T">
 	import type { Snippet } from 'svelte';
-	import { tick, untrack } from 'svelte';
+	import { untrack } from 'svelte';
 	import {
 		errorText,
+		listStatus,
 		NO_MATCH_LABEL,
 		queryPlan,
 		requestGate,
+		searchKeyIntent,
 		SEARCH_DEBOUNCE_MS,
 		searchView,
 		stateLine
@@ -48,10 +50,6 @@
 		paging?: boolean;
 		/** The pause before a typed query is asked for. */
 		debounceMs?: number;
-		/** A row's key, which is what the list and the highlight are addressed by. */
-		keyOf?: (item: T) => string;
-		/** The row the highlight lands on ahead of the first result, if any. */
-		leadKey?: string;
 		shell?: SearchShell;
 		/** Classes on the command box. */
 		commandClass?: string;
@@ -91,8 +89,6 @@
 		readsEmpty = false,
 		paging = false,
 		debounceMs = SEARCH_DEBOUNCE_MS,
-		keyOf,
-		leadKey = '',
 		shell = 'command',
 		commandClass,
 		onkeydown,
@@ -119,25 +115,17 @@
 	let failure = $state<string | null>(null);
 	/** True from the first frame where a read is already on its way, so nothing flashes empty. */
 	let loading = $state(untrack(() => enabled && queryPlan(query, readsEmpty) !== 'clear'));
-	/**
-	 * The row the cursor sits on. cmdk moves it to the first row whenever the list
-	 * changes and bits-ui leaves it where it was, so it is set here and the two
-	 * frameworks answer Down and Enter the same way.
-	 */
-	let cursor = $state('');
-	let listEl = $state<HTMLElement | null>(null);
 
 	const gate = requestGate();
 	let timer: ReturnType<typeof setTimeout> | undefined;
 
-	const firstKey = $derived(leadKey || (items[0] !== undefined && keyOf ? keyOf(items[0]) : ''));
-	const view = $derived(
-		searchView({
-			error: failure,
-			loading,
-			count: items.length,
-			asked: readsEmpty || query.trim().length > 0
-		})
+	const asked = $derived(readsEmpty || query.trim().length > 0);
+	const view = $derived(searchView({ error: failure, loading, count: items.length, asked }));
+	const announcement = $derived(
+		listStatus(
+			{ loading, count: items.length, error: failure, asked },
+			{ emptyLabel, loadingLabel, errorLabel }
+		)
 	);
 
 	async function run(text: string, nextPage: number): Promise<void> {
@@ -150,19 +138,6 @@
 			items = nextPage === 1 ? answer.items : [...items, ...answer.items];
 			page = nextPage;
 			hasMore = answer.hasMore ?? false;
-			const lead = nextPage > 1 ? answer.items[0] : undefined;
-			// A page lands under the row that asked for it: the highlight moves to its first
-			// row, so the list stays where the reader was instead of returning to the top.
-			if (lead !== undefined && keyOf) {
-				// The rows must be in the list, and registered with the primitive, before it
-				// takes one of them as its value; registration runs after the flush.
-				await tick();
-				await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-				cursor = keyOf(lead);
-				// The primitive scrolls for the keys, not for a value written to it.
-				await tick();
-				listEl?.querySelector('[data-selected]')?.scrollIntoView({ block: 'nearest' });
-			}
 		} catch (error) {
 			if (!gate.holds(ticket)) return;
 			failure = errorText(error);
@@ -207,9 +182,17 @@
 		return () => clearTimeout(timer);
 	});
 
-	$effect(() => {
-		cursor = firstKey;
-	});
+	/**
+	 * Escape is the search box's business only while the query has text: the first press
+	 * clears the query and the rows and leaves the caret where it is, and the second is
+	 * the shell's, which is what closes a dialog or a popover.
+	 */
+	function onInputKeydown(event: KeyboardEvent): void {
+		if (searchKeyIntent(event.key, { query }).kind !== 'clear') return;
+		event.preventDefault();
+		event.stopPropagation();
+		query = '';
+	}
 
 	function setOpen(next: boolean): void {
 		if (next === open) return;
@@ -223,10 +206,11 @@
 
 	The debounce, the ticket that drops an answer the next query replaced, the page and
 	its load-more row, the highlight across a page, and the list itself: the error line,
-	the skeletons, the empty line and the rows. A wrapper supplies the read behind it
-	and draws its own rows.
+	the skeletons, the empty line, the rows and the live row that says what the list is
+	doing. A wrapper supplies the read behind it and draws its own rows.
 -->
 {#snippet body()}
+	<Command.Status data-slot="search-status">{announcement}</Command.Status>
 	{#if view === 'error'}
 		<StateLine
 			state="error"
@@ -264,8 +248,13 @@
 {/snippet}
 
 {#snippet inside()}
-	<Command.Input value={query} {placeholder} oninput={(e) => (query = e.currentTarget.value)} />
-	<Command.List bind:ref={listEl} data-sg-search-list>
+	<Command.Input
+		value={query}
+		{placeholder}
+		oninput={(e) => (query = e.currentTarget.value)}
+		onkeydown={onInputKeydown}
+	/>
+	<Command.List data-sg-search-list>
 		{@render body()}
 	</Command.List>
 {/snippet}
@@ -274,20 +263,13 @@
 	{@render body()}
 {:else if shell === 'dialog'}
 	<!-- Server-side matching only, so the list never filters what came back. -->
-	<Command.Dialog
-		bind:open={() => open, setOpen}
-		bind:value={cursor}
-		shouldFilter={false}
-		{title}
-		{description}
-	>
+	<Command.Dialog bind:open={() => open, setOpen} shouldFilter={false} {title} {description}>
 		{@render inside()}
 	</Command.Dialog>
 {:else}
 	<!-- Server-side matching only, so the list never filters what came back. -->
 	<Command.Root
 		shouldFilter={false}
-		bind:value={cursor}
 		class={commandClass}
 		onkeydown={(event) => onkeydown?.(event, items)}
 	>

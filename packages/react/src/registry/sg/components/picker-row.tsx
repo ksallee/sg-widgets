@@ -20,6 +20,7 @@ import {
 } from '@sg-widgets/core';
 import { cn } from '@/lib/utils';
 import { FieldValue } from '@/registry/sg/components/field-value';
+import { PICKER_ROW_INDICATOR } from '@/registry/sg/components/picker-classes';
 import { Thumbnail } from '@/registry/sg/components/thumbnail';
 import { UserAvatar } from '@/registry/sg/components/user-avatar';
 
@@ -61,6 +62,10 @@ export interface PickerRowProps {
   siteUrl?: string;
   /** Drawn in the leading slot when the row carries no picture. */
   glyph?: React.ReactNode;
+  /** What the indicator column holds: a tick, a checkbox, or nothing while the row is not taken. */
+  indicator?: React.ReactNode;
+  /** The `data-slot` the indicator column carries. Defaults to `picker-row-indicator`. */
+  indicatorSlot?: string;
 }
 
 interface SecondaryPlan {
@@ -130,6 +135,8 @@ export function PickerRow({
   context,
   siteUrl,
   glyph,
+  indicator,
+  indicatorSlot,
 }: PickerRowProps) {
   const anatomy = { thumbnail, subLabelField, secondaryField, showCode };
   const site = siteUrl ?? context?.siteUrl;
@@ -147,6 +154,13 @@ export function PickerRow({
 
   return (
     <>
+      {indicator !== undefined ? (
+        /* Fixed whether or not the row is ticked, so every label down the list sits at one x. */
+        <span data-slot={indicatorSlot ?? 'picker-row-indicator'} className={PICKER_ROW_INDICATOR}>
+          {indicator}
+        </span>
+      ) : null}
+
       {thumbnail !== false ? (
         <span
           data-slot="picker-row-leading"

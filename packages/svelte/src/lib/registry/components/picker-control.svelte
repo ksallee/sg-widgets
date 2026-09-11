@@ -64,6 +64,8 @@
 		/** The popup is as wide as the control it hangs off. */
 		anchored?: boolean;
 		loading?: boolean;
+		/** Rows the list offers, which is what the live row counts. */
+		count?: number;
 		error?: string | null;
 		empty?: boolean;
 		emptyLabel?: string;
@@ -84,11 +86,13 @@
 	import { tick, type Snippet } from 'svelte';
 	import {
 		holdsArmed,
+		listStatus,
 		NO_MATCH_LABEL,
 		pickerKeyIntent,
 		scrollHighlightedIntoView,
 		stateLine,
-		summariseSelection
+		summariseSelection,
+		watchOverflow
 	} from '@sg-widgets/core';
 	import { Combobox } from 'bits-ui';
 	import ChevronDown from '@lucide/svelte/icons/chevron-down';
@@ -100,6 +104,7 @@
 	import StateLine from '$lib/registry/components/state-line.svelte';
 	import {
 		CHIP_GAP,
+		LIST_STATUS,
 		OVERFLOW_RESERVE,
 		PICKER_ANCHORED_POPUP,
 		PICKER_BOX,
@@ -160,6 +165,7 @@
 		onClear,
 		anchored = false,
 		loading = false,
+		count = 0,
 		error = null,
 		empty = false,
 		emptyLabel = NO_MATCH_LABEL,
@@ -177,6 +183,8 @@
 
 	let controlEl = $state<HTMLElement | null>(null);
 	let listEl = $state<HTMLElement | null>(null);
+	// The list writes the overflow variables the fade reads, which are Base UI's own.
+	$effect(() => watchOverflow(listEl));
 	let inputEl = $state<HTMLInputElement | null>(null);
 	let chipsEl = $state<HTMLElement | null>(null);
 	/** The chip a Backspace has highlighted. The next one removes it. */
@@ -473,6 +481,15 @@
 					class="sr-only"
 				/>
 			{/if}
+			<div
+				data-slot={`${slot}-status`}
+				role="status"
+				aria-live="polite"
+				aria-atomic="true"
+				class={LIST_STATUS}
+			>
+				{listStatus({ loading, count, error, asked: true }, { emptyLabel, loadingLabel, errorLabel })}
+			</div>
 			<div bind:this={listEl} data-slot={`${slot}-list`} class={PICKER_LIST}>
 				{#if error !== null && error !== ''}
 					<StateLine

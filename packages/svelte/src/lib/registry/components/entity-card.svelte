@@ -359,24 +359,32 @@
 							/>
 						</span>
 					{/if}
-					{#if card.status}
-						<StatusBadge
-							code={card.status.code}
-							status={table[card.status.code] ?? null}
-							field={card.status.field}
-							variant="icon"
-							size="sm"
-							siteUrl={site}
-							class="bg-background/80 border-transparent shadow-sm"
-						/>
-					{/if}
 				</span>
-				{#if actions}
+				<!-- The status keeps the right corner; the actions appear beside it, never over it. -->
+				{#if actions || card.status}
 					<span
-						data-slot="entity-card-actions"
-						class={cn('absolute top-2 right-2 flex items-center gap-1.5', revealClass, hiddenClass)}
+						data-slot="entity-card-overlay-end"
+						class="absolute top-2 right-2 flex max-w-[calc(100%-1rem)] items-center gap-1.5"
 					>
-						{@render actions()}
+						{#if actions}
+							<span
+								data-slot="entity-card-actions"
+								class={cn('flex items-center gap-1.5', revealClass, hiddenClass)}
+							>
+								{@render actions()}
+							</span>
+						{/if}
+						{#if card.status}
+							<StatusBadge
+								code={card.status.code}
+								status={table[card.status.code] ?? null}
+								field={card.status.field}
+								variant="icon"
+								size="sm"
+								siteUrl={site}
+								class="bg-background/80 border-transparent shadow-sm"
+							/>
+						{/if}
 					</span>
 				{/if}
 			</div>

@@ -210,6 +210,93 @@ export async function scopeToProject(
  */
 export const SEARCH_DEBOUNCE_MS = 250;
 
+/** The page `_text_search` answers at its cap, which is also its default (probe 053). */
+export const SEARCH_PAGE_SIZE = 25;
+
+/**
+ * The rows a hierarchy search asks for. Each hit costs one path lookup on top of the
+ * search itself, so it asks for fewer than the endpoint allows.
+ */
+export const HIERARCHY_LEAF_LIMIT = 10;
+
+/**
+ * True when a further page may be there. A read carries no total and `links.next` is
+ * emitted forever, so a full page is the only sign of another one (006_pagination).
+ */
+export function hasMorePage(count: number, size: number): boolean {
+  return size > 0 && count >= size;
+}
+
+/** The project a tree root path names, or null on the site root. */
+export function projectOfPath(path: string): number | null {
+  const match = /^\/Project\/(\d+)/.exec(path);
+  return match ? Number(match[1]) : null;
+}
+
+/**
+ * What a search does with the query it now holds: empty the list, ask at once, or
+ * ask once the pause has elapsed.
+ *
+ * A widget that browses rather than matching reads on an empty query too, which is
+ * what `readsEmpty` says; nothing is debounced there, because no one is typing.
+ */
+export type QueryPlan = 'clear' | 'now' | 'debounce';
+
+export function queryPlan(query: string, readsEmpty: boolean): QueryPlan {
+  if (query.trim().length > 0) return 'debounce';
+  return readsEmpty ? 'now' : 'clear';
+}
+
+/** Which of the four things a search list shows in place of its rows. */
+export type SearchView = 'error' | 'loading' | 'empty' | 'rows';
+
+export interface SearchViewState {
+  /** What the failed read said, or null. */
+  error: string | null;
+  loading: boolean;
+  /** Rows on show. */
+  count: number;
+  /** An empty list is the empty line only once something has been asked for. */
+  asked: boolean;
+}
+
+/**
+ * What a search list draws. The skeletons stand for a first page only: a page on the
+ * way under rows already on screen leaves those rows where they are.
+ */
+export function searchView(state: SearchViewState): SearchView {
+  if (state.error !== null && state.error !== '') return 'error';
+  if (state.loading && state.count === 0) return 'loading';
+  if (state.count === 0 && state.asked) return 'empty';
+  return 'rows';
+}
+
+/**
+ * The ticket an answer has to still hold to be written.
+ *
+ * A search cancels by taking the next ticket: whatever is in flight then holds a
+ * stale one and is dropped rather than landing over the query that replaced it.
+ */
+export interface RequestGate {
+  /** Take the next ticket. Every earlier one is stale from here on. */
+  next: () => number;
+  /** Drop whatever is in flight without starting anything. */
+  cancel: () => void;
+  /** True while `ticket` is the one that may write. */
+  holds: (ticket: number) => boolean;
+}
+
+export function requestGate(): RequestGate {
+  let current = 0;
+  return {
+    next: () => (current += 1),
+    cancel: () => {
+      current += 1;
+    },
+    holds: (ticket: number) => ticket === current,
+  };
+}
+
 /** The types to search, as the map `_text_search` takes: bare names carry no filter. */
 export function searchTypeMap(
   types: string[] | Record<string, WireCondition[] | null>,

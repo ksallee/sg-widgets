@@ -90,9 +90,32 @@ export const PICKER_POPUP =
 export const PICKER_ANCHORED_POPUP =
   'bg-popover text-popover-foreground data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 ring-foreground/10 z-50 w-(--anchor-width) min-w-56 origin-(--transform-origin) overflow-hidden rounded-lg shadow-md ring-1 outline-hidden duration-100';
 
-/** The scrolling list inside the popup. */
+/**
+ * The fade on a scrolling list's edges, and the gutter its scrollbar sits in.
+ *
+ * An edge is faded by the smaller of the fade's own width and the room past it, so an
+ * edge with nothing beyond it is not faded at all. The two distances are the variables
+ * core's `watchOverflow` writes, which are Base UI's own, so one class string serves
+ * both registries.
+ */
+export const LIST_FADE =
+  '[scrollbar-gutter:stable] [--fade-size:1.5rem] mask-t-from-[calc(100%-min(var(--fade-size),var(--scroll-area-overflow-y-start,0px)))] mask-b-from-[calc(100%-min(var(--fade-size),var(--scroll-area-overflow-y-end,0px)))]';
+
+/** The scrolling list inside the popup, fading at whichever edge has more past it. */
 export const PICKER_LIST =
-  'no-scrollbar max-h-72 scroll-py-1 overflow-x-hidden overflow-y-auto p-1 outline-none';
+  `no-scrollbar max-h-72 scroll-py-1 overflow-x-hidden overflow-y-auto p-1 outline-none ${LIST_FADE}`;
+
+/**
+ * The list's live region. It says what the visible block says and nothing more: the
+ * state line stays the thing a reader sees, this row is the thing a reader hears.
+ */
+export const LIST_STATUS = 'sr-only';
+
+/**
+ * The row's indicator column, drawn whether or not the row is ticked, so a label sits
+ * at one x down the whole list.
+ */
+export const PICKER_ROW_INDICATOR = 'flex h-5 w-4 shrink-0 items-center justify-center';
 
 /** One row. Highlight and selection share one colour, per `docs/design-rules.md`. */
 export const PICKER_ROW =

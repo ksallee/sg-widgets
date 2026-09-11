@@ -1,19 +1,22 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { PointerEvent as ReactPointerEvent, ReactNode, RefObject } from 'react';
 import type { ChipRow, PickerSummary } from '@sg-widgets/core';
 import {
   holdsArmed,
+  listStatus,
   NO_MATCH_LABEL,
   pickerKeyIntent,
   scrollHighlightedIntoView,
   stateLine,
   summariseSelection,
+  watchOverflow,
 } from '@sg-widgets/core';
 import { Combobox as ComboboxPrimitive } from '@base-ui/react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ChevronDown, Search, SearchX, TriangleAlert, X } from 'lucide-react';
 import {
   CHIP_GAP,
+  LIST_STATUS,
   OVERFLOW_RESERVE,
   PICKER_ANCHORED_POPUP,
   PICKER_BOX,
@@ -242,7 +245,14 @@ export function PickerControl({
   controlProps,
 }: PickerControlProps) {
   const controlRef = useRef<HTMLDivElement | null>(null);
+  const [listEl, setListEl] = useState<HTMLDivElement | null>(null);
   const listRef = useRef<HTMLDivElement | null>(null);
+  const setList = useCallback((node: HTMLDivElement | null) => {
+    listRef.current = node;
+    setListEl(node);
+  }, []);
+  // The list writes the overflow variables the fade reads, which are Base UI's own.
+  useEffect(() => watchOverflow(listEl), [listEl]);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const chipsRef = useRef<HTMLSpanElement | null>(null);
   /** The chip a Backspace has highlighted. The next one removes it. */
@@ -534,7 +544,19 @@ export function PickerControl({
               className="sr-only"
             />
           )}
-          <ComboboxPrimitive.List ref={listRef} data-slot={`${slot}-list`} className={PICKER_LIST}>
+          <div
+            data-slot={`${slot}-status`}
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+            className={LIST_STATUS}
+          >
+            {listStatus(
+              { loading, count: items.length, error, asked: true },
+              { emptyLabel, loadingLabel, errorLabel },
+            )}
+          </div>
+          <ComboboxPrimitive.List ref={setList} data-slot={`${slot}-list`} className={PICKER_LIST}>
             {note ?? ((key: string) => drawRow(key))}
           </ComboboxPrimitive.List>
         </ComboboxPrimitive.Popup>

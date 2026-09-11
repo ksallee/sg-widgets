@@ -71,8 +71,6 @@ function member(item: Member): ReactNode {
   );
 }
 
-const memberKey = (item: Member): string => item.id;
-
 export default function SearchControlDemo() {
   const [query, setQuery] = useState('');
   const [picked, setPicked] = useState('Nothing yet');
@@ -113,7 +111,6 @@ export default function SearchControlDemo() {
           commandClass="border-border rounded-lg border"
           placeholder="Search the crew…"
           emptyLabel="No one by that name"
-          keyOf={memberKey}
           paging
           rows={found}
         />

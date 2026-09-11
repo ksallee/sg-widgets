@@ -164,7 +164,6 @@
 
 	const order = $derived(Object.keys(searchTypeMap(entityTypes)));
 	const showRecents = $derived(query.trim().length === 0 && recents.length > 0);
-	const leadKey = $derived(showRecents && recents[0] ? `recent:${keyOf(recents[0])}` : '');
 
 	/** The rows the answer holds, under one heading per type, in the order asked for. */
 	function groupsOf(hits: SearchHit[]): GlobalSearchGroup[] {
@@ -304,8 +303,6 @@
 		{loadingLabel}
 		{errorLabel}
 		paging
-		keyOf={hitKey}
-		{leadKey}
 		{rows}
 	/>
 {/snippet}

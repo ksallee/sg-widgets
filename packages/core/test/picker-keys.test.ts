@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { holdsArmed, pickerKeyIntent, type PickerKeyState } from '../src/picker-keys.js';
+import { holdsArmed, pickerKeyIntent, searchKeyIntent, type PickerKeyState } from '../src/picker-keys.js';
 
 function state(over: Partial<PickerKeyState> = {}): PickerKeyState {
   return { open: true, query: '', count: 3, armed: null, editable: true, multiple: true, ...over };
@@ -57,6 +57,23 @@ describe('pickerKeyIntent', () => {
   it('has nothing to say about any other key', () => {
     for (const key of ['a', 'Enter', 'Tab', 'Delete', 'Home']) {
       expect(pickerKeyIntent(key, state({ armed: 2 }))).toEqual({ kind: 'nothing' });
+    }
+  });
+});
+
+describe('searchKeyIntent', () => {
+  it('clears a query on Escape', () => {
+    expect(searchKeyIntent('Escape', { query: 'sh010' })).toEqual({ kind: 'clear' });
+    expect(searchKeyIntent('Escape', { query: ' ' })).toEqual({ kind: 'clear' });
+  });
+
+  it('leaves an Escape with no query to the shell', () => {
+    expect(searchKeyIntent('Escape', { query: '' })).toEqual({ kind: 'nothing' });
+  });
+
+  it('leaves every other key alone', () => {
+    for (const key of ['Enter', 'Backspace', 'ArrowDown', 'ArrowUp', 'Tab', 'a']) {
+      expect(searchKeyIntent(key, { query: 'sh010' })).toEqual({ kind: 'nothing' });
     }
   });
 });

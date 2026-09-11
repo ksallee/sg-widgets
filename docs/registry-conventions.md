@@ -11,7 +11,13 @@ HTTP, and installed into a throwaway consumer project with the real CLIs.
 One kebab-case name per widget, **identical in both registries**: `status-badge`, `entity-chip`,
 `thumbnail`, `user-avatar`, `field-value`. A name is the URL, so it never changes once published.
 
-Every item is `type: "registry:component"`. Files are `type: "registry:component"` too, and every
+Every item is `type: "registry:component"`, with one exception: a shadcn primitive this repo has
+replaced ships as its own `registry:ui` item under the primitive's own name, so a consumer installing
+a widget gets this repo's version rather than the upstream one. React's `command` is that item; every
+item that named `"command"` names its URL instead. Files inside such an item are `type: "registry:ui"`
+so they install to the consumer's `ui` alias, which is what `@/components/ui/<name>` rewrites to.
+
+Files are `type: "registry:component"` too, and every
 item is a single file. Multi-file items are possible but flatten differently in each CLI (see §6),
 so keep to one file per item until a widget genuinely needs more.
 

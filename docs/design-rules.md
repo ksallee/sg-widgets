@@ -183,7 +183,14 @@ resolved from the schema so the value renders by its data type. `fields` only ev
 request; a list of values a widget draws is `details`.
 
 The row itself is one component per framework, `picker-row`, and every widget that lists entity rows
-composes it rather than drawing a second one.
+composes it rather than drawing a second one. A list that can tick a row opens the row on an
+indicator column, whose width is fixed whether or not the row is ticked, so a label sits at one x
+down the whole list.
+
+A popup list fades at whichever edge has more content past it and holds a gutter for its scrollbar,
+and carries a live region under it saying what it is doing: the read in flight, the count it
+answered, the empty line, or what a failed read said. The live region is what a reader hears; the
+state line of rule 5 is what a reader sees, and the two never become one element.
 
 ## 10. Wordmark
 

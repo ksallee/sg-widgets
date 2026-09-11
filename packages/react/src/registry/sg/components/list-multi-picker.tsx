@@ -176,10 +176,9 @@ export function ListMultiPicker({
         value={code}
         className={PICKER_ROW}
       >
-        <span data-slot={`${slot}-check`} className="flex h-5 shrink-0 items-center">
-          <Checkbox checked={chosen} tabIndex={-1} aria-hidden="true" className="pointer-events-none" />
-        </span>
         <PickerRow
+          indicatorSlot={`${slot}-check`}
+          indicator={<Checkbox checked={chosen} tabIndex={-1} aria-hidden="true" className="pointer-events-none" />}
           row={{ type: LIST_ROW_TYPE, id: 0, name: option.label, values: {} }}
           query={searchable ? search : ''}
           thumbnail={false}

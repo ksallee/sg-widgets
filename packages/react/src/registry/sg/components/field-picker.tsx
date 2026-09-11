@@ -463,13 +463,15 @@ export function FieldPicker({
             </div>
           ) : null}
 
-          <Command shouldFilter={false} loop value={cursor} onValueChange={setHighlighted}>
-            <CommandInput
-              autoFocus
-              value={search}
-              onValueChange={setSearch}
-              placeholder={choosing ? 'Which type?' : searchPlaceholder}
-            />
+          <Command
+            shouldFilter={false}
+            loop
+            items={values}
+            query={search}
+            onQueryChange={setSearch}
+            onItemHighlighted={(next) => setHighlighted(typeof next === 'string' ? next : '')}
+          >
+            <CommandInput autoFocus placeholder={choosing ? 'Which type?' : searchPlaceholder} />
             <CommandList>
               {failure ? (
                 <StateLine

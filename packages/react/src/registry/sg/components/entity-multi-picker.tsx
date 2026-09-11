@@ -332,10 +332,9 @@ export function EntityMultiPicker({
         value={key}
         className={cn(PICKER_ROW, hasSubLabel && 'items-start')}
       >
-        <span data-slot="entity-picker-check" className="flex h-5 shrink-0 items-center">
-          <Checkbox checked={chosen} tabIndex={-1} aria-hidden="true" className="pointer-events-none" />
-        </span>
         <PickerRow
+          indicatorSlot="entity-picker-check"
+          indicator={<Checkbox checked={chosen} tabIndex={-1} aria-hidden="true" className="pointer-events-none" />}
           row={row}
           query={state.query}
           thumbnail={thumbnail}

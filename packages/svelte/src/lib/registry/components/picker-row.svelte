@@ -37,6 +37,8 @@
 		context?: SgContext;
 		/** The site the status sprite is served from. Defaults to the context's. */
 		siteUrl?: string;
+		/** The `data-slot` the indicator column carries. Defaults to `picker-row-indicator`. */
+		indicatorSlot?: string;
 	}
 </script>
 
@@ -55,6 +57,7 @@
 		secondaryType
 	} from '@sg-widgets/core';
 	import { cn } from '$lib/utils.js';
+	import { PICKER_ROW_INDICATOR } from '$lib/registry/components/picker-classes.js';
 	import FieldValue from '$lib/registry/components/field-value.svelte';
 	import Thumbnail from '$lib/registry/components/thumbnail.svelte';
 	import UserAvatar from '$lib/registry/components/user-avatar.svelte';
@@ -62,6 +65,8 @@
 	type Props = PickerRowProps & {
 		/** Drawn in the leading slot when the row carries no picture. */
 		glyph?: Snippet;
+		/** What the indicator column holds: a tick, a checkbox, or nothing while the row is not taken. */
+		indicator?: Snippet;
 	};
 
 	let {
@@ -78,7 +83,9 @@
 		size = 'md',
 		context,
 		siteUrl,
-		glyph
+		glyph,
+		indicator,
+		indicatorSlot
 	}: Props = $props();
 
 	const anatomy = $derived({ thumbnail, subLabelField, secondaryField, showCode });
@@ -139,6 +146,13 @@
 	The component draws the row's contents, not its box: the caller owns the list item,
 	its selection state and anything it puts in front, such as a checkbox.
 -->
+{#if indicator}
+	<!-- Fixed whether or not the row is ticked, so every label down the list sits at one x. -->
+	<span data-slot={indicatorSlot ?? 'picker-row-indicator'} class={PICKER_ROW_INDICATOR}>
+		{@render indicator()}
+	</span>
+{/if}
+
 {#if thumbnail !== false}
 	<span data-slot="picker-row-leading" class={cn('flex shrink-0 items-center justify-center', LEAD[size])}>
 		{#if person}

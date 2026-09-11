@@ -177,6 +177,7 @@
 		onClear={() => emit([])}
 		loading={loaded === null}
 		error={failure}
+		count={options.shown.length}
 		empty={options.shown.length === 0}
 		{emptyLabel}
 		{loadingLabel}

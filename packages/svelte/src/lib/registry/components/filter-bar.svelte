@@ -39,6 +39,7 @@
 		toApi3Hash,
 		asFilterGroup,
 		group,
+		matchesTokens,
 		withoutPaths
 	} from '@sg-widgets/core';
 	import { Badge } from '$lib/components/ui/badge/index.js';
@@ -101,6 +102,8 @@
 	const base = $derived(asFilterGroup(baseFilter));
 	const scope = $derived(toApi3Hash(base ? group('and', [base, withoutPaths(value, facets)]) : withoutPaths(value, facets)));
 	const tally = $derived(loadFacets(scope, fields, facets));
+	/** What the open facet's search box holds. */
+	let facetQuery = $state('');
 	const activeCount = $derived(facets.filter((name) => Boolean(findCondition(value, name))).length);
 
 	async function loadFacets(
@@ -182,16 +185,17 @@
 {#snippet facetList(name: string)}
 	{@const selected = selectedOf(name)}
 	<Popover.Content strategy="fixed" class="w-64 p-0" align="start">
-		<Command.Root>
-			<Command.Input placeholder="Search values…" />
+		<Command.Root shouldFilter={false}>
+			<Command.Input bind:value={facetQuery} placeholder="Search values…" />
 			<Command.List>
 				{#await tally}
 					<p class="text-muted-foreground py-6 text-center text-sm">Counting…</p>
 				{:then found}
 					<Command.Empty>No value.</Command.Empty>
-					{#each found[name] ?? [] as option (option.key)}
+					<!-- The box matches what it was given rather than what a read answered, so the rows drawn are the rows the list holds. -->
+					{#each (found[name] ?? []).filter((option) => matchesTokens(facetQuery, option.label, option.key)) as option (option.key)}
 						<Command.Item
-							value="{option.label} {option.key}"
+							value={option.key}
 							data-option={option.key}
 							onSelect={() => toggle(name, option)}
 						>

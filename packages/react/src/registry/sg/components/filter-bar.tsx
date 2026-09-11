@@ -20,6 +20,7 @@ import {
   toApi3Hash,
   asFilterGroup,
   group,
+  matchesTokens,
   withoutPaths,
 } from '@sg-widgets/core';
 import { PlusIcon, XIcon } from 'lucide-react';
@@ -102,6 +103,8 @@ export function FilterBar({
 }: FilterBarProps) {
   const fields = useEntityFields(context, entityType);
   const [tally, setTally] = useState<Record<string, FacetValue[]>>({});
+  /** What the open facet's search box holds. */
+  const [facetQuery, setFacetQuery] = useState('');
   const [counting, setCounting] = useState(true);
 
   // Counts are read against the filter with every facet's own condition stripped, so
@@ -170,9 +173,17 @@ export function FilterBar({
 
   const facetList = (name: string): ReactNode => {
     const selected = selectedOf(name);
+    // The box matches what it was given rather than what a read answered, so the rows
+    // drawn are the rows the list holds.
+    const shown = (tally[name] ?? []).filter((option) => matchesTokens(facetQuery, option.label, option.key));
     return (
       <PopoverContent className="w-64 p-0" align="start">
-        <Command>
+        <Command
+          shouldFilter={false}
+          items={shown.map((option) => option.key)}
+          query={facetQuery}
+          onQueryChange={setFacetQuery}
+        >
           <CommandInput placeholder="Search values…" />
           <CommandList>
             {counting ? (
@@ -180,10 +191,10 @@ export function FilterBar({
             ) : (
               <>
                 <CommandEmpty>No value.</CommandEmpty>
-                {(tally[name] ?? []).map((option) => (
+                {shown.map((option) => (
                   <CommandItem
                     key={option.key}
-                    value={`${option.label} ${option.key}`}
+                    value={option.key}
                     data-option={option.key}
                     onSelect={() => toggle(name, option)}
                   >

@@ -8,6 +8,7 @@ import List from "./command-list.svelte";
 import Loading from "./command-loading.svelte";
 import Separator from "./command-separator.svelte";
 import Shortcut from "./command-shortcut.svelte";
+import Status from "./command-status.svelte";
 import Root from "./command.svelte";
 
 export {
@@ -21,6 +22,7 @@ export {
 	List,
 	Separator,
 	Shortcut,
+	Status,
 	Loading,
 	//
 	Root as Command,
@@ -32,6 +34,7 @@ export {
 	Input as CommandInput,
 	List as CommandList,
 	Separator as CommandSeparator,
+	Status as CommandStatus,
 	Shortcut as CommandShortcut,
 	Loading as CommandLoading,
 };

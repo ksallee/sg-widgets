@@ -66,6 +66,14 @@ a query that matched nothing is the empty line, and otherwise it is the rows the
 further page adds a load-more row under them; a press on it pages rather than selects, so the popup
 stays open and the value is untouched.
 
+Above the list sits a live region, which says what the list is doing: the read in flight, the number
+of rows it offered, the empty line, or what a failed read said. It is what a reader hears; the state
+line inside the list is what a reader sees.
+
+The list fades at whichever edge has more content past it and holds a gutter for its scrollbar, so
+rows never shift as a page lands. The pattern is coss.com/ui at e937bec, whose scroll area reads the
+same variables; it is read as a reference and not installed.
+
 ## Props
 
 | prop | type | default | meaning |
@@ -180,8 +188,11 @@ into the query, so the base's clear on close is a change the caret sees.
 ## PickerRow
 
 The row every picker, search and tree draws, and the other half of a picker's list. It draws a row's
-contents, not its box: the caller owns the list item, its selection state and anything it puts in
-front, such as a checkbox.
+contents, not its box: the caller owns the list item and its selection state.
+
+The row opens on an indicator column, which is a fixed width whether or not the row is ticked, so a
+label sits at one x down the whole list. A multi picker puts its checkbox there and a single picker a
+tick on the row it holds.
 
 | prop | type | default | meaning |
 |---|---|---|---|
@@ -198,6 +209,9 @@ front, such as a checkbox.
 | `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Picture and text ladder. |
 | `context` | `SgContext` | — | The secondary's schema and the status table are read through it. |
 | `siteUrl` | `string` | the context's | The site the status sprite is served from. |
+| `indicatorSlot` | `string` | `'picker-row-indicator'` | The `data-slot` the indicator column carries. |
 
-One slot, `glyph` in both frameworks: it is drawn in the leading slot when the row carries no picture.
-A row whose type is a person draws an avatar there instead.
+Two slots, `glyph` and `indicator` in both frameworks. `glyph` is drawn in the leading slot when the
+row carries no picture; a row whose type is a person draws an avatar there instead. `indicator` is
+the tick or the checkbox in the indicator column, and the column is drawn only where a widget
+passes it.

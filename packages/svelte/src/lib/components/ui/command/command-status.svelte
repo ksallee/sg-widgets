@@ -7,14 +7,18 @@
 		class: className,
 		children,
 		...restProps
-	}: WithElementRef<HTMLAttributes<HTMLSpanElement>> = $props();
+	}: WithElementRef<HTMLAttributes<HTMLDivElement>> = $props();
 </script>
 
-<span
+<!-- The list's live region: what a reader hears, beside what the state line shows. -->
+<div
 	bind:this={ref}
-	data-slot="command-shortcut"
-	class={cn("ml-auto text-xs tracking-widest text-muted-foreground group-data-highlighted/command-item:text-foreground", className)}
+	data-slot="command-status"
+	role="status"
+	aria-live="polite"
+	aria-atomic="true"
+	class={cn("sr-only", className)}
 	{...restProps}
 >
 	{@render children?.()}
-</span>
+</div>

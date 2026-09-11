@@ -19,6 +19,7 @@ import {
   withSelectedPinned,
 } from '@sg-widgets/core';
 import { Combobox as ComboboxPrimitive } from '@base-ui/react';
+import { Check } from 'lucide-react';
 import { EntityChip } from '@/registry/sg/components/entity-chip';
 import { PICKER_ARMED, PICKER_CHIP, PICKER_ROW } from '@/registry/sg/components/picker-classes';
 import { PickerControl } from '@/registry/sg/components/picker-control';
@@ -289,6 +290,7 @@ export function EntityPicker({
         className={cn(PICKER_ROW, hasSubLabel && 'items-start')}
       >
         <PickerRow
+          indicator={chosen ? <Check aria-hidden="true" className="size-4" /> : null}
           row={row}
           query={state.query}
           thumbnail={thumbnail}

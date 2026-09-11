@@ -26,6 +26,7 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/sort-picker.js
 | `context` | `SgContext` | required | The widget context. Every read goes through it, so widgets on a page share one cache. |
 | `value` | `SortKey[]` | `[]` | The keys, in order. Two-way in Svelte through `bind:value`. |
 | `hidePaths` | `string[]` | `[]` | Paths kept out of the field list. A pattern hides itself and everything under it. |
+| `paths` | `string[]` | — | Only these paths are offered, so a table's toolbar sorts on the columns it shows. A link stays in the list while an offered path runs through it. |
 | `disabled` | `boolean` | `false` | Blocks the trigger. |
 | `open` | `boolean` | `false` | Whether the popover is showing. Two-way in Svelte. |
 | `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Trigger heights 8, 9 and 10. |

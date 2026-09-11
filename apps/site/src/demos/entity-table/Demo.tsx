@@ -176,7 +176,7 @@ export default function EntityTableDemo() {
             </>
           }
           toolbarEnd={
-            <SortPicker entityType="Version" context={context} size="sm" value={sortKeys} onChange={setSortKeys} />
+            <SortPicker entityType="Version" context={context} size="sm" paths={columns.map((column) => column.path)} value={sortKeys} onChange={setSortKeys} />
           }
         />
       </div>

@@ -33,6 +33,8 @@ export interface SortPickerProps extends Omit<React.HTMLAttributes<HTMLDivElemen
   value: SortKey[];
   /** Paths to keep out of the field list, each hiding itself and everything under it. */
   hidePaths?: string[];
+  /** Only these paths are offered; a link stays in the list while a path runs through it. */
+  paths?: string[];
   size?: SortPickerSize;
   disabled?: boolean;
   /** Both the keys and the `sort` string they serialise to. */
@@ -61,6 +63,7 @@ export function SortPicker({
   context,
   value = [],
   hidePaths = [],
+  paths,
   size = 'md',
   disabled = false,
   onChange,
@@ -98,6 +101,9 @@ export function SortPicker({
     for (const key of value) resolveLabel(key.field);
   }, [value, resolveLabel]);
 
+  /** A path the caller offers, or a link a caller's path runs through. */
+  const offered = (path: string): boolean =>
+    !paths || paths.includes(path) || paths.some((p) => p.startsWith(`${path}.`));
   const chosen = value.map((k) => k.field);
   const nameOf = (field: string): string => labels[`${entityType}|${field}`] ?? field;
 
@@ -249,7 +255,7 @@ export function SortPicker({
             deepLinks
             clearable={false}
             exclude={chosen}
-            filter={(field) => isSortable(field.dataType)}
+            filter={(field, path) => isSortable(field.dataType) && offered(path)}
             placeholder="Add a field"
             searchPlaceholder="Add a field…"
             emptyLabel="No field left to sort on"

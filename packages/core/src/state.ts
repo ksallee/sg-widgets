@@ -50,3 +50,11 @@ export function stateLine(
   if (state === 'error') return labels.errorLabel ?? (message?.trim() ? message.trim() : ERROR_LABEL);
   return labels.emptyLabel ?? NO_ROWS_LABEL;
 }
+
+/**
+ * What a failed read said, as a line. An `Error` gives its message; anything else
+ * a promise rejected with is rendered as itself, so a thrown string still reads.
+ */
+export function errorText(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}

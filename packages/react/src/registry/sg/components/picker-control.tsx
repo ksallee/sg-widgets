@@ -2,7 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import type { PointerEvent as ReactPointerEvent, ReactNode, RefObject } from 'react';
 import type { ChipRow, PickerSummary } from '@sg-widgets/core';
 import {
-  holdsArmed,
+  focusChip,
   listStatus,
   NO_MATCH_LABEL,
   pickerKeyIntent,
@@ -127,7 +127,7 @@ export interface PickerControlProps {
   items: string[];
   /** One row of the list. */
   renderItem: (key: string) => ReactNode;
-  /** One chip: its index, whether Backspace has armed it, whether the row hides it. */
+  /** One chip: its index, whether the caret is on it, whether the row hides it. */
   renderChip?: (index: number, armed: boolean, hidden: boolean) => ReactNode;
   /** What the control shows for the selection. */
   summary?: PickerSummary;
@@ -255,7 +255,7 @@ export function PickerControl({
   useEffect(() => watchOverflow(listEl), [listEl]);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const chipsRef = useRef<HTMLSpanElement | null>(null);
-  /** The chip a Backspace has highlighted. The next one removes it. */
+  /** The chip holding the caret. Backspace and Delete take it. */
   const [armedChip, setArmedChip] = useState<number | null>(null);
   /** A press on the load-more row is not a selection, and must not close the popup. */
   const pagingRef = useRef(false);
@@ -268,13 +268,19 @@ export function PickerControl({
   const row = useChipRow(fitted, rowKey ?? `${size}|${summary}|${labels.join(', ')}`, controlRef, chipsRef);
   const plan = summariseSelection(labels, (label) => label, { summary, max, fit: row.fit });
   const counted = summary === 'count' && chipRow && multiple;
-  // A chip removed from under the highlight takes it with it.
+  // A chip removed from under the caret takes it with it.
   const armed = armedChip !== null && armedChip < labels.length ? armedChip : null;
-  // A chip removed from under the highlight takes it with it; a chip added later must
+  // A chip removed from under the caret takes it with it; a chip added later must
   // not inherit an index that outlived its chip.
   useEffect(() => {
     if (armedChip !== null && armedChip >= labels.length) setArmedChip(null);
   }, [armedChip, labels.length]);
+
+  // The caret sits on one chip of the row at a time, and the row keeps it out of the
+  // tab order, so Tab still leaves the control.
+  useEffect(() => {
+    focusChip(chipsRef.current, armed);
+  }, [armed, labels.length]);
 
   function setOpen(next: boolean): void {
     const wanted = interactive ? next : false;
@@ -292,6 +298,7 @@ export function PickerControl({
     // The chip's remove control, the clear control and the chevron own their own press.
     if (target?.closest('button')) return;
     const onCaret = target === inputRef.current;
+    setArmedChip(null);
     if (inline && !onCaret) {
       event.preventDefault();
       inputRef.current?.focus({ preventScroll: true });
@@ -313,31 +320,54 @@ export function PickerControl({
     scrollHighlightedIntoView(listRef.current);
   }, [open, items.length]);
 
+  /** The caret back in the input, and the chip row released. */
+  function toInput(): void {
+    setArmedChip(null);
+    inputRef.current?.focus({ preventScroll: true });
+  }
+
   /**
-   * Backspace, Escape and the arrows. The primitive's own handler runs after this
-   * one, so a key this picker owns is prevented rather than shared.
+   * The chip keys, Escape and the arrows, from the input or from a chip. The primitive's
+   * own handler runs after this one, so a key this picker owns is prevented rather than
+   * shared.
    */
-  function onKey(event: React.KeyboardEvent<HTMLInputElement>): void {
+  function onKey(event: React.KeyboardEvent): void {
+    // A link or a remove control inside a chip owns its own keys.
+    if ((event.target as HTMLElement | null)?.closest('a,button')) return;
     const intent = pickerKeyIntent(event.key, {
       open,
       query,
       count: labels.length,
-      armed,
+      focused: armed,
       editable: interactive,
       multiple,
     });
-    if (!holdsArmed(event.key)) setArmedChip(null);
     switch (intent.kind) {
       case 'dismiss':
+        if (armed !== null) toInput();
         setOpen(false);
         return;
-      case 'arm':
+      case 'focus':
         event.preventDefault();
-        setArmedChip(intent.index);
+        if (intent.index === null) toInput();
+        else setArmedChip(intent.index);
         return;
       case 'remove':
         event.preventDefault();
+        setArmedChip(intent.then);
         onRemoveAt?.(intent.index);
+        if (intent.then === null) inputRef.current?.focus({ preventScroll: true });
+        return;
+      case 'type':
+        event.preventDefault();
+        toInput();
+        onQueryChange(query + intent.key);
+        if (interactive && !open) setOpen(true);
+        return;
+      case 'open':
+        event.preventDefault();
+        toInput();
+        setOpen(true);
         return;
       case 'follow':
         // The highlight moves after this handler, so the list follows it a frame later.
@@ -358,6 +388,9 @@ export function PickerControl({
       return;
     }
     onSelect(next);
+    // A press on a row leaves the caret in the list; the next key belongs to the
+    // control, so the input takes it back.
+    inputRef.current?.focus({ preventScroll: true });
   }
 
   function closing(next: boolean, details: { reason?: string; event?: unknown; cancel: () => void }): void {
@@ -428,6 +461,7 @@ export function PickerControl({
             <span
               ref={chipsRef}
               data-slot={chipsSlot ?? `${slot}-chips`}
+              onKeyDown={onKey}
               className={cn(
                 'flex min-w-0 items-center gap-1.5 [&>[hidden]]:hidden',
                 plan.oneLine ? 'flex-nowrap overflow-hidden' : 'flex-wrap',

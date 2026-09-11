@@ -27,6 +27,9 @@ export const LEAF_GLYPH: Record<LeafSize, string> = {
  * The cross inside a badge or a chip. It hovers with a wash of its own
  * foreground rather than the destructive tint, so the two read the same
  * (`docs/design-rules.md` rule 5).
+ *
+ * A coarse pointer gets a 44px box centred on the cross, drawn as a pseudo-element so
+ * the chip keeps its own size and nothing around it moves.
  */
 export const REMOVE_CONTROL =
-  'hover:bg-current/15 focus-visible:ring-ring focus-visible:ring-offset-background shrink-0 rounded-sm p-0.5 opacity-70 outline-none transition-colors duration-150 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-2 motion-safe:active:scale-[0.98]';
+  "hover:bg-current/15 focus-visible:ring-ring focus-visible:ring-offset-background shrink-0 rounded-sm p-0.5 opacity-70 outline-none transition-colors duration-150 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-2 motion-safe:active:scale-[0.98] pointer-coarse:relative pointer-coarse:before:absolute pointer-coarse:before:top-1/2 pointer-coarse:before:left-1/2 pointer-coarse:before:size-11 pointer-coarse:before:-translate-x-1/2 pointer-coarse:before:-translate-y-1/2 pointer-coarse:before:content-['']";

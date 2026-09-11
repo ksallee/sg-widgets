@@ -52,6 +52,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import { PICKER_ICON_BUTTON } from '@/registry/sg/components/picker-classes';
 import { StateLine } from '@/registry/sg/components/state-line';
 
 export type FieldPickerSize = 'sm' | 'md' | 'lg';
@@ -343,7 +344,7 @@ export function FieldPicker({
       open,
       query: search,
       count: value === '' ? 0 : 1,
-      armed: null,
+      focused: null,
       editable: !readonly && !disabled,
       multiple: false,
     });
@@ -580,7 +581,7 @@ export function FieldPicker({
               data-slot="field-picker-clear"
               aria-label="Clear the field"
               onClick={() => onValueChange?.('')}
-              className="hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring focus-visible:ring-offset-background pointer-events-auto shrink-0 rounded-sm p-0.5 opacity-70 outline-none transition-colors duration-150 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-2 motion-safe:active:scale-[0.98]"
+              className={PICKER_ICON_BUTTON}
             >
               <X aria-hidden="true" className={GLYPH[size]} />
             </button>

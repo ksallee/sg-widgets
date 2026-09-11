@@ -17,7 +17,9 @@
 //   pnpm qa --start --path /widgets/entity-picker/            --framework both --drive tools/drives/picker-contract.js
 //   pnpm qa --start --path /widgets/entity-multi-picker/      --framework both --drive tools/drives/picker-contract.js
 //   pnpm qa --start --path /widgets/user-picker/              --framework both --drive tools/drives/picker-contract.js
+//   pnpm qa --start --path /widgets/user-multi-picker/        --framework both --drive tools/drives/picker-contract.js
 //   pnpm qa --start --path /widgets/project-picker/           --framework both --drive tools/drives/picker-contract.js
+//   pnpm qa --start --path /widgets/project-multi-picker/     --framework both --drive tools/drives/picker-contract.js
 //   pnpm qa --start --path /widgets/status-picker/            --framework both --drive tools/drives/picker-contract.js
 //   pnpm qa --start --path /widgets/status-multi-picker/      --framework both --drive tools/drives/picker-contract.js
 //   pnpm qa --start --path /widgets/entity-type-picker/       --framework both --drive tools/drives/picker-contract.js
@@ -28,8 +30,6 @@
 //   pnpm qa --start --path /widgets/sort-picker/              --framework both --drive tools/drives/picker-contract.js
 //   pnpm qa --start --path /widgets/column-picker/            --framework both --drive tools/drives/picker-contract.js
 //   pnpm qa --start --path /widgets/picker-control/           --framework both --drive tools/drives/picker-contract.js
-//
-// The user multi and project multi pickers are demos of the user and project pages.
 //
 // The clauses, numbered as design rule 7. Each runs on the controls whose shape it fits: the
 // press and keyboard clauses once per shape a page draws, the state clauses on every control.

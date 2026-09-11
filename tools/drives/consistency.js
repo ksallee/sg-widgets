@@ -6,7 +6,7 @@
 // frameworks are then compared value by value, so a widget that is wrong in the same way
 // twice still reads as one deviation per framework and none across them.
 //
-// Three readings, where the rules leave room. Each takes what most widgets already do.
+// Four readings, where the rules leave room. Each takes what most widgets already do.
 //
 //   Control radius is `--radius` (`rounded-lg`), the step every shadcn primitive and
 //   twelve of the twenty-two widget controls wear, rather than the `rounded-md` of the
@@ -23,6 +23,12 @@
 //   A row's gap is 8: its leading slot is a thumbnail or an avatar, an item beside the
 //   label rather than a glyph inside it. A glyph inside a chip, a badge or a control
 //   keeps 6.
+//
+//   A list of rows has no gap and its rows no minimum height, rule 2's own wording. A
+//   list is read off the DOM: a box whose visible children carry one `data-slot`, stack
+//   down the page, fill its width and are wider than they are tall. A section stack names
+//   its parts differently, a chip row runs across and a card is not wide, so none of the
+//   three is measured as a list.
 
 const LADDER = { sm: 32, md: 36, lg: 40 };
 const INSET = { sm: 8, md: 12, lg: 12 };
@@ -113,6 +119,26 @@ function writesText(box) {
   return [...box.childNodes].some((node) => node.nodeType === 3 && node.textContent.trim());
 }
 
+/** Every list of rows under `root`, by the shape of its children rather than by name. */
+function rowLists(root) {
+  const lists = [];
+  for (const box of [root, ...$$('*', root)]) {
+    const kids = [...box.children].filter((el) => el.getBoundingClientRect().height > 0);
+    if (kids.length < 2) continue;
+    const slot = kids[0].dataset.slot;
+    if (!slot || kids.some((el) => el.dataset.slot !== slot)) continue;
+    const s = getComputedStyle(box);
+    const width = box.getBoundingClientRect().width - px(s.paddingLeft) - px(s.paddingRight);
+    const rows = kids.every((el, i) => {
+      const r = el.getBoundingClientRect();
+      if (r.width < width * 0.95 || r.width < r.height * 2) return false;
+      return i === 0 || r.top >= kids[i - 1].getBoundingClientRect().bottom - 1;
+    });
+    if (rows) lists.push({ box, slot, row: kids[0] });
+  }
+  return lists;
+}
+
 function inlineGap(box) {
   const style = getComputedStyle(box);
   return style.columnGap === 'normal' ? null : px(style.columnGap);
@@ -159,6 +185,13 @@ function measureParts(widget, framework, root, R, scope) {
   const button = $$(ICON_BUTTON, root).find((el) => el.getBoundingClientRect().height > 0);
   if (button) {
     check(widget, framework, `${scope}icon-button`, 'radius', R.row, px(getComputedStyle(button).borderTopLeftRadius));
+  }
+
+  for (const { box, slot, row } of rowLists(root)) {
+    const gap = getComputedStyle(box).rowGap;
+    check(widget, framework, `${scope}list ${slot}`, 'row-gap', 0, gap === 'normal' ? 0 : px(gap));
+    const min = getComputedStyle(row).minHeight;
+    check(widget, framework, `${scope}list ${slot}`, 'row-min-height', 0, min === 'auto' ? 0 : px(min));
   }
 
   const line = $$('[data-slot$="state-line"],[data-slot$="-empty"],[data-slot$="-error"]', root).find(
@@ -319,7 +352,7 @@ for (const [key, value] of byKey) {
 const total = deviations.length + across.length;
 const verdict =
   total === 0
-    ? `PASS ${seen.length} readings over both frameworks: every height, inset, gap, row, popup, size and radius is on the scale, and the two frameworks agree`
+    ? `PASS ${seen.length} readings over both frameworks: every height, inset, gap, row, list, popup, size and radius is on the scale, and the two frameworks agree`
     : `FAIL ${total} deviations over ${seen.length} readings: ${deviations
         .slice(0, 6)
         .map((d) => `${d.widget} ${d.framework} ${d.part} ${d.property} ${d.expected} != ${d.actual}`)

@@ -85,7 +85,7 @@
 <script lang="ts">
 	import { tick, type Snippet } from 'svelte';
 	import {
-		holdsArmed,
+		focusChip,
 		listStatus,
 		NO_MATCH_LABEL,
 		pickerKeyIntent,
@@ -125,7 +125,7 @@
 	import { cn } from '$lib/utils.js';
 
 	type Props = PickerControlProps & {
-		/** One chip: its index, whether Backspace has armed it, whether the row hides it. */
+		/** One chip: its index, whether the caret is on it, whether the row hides it. */
 		chip?: Snippet<[number, boolean, boolean]>;
 		/** The rows of the list, as items of the primitive. */
 		rows?: Snippet;
@@ -187,7 +187,7 @@
 	$effect(() => watchOverflow(listEl));
 	let inputEl = $state<HTMLInputElement | null>(null);
 	let chipsEl = $state<HTMLElement | null>(null);
-	/** The chip a Backspace has highlighted. The next one removes it. */
+	/** The chip holding the caret. Backspace and Delete take it. */
 	let armed = $state<number | null>(null);
 	/** A press on the load-more row is not a selection, and must not close the popup. */
 	let paging = false;
@@ -271,6 +271,7 @@
 		// takes it: the field's, or the popup's once the effect below focuses it.
 		const onCaret = target === inputEl;
 		if (!onCaret) event.preventDefault();
+		armed = null;
 		if (inline && !onCaret) inputEl?.focus({ preventScroll: true });
 		// A press anywhere on the control toggles the list, the caret included; typing opens it again.
 		setOpen(!open);
@@ -299,36 +300,74 @@
 		onOpenChange?.(open);
 	}
 
-	// A chip removed from under the highlight takes it with it.
+	// A chip removed from under the caret takes it with it.
 	$effect(() => {
 		if (armed !== null && armed >= labels.length) armed = null;
 	});
 
+	// The caret sits on one chip of the row at a time, and the row keeps it out of the
+	// tab order, so Tab still leaves the control.
+	$effect(() => {
+		void labels.length;
+		focusChip(chipsEl, armed);
+	});
+
+	// A chip is not a control, so its keys reach this handler through the row rather
+	// than through markup a reader would have to read as interactive.
+	$effect(() => {
+		const row = chipsEl;
+		if (!row) return;
+		row.addEventListener('keydown', onKey);
+		return () => row.removeEventListener('keydown', onKey);
+	});
+
+	/** The caret back in the input, and the chip row released. */
+	function toInput(): void {
+		armed = null;
+		inputEl?.focus({ preventScroll: true });
+	}
+
 	/**
-	 * Backspace, Escape and the arrows. The primitive's own handler runs after this
-	 * one, so a key this picker owns is prevented rather than shared.
+	 * The chip keys, Escape and the arrows, from the input or from a chip. The
+	 * primitive's own handler runs after this one, so a key this picker owns is
+	 * prevented rather than shared.
 	 */
 	function onKey(event: KeyboardEvent): void {
+		// A link or a remove control inside a chip owns its own keys.
+		if ((event.target as HTMLElement | null)?.closest('a,button')) return;
 		const intent = pickerKeyIntent(event.key, {
 			open,
 			query,
 			count: labels.length,
-			armed,
+			focused: armed,
 			editable: interactive,
 			multiple
 		});
-		if (!holdsArmed(event.key)) armed = null;
 		switch (intent.kind) {
 			case 'dismiss':
+				if (armed !== null) toInput();
 				setOpen(false);
 				return;
-			case 'arm':
+			case 'focus':
 				event.preventDefault();
-				armed = intent.index;
+				if (intent.index === null) toInput();
+				else armed = intent.index;
 				return;
 			case 'remove':
 				event.preventDefault();
+				armed = intent.then;
 				onRemoveAt?.(intent.index);
+				if (intent.then === null) inputEl?.focus({ preventScroll: true });
+				return;
+			case 'type':
+				event.preventDefault();
+				toInput();
+				typed(query + intent.key);
+				return;
+			case 'open':
+				event.preventDefault();
+				toInput();
+				setOpen(true);
 				return;
 			case 'follow':
 				void tick().then(() => scrollHighlightedIntoView(listEl));
@@ -353,6 +392,9 @@
 			return;
 		}
 		onSelect(next);
+		// A press on a row leaves the caret in the list; the next key belongs to the
+		// control, so the input takes it back.
+		inputEl?.focus({ preventScroll: true });
 	}
 
 	function clear(): void {

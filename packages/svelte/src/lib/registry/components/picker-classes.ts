@@ -121,9 +121,14 @@ export const PICKER_ROW_INDICATOR = 'flex h-5 w-4 shrink-0 items-center justify-
 export const PICKER_ROW =
 	'data-highlighted:bg-accent data-highlighted:text-accent-foreground relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0';
 
-/** The clear control, shared by every picker in this registry. */
+/**
+ * The clear control and the chevron, shared by every picker in this registry.
+ *
+ * A coarse pointer gets a 44px box centred on the glyph, drawn as a pseudo-element so
+ * the control keeps its own size and nothing around it moves.
+ */
 export const PICKER_ICON_BUTTON =
-	'hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring focus-visible:ring-offset-background pointer-events-auto shrink-0 rounded-sm p-0.5 opacity-70 outline-none transition-colors duration-150 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-2 motion-safe:active:scale-[0.98]';
+	"hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring focus-visible:ring-offset-background pointer-events-auto shrink-0 rounded-sm p-0.5 opacity-70 outline-none transition-colors duration-150 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-2 motion-safe:active:scale-[0.98] pointer-coarse:relative pointer-coarse:before:absolute pointer-coarse:before:top-1/2 pointer-coarse:before:left-1/2 pointer-coarse:before:size-11 pointer-coarse:before:-translate-x-1/2 pointer-coarse:before:-translate-y-1/2 pointer-coarse:before:content-['']";
 
 /** The chip a Backspace has armed: the focus ring, inset so the chip row's clipping and the control's edge never cut it. */
 export const PICKER_ARMED = 'ring-ring ring-2 ring-inset';

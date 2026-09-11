@@ -53,6 +53,8 @@ for (const table of $$('table[data-props]')) {
       continue;
     }
     inherited++;
+    if (!/^from [A-Z]/.test(link.textContent.trim()))
+      failures.push(`${key}: ${name} says "${link.textContent.trim()}" instead of naming its page`);
     const href = new URL(link.getAttribute('href'), location.href);
     const target = href.hash.slice(1);
     const there = await idsOn(href.pathname);

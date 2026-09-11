@@ -4,7 +4,7 @@
  *
  * `<Props name="user-multi-picker" />` draws every prop the widget takes: its own
  * rows first, then its base's, an override where the base's row sat. An inherited
- * row names the item it comes from and links to that row on its page. `kind` picks
+ * row says which page it comes from, named as the sidebar names it, and links to that row. `kind` picks
  * the table: props, events, slots or keyboard.
  *
  * Every row carries an id -- `prop-size`, `event-onValueChange`, `slot-row`,
@@ -12,6 +12,7 @@
  * on a page of its own uses those ids bare; one drawn as a section of another item's
  * page prefixes them with its own name.
  */
+import { getCollection } from 'astro:content';
 import { resolve, type Kind } from '../props/_resolve';
 import type { EventRow, KeyRow, PropRow, SlotRow } from '../props/_types';
 
@@ -23,6 +24,15 @@ interface Props {
 
 const { name, kind = 'props' } = Astro.props;
 const rows = resolve(name, kind);
+
+/** The title of every widget page, by slug, as the sidebar shows it. */
+const titles = new Map((await getCollection('docs')).map((page) => [page.id, page.data.title]));
+
+/** The page an origin link lands on, named the way the sidebar names it. */
+function originOf(href: string): string {
+  const slug = href.replace(/^\//, '').replace(/\/?(#.*)?$/, '');
+  return titles.get(slug) ?? slug.split('/').pop() ?? slug;
+}
 
 /** Inline markdown of a cell: code spans, links and `kbd`, on escaped text. */
 function inline(text: string | undefined): string {
@@ -98,7 +108,7 @@ function head(row: PropRow | EventRow | SlotRow | KeyRow): string {
             <Fragment set:html={head(entry.row)} />
             {entry.href && (
               <a class="sg-props-from" href={entry.href}>
-                {entry.owner}
+                from {originOf(entry.href)}
               </a>
             )}
           </td>
@@ -111,16 +121,48 @@ function head(row: PropRow | EventRow | SlotRow | KeyRow): string {
   </tbody>
 </table>
 
+<script>
+  // A row anchor is reached from another page, and the demos hydrate after the browser has
+  // scrolled, so the row is held in view while the page settles.
+  const jump = () => {
+    const id = decodeURIComponent(location.hash.slice(1));
+    const row = id ? document.getElementById(id) : null;
+    if (row?.tagName === 'TR') row.scrollIntoView({ block: 'start' });
+  };
+  const settle = () => {
+    jump();
+    const main = document.querySelector('main') ?? document.body;
+    const watcher = new ResizeObserver(jump);
+    watcher.observe(main);
+    setTimeout(() => watcher.disconnect(), 2500);
+  };
+  window.addEventListener('load', settle);
+  window.addEventListener('hashchange', jump);
+</script>
+
 <style>
   /* The table is Starlight's own; only the origin link is ours. */
   .sg-props-from {
     display: block;
     font-size: var(--sl-text-xs);
     color: var(--muted-foreground);
-    text-decoration: none;
+    text-decoration: underline;
+    text-decoration-color: color-mix(in oklab, var(--muted-foreground) 50%, transparent);
+    text-underline-offset: 0.2em;
+    transition: color 150ms;
   }
 
   .sg-props-from:hover {
-    text-decoration: underline;
+    color: var(--foreground);
+    text-decoration-color: currentColor;
+  }
+
+  /* A row reached by its anchor clears the sticky header and says where the reader landed. */
+  tr[id] {
+    scroll-margin-top: calc(var(--sl-nav-height) + 1rem);
+  }
+
+  tr:target > td {
+    background: var(--muted);
   }
 </style>

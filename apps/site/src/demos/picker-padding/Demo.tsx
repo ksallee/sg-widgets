@@ -14,10 +14,12 @@ import { EntityPicker } from '@/registry/sg/components/entity-picker';
 import { EntityTypeMultiPicker } from '@/registry/sg/components/entity-type-multi-picker';
 import { EntityTypePicker } from '@/registry/sg/components/entity-type-picker';
 import { FieldPicker } from '@/registry/sg/components/field-picker';
-import { ProjectMultiPicker, ProjectPicker } from '@/registry/sg/components/project-picker';
+import { ProjectMultiPicker } from '@/registry/sg/components/project-multi-picker';
+import { ProjectPicker } from '@/registry/sg/components/project-picker';
 import { StatusMultiPicker } from '@/registry/sg/components/status-multi-picker';
 import { StatusPicker } from '@/registry/sg/components/status-picker';
-import { UserMultiPicker, UserPicker } from '@/registry/sg/components/user-picker';
+import { UserMultiPicker } from '@/registry/sg/components/user-multi-picker';
+import { UserPicker } from '@/registry/sg/components/user-picker';
 import { createDemoContext } from '../_shared/client';
 
 type Size = 'sm' | 'md' | 'lg';

@@ -1,13 +1,13 @@
 ---
 title: ProjectPicker
-description: Projects, chosen by server-side search, with the project thumbnail and its status.
+description: One project, chosen by server-side search, with the project thumbnail and its status.
 ---
 
 import Demo from '../../../components/Demo.astro';
 
 Searches projects on the server, showing each one's thumbnail and status.
 
-Single and multi: `ProjectPicker` takes one project, `ProjectMultiPicker` several; both are on this page.
+Single and multi: [ProjectMultiPicker](/widgets/project-multi-picker/) takes several projects.
 
 ## Install
 
@@ -16,23 +16,20 @@ pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/project-picker.json
 pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/project-picker.json
 ```
 
-The item holds both variants. React installs one file exporting `ProjectPicker` and
-`ProjectMultiPicker`; Svelte installs `project-picker.svelte` and `project-multi-picker.svelte`.
-Both configure the generic pickers, which are installed alongside.
+The item installs the single picker alone. A caller who installed it for `ProjectMultiPicker` takes
+the `project-multi-picker` item instead; this note stands for one release.
 
-<Demo name="project-picker" title="ProjectPicker and ProjectMultiPicker: archived projects, hydration, sizes, states" />
+<Demo name="project-picker" title="ProjectPicker: archived projects, hydration, sizes, states" />
 
 ## Props
 
-Every prop of [EntityPicker](/widgets/entity-picker/) and
-[EntityMultiPicker](/widgets/entity-multi-picker/) except `entityTypes`, plus:
+Every prop of [EntityPicker](/widgets/entity-picker/) except `entityTypes`, plus:
 
 | prop | type | default | meaning |
 |---|---|---|---|
 | `includeArchived` | `boolean` | `false` | Offer projects whose `archived` checkbox is set. |
 
-`placeholder` defaults to `Search for a project`, or `Search for projects` on the multi picker. The
-multi picker takes `summary` and `max` like every other multi picker.
+`placeholder` defaults to `Search for a project`.
 
 The sub-label is the project's status, so an active project can be told from a bidding one.
 
@@ -40,7 +37,7 @@ The sub-label is the project's status, so an active project can be told from a b
 
 | event | payload | when |
 |---|---|---|
-| `onValueChange` | `EntityRef`, `PickerRow` | The selection changed. The multi picker sends arrays. |
+| `onValueChange` | `EntityRef`, `PickerRow` | The selection changed. |
 | `onError` | `Error` | A read failed. The list shows it inline as well. |
 | `onOpenChange` | `boolean` | The popup opened or closed. Svelte also binds it with `bind:open`. |
 
@@ -50,8 +47,7 @@ None.
 
 ## Keyboard
 
-The same as [EntityPicker](/widgets/entity-picker/) and
-[EntityMultiPicker](/widgets/entity-multi-picker/).
+The same as [EntityPicker](/widgets/entity-picker/).
 
 ## API behaviour
 

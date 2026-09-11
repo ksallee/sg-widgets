@@ -47,7 +47,8 @@ import { StatusPicker } from '@/registry/sg/components/status-picker';
 import { TextEditor } from '@/registry/sg/components/text-editor';
 import { UrlEditor } from '@/registry/sg/components/url-editor';
 import { UserAvatar } from '@/registry/sg/components/user-avatar';
-import { UserMultiPicker, UserPicker } from '@/registry/sg/components/user-picker';
+import { UserMultiPicker } from '@/registry/sg/components/user-multi-picker';
+import { UserPicker } from '@/registry/sg/components/user-picker';
 import { createDemoContext } from '../_shared/client';
 import { DemoContextProvider } from '../_shared/react';
 

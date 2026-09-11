@@ -1393,13 +1393,36 @@
         "lucide-react"
       ],
       "registryDependencies": [
-        "https://sg-widgets.dev/r/react/entity-picker.json",
-        "https://sg-widgets.dev/r/react/entity-multi-picker.json"
+        "https://sg-widgets.dev/r/react/entity-picker.json"
       ],
-      "docs": "One file exporting UserPicker and UserMultiPicker. Both configure the generic pickers; neither forks them.",
+      "docs": "Configures the generic entity picker for people; it does not fork it.",
       "files": [
         {
           "path": "src/registry/sg/components/user-picker.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "user-multi-picker",
+      "type": "registry:component",
+      "title": "User Multi Picker",
+      "description": "Several people and script accounts, chosen by server-side search across name, login and email.",
+      "categories": [
+        "flow-production-tracking",
+        "picker"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "https://sg-widgets.dev/r/react/entity-multi-picker.json"
+      ],
+      "docs": "The person configuration on the generic multi picker. The value is an array of references, shown as chips.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/user-multi-picker.tsx",
           "type": "registry:component"
         }
       ]
@@ -1418,13 +1441,36 @@
         "lucide-react"
       ],
       "registryDependencies": [
-        "https://sg-widgets.dev/r/react/entity-picker.json",
-        "https://sg-widgets.dev/r/react/entity-multi-picker.json"
+        "https://sg-widgets.dev/r/react/entity-picker.json"
       ],
-      "docs": "One file exporting ProjectPicker and ProjectMultiPicker. Archived projects are left out unless includeArchived is set.",
+      "docs": "Archived projects are left out unless includeArchived is set.",
       "files": [
         {
           "path": "src/registry/sg/components/project-picker.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "project-multi-picker",
+      "type": "registry:component",
+      "title": "Project Multi Picker",
+      "description": "Several projects, chosen by server-side search, with the project thumbnail and its status.",
+      "categories": [
+        "flow-production-tracking",
+        "picker"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "https://sg-widgets.dev/r/react/entity-multi-picker.json"
+      ],
+      "docs": "The project configuration on the generic multi picker. The value is an array of references, shown as chips.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/project-multi-picker.tsx",
           "type": "registry:component"
         }
       ]

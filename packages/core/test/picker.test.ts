@@ -15,9 +15,16 @@ import {
   mergeFilters,
   nameSearchFilter,
   placeholderName,
+  PROJECT_PICKER_FIELDS,
+  projectPickerFilters,
   pruneFilterToFields,
   queryTokens,
   summariseSelection,
+  USER_PICKER_FIELDS,
+  userPickerFilters,
+  userPickerSearchFields,
+  userPickerSubLabel,
+  userPickerTypes,
   userSearchFields,
   withSelectedPinned,
 } from '../src/picker.js';
@@ -120,6 +127,68 @@ describe('userSearchFields', () => {
 
   it('is empty for an empty query', () => {
     expect(userSearchFields('   ')).toEqual([]);
+  });
+});
+
+describe('the person configuration both user pickers take', () => {
+  it('offers script accounts after people, and people alone when they are not wanted', () => {
+    expect(userPickerTypes(true)).toEqual(['HumanUser', 'ApiUser']);
+    expect(userPickerTypes(false)).toEqual(['HumanUser']);
+  });
+
+  it('sends the active condition unless inactive people are asked for', () => {
+    expect(toApi3Hash(userPickerFilters(false, null))).toEqual({
+      logical_operator: 'and',
+      conditions: [['sg_status_list', 'is', 'act']],
+    });
+    expect(userPickerFilters(true, null).conditions).toHaveLength(0);
+  });
+
+  it("keeps the caller's own filter beside it", () => {
+    const merged = userPickerFilters(false, group('and', [condition('id', 'is', 7)]));
+    expect(toApi3Hash(merged)).toEqual({
+      logical_operator: 'and',
+      conditions: [
+        { logical_operator: 'and', conditions: [['id', 'is', 7]] },
+        ['sg_status_list', 'is', 'act'],
+      ],
+    });
+  });
+
+  it('names a script account, and a person by their address', () => {
+    const script: PickerRow = { type: 'ApiUser', id: 3, name: 'sync', values: {} };
+    const person: PickerRow = { type: 'HumanUser', id: 20, name: 'Ada Lovelace', values: { email: 'ada@example.studio' } };
+    const nameless: PickerRow = { type: 'HumanUser', id: 21, name: 'Bruno Kessel', values: {} };
+    expect(userPickerSubLabel(script)).toBe('API user');
+    expect(userPickerSubLabel(person)).toBe('ada@example.studio');
+    expect(userPickerSubLabel(nameless)).toBe('');
+  });
+
+  it("puts the caller's search fields after the ones a person is searched by", () => {
+    expect(userPickerSearchFields(['sg_department'])('ada')).toEqual([
+      { path: 'email', operator: 'starts_with' },
+      'login',
+      'sg_department',
+    ]);
+    expect(userPickerSearchFields((query) => (query.length > 2 ? ['sg_department'] : []))('ad')).toEqual([
+      { path: 'email', operator: 'starts_with' },
+      'login',
+    ]);
+  });
+});
+
+describe('the project configuration both project pickers take', () => {
+  it('hides archived projects unless they are asked for', () => {
+    expect(toApi3Hash(projectPickerFilters(false, null))).toEqual({
+      logical_operator: 'and',
+      conditions: [['archived', 'is', false]],
+    });
+    expect(projectPickerFilters(true, null).conditions).toHaveLength(0);
+  });
+
+  it('reads the status field Project alone uses', () => {
+    expect(PROJECT_PICKER_FIELDS).toContain('sg_status');
+    expect(USER_PICKER_FIELDS).toContain('sg_status_list');
   });
 });
 

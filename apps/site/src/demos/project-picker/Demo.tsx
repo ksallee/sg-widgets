@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import type { EntityRef } from '@sg-widgets/core';
-import { ProjectMultiPicker, ProjectPicker } from '@/registry/sg/components/project-picker';
+import { ProjectPicker } from '@/registry/sg/components/project-picker';
 import { createDemoContext } from '../_shared/client';
 
 const group = 'flex flex-col gap-2';
@@ -24,7 +24,6 @@ export default function ProjectPickerDemo() {
     : { type: 'Project', id: context.projectId, name: 'Blue Moon Rising' };
 
   const [one, setOne] = useState<EntityRef | null>(null);
-  const [several, setSeveral] = useState<EntityRef[]>([]);
   const [archived, setArchived] = useState<EntityRef | null>(null);
   // A bare reference: type and id, no name. Resolved on mount.
   const [bare, setBare] = useState<EntityRef | null>({ type: 'Project', id: context.projectFor(71) });
@@ -36,14 +35,6 @@ export default function ProjectPickerDemo() {
         <div className={field}>
           <span className={caption}>One project, clearable</span>
           <ProjectPicker context={context} value={one} onValueChange={setOne} clearable />
-        </div>
-      </section>
-
-      <section className={group} data-demo-case="multi">
-        <h4 className={label}>Several, with checkbox rows</h4>
-        <div className={field}>
-          <span className={caption}>Several projects at once</span>
-          <ProjectMultiPicker context={context} value={several} onValueChange={setSeveral} clearable />
         </div>
       </section>
 

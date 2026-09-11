@@ -1,21 +1,24 @@
 <script lang="ts">
 	import type { HTMLAttributes } from 'svelte/elements';
-	import type { EntityRef, PickerRow } from '@sg-widgets/core';
+	import type { EntityRef, PickerRow, UserPickerOptions } from '@sg-widgets/core';
+	import {
+		USER_PICKER_FIELDS,
+		userPickerFilters,
+		userPickerSearchFields,
+		userPickerSubLabel,
+		userPickerTypes
+	} from '@sg-widgets/core';
 	import { type WithElementRef } from '$lib/utils.js';
 	import EntityMultiPicker, {
 		type EntityMultiPickerBaseProps
 	} from './entity-multi-picker.svelte';
-	import { USER_FIELDS, userFilters, userSearchFieldsWith, userSubLabel, userTypes } from './user-picker.svelte';
 
 	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>, HTMLDivElement> &
-		Omit<EntityMultiPickerBaseProps, 'entityTypes'> & {
-		value?: EntityRef[];
-		onValueChange?: (value: EntityRef[], rows: PickerRow[]) => void;
-		/** Search script accounts alongside people. */
-		includeApiUsers?: boolean;
-		/** Offer people whose status is `dis`. */
-		includeInactive?: boolean;
-	};
+		Omit<EntityMultiPickerBaseProps, 'entityTypes'> &
+		UserPickerOptions & {
+			value?: EntityRef[];
+			onValueChange?: (value: EntityRef[], rows: PickerRow[]) => void;
+		};
 
 	let {
 		value = $bindable([]),
@@ -42,11 +45,11 @@
 	bind:value
 	bind:open
 	bind:ref
-	entityTypes={userTypes(includeApiUsers)}
-	searchFields={userSearchFieldsWith(searchFields)}
-	fields={[...USER_FIELDS, ...fields]}
-	filters={userFilters(includeInactive, filters)}
-	subLabel={userSubLabel}
+	entityTypes={userPickerTypes(includeApiUsers)}
+	searchFields={userPickerSearchFields(searchFields)}
+	fields={[...USER_PICKER_FIELDS, ...fields]}
+	filters={userPickerFilters(includeInactive, filters)}
+	subLabel={userPickerSubLabel}
 	{placeholder}
 	{...rest}
 />

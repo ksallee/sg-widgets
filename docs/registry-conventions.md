@@ -15,6 +15,10 @@ Every item is `type: "registry:component"`. Files are `type: "registry:component
 item is a single file. Multi-file items are possible but flatten differently in each CLI (see §6),
 so keep to one file per item until a widget genuinely needs more.
 
+A renamed widget keeps its old name as a deprecated item for one release: the old item holds a
+module that re-exports the new one, names the new item as its only `registryDependencies` entry,
+and says "Deprecated" in its description. Its docs page keeps its URL and points at the new one.
+
 ## 2. Where the source lives
 
 | | path on disk | imported in source as | installs to |

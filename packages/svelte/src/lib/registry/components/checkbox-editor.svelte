@@ -1,16 +1,13 @@
 <script lang="ts" module>
-	export type CheckboxEditorSize = 'sm' | 'md' | 'lg';
+	import type { ControlSize } from '$lib/registry/components/control-classes.js';
+
+	export type CheckboxEditorSize = ControlSize;
 
 	/** The switch primitive carries two sizes; the third reuses the larger one. */
 	const SWITCH: Record<CheckboxEditorSize, 'sm' | 'default'> = {
 		sm: 'sm',
 		md: 'default',
 		lg: 'default'
-	};
-	const BOX: Record<CheckboxEditorSize, string> = {
-		sm: 'h-8',
-		md: 'h-9',
-		lg: 'h-10'
 	};
 </script>
 
@@ -20,6 +17,8 @@
 	import type { FieldSchema } from '@sg-widgets/core';
 	import { Switch } from '$lib/components/ui/switch/index.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
+	import { CONTROL_HEIGHT } from '$lib/registry/components/control-classes.js';
+	import FieldError from '$lib/registry/components/field-error.svelte';
 
 	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>, HTMLDivElement> & {
 		/** Two-state and never null: an untouched row already reads false (field_types/checkbox). */
@@ -83,7 +82,7 @@
 	class={cn('flex w-full min-w-0 flex-col gap-2', className)}
 	{...rest}
 >
-	<div class={cn('flex w-full min-w-0 items-center gap-2', BOX[size])}>
+	<div class={cn('flex w-full min-w-0 items-center gap-2', CONTROL_HEIGHT[size])}>
 		<Switch
 			size={SWITCH[size]}
 			{checked}
@@ -96,11 +95,5 @@
 		/>
 		<span aria-hidden="true" class="truncate text-sm select-none">{label}</span>
 	</div>
-	{#if error}
-		{#if errorMessage}
-			{@render errorMessage(error)}
-		{:else}
-			<p data-slot="field-editor-error" class="text-destructive text-xs">{error}</p>
-		{/if}
-	{/if}
+	<FieldError message={error} {errorMessage} />
 </div>

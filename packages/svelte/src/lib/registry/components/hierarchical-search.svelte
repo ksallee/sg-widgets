@@ -36,13 +36,8 @@
 	/** Leaf types a drill-down usually ends on. */
 	export const HIERARCHICAL_SEARCH_TYPES = ['Shot', 'Asset', 'Sequence', 'Task'];
 
-	const DEBOUNCE_MS = 250;
 	/** Each hit costs one path lookup, so the search asks for fewer rows than the endpoint allows. */
 	const LEAF_LIMIT = 10;
-
-	function typeMap(types: HierarchicalSearchTypes): Record<string, WireCondition[] | null> {
-		return Array.isArray(types) ? Object.fromEntries(types.map((t) => [t, null])) : types;
-	}
 
 	/** The project a root path names, for scoping the text search that finds the leaves. */
 	function projectOf(rootPath: string): number | null {
@@ -52,10 +47,12 @@
 </script>
 
 <script lang="ts">
+	import type { Component } from 'svelte';
 	import type { HTMLAttributes } from 'svelte/elements';
 	import type { SgContext } from '@sg-widgets/core';
 	import {
 		breadcrumb,
+		errorText,
 		hierarchyEntity,
 		hydrate,
 		NO_MATCH_LABEL,
@@ -64,23 +61,19 @@
 		pathRefs,
 		rowFields,
 		scopeToProject,
+		SEARCH_DEBOUNCE_MS,
+		searchTypeMap,
 		stateLine
 	} from '@sg-widgets/core';
-	import Box from '@lucide/svelte/icons/box';
 	import ChevronRight from '@lucide/svelte/icons/chevron-right';
-	import Clapperboard from '@lucide/svelte/icons/clapperboard';
-	import Film from '@lucide/svelte/icons/film';
 	import Folder from '@lucide/svelte/icons/folder';
-	import ListChecks from '@lucide/svelte/icons/list-checks';
 	import Search from '@lucide/svelte/icons/search';
-	import Tag from '@lucide/svelte/icons/tag';
 	import TriangleAlert from '@lucide/svelte/icons/triangle-alert';
-	import User from '@lucide/svelte/icons/user';
-	import Video from '@lucide/svelte/icons/video';
 	import * as Command from '$lib/components/ui/command/index.js';
-	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
+	import { entityGlyph } from '$lib/registry/components/entity-glyphs.js';
 	import Row from '$lib/registry/components/picker-row.svelte';
+	import SearchSkeleton from '$lib/registry/components/search-skeleton.svelte';
 	import StateLine from '$lib/registry/components/state-line.svelte';
 
 	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>, HTMLDivElement> & {
@@ -170,19 +163,9 @@
 	});
 	const empty = $derived(!loading && failure === null && rows.length === 0);
 
-	const GLYPHS: Record<string, typeof Tag> = {
-		Shot: Clapperboard,
-		Asset: Box,
-		Sequence: Film,
-		Version: Video,
-		Task: ListChecks,
-		HumanUser: User,
-		Project: Folder
-	};
-
-	function glyphFor(row: HierarchicalSearchRow): typeof Tag {
-		if (!row.ref) return Folder;
-		return GLYPHS[row.ref.type] ?? Tag;
+	/** A level is a folder; a row takes its type's own glyph. */
+	function glyphFor(row: HierarchicalSearchRow): Component {
+		return row.ref ? entityGlyph(row.ref.type) : Folder;
 	}
 
 	/** The row a list entry draws as: the reference it stands for and what a search read. */
@@ -207,7 +190,7 @@
 
 	function browseRow(node: HierarchyNode, crumbs: string[]): HierarchicalSearchRow {
 		const ref = hierarchyEntity(node.ref);
-		const allowed = Object.keys(typeMap(entityTypes));
+		const allowed = Object.keys(searchTypeMap(entityTypes));
 		return {
 			label: node.label,
 			crumbs,
@@ -233,7 +216,7 @@
 			rows = node.children.map((child) => browseRow(child, [...crumbs.map((c) => c.label), node.label]));
 		} catch (error) {
 			if (id !== requestId) return;
-			failure = error instanceof Error ? error.message : String(error);
+			failure = errorText(error);
 			rows = [];
 		} finally {
 			if (id === requestId) loading = false;
@@ -250,7 +233,7 @@
 		loading = true;
 		failure = null;
 		try {
-			let types = typeMap(entityTypes);
+			let types = searchTypeMap(entityTypes);
 			const projectId = projectOf(rootPath);
 			if (projectId !== null) types = await scopeToProject(schema, types, projectId);
 			const found = await context.client.textSearch(text, types, { size: LEAF_LIMIT, number: 1 });
@@ -289,7 +272,7 @@
 			});
 		} catch (error) {
 			if (id !== requestId) return;
-			failure = error instanceof Error ? error.message : String(error);
+			failure = errorText(error);
 			rows = [];
 		} finally {
 			if (id === requestId) loading = false;
@@ -307,7 +290,7 @@
 			void browse(here, trail);
 			return;
 		}
-		timer = setTimeout(() => void search(text), DEBOUNCE_MS);
+		timer = setTimeout(() => void search(text), SEARCH_DEBOUNCE_MS);
 	}
 
 	function drill(row: HierarchicalSearchRow): void {
@@ -381,22 +364,11 @@
 					label={stateLine('error', { errorLabel }, failure)}
 				/>
 			{:else if loading && rows.length === 0}
-				<div
-					data-slot="search-loading"
-					class="flex flex-col gap-2 p-1"
-					aria-busy="true"
-					aria-label={stateLine('loading', { loadingLabel })}
-				>
-					{#each [0, 1, 2] as line (line)}
-						<div class="flex items-center gap-2 px-2 py-1.5">
-							<Skeleton class={cn('shrink-0', LEAD[size])} />
-							<div class="flex min-w-0 flex-1 flex-col gap-1">
-								<Skeleton class="h-3 w-1/2" />
-								<Skeleton class="h-2.5 w-1/4" />
-							</div>
-						</div>
-					{/each}
-				</div>
+				<SearchSkeleton
+					slotName="search-loading"
+					lead={cn('shrink-0', LEAD[size])}
+					label={stateLine('loading', { loadingLabel })}
+				/>
 			{:else if empty}
 				<StateLine
 					state="empty"

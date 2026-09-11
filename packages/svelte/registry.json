@@ -36,6 +36,7 @@
         "@lucide/svelte"
       ],
       "registryDependencies": [
+        "local:leaf-classes",
         "local:status-glyph"
       ],
       "files": [
@@ -55,6 +56,8 @@
         "@lucide/svelte"
       ],
       "registryDependencies": [
+        "local:entity-glyphs",
+        "local:leaf-classes",
         "local:entity-card",
         "hover-card"
       ],
@@ -75,6 +78,7 @@
         "@lucide/svelte"
       ],
       "registryDependencies": [
+        "local:entity-glyphs",
         "local:state-line",
         "local:status-badge",
         "local:thumbnail",
@@ -114,7 +118,9 @@
         "@sg-widgets/core",
         "@lucide/svelte"
       ],
-      "registryDependencies": [],
+      "registryDependencies": [
+        "local:leaf-classes"
+      ],
       "files": [
         {
           "path": "src/lib/registry/components/user-avatar.svelte",
@@ -182,6 +188,24 @@
       ]
     },
     {
+      "name": "search-skeleton",
+      "type": "registry:component",
+      "title": "Search Skeleton",
+      "description": "The rows a search widget draws while its read is in flight.",
+      "dependencies": [
+        "@sg-widgets/core"
+      ],
+      "registryDependencies": [
+        "skeleton"
+      ],
+      "files": [
+        {
+          "path": "src/lib/registry/components/search-skeleton.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
       "name": "picker-classes",
       "type": "registry:component",
       "title": "Picker Classes",
@@ -198,6 +222,115 @@
       ]
     },
     {
+      "name": "picker-control",
+      "type": "registry:component",
+      "title": "Picker Control",
+      "description": "The control box and popup shell every picker in this registry is built on.",
+      "categories": [
+        "flow-production-tracking",
+        "atom"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte",
+        "bits-ui"
+      ],
+      "registryDependencies": [
+        "local:picker-classes",
+        "local:state-line",
+        "skeleton"
+      ],
+      "docs": "The control and the popup of every picker: the box and its states, the press rule, the keyboard model, inline against summary, and the popup shell.",
+      "files": [
+        {
+          "path": "src/lib/registry/components/picker-control.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "leaf-classes",
+      "type": "registry:component",
+      "title": "Leaf Classes",
+      "description": "The ladder and the remove control every badge, chip and avatar in this registry wears.",
+      "dependencies": [
+        "@sg-widgets/core"
+      ],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "src/lib/registry/components/leaf-classes.ts",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "entity-glyphs",
+      "type": "registry:component",
+      "title": "Entity Glyphs",
+      "description": "A glyph per entity type, with the tag every unlisted type takes.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte"
+      ],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "src/lib/registry/components/entity-glyphs.ts",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "control-classes",
+      "type": "registry:component",
+      "title": "Control Classes",
+      "description": "The height, inset and glyph ladder every non-picker control in this registry wears.",
+      "dependencies": [
+        "@sg-widgets/core"
+      ],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "src/lib/registry/components/control-classes.ts",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "field-error",
+      "type": "registry:component",
+      "title": "Field Error",
+      "description": "The line a field editor shows under its control when a parse fails.",
+      "dependencies": [
+        "@sg-widgets/core"
+      ],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "src/lib/registry/components/field-error.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "editor-calendar",
+      "type": "registry:component",
+      "title": "Editor Calendar",
+      "description": "The calendar day the date editors hand the Calendar primitive.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@internationalized/date"
+      ],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "src/lib/registry/components/editor-calendar.ts",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
       "name": "entity-type-picker",
       "type": "registry:component",
       "title": "Entity Type Picker",
@@ -208,9 +341,8 @@
         "bits-ui"
       ],
       "registryDependencies": [
+        "local:picker-control",
         "local:picker-classes",
-        "local:state-line",
-        "skeleton",
         "checkbox"
       ],
       "files": [
@@ -293,6 +425,8 @@
         "@lucide/svelte"
       ],
       "registryDependencies": [
+        "local:field-error",
+        "local:control-classes",
         "input",
         "textarea"
       ],
@@ -313,6 +447,8 @@
         "@lucide/svelte"
       ],
       "registryDependencies": [
+        "local:field-error",
+        "local:control-classes",
         "button",
         "input"
       ],
@@ -333,6 +469,8 @@
         "@lucide/svelte"
       ],
       "registryDependencies": [
+        "local:control-classes",
+        "local:field-error",
         "switch"
       ],
       "files": [
@@ -353,6 +491,9 @@
         "@internationalized/date"
       ],
       "registryDependencies": [
+        "local:editor-calendar",
+        "local:field-error",
+        "local:control-classes",
         "input",
         "button",
         "calendar",
@@ -376,6 +517,9 @@
         "@internationalized/date"
       ],
       "registryDependencies": [
+        "local:editor-calendar",
+        "local:field-error",
+        "local:control-classes",
         "input",
         "button",
         "calendar",
@@ -389,20 +533,64 @@
       ]
     },
     {
-      "name": "list-select",
+      "name": "list-picker",
       "type": "registry:component",
-      "title": "List Editor",
-      "description": "A list field as a select over its valid values.",
+      "title": "List Picker",
+      "description": "One value of a list field, picked from the set its schema declares.",
       "dependencies": [
         "@sg-widgets/core",
-        "@lucide/svelte"
+        "@lucide/svelte",
+        "bits-ui"
       ],
       "registryDependencies": [
-        "select"
+        "local:picker-control",
+        "local:picker-row",
+        "local:picker-classes"
       ],
       "files": [
         {
-          "path": "src/lib/registry/components/list-select.svelte",
+          "path": "src/lib/registry/components/list-picker.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "list-select",
+      "type": "registry:component",
+      "title": "List Select",
+      "description": "Deprecated: the former name of list-picker, which it re-exports.",
+      "dependencies": [
+        "@sg-widgets/core"
+      ],
+      "registryDependencies": [
+        "local:list-picker"
+      ],
+      "files": [
+        {
+          "path": "src/lib/registry/components/list-select.ts",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "list-multi-picker",
+      "type": "registry:component",
+      "title": "List Multi Picker",
+      "description": "Several values of a list field, picked from the set its schema declares.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte",
+        "bits-ui"
+      ],
+      "registryDependencies": [
+        "local:picker-control",
+        "local:picker-row",
+        "local:picker-classes",
+        "checkbox"
+      ],
+      "files": [
+        {
+          "path": "src/lib/registry/components/list-multi-picker.svelte",
           "type": "registry:component"
         }
       ]
@@ -411,20 +599,16 @@
       "name": "list-multi-select",
       "type": "registry:component",
       "title": "List Multi Select",
-      "description": "Several values of a list field, chosen from its valid values with checkboxes.",
+      "description": "Deprecated: the former name of list-multi-picker, which it re-exports.",
       "dependencies": [
-        "@sg-widgets/core",
-        "@lucide/svelte"
+        "@sg-widgets/core"
       ],
       "registryDependencies": [
-        "badge",
-        "checkbox",
-        "command",
-        "popover"
+        "local:list-multi-picker"
       ],
       "files": [
         {
-          "path": "src/lib/registry/components/list-multi-select.svelte",
+          "path": "src/lib/registry/components/list-multi-select.ts",
           "type": "registry:component"
         }
       ]
@@ -439,6 +623,8 @@
         "@lucide/svelte"
       ],
       "registryDependencies": [
+        "local:field-error",
+        "local:control-classes",
         "input"
       ],
       "files": [
@@ -458,6 +644,8 @@
         "@lucide/svelte"
       ],
       "registryDependencies": [
+        "local:field-error",
+        "local:control-classes",
         "input"
       ],
       "files": [
@@ -500,6 +688,22 @@
       ]
     },
     {
+      "name": "entity-fields",
+      "type": "registry:component",
+      "title": "Entity Fields",
+      "description": "One entity type's fields, read through the context and kept.",
+      "dependencies": [
+        "@sg-widgets/core"
+      ],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "src/lib/registry/components/entity-fields.svelte.ts",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
       "name": "filter-editor",
       "type": "registry:component",
       "title": "Filter Editor",
@@ -509,6 +713,7 @@
         "@lucide/svelte"
       ],
       "registryDependencies": [
+        "local:entity-fields",
         "local:state-line",
         "button",
         "select",
@@ -546,6 +751,7 @@
         "@lucide/svelte"
       ],
       "registryDependencies": [
+        "local:control-classes",
         "badge",
         "button",
         "dialog",
@@ -568,6 +774,8 @@
         "@lucide/svelte"
       ],
       "registryDependencies": [
+        "local:entity-fields",
+        "local:control-classes",
         "badge",
         "button",
         "checkbox",
@@ -618,11 +826,9 @@
         "@lucide/svelte"
       ],
       "registryDependencies": [
-        "local:picker-row",
-        "local:state-line",
-        "local:status-badge",
-        "select",
-        "skeleton"
+        "local:list-picker",
+        "local:picker-classes",
+        "local:status-badge"
       ],
       "files": [
         {
@@ -638,20 +844,34 @@
       "description": "Several Flow Production Tracking statuses, picked from the codes a project offers.",
       "dependencies": [
         "@sg-widgets/core",
-        "@lucide/svelte",
         "bits-ui"
       ],
       "registryDependencies": [
+        "local:picker-control",
         "local:picker-classes",
         "local:picker-row",
-        "local:state-line",
         "local:status-badge",
-        "checkbox",
-        "skeleton"
+        "checkbox"
       ],
       "files": [
         {
           "path": "src/lib/registry/components/status-multi-picker.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "collection-source",
+      "type": "registry:component",
+      "title": "Collection Source",
+      "description": "The binding between a collection and the source behind it: its snapshot, its mode and its two-way sort and filter.",
+      "dependencies": [
+        "@sg-widgets/core"
+      ],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "src/lib/registry/components/collection-source.svelte.ts",
           "type": "registry:component"
         }
       ]
@@ -689,6 +909,7 @@
         "@tanstack/virtual-core"
       ],
       "registryDependencies": [
+        "local:collection-source",
         "local:collection-footer",
         "local:state-line",
         "local:field-value",
@@ -719,6 +940,7 @@
         "@tanstack/virtual-core"
       ],
       "registryDependencies": [
+        "local:collection-source",
         "local:collection-footer",
         "local:state-line",
         "local:entity-card",
@@ -745,6 +967,7 @@
         "@tanstack/virtual-core"
       ],
       "registryDependencies": [
+        "local:collection-source",
         "local:collection-footer",
         "local:state-line",
         "local:field-value",
@@ -794,15 +1017,13 @@
       "description": "One Flow Production Tracking entity, chosen by server-side search across one or more types.",
       "dependencies": [
         "@sg-widgets/core",
-        "@lucide/svelte",
         "bits-ui"
       ],
       "registryDependencies": [
+        "local:picker-control",
         "local:picker-classes",
-        "local:state-line",
         "local:entity-chip",
-        "local:picker-row",
-        "skeleton"
+        "local:picker-row"
       ],
       "files": [
         {
@@ -818,16 +1039,14 @@
       "description": "Several Flow Production Tracking entities, chosen by server-side search, with checkbox rows and removable chips.",
       "dependencies": [
         "@sg-widgets/core",
-        "@lucide/svelte",
         "bits-ui"
       ],
       "registryDependencies": [
+        "local:picker-control",
         "local:picker-classes",
-        "local:state-line",
         "local:entity-chip",
         "local:picker-row",
-        "checkbox",
-        "skeleton"
+        "checkbox"
       ],
       "files": [
         {
@@ -894,6 +1113,8 @@
         "@lucide/svelte"
       ],
       "registryDependencies": [
+        "local:search-skeleton",
+        "local:control-classes",
         "local:state-line",
         "local:entity-chip",
         "local:picker-row",
@@ -920,6 +1141,8 @@
         "@lucide/svelte"
       ],
       "registryDependencies": [
+        "local:search-skeleton",
+        "local:entity-glyphs",
         "local:state-line",
         "local:picker-row",
         "command",
@@ -942,6 +1165,8 @@
         "@lucide/svelte"
       ],
       "registryDependencies": [
+        "local:search-skeleton",
+        "local:control-classes",
         "local:state-line",
         "local:entity-chip",
         "local:picker-row",

@@ -7,37 +7,11 @@ import { Calendar } from '@/components/ui/calendar';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
+import { CONTROL_BOX, CONTROL_GLYPH, type ControlSize } from '@/registry/sg/components/control-classes';
+import { fromCalendarDate, toCalendarDate } from '@/registry/sg/components/editor-calendar';
+import { FieldError } from '@/registry/sg/components/field-error';
 
-export type DateEditorSize = 'sm' | 'md' | 'lg';
-
-/** The control ladder of `docs/design-rules.md`: 8 / 9 / 10. */
-const BOX: Record<DateEditorSize, string> = {
-  sm: 'h-8 px-2',
-  md: 'h-9 px-3',
-  lg: 'h-10 px-3',
-};
-
-/** The calendar glyph grows one step at `lg`, as the status picker's does. */
-const GLYPH: Record<DateEditorSize, string> = {
-  sm: 'size-4',
-  md: 'size-4',
-  lg: 'size-5',
-};
-
-const DATE_ONLY = /^(\d{4})-(\d{2})-(\d{2})$/;
-
-/** `YYYY-MM-DD` as a calendar day, or undefined when the string is not one (field_types/date). */
-function toCalendarDate(value: string | null | undefined): Date | undefined {
-  const m = DATE_ONLY.exec(String(value ?? '').trim());
-  if (!m) return undefined;
-  return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
-}
-
-function fromCalendarDate(value: Date | undefined): string {
-  if (!value) return '';
-  const pad = (n: number, width = 2) => String(n).padStart(width, '0');
-  return `${pad(value.getFullYear(), 4)}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}`;
-}
+export type DateEditorSize = ControlSize;
 
 export interface DateEditorProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'defaultValue'> {
   /** The stored day, exactly `YYYY-MM-DD`, with no time and no zone (field_types/date). */
@@ -176,11 +150,11 @@ export function DateEditor({
           className={cn(
             buttonVariants({ variant: 'outline' }),
             'w-full justify-start gap-1.5 font-normal tabular-nums',
-            BOX[size],
+            CONTROL_BOX[size],
             !value && 'text-muted-foreground',
           )}
         >
-          <CalendarIcon aria-hidden="true" className={cn(GLYPH[size], 'shrink-0')} />
+          <CalendarIcon aria-hidden="true" className={cn(CONTROL_GLYPH[size], 'shrink-0')} />
           <span className="truncate">{value ?? placeholder}</span>
         </PopoverTrigger>
         <PopoverContent align="start" className="flex w-auto flex-col gap-3 p-3" initialFocus={dayInput}>
@@ -192,7 +166,7 @@ export function DateEditor({
             disabled={disabled}
             readOnly={readonly}
             placeholder={placeholder}
-            className={cn('tabular-nums', BOX[size])}
+            className={cn('tabular-nums', CONTROL_BOX[size])}
             aria-invalid={isInvalid}
             aria-label={field?.displayName ?? 'Date'}
             aria-required={field?.mandatory}
@@ -206,13 +180,7 @@ export function DateEditor({
           <Calendar mode="single" className="p-0" selected={day} onSelect={pick} />
         </PopoverContent>
       </Popover>
-      {message
-        ? (errorMessage?.(message) ?? (
-            <p data-slot="field-editor-error" className="text-destructive text-xs">
-              {message}
-            </p>
-          ))
-        : null}
+      <FieldError message={message} errorMessage={errorMessage} />
     </div>
   );
 }

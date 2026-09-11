@@ -1,24 +1,11 @@
 <script lang="ts" module>
+	import type { LeafSize } from '$lib/registry/components/leaf-classes.js';
+
 	/** How much of the status to show. `glyph` is the bare icon, with no pill around it. */
 	export type StatusBadgeVariant = 'both' | 'icon' | 'text' | 'glyph';
-	export type StatusBadgeSize = 'sm' | 'md' | 'lg';
+	export type StatusBadgeSize = LeafSize;
 	/** Which of the two names the badge puts on show; the other one goes in the tooltip. */
 	export type StatusBadgeLabel = 'name' | 'code';
-
-	/**
-	 * Leaf atoms follow the thumbnail/avatar ladder of `docs/design-rules.md`
-	 * (6 / 8 / 10); the input ladder (8 / 9 / 10) is for controls.
-	 */
-	const BOX: Record<StatusBadgeSize, string> = {
-		sm: 'h-6 text-xs',
-		md: 'h-8 text-sm',
-		lg: 'h-10 text-sm'
-	};
-	const GLYPH: Record<StatusBadgeSize, string> = {
-		sm: 'size-4',
-		md: 'size-4',
-		lg: 'size-5'
-	};
 </script>
 
 <script lang="ts">
@@ -27,6 +14,7 @@
 	import { statusGlyph, statusLabel, statusPaint } from '@sg-widgets/core';
 	import X from '@lucide/svelte/icons/x';
 	import { cn, type WithElementRef } from '$lib/utils.js';
+	import { LEAF_BOX, LEAF_GLYPH, REMOVE_CONTROL } from '$lib/registry/components/leaf-classes.js';
 	import StatusGlyph from '$lib/registry/components/status-glyph.svelte';
 
 	// `color` is a deprecated HTML attribute Svelte types as `never`, so it is dropped
@@ -124,7 +112,7 @@
 -->
 {#snippet content()}
 	{#if showGlyph}
-		<StatusGlyph {status} {siteUrl} class={GLYPH[size]} />
+		<StatusGlyph {status} {siteUrl} class={LEAF_GLYPH[size]} />
 	{/if}
 	<span class={cn('truncate', !showText && 'sr-only')}>{textIcon ?? text}</span>
 {/snippet}
@@ -140,11 +128,11 @@
 		style={bare ? undefined : style}
 		class={cn(
 			bare
-				? cn('inline-flex shrink-0 items-center justify-center align-middle', GLYPH[size])
+				? cn('inline-flex shrink-0 items-center justify-center align-middle', LEAF_GLYPH[size])
 				: cn(
 						'border-border bg-background inline-flex max-w-full min-w-0 items-center rounded-md border px-1.5 align-middle text-xs font-medium',
 						'gap-1.5',
-						BOX[size],
+						LEAF_BOX[size],
 						variant === 'icon' && 'justify-center',
 						paint && 'border-transparent ring-1 ring-current/10 ring-inset',
 						color && !paint && 'bg-muted text-muted-foreground border-transparent'
@@ -154,7 +142,7 @@
 		{...rest}
 	>
 		{#if bare}
-			<StatusGlyph {status} {siteUrl} fallback class={GLYPH[size]} />
+			<StatusGlyph {status} {siteUrl} fallback class={LEAF_GLYPH[size]} />
 			<span class="sr-only">{text}</span>
 		{:else if showRemove}
 			<span class="flex min-w-0 items-center gap-1.5">{@render content()}</span>
@@ -163,7 +151,7 @@
 				data-slot="status-badge-remove"
 				aria-label={removeLabel ?? `Remove ${text}`}
 				onclick={() => onRemove?.(code)}
-				class="hover:bg-current/15 focus-visible:ring-ring focus-visible:ring-offset-background pointer-events-auto shrink-0 rounded-sm p-0.5 opacity-70 outline-none transition-colors duration-150 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-2 motion-safe:active:scale-[0.98]"
+				class={cn(REMOVE_CONTROL, 'pointer-events-auto')}
 			>
 				<X aria-hidden="true" class="size-3" />
 			</button>

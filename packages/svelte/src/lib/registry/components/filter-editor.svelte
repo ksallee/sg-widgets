@@ -126,6 +126,7 @@
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
 	import * as ToggleGroup from '$lib/components/ui/toggle-group/index.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
+	import { entityFields } from '$lib/registry/components/entity-fields.svelte.js';
 	import CheckboxEditor from '$lib/registry/components/checkbox-editor.svelte';
 	import StateLine from '$lib/registry/components/state-line.svelte';
 	import ColorEditor from '$lib/registry/components/color-editor.svelte';
@@ -134,8 +135,8 @@
 	import EntityMultiPicker from '$lib/registry/components/entity-multi-picker.svelte';
 	import EntityPicker from '$lib/registry/components/entity-picker.svelte';
 	import FieldPicker from '$lib/registry/components/field-picker.svelte';
-	import ListMultiSelect from '$lib/registry/components/list-multi-select.svelte';
-	import ListSelect from '$lib/registry/components/list-select.svelte';
+	import ListMultiPicker from '$lib/registry/components/list-multi-picker.svelte';
+	import ListPicker from '$lib/registry/components/list-picker.svelte';
 	import NumberEditor from '$lib/registry/components/number-editor.svelte';
 	import StatusMultiPicker from '$lib/registry/components/status-multi-picker.svelte';
 	import StatusPicker from '$lib/registry/components/status-picker.svelte';
@@ -181,19 +182,11 @@
 		...rest
 	}: Props = $props();
 
-	let fields = $state<Record<string, FieldSchema>>({});
-
-	// The schema service caches, so this reaches the network once per type however
-	// often the tree is edited (probe 002).
-	$effect(() => {
-		let live = true;
-		void context.schema.fields(entityType).then((loaded) => {
-			if (live) fields = loaded;
-		});
-		return () => {
-			live = false;
-		};
-	});
+	const schemaFields = entityFields(
+		() => context,
+		() => entityType
+	);
+	const fields = $derived(schemaFields.current);
 
 	/**
 	 * The leaf schema of every dotted path the tree holds, added once and kept.
@@ -499,7 +492,7 @@
 					onValueChange={(next) =>
 						set(withRelativeWindow(node.value, { count: next === null ? null : Number(next) }) as ConditionValue)}
 				/>
-				<ListSelect
+				<ListPicker
 					class="w-24 shrink-0"
 					size={INNER[size]}
 					{disabled}
@@ -558,7 +551,7 @@
 				onValueChange={(next) => set(next ?? '')}
 			/>
 		{:else if kind === 'options' && arity === 'many'}
-			<ListMultiSelect
+			<ListMultiPicker
 				class="min-w-0 flex-1"
 				size={INNER[size]}
 				{disabled}
@@ -568,7 +561,7 @@
 				onValueChange={(next) => set([...next])}
 			/>
 		{:else if kind === 'options'}
-			<ListSelect
+			<ListPicker
 				class="min-w-0 flex-1"
 				size={INNER[size]}
 				{disabled}

@@ -9,6 +9,10 @@ An ordered list of sort keys. Each is a field and a direction; the list serialis
 string `_search` takes. Fields are chosen with FieldPicker, which descends through links, so a key
 may be a dotted path.
 
+It sits on the Popover rather than the shared picker control: its popup is an editor over an
+ordered list, not a list of values to pick from, and its press, its keyboard and its dismissal
+already match the pickers.
+
 ## Install
 
 ```sh

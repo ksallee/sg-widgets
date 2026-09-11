@@ -4,15 +4,10 @@ import { parseTextInput } from '@sg-widgets/core';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
+import { CONTROL_BOX, type ControlSize } from '@/registry/sg/components/control-classes';
+import { FieldError } from '@/registry/sg/components/field-error';
 
-export type TextEditorSize = 'sm' | 'md' | 'lg';
-
-/** The control ladder of `docs/design-rules.md`: 8 / 9 / 10. */
-const BOX: Record<TextEditorSize, string> = {
-  sm: 'h-8 px-2',
-  md: 'h-9 px-3',
-  lg: 'h-10 px-3',
-};
+export type TextEditorSize = ControlSize;
 
 export interface TextEditorProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onInput' | 'defaultValue'> {
   /** The stored string, or null. There is no empty string in the store (field_types/text). */
@@ -136,7 +131,7 @@ export function TextEditor({
           disabled={disabled}
           readOnly={readonly}
           placeholder={placeholder}
-          className={BOX[size]}
+          className={CONTROL_BOX[size]}
           aria-invalid={isInvalid}
           aria-label={field?.displayName}
           aria-required={field?.mandatory}
@@ -146,13 +141,7 @@ export function TextEditor({
           onKeyDown={onKeyDown}
         />
       )}
-      {message
-        ? (errorMessage?.(message) ?? (
-            <p data-slot="field-editor-error" className="text-destructive text-xs">
-              {message}
-            </p>
-          ))
-        : null}
+      <FieldError message={message} errorMessage={errorMessage} />
     </div>
   );
 }

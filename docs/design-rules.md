@@ -113,6 +113,15 @@ tell the user".
 - Keyboard first: every widget is operable without a mouse, and the keyboard model is documented on its
   docs page in one short table.
 
+A picker is not built from the primitive. `picker-control`, one item per package, is the control
+box with its states, the press rule (a press on the control toggles the list, a press on the caret
+only opens it), the dismissal guard, where the caret lands on open, the keyboard model of core's
+`pickerKeyIntent`, the inline token field against the summary trigger with its chip row, and the
+popup shell: the search row, the list, the empty, loading and error block, and the load-more row.
+A picker supplies its query and rows, its row renderer and its chip, and declares the base as a
+registry dependency. A widget that reaches for the Select or the Popover instead says on its docs
+page why.
+
 ## 8. Checklist for a PR
 
 1. No margins on flex or grid children.

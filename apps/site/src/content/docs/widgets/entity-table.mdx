@@ -75,6 +75,7 @@ rows and puts one error line under them with a retry.
 | `editorFor` | `(dataType) => Component \| null` | — | The editor a cell opens, by data type. A type it does not answer for opens FieldEditor. |
 | `editorPlacement` | `'inline' \| 'popover'` | per data type | Where every cell editor opens. A column's own `editorPlacement` wins over it. |
 | `showCode` | `boolean` | `false` | Show the programmatic field path beside the header's display name. |
+| `columnMenu` | `boolean` | `false` | A menu on every header: sort, hide and pin left. |
 | `paging` | `'pages' \| 'more' \| 'scroll'` | `'pages'` | How the set is walked: a page number, a load-more row, or the scroller. |
 | `pageSizes` | `number[]` | `[25, 50, 100]` | Rows per page offered in the footer. `pages` only. |
 | `maxHeight` | `string` | `'28rem'` | Height of the scrolling body. |
@@ -160,7 +161,9 @@ spec forces it for that column.
 
 ## Column menu
 
-Every header carries a menu: sort ascending, sort descending, clear sort, hide column, and pin left.
+With `columnMenu`, every header carries a menu: sort ascending, sort descending, clear sort, hide
+column, and pin left. It is off by default: a header sorts on a press, and the column picker in the
+toolbar is where columns are shown and hidden.
 The sort entries are inert on a column the schema says cannot be sorted. Hiding writes the shorter
 column list back through `columns`. Pinning sticks the column to the start of the scrolling body.
 

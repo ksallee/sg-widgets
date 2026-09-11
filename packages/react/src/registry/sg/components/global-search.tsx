@@ -2,12 +2,16 @@ import type * as React from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { EntityRef, FieldSpec, PickerRow as PickerRowData, SearchHit, SgContext, WireCondition } from '@sg-widgets/core';
 import {
+  errorText,
   hydrate,
   NO_MATCH_LABEL,
   pathOf,
   placeholderName,
+  prependRecent,
   rowFields,
   scopeToProject,
+  SEARCH_DEBOUNCE_MS,
+  searchTypeMap,
   stateLine,
 } from '@sg-widgets/core';
 import { Search, TriangleAlert } from 'lucide-react';
@@ -21,10 +25,11 @@ import {
 } from '@/components/ui/command';
 import { Button } from '@/components/ui/button';
 import { Kbd } from '@/components/ui/kbd';
-import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import { CONTROL_GLYPH, CONTROL_HEIGHT, type ControlSize } from '@/registry/sg/components/control-classes';
 import { EntityChip } from '@/registry/sg/components/entity-chip';
 import { PickerRow } from '@/registry/sg/components/picker-row';
+import { SearchSkeleton } from '@/registry/sg/components/search-skeleton';
 import { StateLine } from '@/registry/sg/components/state-line';
 
 /** Types to search, either bare names or names with a filter each. */
@@ -40,9 +45,6 @@ export interface GlobalSearchGroup {
 /** Types a stock site searches over. A caller with custom entities passes its own. */
 export const GLOBAL_SEARCH_TYPES = ['Asset', 'Shot', 'Sequence', 'Task', 'Version', 'HumanUser', 'Project'];
 
-/** Long enough that a typist does not fire a request a letter, short enough to feel live. */
-const DEBOUNCE_MS = 250;
-
 /** A stable empty list, so the default never changes what a memo depends on. */
 const EMPTY_FIELDS: string[] = [];
 /** The endpoint's cap and its default (probe 053). */
@@ -54,19 +56,12 @@ const META =
     ? '⌘'
     : 'Ctrl';
 
-function typeMap(types: GlobalSearchTypes): Record<string, WireCondition[] | null> {
-  return Array.isArray(types) ? Object.fromEntries(types.map((t) => [t, null])) : types;
+function keyOf(ref: EntityRef): string {
+  return `${ref.type}:${ref.id}`;
 }
 
-function same(a: EntityRef, b: EntityRef): boolean {
-  return a.type === b.type && a.id === b.id;
-}
+export type GlobalSearchSize = ControlSize;
 
-export type GlobalSearchSize = 'sm' | 'md' | 'lg';
-
-/** The trigger follows the input ladder of `docs/design-rules.md`. */
-const BOX: Record<GlobalSearchSize, string> = { sm: 'h-8', md: 'h-9', lg: 'h-10' };
-const GLYPH: Record<GlobalSearchSize, string> = { sm: 'size-4', md: 'size-4', lg: 'size-5' };
 /** A chip inside a row sits one step down the leaf ladder. */
 const CHIP: Record<GlobalSearchSize, 'sm' | 'md'> = { sm: 'sm', md: 'sm', lg: 'md' };
 
@@ -176,6 +171,8 @@ export function GlobalSearch({
 
   const [query, setQueryState] = useState('');
   const [hits, setHits] = useState<SearchHit[]>([]);
+  /** The highlighted row. cmdk owns it between pages; a new page moves it to its first row. */
+  const [cursor, setCursor] = useState('');
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -200,7 +197,7 @@ export function GlobalSearch({
     };
   }, [schema]);
 
-  const order = useMemo(() => Object.keys(typeMap(entityTypes)), [entityTypes]);
+  const order = useMemo(() => Object.keys(searchTypeMap(entityTypes)), [entityTypes]);
 
   const groups = useMemo((): GlobalSearchGroup[] => {
     const byType = new Map<string, SearchHit[]>();
@@ -223,7 +220,7 @@ export function GlobalSearch({
       setLoading(true);
       setFailure(null);
       try {
-        let types = typeMap(entityTypes);
+        let types = searchTypeMap(entityTypes);
         if (projectId !== null && projectId !== undefined) types = await scopeToProject(schema, types, projectId);
         const rows = await context.client.textSearch(text, types, { size: PAGE_SIZE, number: nextPage });
         const found = await hydrate(context.client, rows, {
@@ -233,11 +230,14 @@ export function GlobalSearch({
         if (id !== requestId.current) return;
         setHits((current) => (nextPage === 1 ? found : [...current, ...found]));
         setPage(nextPage);
+        // A page lands under the row that asked for it: the highlight moves to its first
+        // row, so the list stays where the reader was instead of returning to the top.
+        if (nextPage > 1 && found[0]) setCursor(`${found[0].ref.type}:${found[0].ref.id}`);
         // The answer carries no `links`, so a full page is the only sign of another one (probe 006).
         setHasMore(rows.length === PAGE_SIZE);
       } catch (error) {
         if (id !== requestId.current) return;
-        setFailure(error instanceof Error ? error.message : String(error));
+        setFailure(errorText(error));
         setHits([]);
         setHasMore(false);
       } finally {
@@ -262,14 +262,14 @@ export function GlobalSearch({
         return;
       }
       setLoading(true);
-      timer.current = setTimeout(() => void run(text, 1), DEBOUNCE_MS);
+      timer.current = setTimeout(() => void run(text, 1), SEARCH_DEBOUNCE_MS);
     },
     [run],
   );
 
   const choose = useCallback(
     (entity: EntityRef): void => {
-      onRecentsChange?.([entity, ...recents.filter((r) => !same(r, entity))].slice(0, recentLimit));
+      onRecentsChange?.(prependRecent(recents, entity, recentLimit, keyOf));
       onSelect?.(entity);
       if (!inline) setOpen(false);
       setQuery('');
@@ -340,22 +340,7 @@ export function GlobalSearch({
             label={stateLine('error', { errorLabel }, failure)}
           />
         ) : loading && hits.length === 0 ? (
-          <div
-            data-slot="search-loading"
-            className="flex flex-col gap-2 p-1"
-            aria-busy="true"
-            aria-label={stateLine('loading', { loadingLabel })}
-          >
-            {[0, 1, 2].map((line) => (
-              <div key={line} className="flex items-center gap-2 px-2 py-1.5">
-                <Skeleton className="h-6 w-10 shrink-0" />
-                <div className="flex min-w-0 flex-1 flex-col gap-1">
-                  <Skeleton className="h-3 w-1/2" />
-                  <Skeleton className="h-2.5 w-1/4" />
-                </div>
-              </div>
-            ))}
-          </div>
+          <SearchSkeleton slotName="search-loading" label={stateLine('loading', { loadingLabel })} />
         ) : empty ? (
           <StateLine state="empty" slotName="search-empty" icon={Search} label={emptyLabel} />
         ) : showRecents ? (
@@ -417,7 +402,7 @@ export function GlobalSearch({
         {...rest}
       >
         {/* Server-side matching only, so the list never filters what came back. */}
-        <Command shouldFilter={false} className="border-border rounded-lg border">
+        <Command shouldFilter={false} value={cursor} onValueChange={setCursor} className="border-border rounded-lg border">
           {body}
         </Command>
       </div>
@@ -439,18 +424,20 @@ export function GlobalSearch({
           variant="outline"
           data-slot="global-search-trigger"
           data-size={size}
-          className={cn('w-full justify-between', BOX[size])}
+          className={cn('w-full justify-between', CONTROL_HEIGHT[size])}
           onClick={() => setOpen(true)}
         >
           <span className="flex min-w-0 items-center gap-1.5">
-            <Search aria-hidden="true" className={cn('opacity-70', GLYPH[size])} />
+            <Search aria-hidden="true" className={cn('opacity-70', CONTROL_GLYPH[size])} />
             <span className="truncate">{label}</span>
           </span>
           {hotkey ? <Kbd>{META}K</Kbd> : null}
         </Button>
       )}
       <CommandDialog open={open} onOpenChange={setOpen} title="Search" description="Search across the site by name.">
-        <Command shouldFilter={false}>{body}</Command>
+        <Command shouldFilter={false} value={cursor} onValueChange={setCursor}>
+          {body}
+        </Command>
       </CommandDialog>
     </div>
   );

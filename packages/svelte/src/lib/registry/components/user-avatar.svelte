@@ -1,16 +1,13 @@
 <script lang="ts" module>
-	export type UserAvatarSize = 'sm' | 'md' | 'lg';
+	import { LEAF_GLYPH, type LeafSize } from '$lib/registry/components/leaf-classes.js';
+
+	export type UserAvatarSize = LeafSize;
 
 	/** Avatars follow the same ladder as thumbnails (`docs/design-rules.md`). */
 	const BOX: Record<UserAvatarSize, string> = {
 		sm: 'size-6 text-xs',
 		md: 'size-8 text-sm',
 		lg: 'size-10 text-sm'
-	};
-	const GLYPH: Record<UserAvatarSize, string> = {
-		sm: 'size-4',
-		md: 'size-4',
-		lg: 'size-5'
 	};
 	/**
 	 * Initials tint: a fixed hue from the name at a light and a dark lightness, so it
@@ -87,7 +84,7 @@
 		style={tinted ? `--sg-hue: ${nameHue(name)}` : undefined}
 	>
 		{#if apiUser}
-			<Bot aria-hidden="true" class={GLYPH[size]} />
+			<Bot aria-hidden="true" class={LEAF_GLYPH[size]} />
 			<span class="sr-only">{name}</span>
 		{:else if src}
 			<img

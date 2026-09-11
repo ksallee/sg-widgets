@@ -1,59 +1,22 @@
 import type * as React from 'react';
 import type { EntityRef, SgClient, SgContext } from '@sg-widgets/core';
 import { contextFromClient, entityDetailUrl } from '@sg-widgets/core';
-import {
-  Box,
-  Clapperboard,
-  FileBox,
-  Film,
-  Folder,
-  ListChecks,
-  MessageSquare,
-  Tag,
-  User,
-  Video,
-  X,
-} from 'lucide-react';
+import { X } from 'lucide-react';
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card';
 import { cn } from '@/lib/utils';
 import { EntityCard } from '@/registry/sg/components/entity-card';
+import { entityGlyph } from '@/registry/sg/components/entity-glyphs';
+import { LEAF_BOX, LEAF_GLYPH, REMOVE_CONTROL, type LeafSize } from '@/registry/sg/components/leaf-classes';
 
-export type EntityChipSize = 'sm' | 'md' | 'lg';
+export type EntityChipSize = LeafSize;
 export type EntityChipVariant = 'chip' | 'link' | 'text';
 
-/** Leaf atoms follow the thumbnail/avatar ladder of `docs/design-rules.md`. */
-const BOX_CLASS: Record<EntityChipSize, string> = {
-  sm: 'h-6 text-xs',
-  md: 'h-8 text-sm',
-  lg: 'h-10 text-sm',
-};
 /** A link or a bare label has no box, so only the type scale applies. */
 const TEXT: Record<EntityChipSize, string> = {
   sm: 'text-xs',
   md: 'text-sm',
   lg: 'text-sm',
 };
-const GLYPH: Record<EntityChipSize, string> = {
-  sm: 'size-4',
-  md: 'size-4',
-  lg: 'size-5',
-};
-
-/**
- * A glyph per entity type. A stock site has 114 types plus any number of custom
- * ones, so this covers the types a widget meets constantly and falls back to a tag.
- */
-const GLYPHS = {
-  Shot: Clapperboard,
-  Asset: Box,
-  Sequence: Film,
-  Version: Video,
-  Task: ListChecks,
-  HumanUser: User,
-  Project: Folder,
-  Note: MessageSquare,
-  PublishedFile: FileBox,
-} as const;
 
 export interface EntityChipProps extends Omit<React.HTMLAttributes<HTMLSpanElement>, 'onClick'> {
   /** `{type, id, name}` exactly as an entity field returns it under `relationships` (field_types/entity). */
@@ -108,7 +71,7 @@ export function EntityChip({
 }: EntityChipProps) {
   const named = Boolean(entity.name && entity.name.length > 0);
   const label = named ? (entity.name as string) : `${entity.type} #${entity.id}`;
-  const Glyph = GLYPHS[entity.type as keyof typeof GLYPHS] ?? Tag;
+  const Glyph = entityGlyph(entity.type);
 
   // One context per client, so a chip handed a bare client shares the page's caches.
   const ctx = context ?? (client ? contextFromClient(client) : undefined);
@@ -130,7 +93,7 @@ export function EntityChip({
     variant === 'chip'
       ? cn(
           'bg-secondary text-secondary-foreground rounded-md border px-2',
-          BOX_CLASS[size],
+          LEAF_BOX[size],
           interactive && 'hover:bg-accent hover:text-accent-foreground transition-colors duration-150',
         )
       : TEXT[size],
@@ -147,10 +110,10 @@ export function EntityChip({
             aria-hidden="true"
             loading="lazy"
             decoding="async"
-            className={cn('shrink-0 rounded-sm object-cover', GLYPH[size])}
+            className={cn('shrink-0 rounded-sm object-cover', LEAF_GLYPH[size])}
           />
         ) : (
-          <Glyph aria-hidden="true" className={cn('shrink-0 opacity-70', GLYPH[size])} />
+          <Glyph aria-hidden="true" className={cn('shrink-0 opacity-70', LEAF_GLYPH[size])} />
         )
       ) : null}
       <span className={cn('truncate', !named && 'font-mono tabular-nums')}>{label}</span>
@@ -188,7 +151,7 @@ export function EntityChip({
           type="button"
           aria-label={removeLabel ?? `Remove ${label}`}
           onClick={() => onRemove?.(entity)}
-          className="hover:bg-current/15 focus-visible:ring-ring focus-visible:ring-offset-background shrink-0 rounded-sm p-0.5 opacity-70 outline-none transition-colors duration-150 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-2 motion-safe:active:scale-[0.98]"
+          className={REMOVE_CONTROL}
         >
           <X aria-hidden="true" className="size-3" />
         </button>

@@ -12,6 +12,8 @@ const packages = new URL('../../packages/', import.meta.url);
 const reactSrc = fileURLToPath(new URL('react/src', packages));
 const svelteLib = fileURLToPath(new URL('svelte/src/lib', packages));
 const coreSrc = fileURLToPath(new URL('core/src/index.ts', packages));
+const baseUi = fileURLToPath(new URL('react/node_modules/@base-ui/react', packages));
+const bitsUi = fileURLToPath(new URL('svelte/node_modules/bits-ui', packages));
 const repoRoot = fileURLToPath(new URL('../../', import.meta.url));
 
 // Inlined in the head, so the stored palette is on `:root` before the first paint. Read
@@ -69,7 +71,7 @@ export default defineConfig({
             { label: 'Overview', slug: 'widgets' },
             {
               label: 'Foundations',
-              items: ['thumbnail', 'user-avatar', 'text-editor', 'number-editor', 'checkbox-editor', 'date-editor', 'date-time-editor', 'list-select', 'list-multi-select', 'url-editor', 'color-editor'].map((n) => ({ slug: `widgets/${n}` })),
+              items: ['thumbnail', 'user-avatar', 'text-editor', 'number-editor', 'checkbox-editor', 'date-editor', 'date-time-editor', 'url-editor', 'color-editor', 'picker-control'].map((n) => ({ slug: `widgets/${n}` })),
             },
             {
               label: 'Display',
@@ -77,7 +79,7 @@ export default defineConfig({
             },
             {
               label: 'Pickers',
-              items: ['entity-picker', 'entity-multi-picker', 'user-picker', 'project-picker', 'status-picker', 'status-multi-picker', 'entity-type-picker', 'field-picker', 'column-picker', 'field-editor', 'global-search', 'hierarchical-search', 'context-selector'].map((n) => ({ slug: `widgets/${n}` })),
+              items: ['entity-picker', 'entity-multi-picker', 'user-picker', 'project-picker', 'status-picker', 'status-multi-picker', 'list-picker', 'list-multi-picker', 'entity-type-picker', 'field-picker', 'column-picker', 'field-editor', 'global-search', 'hierarchical-search', 'context-selector'].map((n) => ({ slug: `widgets/${n}` })),
             },
             {
               label: 'Queries and collections',
@@ -129,6 +131,12 @@ export default defineConfig({
         // hot-reloads an edit to packages/core straight into the open demo page,
         // which watching a build output does not.
         { find: '@sg-widgets/core', replacement: coreSrc },
+        // A demo that builds a widget out of a registry part imports the same
+        // primitive the part does. The site keeps no copy of either, so both point at
+        // the workspace package's, which is also the copy the registry sources load:
+        // one instance of each primitive on the page, and one combobox context.
+        { find: '@base-ui/react', replacement: baseUi },
+        { find: 'bits-ui', replacement: bitsUi },
         { find: '@', replacement: reactSrc },
         { find: '$lib', replacement: svelteLib },
       ],

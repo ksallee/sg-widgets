@@ -20,27 +20,16 @@ import { Minus, Plus } from 'lucide-react';
 import { buttonVariants } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { CONTROL_BOX, CONTROL_GLYPH, type ControlSize } from '@/registry/sg/components/control-classes';
+import { FieldError } from '@/registry/sg/components/field-error';
 
-export type NumberEditorSize = 'sm' | 'md' | 'lg';
-
-/** The control ladder of `docs/design-rules.md`: 8 / 9 / 10. */
-const BOX: Record<NumberEditorSize, string> = {
-  sm: 'h-8 px-2',
-  md: 'h-9 px-3',
-  lg: 'h-10 px-3',
-};
+export type NumberEditorSize = ControlSize;
 
 /** A stepper is the square of the control it steps. */
 const STEPPER: Record<NumberEditorSize, string> = {
   sm: 'size-8',
   md: 'size-9',
   lg: 'size-10',
-};
-
-const GLYPH: Record<NumberEditorSize, string> = {
-  sm: 'size-4',
-  md: 'size-4',
-  lg: 'size-5',
 };
 
 /** Pixels of drag one step of the scrub area costs. */
@@ -323,9 +312,9 @@ export function NumberEditor({
   const stepperClass = cn(
     buttonVariants({ variant: inline ? 'ghost' : 'outline' }),
     'select-none',
-    inline ? 'absolute right-0.5 h-3.5 w-5 rounded-sm p-0' : STEPPER[size],
+    inline ? 'absolute right-0.5 z-10 h-3.5 w-5 rounded-sm p-0' : STEPPER[size],
   );
-  const glyphClass = inline ? 'size-3' : GLYPH[size];
+  const glyphClass = inline ? 'size-3' : CONTROL_GLYPH[size];
   const padRight = suffix && inline && steppers ? 'pr-12' : suffix ? 'pr-7' : inline && steppers ? 'pr-6' : undefined;
 
   return (
@@ -405,7 +394,7 @@ export function NumberEditor({
                   placeholder={placeholder}
                   className={cn(
                     'tabular-nums',
-                    BOX[size],
+                    CONTROL_BOX[size],
                     prefix && 'pl-7',
                     padRight,
                     inline && 'shrink-0',
@@ -461,13 +450,7 @@ export function NumberEditor({
           {hint}
         </p>
       ) : null}
-      {message
-        ? (errorMessage?.(message) ?? (
-            <p data-slot="field-editor-error" className="text-destructive text-xs">
-              {message}
-            </p>
-          ))
-        : null}
+      <FieldError message={message} errorMessage={errorMessage} />
     </NumberField.Root>
   );
 }

@@ -64,7 +64,7 @@ async function frame(path) {
 /** What one list row draws, as the anatomy of rule 9. */
 function anatomy(row) {
   return {
-    code: row.dataset.statusCode ?? '',
+    code: row.dataset.option ?? row.dataset.statusCode ?? '',
     glyph: Boolean(row.querySelector('[data-slot="picker-row-leading"] [data-slot="status-glyph"]')),
     leading: Boolean(row.querySelector('[data-slot="picker-row-leading"]')),
     label: row.querySelector('[data-slot="picker-row-name"]')?.textContent.trim() ?? '',
@@ -92,14 +92,14 @@ for (const framework of ['svelte', 'react']) {
 
   // A closed popup stays in the DOM carrying `data-closed`, so only live rows count.
   const live = (rows) => rows.filter((row) => !row.closest('[data-closed]') && row.getClientRects().length > 0);
-  const options = () => live($$('[role="option"][data-status-code]'));
+  const options = () => live($$('[data-slot="status-picker-option"]'));
   let lastTrigger = null;
   const openSingle = async (demo) => {
     const settled = await until(() => {
       const el = $(`[data-demo="${demo}"] [data-slot="status-picker"]`, pane);
       return el && !el.dataset.loading ? el : null;
     }, 15000);
-    const trigger = settled && $('[data-slot="select-trigger"]', settled);
+    const trigger = settled && $('[data-slot="status-picker-control"]', settled);
     if (!trigger) {
       failures.push(`${framework}: no ${demo} status picker to open`);
       return null;
@@ -119,16 +119,17 @@ for (const framework of ['svelte', 'react']) {
     note.picker = drawn.slice(0, 3);
 
     // A pick closes the list and lands in the control as a badge.
-    const apr = listed.find((row) => row.dataset.statusCode === 'apr');
+    const apr = listed.find((row) => row.dataset.option === 'apr');
     if (apr) {
       apr.click();
       pointer(apr);
     }
-    const chosen = await until(
-      () => $(`[data-demo="p70"] [data-slot="status-picker-value"] [data-slot="status-badge"]`, pane),
-      4000,
-    );
-    note.pickedBadge = chosen?.dataset.statusCode ?? '';
+    // The control already holds a badge, so the wait is for the picked code, not for any.
+    const chosen = await until(() => {
+      const badge = $(`[data-demo="p70"] [data-slot="status-picker-value"] [data-slot="status-badge"]`, pane);
+      return badge?.dataset.statusCode === 'apr' ? badge : null;
+    }, 4000);
+    note.pickedBadge = chosen?.dataset.statusCode ?? $(`[data-demo="p70"] [data-slot="status-picker-value"] [data-slot="status-badge"]`, pane)?.dataset.statusCode ?? '';
     if (note.pickedBadge !== 'apr') failures.push(`${framework}: the picked status is "${note.pickedBadge}" in the control, not a badge for apr`);
   }
   if (!(await dismiss(document, options, lastTrigger))) failures.push(`${framework}: a status picker list would not close`);

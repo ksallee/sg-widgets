@@ -26,3 +26,26 @@ Every widget that reads takes the context, built once over your client. It is wh
 cost one schema read and one status table. Wire your own client, or the shipped REST one.
 
 <Demo name="hello" />
+
+## Shared parts
+
+A widget is built from parts the registry also holds. They install with the widgets that need
+them; a picker pulls in its base, its row and its classes the way a table pulls in its source
+binding and its footer. The same names exist in both registries.
+
+| part | what it is | used by |
+|---|---|---|
+| [`picker-control`](/widgets/picker-control/) | The control box and popup shell every picker is built on: the press rule, the caret, the keyboard model, inline and summary modes, the search row, the list, the state line and the load-more row. | every picker: entity, entity multi, status, status multi, list, list multi and entity type |
+| [`picker-row`](/widgets/picker-control/#pickerrow) | The row every picker, search and tree draws: a picture, a highlighted label, a sub-label and a typed secondary. | the pickers, global search, hierarchical search, context selector |
+| `picker-classes` | The control, popup, list and row classes every picker wears. | the pickers, picker-control |
+| `control-classes` | The height, inset and glyph ladder every non-picker control wears. | the editors, filter bar, filter dialog, global search, context selector |
+| `leaf-classes` | The ladder and the remove control every badge, chip and avatar wears. | status badge, entity chip, user avatar |
+| `state-line` | The centred empty and error line every data widget draws. | the collections, the pickers, the search widgets, filter editor, entity card |
+| `status-glyph` | One status icon, from the site's own image or a cell of the stock sprite. | status badge, and the badge's `glyph` variant |
+| `entity-glyphs` | A glyph per entity type, with the tag every unlisted type takes. | entity chip, entity card, hierarchical search |
+| `field-error` | The line a field editor shows under its control when a parse fails. | the editors |
+| `editor-calendar` | The calendar day the date editors hand the Calendar primitive. | date editor, date-time editor |
+| `search-skeleton` | The rows a search widget draws while its read is in flight. | global search, hierarchical search, context selector |
+| `collection-source` | The binding between a collection and its source: the snapshot, the paging mode and the two-way sort and filter. | entity table, entity grid, grouped list |
+| `collection-footer` | The pager under a collection: page size, range and arrows in pages, the loaded count otherwise. | entity table, entity grid, grouped list |
+| `entity-fields` | One entity type's fields, read through the context and kept. | filter bar, filter editor |

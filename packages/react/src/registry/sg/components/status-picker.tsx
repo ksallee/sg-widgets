@@ -1,52 +1,13 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
-import type { ReactNode } from 'react';
-import type {
-  PickerRow as PickerRowData,
-  SgContext,
-  StatusOption,
-  StatusRecord,
-} from '@sg-widgets/core';
-import { NO_ROWS_LABEL, stateLine } from '@sg-widgets/core';
-import { SearchX, TriangleAlert, X } from 'lucide-react';
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-} from '@/components/ui/select';
-import { Skeleton } from '@/components/ui/skeleton';
-import { cn } from '@/lib/utils';
-import { PickerRow } from '@/registry/sg/components/picker-row';
-import { StateLine } from '@/registry/sg/components/state-line';
+import type { SgContext, StatusOption, StatusRecord } from '@sg-widgets/core';
+import { NO_ROWS_LABEL } from '@sg-widgets/core';
+import { ListPicker } from '@/registry/sg/components/list-picker';
+import { PICKER_CHIP as BADGE } from '@/registry/sg/components/picker-classes';
 import { StatusBadge } from '@/registry/sg/components/status-badge';
 
 export type StatusPickerSize = 'sm' | 'md' | 'lg';
 
-/**
- * Controls follow the input ladder of `docs/design-rules.md`. A filled control's leading
- * inset matches the room above and below its badge, so the badge sits evenly inside the
- * border; `data-empty` gives the reading inset of a plain input back. The height carries
- * `!` because the select trigger sets its own under a `data-size` selector, and is fixed,
- * so there is no vertical inset to take.
- */
-const BOX: Record<StatusPickerSize, string> = {
-  sm: 'h-8! pr-2 pl-[5px] data-empty:pl-1.5',
-  md: 'h-9! pr-3 pl-[5px] data-empty:pl-2',
-  lg: 'h-10! pr-3 pl-0.5 data-empty:pl-2',
-};
-const GLYPH: Record<StatusPickerSize, string> = {
-  sm: 'size-4',
-  md: 'size-4',
-  lg: 'size-5',
-};
-/** A badge inside a control sits one step down the leaf ladder. */
-const BADGE: Record<StatusPickerSize, 'sm' | 'md'> = { sm: 'sm', md: 'sm', lg: 'md' };
-
-const TRIGGER =
-  'border-input bg-background hover:bg-muted/30 focus-visible:ring-ring focus-visible:ring-offset-background aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 flex w-full min-w-0 items-center rounded-lg border text-sm outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 aria-invalid:ring-2';
-
-export interface StatusPickerProps extends React.HTMLAttributes<HTMLDivElement> {
+export interface StatusPickerProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'slot'> {
   /** The root element. */
   ref?: React.Ref<HTMLDivElement>;
 
@@ -150,12 +111,13 @@ function statusOptionStore(
 /**
  * One status, picked from the codes a project offers.
  *
- * The options are `valid_values` minus the project's `hidden_values`, read with
- * `project_id`; over several projects they are the intersection of those sets. REST
- * does not enforce `hidden_values` on write, so the subtraction is the client's job
- * (probe 009). A code the option set does not carry still renders, as itself: a row
- * may legally hold one (field_types/status_list). When a later option set drops the
- * selected code, the picker clears it and emits once.
+ * The list picker with a status row and a badge for its value. The options are
+ * `valid_values` minus the project's `hidden_values`, read with `project_id`; over
+ * several projects they are the intersection of those sets. REST does not enforce
+ * `hidden_values` on write, so the subtraction is the client's job (probe 009). A code
+ * the option set does not carry still renders, as itself: a row may legally hold one
+ * (field_types/status_list). When a later option set drops the selected code, the
+ * picker clears it and emits once.
  *
  * A row is the shared picker row of rule 9: the status icon as the leading glyph, the
  * display label, and the code right-aligned. The badge stays in the control, where a
@@ -207,14 +169,6 @@ export function StatusPicker({
 
   // `display_values` is the only other source of a label, so the options carry it to the badge.
   const badgeField = { displayValues: Object.fromEntries(query.options.map((o) => [o.code, o.label])) };
-  const unknown = value !== undefined && value !== '' && !query.options.some((o) => o.code === value);
-  // A stored code outside the usable set is legal, so it still gets a row (probe 009).
-  const rows = unknown && value ? [...query.options, { code: value, label: value }] : query.options;
-  const title = value ? (rows.find((o) => o.code === value)?.label ?? value) : placeholder;
-
-  // Read-only wins over disabled and over the loading window.
-  const inert = !readonly && (disabled || query.loading);
-  const showClear = clearable && Boolean(value) && !readonly && !disabled;
 
   // The first option set is not a change: it is what the widget was mounted to show.
   const seen = useRef<string | null>(null);
@@ -230,157 +184,55 @@ export function StatusPicker({
     if (dropped) onValueChange?.(undefined);
   }, [query, value, onValueChange]);
 
-  const badge = (code: string) => (
-    <StatusBadge
-      code={code}
-      status={query.statuses.get(code) ?? null}
-      field={badgeField}
-      size={BADGE[size]}
-      siteUrl={site}
-      className="min-w-0"
-    />
-  );
-
-  /** The shared row a status is drawn as. There is no entity behind a code, so it carries no values. */
-  const rowOf = (option: StatusOption): PickerRowData => ({
-    type: 'Status',
-    id: 0,
-    name: option.label,
-    values: {},
-  });
-
-  /** The right-aligned value: the caller's, else the code when it says more than the label. */
-  const secondaryOf = (option: StatusOption): string | undefined => {
-    if (secondary) return secondary(option) || undefined;
-    return showCode && option.code !== option.label ? option.code : undefined;
-  };
-
-  // The value keeps clear of the clear control, which floats over the trigger.
-  const selection = (
-    <span
-      data-slot="status-picker-value"
-      className={cn('flex min-w-0 flex-1 items-center', showClear && 'pr-8')}
-    >
-      {value ? badge(value) : <span className="text-muted-foreground truncate">{placeholder}</span>}
-    </span>
-  );
-
-  let list: ReactNode;
-  if (query.error !== null) {
-    list = (
-      <StateLine
-        state="error"
-        slotName="status-picker-error"
-        icon={TriangleAlert}
-        label={stateLine('error', { errorLabel }, query.error)}
-      />
-    );
-  } else if (query.loading) {
-    list = (
-      <div
-        data-slot="status-picker-loading"
-        className="flex flex-col gap-2 p-1"
-        aria-busy="true"
-        aria-label={stateLine('loading', { loadingLabel })}
-      >
-        {[0, 1, 2].map((row) => (
-          <Skeleton key={row} className="h-8 w-full" />
-        ))}
-      </div>
-    );
-  } else if (rows.length === 0) {
-    list = (
-      <StateLine state="empty" slotName="status-picker-empty" icon={SearchX} label={emptyLabel} />
-    );
-  } else {
-    list = (
-      <SelectGroup>
-        {rows.map((option) => (
-          <SelectItem
-            key={option.code}
-            data-status-code={option.code}
-            value={option.code}
-            className="py-1.5 pl-2"
-          >
-            <PickerRow
-              row={rowOf(option)}
-              subLabel={subLabel?.(option)}
-              secondary={secondaryOf(option)}
-              size={size}
-              context={context}
-              glyph={
-                <StatusBadge
-                  code={option.code}
-                  status={query.statuses.get(option.code) ?? null}
-                  field={badgeField}
-                  variant="glyph"
-                  size={size}
-                  siteUrl={site}
-                />
-              }
-            />
-          </SelectItem>
-        ))}
-      </SelectGroup>
-    );
-  }
-
   return (
-    <div
+    <ListPicker
       ref={ref}
-      data-slot="status-picker"
-      data-size={size}
-      data-loading={query.loading ? 'true' : undefined}
-      className={cn('relative flex w-full min-w-0 items-center', className)}
-      {...rest}
-    >
-      {readonly ? (
-        <div
-          data-slot="status-picker-trigger"
-          data-readonly="true"
-          data-empty={value ? undefined : ''}
-          aria-readonly="true"
-          aria-invalid={invalid ? 'true' : undefined}
-          title={title}
-          className={cn(TRIGGER, BOX[size], 'pr-3')}
-        >
-          {selection}
-        </div>
-      ) : (
-        <>
-          <Select
-            value={value ?? null}
-            onValueChange={(next: string | null) => onValueChange?.(next ?? undefined)}
-            disabled={inert}
-            open={open}
-            onOpenChange={(next: boolean) => setOpen(inert ? false : next)}
-          >
-            <SelectTrigger
-              data-empty={value ? undefined : ''}
-              aria-invalid={invalid ? 'true' : undefined}
-              title={title}
-              className={cn(TRIGGER, BOX[size])}
-            >
-              {selection}
-            </SelectTrigger>
-            <SelectContent align="start" alignItemWithTrigger={false} className="p-1">
-              {list}
-            </SelectContent>
-          </Select>
-
-          {showClear ? (
-            <button
-              type="button"
-              data-slot="status-picker-clear"
-              aria-label="Clear the status"
-              onClick={() => onValueChange?.(undefined)}
-              className="hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring focus-visible:ring-offset-background absolute right-8 shrink-0 rounded-sm p-0.5 opacity-70 outline-none transition-colors duration-150 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-2 motion-safe:active:scale-[0.98]"
-            >
-              <X aria-hidden="true" className={GLYPH[size]} />
-            </button>
-          ) : null}
-        </>
+      slot="status-picker"
+      picker="status"
+      options={query.options}
+      value={value ?? null}
+      onValueChange={(next) => onValueChange?.(next ?? undefined)}
+      placeholder={placeholder}
+      emptyLabel={emptyLabel}
+      loadingLabel={loadingLabel}
+      errorLabel={errorLabel}
+      loading={query.loading}
+      loadError={query.error}
+      clearable={clearable}
+      clearLabel="Clear the status"
+      triggerLabel="Show the statuses"
+      readonly={readonly}
+      disabled={disabled}
+      invalid={invalid}
+      showCode={showCode}
+      subLabel={subLabel}
+      secondary={secondary}
+      size={size}
+      open={open}
+      onOpenChange={setOpen}
+      className={className}
+      valueChip={(code) => (
+        <StatusBadge
+          key={code}
+          code={code}
+          status={query.statuses.get(code) ?? null}
+          field={badgeField}
+          size={BADGE[size]}
+          siteUrl={site}
+          className="min-w-0"
+        />
       )}
-    </div>
+      mark={(option) => (
+        <StatusBadge
+          code={option.code}
+          status={query.statuses.get(option.code) ?? null}
+          field={badgeField}
+          variant="glyph"
+          size={size}
+          siteUrl={site}
+        />
+      )}
+      {...rest}
+    />
   );
 }

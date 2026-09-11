@@ -7,6 +7,9 @@ import Demo from '../../../components/Demo.astro';
 
 Picks one status code for an entity type, offering only the codes the project it is scoped to allows.
 
+It is the [list picker](/widgets/list-picker/) configured with a status row and a badge for its
+value: the same control, popup, press rule and keyboard as every other picker.
+
 ## Install
 
 ```sh
@@ -73,8 +76,6 @@ None. The rows are the shared picker row; the closed state is a status badge.
 |---|---|
 | <kbd>Space</kbd>, <kbd>Enter</kbd>, <kbd>↓</kbd> | Opens the list |
 | <kbd>↑</kbd> <kbd>↓</kbd> | Moves the highlight |
-| <kbd>Home</kbd> <kbd>End</kbd> | First and last status |
-| a–z | Jumps to the status whose label starts with the letters typed |
 | <kbd>Enter</kbd> | Selects the highlighted status and closes |
 | <kbd>Esc</kbd> | Closes and keeps the selection |
 | <kbd>Tab</kbd> | Leaves the control, or reaches the clear control when there is one |

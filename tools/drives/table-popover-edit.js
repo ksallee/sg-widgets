@@ -93,7 +93,7 @@ async function run(framework) {
     'a status picker in the popover',
   );
   seen.statusPopover = status !== null && openPopover() !== null;
-  key(status.querySelector('[data-slot="select-trigger"], [data-slot="status-picker-trigger"]'), 'Escape');
+  key(status.querySelector('[data-slot="status-picker-control"]'), 'Escape');
   await until(() => openPopover() === null || null, 'the status popover to close');
 
   return { framework, ...seen };

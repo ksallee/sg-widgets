@@ -68,11 +68,8 @@
 		rowIdOf,
 		rowIsDisabled,
 		rowKey,
-		sameFilters,
 		sameIds,
-		sameSort,
 		shouldLoadNext,
-		sourceModeFor,
 		stateLine,
 		toColumn,
 		toggleId
@@ -85,6 +82,7 @@
 	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
+	import { bindSource } from '$lib/registry/components/collection-source.svelte.js';
 	import CollectionFooter from '$lib/registry/components/collection-footer.svelte';
 	import FieldValue from '$lib/registry/components/field-value.svelte';
 	import StateLine from '$lib/registry/components/state-line.svelte';
@@ -204,17 +202,25 @@
 		...rest
 	}: Props = $props();
 
-	// svelte-ignore state_referenced_locally
-	let snapshot = $state(source.snapshot());
-	$effect(() => source.subscribe(() => (snapshot = source.snapshot())));
-	$effect(() => {
-		if (source.status === 'idle') void source.load();
+	const bound = bindSource({
+		source: () => source,
+		paging: () => paging,
+		sort: {
+			get: () => sort,
+			set: (next) => {
+				sort = next;
+				onSortChange?.(next);
+			}
+		},
+		filters: {
+			get: () => filters,
+			set: (next) => {
+				filters = next;
+				onFiltersChange?.(next);
+			}
+		}
 	});
-	$effect(() => {
-		// `paging` is the one prop a caller sets, so the source follows it rather than the
-		// other way round. Setting a mode it already holds is a no-op.
-		void source.setMode(sourceModeFor(paging));
-	});
+	const snapshot = $derived(bound.snapshot);
 	$effect(() => {
 		// A group is only whole when the server put its rows together, so the group path
 		// leads the sort. Setting it reads the first page again.
@@ -251,10 +257,8 @@
 	const groups = $derived(groupRowsKeyed(rows, groupBy.path));
 
 	/*
-	 * Two-way state.
-	 *
-	 * Each pair is one effect out and one in, each reading the other side untracked, so
-	 * a change travels once and the two never write to each other.
+	 * The collapsed keys, two-way: one effect out and one in, each reading the other
+	 * side untracked, so a change travels once and the two never write to each other.
 	 */
 	$effect(() => {
 		const keys = shutKeys;
@@ -266,30 +270,6 @@
 		const keys = collapsed ?? [];
 		if (sameIds(keys, untrack(() => shutKeys))) return;
 		shutKeys = [...keys];
-	});
-
-	$effect(() => {
-		const wanted = sort;
-		if (wanted === undefined || sameSort(wanted, untrack(() => snapshot.sort))) return;
-		void source.setSort([...wanted]);
-	});
-	$effect(() => {
-		const current = snapshot.sort;
-		if (sameSort(current, untrack(() => sort ?? []))) return;
-		sort = [...current];
-		onSortChange?.(sort);
-	});
-
-	$effect(() => {
-		const wanted = filters;
-		if (wanted === undefined || sameFilters(wanted, untrack(() => snapshot.filters))) return;
-		void source.setFilters(wanted);
-	});
-	$effect(() => {
-		const current = snapshot.filters;
-		if (sameFilters(current, untrack(() => filters ?? null))) return;
-		filters = current;
-		onFiltersChange?.(current);
 	});
 
 	function toggle(row: EntityRow): void {
@@ -487,12 +467,6 @@
 		observer.observe(target);
 		return () => observer.disconnect();
 	});
-
-	/** Read the page that failed again: the one a pager is on, or the one that was appended. */
-	function retryPage(): void {
-		if (paging === 'pages') void source.setPage(snapshot.page);
-		else void source.loadMore();
-	}
 
 	const loadingText = $derived(stateLine('loading', { loadingLabel }));
 </script>
@@ -697,7 +671,7 @@
 					icon={CircleAlert}
 					label={stateLine('error', { errorLabel }, snapshot.error?.message)}
 				>
-					<Button variant="outline" size="sm" onclick={retryPage}>Retry</Button>
+					<Button variant="outline" size="sm" onclick={() => bound.retry()}>Retry</Button>
 				</StateLine>
 			{:else if snapshot.status === 'loadingMore'}
 				<div data-slot="grouped-list-loading" class="p-2" aria-busy="true" aria-label={loadingText}>

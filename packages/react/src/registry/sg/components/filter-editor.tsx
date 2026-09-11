@@ -52,11 +52,12 @@ import { CheckboxEditor } from '@/registry/sg/components/checkbox-editor';
 import { ColorEditor } from '@/registry/sg/components/color-editor';
 import { DateEditor } from '@/registry/sg/components/date-editor';
 import { DateTimeEditor } from '@/registry/sg/components/date-time-editor';
+import { useEntityFields } from '@/registry/sg/components/entity-fields';
 import { EntityMultiPicker } from '@/registry/sg/components/entity-multi-picker';
 import { EntityPicker } from '@/registry/sg/components/entity-picker';
 import { FieldPicker } from '@/registry/sg/components/field-picker';
-import { ListMultiSelect } from '@/registry/sg/components/list-multi-select';
-import { ListSelect } from '@/registry/sg/components/list-select';
+import { ListMultiPicker } from '@/registry/sg/components/list-multi-picker';
+import { ListPicker } from '@/registry/sg/components/list-picker';
 import { NumberEditor } from '@/registry/sg/components/number-editor';
 import { StateLine } from '@/registry/sg/components/state-line';
 import { StatusMultiPicker } from '@/registry/sg/components/status-multi-picker';
@@ -221,19 +222,7 @@ export function FilterEditor({
   ref,
   ...rest
 }: FilterEditorProps) {
-  const [fields, setFields] = useState<Record<string, FieldSchema>>({});
-
-  // The schema service caches, so this reaches the network once per type however
-  // often the tree is edited (probe 002).
-  useEffect(() => {
-    let live = true;
-    void context.schema.fields(entityType).then((loaded) => {
-      if (live) setFields(loaded);
-    });
-    return () => {
-      live = false;
-    };
-  }, [context.schema, entityType]);
+  const fields = useEntityFields(context, entityType);
 
   /**
    * The leaf schema of every dotted path the tree holds, added once and kept.
@@ -570,7 +559,7 @@ function ValueSlot({ ctx, path, node }: { ctx: EditorContext; path: NodePath; no
           onValueChange={(next) => set(next ?? '')}
         />
       ) : kind === 'options' && arity === 'many' ? (
-        <ListMultiSelect
+        <ListMultiPicker
           className="min-w-0 flex-1"
           size={INNER[ctx.size]}
           disabled={disabled}
@@ -580,7 +569,7 @@ function ValueSlot({ ctx, path, node }: { ctx: EditorContext; path: NodePath; no
           onValueChange={(next) => set([...next])}
         />
       ) : kind === 'options' ? (
-        <ListSelect
+        <ListPicker
           className="min-w-0 flex-1"
           size={INNER[ctx.size]}
           disabled={disabled}
@@ -818,7 +807,7 @@ function RelativeValue({
           onChange(withRelativeWindow(value, { count: next === null ? null : Number(next) }) as ConditionValue)
         }
       />
-      <ListSelect
+      <ListPicker
         className="w-24 shrink-0"
         size={INNER[size]}
         disabled={disabled}

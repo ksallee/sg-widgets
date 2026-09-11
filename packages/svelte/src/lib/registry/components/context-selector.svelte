@@ -1,7 +1,9 @@
 <script lang="ts" module>
 	import type { EntityRef, FieldSpec } from '@sg-widgets/core';
 
-	export type ContextSelectorSize = 'sm' | 'md' | 'lg';
+	import { CONTROL_GLYPH, type ControlSize } from '$lib/registry/components/control-classes.js';
+
+	export type ContextSelectorSize = ControlSize;
 
 	/**
 	 * Controls follow the input ladder of `docs/design-rules.md`. `data-empty` takes the
@@ -14,7 +16,6 @@
 		md: 'min-h-9 pr-3 pl-[5px] py-1 data-empty:pl-2 data-empty:py-0.5',
 		lg: 'min-h-10 pr-3 pl-1 py-0.5 data-empty:pl-2 data-empty:py-0'
 	};
-	const GLYPH: Record<ContextSelectorSize, string> = { sm: 'size-4', md: 'size-4', lg: 'size-5' };
 	/** A chip inside a control sits one step down the leaf ladder. */
 	const CHIP: Record<ContextSelectorSize, 'sm' | 'md'> = { sm: 'sm', md: 'sm', lg: 'md' };
 
@@ -66,16 +67,16 @@
 <script lang="ts">
 	import type { HTMLAttributes } from 'svelte/elements';
 	import type { PickerRow, SgContext } from '@sg-widgets/core';
-	import { NO_ROWS_LABEL, pathOf, rowFields, stateLine } from '@sg-widgets/core';
+	import { errorText, NO_ROWS_LABEL, pathOf, prependRecent, rowFields, stateLine } from '@sg-widgets/core';
 	import ChevronDown from '@lucide/svelte/icons/chevron-down';
 	import ListChecks from '@lucide/svelte/icons/list-checks';
 	import TriangleAlert from '@lucide/svelte/icons/triangle-alert';
 	import * as Popover from '$lib/components/ui/popover/index.js';
-	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
 	import EntityChip from '$lib/registry/components/entity-chip.svelte';
 	import HierarchicalSearch from '$lib/registry/components/hierarchical-search.svelte';
 	import Row from '$lib/registry/components/picker-row.svelte';
+	import SearchSkeleton from '$lib/registry/components/search-skeleton.svelte';
 	import StateLine from '$lib/registry/components/state-line.svelte';
 
 	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>, HTMLDivElement> & {
@@ -204,7 +205,7 @@
 			})
 			.catch((error: unknown) => {
 				if (!live) return;
-				failure = error instanceof Error ? error.message : String(error);
+				failure = errorText(error);
 				tasks = [];
 			})
 			.finally(() => {
@@ -237,7 +238,7 @@
 	}
 
 	function apply(next: WorkContext): void {
-		onRecentsChange?.([next, ...recents.filter((r) => keyOf(r) !== keyOf(next))].slice(0, recentLimit));
+		onRecentsChange?.(prependRecent(recents, next, recentLimit, keyOf));
 		onWorkContextChange?.(next);
 		setOpen(false);
 	}
@@ -245,6 +246,9 @@
 	const heading = 'text-muted-foreground px-2 py-1.5 text-xs font-medium';
 	const rowClass =
 		'hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring focus-visible:ring-offset-background flex w-full min-w-0 items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2';
+	/** A recent is a row of chips, and the chips carry the hover; the row itself stays quiet. */
+	const recentClass =
+		'focus-visible:ring-ring focus-visible:ring-offset-background flex w-full min-w-0 items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm outline-none focus-visible:ring-2 focus-visible:ring-offset-2';
 </script>
 
 <!--
@@ -275,7 +279,7 @@
 					{/each}
 				{/if}
 			</span>
-			<ChevronDown aria-hidden="true" class={cn('text-muted-foreground shrink-0', GLYPH[size])} />
+			<ChevronDown aria-hidden="true" class={cn('text-muted-foreground shrink-0', CONTROL_GLYPH[size])} />
 		</Popover.Trigger>
 
 		<!-- Fixed: the Command list inside scrolls its cursor into view on mount, and an absolute
@@ -291,7 +295,7 @@
 					<p class="text-muted-foreground px-2 py-1.5 text-sm">Nothing yet.</p>
 				{:else}
 					{#each recents as recent (keyOf(recent))}
-						<button type="button" class={rowClass} onclick={() => apply(recent)}>
+						<button type="button" class={recentClass} onclick={() => apply(recent)}>
 							<span class="flex min-w-0 flex-1 flex-wrap items-center gap-2">
 								{#each [recent.project, recent.entity, recent.task].filter((r) => r !== null) as chip (`${chip.type}:${chip.id}`)}
 									<EntityChip entity={chip} size={CHIP[size]} {context} />
@@ -312,21 +316,11 @@
 						label={stateLine('error', { errorLabel }, failure)}
 					/>
 				{:else if loading && currentUser}
-					<div
-						class="flex flex-col gap-2 p-1"
-						aria-busy="true"
-						aria-label={stateLine('loading', { loadingLabel })}
-					>
-						{#each [0, 1] as line (line)}
-							<div class="flex items-center gap-2 px-2 py-1.5">
-								<Skeleton class="size-4 shrink-0" />
-								<div class="flex min-w-0 flex-1 flex-col gap-1">
-									<Skeleton class="h-3 w-1/2" />
-									<Skeleton class="h-2.5 w-1/4" />
-								</div>
-							</div>
-						{/each}
-					</div>
+					<SearchSkeleton
+						lines={2}
+						lead="size-4 shrink-0"
+						label={stateLine('loading', { loadingLabel })}
+					/>
 				{:else if byProject.length === 0}
 					<p data-slot="context-tasks-empty" class="text-muted-foreground px-2 py-1.5 text-sm">
 						{emptyLabel}

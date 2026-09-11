@@ -3,28 +3,14 @@ import type { FieldSchema, StatusRecord } from '@sg-widgets/core';
 import { statusGlyph, statusLabel, statusPaint } from '@sg-widgets/core';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { LEAF_BOX, LEAF_GLYPH, REMOVE_CONTROL, type LeafSize } from '@/registry/sg/components/leaf-classes';
 import { StatusGlyph } from '@/registry/sg/components/status-glyph';
 
 /** How much of the status to show. `glyph` is the bare icon, with no pill around it. */
 export type StatusBadgeVariant = 'both' | 'icon' | 'text' | 'glyph';
-export type StatusBadgeSize = 'sm' | 'md' | 'lg';
+export type StatusBadgeSize = LeafSize;
 /** Which of the two names the badge puts on show; the other one goes in the tooltip. */
 export type StatusBadgeLabel = 'name' | 'code';
-
-/**
- * Leaf atoms follow the thumbnail/avatar ladder of `docs/design-rules.md`
- * (6 / 8 / 10); the input ladder (8 / 9 / 10) is for controls.
- */
-const BOX: Record<StatusBadgeSize, string> = {
-  sm: 'h-6 text-xs',
-  md: 'h-8 text-sm',
-  lg: 'h-10 text-sm',
-};
-const GLYPH: Record<StatusBadgeSize, string> = {
-  sm: 'size-4',
-  md: 'size-4',
-  lg: 'size-5',
-};
 
 export interface StatusBadgeProps extends Omit<React.HTMLAttributes<HTMLSpanElement>, 'children' | 'color'> {
   /** The stored code, e.g. `ip`. A row may hold a code outside the usable set; that is legal (probe 009). */
@@ -109,7 +95,7 @@ export function StatusBadge({
 
   const content = (
     <>
-      {showGlyph ? <StatusGlyph status={status} siteUrl={siteUrl} className={GLYPH[size]} /> : null}
+      {showGlyph ? <StatusGlyph status={status} siteUrl={siteUrl} className={LEAF_GLYPH[size]} /> : null}
       <span className={cn('truncate', !showText && 'sr-only')}>{textIcon ?? text}</span>
     </>
   );
@@ -124,11 +110,11 @@ export function StatusBadge({
       style={bare ? undefined : style}
       className={cn(
         bare
-          ? cn('inline-flex shrink-0 items-center justify-center align-middle', GLYPH[size])
+          ? cn('inline-flex shrink-0 items-center justify-center align-middle', LEAF_GLYPH[size])
           : cn(
               'border-border bg-background inline-flex max-w-full min-w-0 items-center rounded-md border px-1.5 align-middle text-xs font-medium',
               'gap-1.5',
-              BOX[size],
+              LEAF_BOX[size],
               variant === 'icon' && 'justify-center',
               paint && 'border-transparent ring-1 ring-current/10 ring-inset',
               color && !paint && 'bg-muted text-muted-foreground border-transparent',
@@ -139,7 +125,7 @@ export function StatusBadge({
     >
       {bare ? (
         <>
-          <StatusGlyph status={status} siteUrl={siteUrl} fallback className={GLYPH[size]} />
+          <StatusGlyph status={status} siteUrl={siteUrl} fallback className={LEAF_GLYPH[size]} />
           <span className="sr-only">{text}</span>
         </>
       ) : showRemove ? (
@@ -150,7 +136,7 @@ export function StatusBadge({
             data-slot="status-badge-remove"
             aria-label={removeLabel ?? `Remove ${text}`}
             onClick={() => onRemove?.(code)}
-            className="hover:bg-current/15 focus-visible:ring-ring focus-visible:ring-offset-background pointer-events-auto shrink-0 rounded-sm p-0.5 opacity-70 outline-none transition-colors duration-150 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-2 motion-safe:active:scale-[0.98]"
+            className={cn(REMOVE_CONTROL, 'pointer-events-auto')}
           >
             <X aria-hidden="true" className="size-3" />
           </button>

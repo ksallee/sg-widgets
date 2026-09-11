@@ -337,6 +337,29 @@ export function toApiDate(raw: string): ParseResult<string | null> {
   return { value: text };
 }
 
+/** A calendar day, as the three numbers a calendar widget is built from. */
+export interface IsoDayParts {
+  year: number;
+  month: number;
+  day: number;
+}
+
+/**
+ * `YYYY-MM-DD` as its three numbers, or null when the string is not one. The shape
+ * a calendar takes differs per framework, so only the split is shared.
+ */
+export function isoDayParts(value: string | null | undefined): IsoDayParts | null {
+  const m = DATE_ONLY.exec(String(value ?? '').trim());
+  if (!m) return null;
+  return { year: Number(m[1]), month: Number(m[2]), day: Number(m[3]) };
+}
+
+/** The three numbers back as `YYYY-MM-DD`, zero-padded. */
+export function isoDay(parts: IsoDayParts): string {
+  const pad = (n: number, width = 2): string => String(n).padStart(width, '0');
+  return `${pad(parts.year, 4)}-${pad(parts.month)}-${pad(parts.day)}`;
+}
+
 export interface DateTimeOptions {
   /** IANA zone the typed wall-clock time is read in. Defaults to the runtime's. */
   timeZone?: string;

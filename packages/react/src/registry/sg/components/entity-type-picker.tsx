@@ -241,11 +241,13 @@ export function EntityTypePicker({
     const target = event.target as HTMLElement | null;
     // The chip's remove control, the clear control and the chevron own their own press.
     if (target?.closest('button')) return;
-    if (inline && target !== inputRef.current) {
+    const onCaret = target === inputRef.current;
+    if (inline && !onCaret) {
       event.preventDefault();
       inputRef.current?.focus({ preventScroll: true });
     }
-    setOpen(true);
+    // A press on the control toggles the list; a press on the caret only ever opens it.
+    setOpen(onCaret ? true : !open);
   }
 
   // A summary trigger has no caret of its own, so the popup's search box takes it.

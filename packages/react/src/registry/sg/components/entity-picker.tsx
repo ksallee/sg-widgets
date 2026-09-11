@@ -287,11 +287,13 @@ export function EntityPicker({
     const target = event.target as HTMLElement | null;
     // The chip's remove control, the clear control and the chevron own their own press.
     if (target?.closest('button')) return;
-    if (target !== inputRef.current) {
+    const onCaret = target === inputRef.current;
+    if (!onCaret) {
       event.preventDefault();
       inputRef.current?.focus({ preventScroll: true });
     }
-    setOpen(true);
+    // A press on the control toggles the list; a press on the caret only ever opens it.
+    setOpen(onCaret ? true : !open);
   }
 
   /** The caller's own sub-label. Absent, the row reads `subLabelField` itself. */

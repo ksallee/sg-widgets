@@ -376,9 +376,11 @@
 		if (target?.closest('button')) return;
 		// The press's own default would move focus to the body and off whichever caret
 		// takes it: the field's, or the popup's once the effect below focuses it.
-		if (target !== inputEl) event.preventDefault();
-		if (inline && target !== inputEl) inputEl?.focus({ preventScroll: true });
-		setOpen(true);
+		const onCaret = target === inputEl;
+		if (!onCaret) event.preventDefault();
+		if (inline && !onCaret) inputEl?.focus({ preventScroll: true });
+		// A press on the control toggles the list; a press on the caret only ever opens it.
+		setOpen(onCaret ? true : !open);
 	}
 
 	// A summary trigger has no caret of its own, so the popup's search box takes it.

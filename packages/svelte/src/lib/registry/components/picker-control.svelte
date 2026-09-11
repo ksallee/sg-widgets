@@ -83,15 +83,15 @@
 </script>
 
 <script lang="ts">
-	import { tick, type Snippet } from 'svelte';
+	import type { Snippet } from 'svelte';
 	import {
 		focusChip,
 		listStatus,
 		NO_MATCH_LABEL,
 		pickerKeyIntent,
-		scrollHighlightedIntoView,
 		stateLine,
 		summariseSelection,
+		watchHighlight,
 		watchOverflow
 	} from '@sg-widgets/core';
 	import { Combobox } from 'bits-ui';
@@ -376,7 +376,7 @@
 				setOpen(true);
 				return;
 			case 'follow':
-				void tick().then(() => scrollHighlightedIntoView(listEl));
+				// The key belongs to the list, and the list's own watcher follows the highlight.
 				return;
 			default:
 				return;
@@ -387,8 +387,7 @@
 	// replaces them all; either way the list follows the highlight.
 	$effect(() => {
 		void rowCount;
-		if (!open) return;
-		void tick().then(() => scrollHighlightedIntoView(listEl));
+		return watchHighlight(listEl);
 	});
 
 	function choose(next: string[]): void {

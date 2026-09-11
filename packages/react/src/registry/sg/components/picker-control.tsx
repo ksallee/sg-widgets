@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { PointerEvent as ReactPointerEvent, ReactNode, RefObject } from 'react';
 import type { ChipRow, PickerSummary } from '@sg-widgets/core';
 import {
@@ -6,9 +6,9 @@ import {
   listStatus,
   NO_MATCH_LABEL,
   pickerKeyIntent,
-  scrollHighlightedIntoView,
   stateLine,
   summariseSelection,
+  watchHighlight,
   watchOverflow,
 } from '@sg-widgets/core';
 import { Combobox as ComboboxPrimitive } from '@base-ui/react';
@@ -246,11 +246,6 @@ export function PickerControl({
 }: PickerControlProps) {
   const controlRef = useRef<HTMLDivElement | null>(null);
   const [listEl, setListEl] = useState<HTMLDivElement | null>(null);
-  const listRef = useRef<HTMLDivElement | null>(null);
-  const setList = useCallback((node: HTMLDivElement | null) => {
-    listRef.current = node;
-    setListEl(node);
-  }, []);
   // The list writes the overflow variables the fade reads, which are Base UI's own.
   useEffect(() => watchOverflow(listEl), [listEl]);
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -322,10 +317,7 @@ export function PickerControl({
 
   // A load-more page appends rows under the highlighted one, and a new query
   // replaces them all; either way the list follows the highlight.
-  useEffect(() => {
-    if (!open) return;
-    scrollHighlightedIntoView(listRef.current);
-  }, [open, items.length]);
+  useEffect(() => watchHighlight(listEl), [listEl, items.length]);
 
   /** The caret back in the input, and the chip row released. */
   function toInput(): void {
@@ -382,8 +374,7 @@ export function PickerControl({
         setOpen(true);
         return;
       case 'follow':
-        // The highlight moves after this handler, so the list follows it a frame later.
-        requestAnimationFrame(() => scrollHighlightedIntoView(listRef.current));
+        // The key belongs to the list, and the list's own watcher follows the highlight.
         return;
       default:
         // A closed picker leaves Escape alone: the primitive would clear the value.
@@ -603,7 +594,7 @@ export function PickerControl({
               { emptyLabel, loadingLabel, errorLabel },
             )}
           </div>
-          <ComboboxPrimitive.List ref={setList} data-slot={`${slot}-list`} className={PICKER_LIST}>
+          <ComboboxPrimitive.List ref={setListEl} data-slot={`${slot}-list`} className={PICKER_LIST}>
             {note ?? ((key: string) => drawRow(key))}
           </ComboboxPrimitive.List>
         </ComboboxPrimitive.Popup>

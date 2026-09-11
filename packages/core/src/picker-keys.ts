@@ -126,3 +126,22 @@ export function scrollHighlightedIntoView(list: Element | null | undefined): boo
   row.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   return true;
 }
+
+/**
+ * Keep the highlighted row in view for as long as the list is drawn.
+ *
+ * The primitive moves the highlight itself, and a load-more page appends rows under it,
+ * so the list follows the mark rather than the key that moved it. Returns the teardown.
+ */
+export function watchHighlight(list: Element | null | undefined): () => void {
+  if (!list || typeof MutationObserver === 'undefined') return () => {};
+  scrollHighlightedIntoView(list);
+  const observer = new MutationObserver(() => scrollHighlightedIntoView(list));
+  observer.observe(list, {
+    subtree: true,
+    childList: true,
+    attributes: true,
+    attributeFilter: ['data-highlighted'],
+  });
+  return () => observer.disconnect();
+}

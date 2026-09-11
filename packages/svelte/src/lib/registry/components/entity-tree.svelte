@@ -383,7 +383,9 @@
 		const root = ref;
 		if (!path || !root || !document.activeElement?.closest('[data-path]')) return;
 		if (!root.contains(document.activeElement)) return;
-		root.querySelector<HTMLElement>(`[data-path="${CSS.escape(path)}"]`)?.focus({ preventScroll: true });
+		const row = root.querySelector<HTMLElement>(`[data-path="${CSS.escape(path)}"]`);
+		row?.focus({ preventScroll: true });
+		row?.scrollIntoView({ block: 'nearest' });
 	});
 
 	const loadingText = $derived(stateLine('loading', { loadingLabel }));

@@ -33,48 +33,47 @@
 		selectable: boolean;
 	}
 
+	/** One level of the tree, and the levels above it. */
+	interface Level {
+		path: string;
+		crumbs: Array<{ label: string; path: string }>;
+	}
+
 	/** Leaf types a drill-down usually ends on. */
 	export const HIERARCHICAL_SEARCH_TYPES = ['Shot', 'Asset', 'Sequence', 'Task'];
 
-	/** Each hit costs one path lookup, so the search asks for fewer rows than the endpoint allows. */
-	const LEAF_LIMIT = 10;
-
-	/** The project a root path names, for scoping the text search that finds the leaves. */
-	function projectOf(rootPath: string): number | null {
-		const match = /^\/Project\/(\d+)/.exec(rootPath);
-		return match ? Number(match[1]) : null;
+	/** A row is addressed by its tree path. */
+	function nodeKey(row: HierarchicalSearchRow): string {
+		return row.nodePath;
 	}
 </script>
 
 <script lang="ts">
 	import type { Component } from 'svelte';
+	import { untrack } from 'svelte';
 	import type { HTMLAttributes } from 'svelte/elements';
 	import type { SgContext } from '@sg-widgets/core';
 	import {
 		breadcrumb,
-		errorText,
 		hierarchyEntity,
+		HIERARCHY_LEAF_LIMIT,
 		hydrate,
 		NO_MATCH_LABEL,
 		NO_ROWS_LABEL,
 		pathOf,
 		pathRefs,
+		projectOfPath,
 		rowFields,
 		scopeToProject,
-		SEARCH_DEBOUNCE_MS,
-		searchTypeMap,
-		stateLine
+		searchTypeMap
 	} from '@sg-widgets/core';
 	import ChevronRight from '@lucide/svelte/icons/chevron-right';
 	import Folder from '@lucide/svelte/icons/folder';
-	import Search from '@lucide/svelte/icons/search';
-	import TriangleAlert from '@lucide/svelte/icons/triangle-alert';
 	import * as Command from '$lib/components/ui/command/index.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
 	import { entityGlyph } from '$lib/registry/components/entity-glyphs.js';
 	import Row from '$lib/registry/components/picker-row.svelte';
-	import SearchSkeleton from '$lib/registry/components/search-skeleton.svelte';
-	import StateLine from '$lib/registry/components/state-line.svelte';
+	import SearchControl, { type SearchAnswer, type SearchRequest } from '$lib/registry/components/search-control.svelte';
 
 	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>, HTMLDivElement> & {
 		/** The widget context. Every read goes through it, so widgets on a page share one cache. */
@@ -140,28 +139,16 @@
 	const schema = $derived(context.schema);
 
 	let query = $state('');
-	let rows = $state<HierarchicalSearchRow[]>([]);
-	let loading = $state(false);
-	let failure = $state<string | null>(null);
-	/** Where browsing is, and the labels of every level above it. `$effect` sets it from `rootPath`. */
-	let here = $state('/');
-	let trail = $state<Array<{ label: string; path: string }>>([]);
-
-	let requestId = 0;
-	let timer: ReturnType<typeof setTimeout> | undefined;
+	/** The level being browsed, and the levels above it. */
+	let level = $state<Level>({ path: untrack(() => rootPath), crumbs: [] });
 
 	const searching = $derived(query.trim().length > 0);
-	/**
-	 * The row the cursor sits on. cmdk moves it to the first row whenever the list
-	 * changes and bits-ui leaves it where it was, so it is set here and the two
-	 * frameworks answer Down, Right and Enter the same way.
-	 */
-	let cursor = $state('');
-	const firstRow = $derived(!searching && trail.length > 0 ? 'up' : (rows[0]?.nodePath ?? ''));
+	const trail = $derived(level.crumbs);
+	const leadKey = $derived(!searching && trail.length > 0 ? 'up' : '');
+
 	$effect(() => {
-		cursor = firstRow;
+		level = { path: rootPath, crumbs: [] };
 	});
-	const empty = $derived(!loading && failure === null && rows.length === 0);
 
 	/** A level is a folder; a row takes its type's own glyph. */
 	function glyphFor(row: HierarchicalSearchRow): Component {
@@ -204,23 +191,9 @@
 	}
 
 	/** Open one level of the tree. `children` names the next paths (post_hierarchy_expand). */
-	async function browse(path: string, crumbs: Array<{ label: string; path: string }>): Promise<void> {
-		const id = (requestId += 1);
-		loading = true;
-		failure = null;
-		try {
-			const node = await context.client.hierarchyExpand(path);
-			if (id !== requestId) return;
-			here = path;
-			trail = crumbs;
-			rows = node.children.map((child) => browseRow(child, [...crumbs.map((c) => c.label), node.label]));
-		} catch (error) {
-			if (id !== requestId) return;
-			failure = errorText(error);
-			rows = [];
-		} finally {
-			if (id === requestId) loading = false;
-		}
+	async function browse(at: Level): Promise<HierarchicalSearchRow[]> {
+		const node = await context.client.hierarchyExpand(at.path);
+		return node.children.map((child) => browseRow(child, [...at.crumbs.map((c) => c.label), node.label]));
 	}
 
 	/**
@@ -228,81 +201,60 @@
 	 * entity and answers its path, so the words are matched by `_text_search` first
 	 * (post_hierarchy_search).
 	 */
-	async function search(text: string): Promise<void> {
-		const id = (requestId += 1);
-		loading = true;
-		failure = null;
-		try {
-			let types = searchTypeMap(entityTypes);
-			const projectId = projectOf(rootPath);
-			if (projectId !== null) types = await scopeToProject(schema, types, projectId);
-			const found = await context.client.textSearch(text, types, { size: LEAF_LIMIT, number: 1 });
-			const hits = await hydrate(context.client, found, {
-				fields: rowFields({ thumbnail, labelField, subLabelField, secondaryField, showCode, fields }),
-				labelField
-			});
-			const paths = await Promise.all(
-				hits.map((hit) =>
-					context.client
-						.hierarchySearch(rootPath, hit.ref)
-						.then((answers) => answers[0] ?? null)
-						.catch(() => null)
-				)
-			);
-			if (id !== requestId) return;
-			rows = paths.flatMap((path, i) => {
-				const hit = hits[i];
-				// A row the tree has no place for under this root is not a result.
-				if (!path || !hit) return [];
-				const crumbs = breadcrumb(path);
-				// The tree's own label names the row, unless the caller named a field.
-				const own = (labelField ? hit.ref.name : '') || (crumbs[crumbs.length - 1] as string);
-				return [
-					{
-						label: own,
-						crumbs: crumbs.slice(0, -1),
-						ref: { ...hit.ref, name: path.label },
-						values: hit.values,
-						path: pathRefs(path.incrementalPath),
-						nodePath: path.incrementalPath[path.incrementalPath.length - 1] ?? rootPath,
-						hasChildren: false,
-						selectable: true
-					}
-				];
-			});
-		} catch (error) {
-			if (id !== requestId) return;
-			failure = errorText(error);
-			rows = [];
-		} finally {
-			if (id === requestId) loading = false;
-		}
+	async function searchLeaves(text: string): Promise<HierarchicalSearchRow[]> {
+		let types = searchTypeMap(entityTypes);
+		const projectId = projectOfPath(rootPath);
+		if (projectId !== null) types = await scopeToProject(schema, types, projectId);
+		const found = await context.client.textSearch(text, types, { size: HIERARCHY_LEAF_LIMIT, number: 1 });
+		const hits = await hydrate(context.client, found, {
+			fields: rowFields({ thumbnail, labelField, subLabelField, secondaryField, showCode, fields }),
+			labelField
+		});
+		const paths = await Promise.all(
+			hits.map((hit) =>
+				context.client
+					.hierarchySearch(rootPath, hit.ref)
+					.then((answers) => answers[0] ?? null)
+					.catch(() => null)
+			)
+		);
+		return paths.flatMap((path, i) => {
+			const hit = hits[i];
+			// A row the tree has no place for under this root is not a result.
+			if (!path || !hit) return [];
+			const crumbs = breadcrumb(path);
+			// The tree's own label names the row, unless the caller named a field.
+			const own = (labelField ? hit.ref.name : '') || (crumbs[crumbs.length - 1] as string);
+			return [
+				{
+					label: own,
+					crumbs: crumbs.slice(0, -1),
+					ref: { ...hit.ref, name: path.label },
+					values: hit.values,
+					path: pathRefs(path.incrementalPath),
+					nodePath: path.incrementalPath[path.incrementalPath.length - 1] ?? rootPath,
+					hasChildren: false,
+					selectable: true
+				}
+			];
+		});
 	}
 
-	function setQuery(text: string): void {
-		query = text;
-		clearTimeout(timer);
-		// Bumping the id cancels an answer already in flight for the text just replaced.
-		requestId += 1;
-		rows = [];
-		loading = true;
-		if (text.trim().length === 0) {
-			void browse(here, trail);
-			return;
-		}
-		timer = setTimeout(() => void search(text), SEARCH_DEBOUNCE_MS);
+	async function load({ query: text }: SearchRequest): Promise<SearchAnswer<HierarchicalSearchRow>> {
+		if (text.trim().length === 0) return { items: await browse(level) };
+		return { items: await searchLeaves(text) };
 	}
 
 	function drill(row: HierarchicalSearchRow): void {
 		if (!row.hasChildren || searching) return;
-		void browse(row.nodePath, [...trail, { label: row.label, path: here }]);
+		level = { path: row.nodePath, crumbs: [...trail, { label: row.label, path: level.path }] };
 	}
 
 	function up(): void {
 		if (searching || trail.length === 0) return;
 		const parent = trail[trail.length - 1];
 		if (!parent) return;
-		void browse(parent.path, trail.slice(0, -1));
+		level = { path: parent.path, crumbs: trail.slice(0, -1) };
 	}
 
 	function activate(row: HierarchicalSearchRow): void {
@@ -318,7 +270,7 @@
 	 * cursor is read off the DOM because the command list owns it, and both frameworks
 	 * mark it the same way.
 	 */
-	function onKeydown(event: KeyboardEvent): void {
+	function onKeydown(event: KeyboardEvent, items: HierarchicalSearchRow[]): void {
 		if (searching) return;
 		if (event.key === 'ArrowLeft' || (event.key === 'Backspace' && query.length === 0)) {
 			event.preventDefault();
@@ -329,15 +281,11 @@
 		const root = event.currentTarget as HTMLElement | null;
 		// cmdk marks an unselected row `data-selected="false"` where bits-ui omits it; `aria-selected` is the same in both.
 		const nodePath = root?.querySelector('[data-slot="command-item"][aria-selected="true"]')?.getAttribute('data-node-path');
-		const item = rows.find((r) => r.nodePath === nodePath);
+		const item = items.find((r) => r.nodePath === nodePath);
 		if (!item?.hasChildren) return;
 		event.preventDefault();
 		drill(item);
 	}
-
-	$effect(() => {
-		void browse(rootPath, []);
-	});
 </script>
 
 <!--
@@ -351,89 +299,75 @@
 	result a breadcrumb. The path runs through field names such as `sg_sequence`,
 	because the tree follows the site's own navigation configuration.
 -->
+{#snippet rows({ items }: { items: HierarchicalSearchRow[]; query: string; loading: boolean })}
+	<Command.Group heading={searching ? 'Results' : trail.map((c) => c.label).join(' › ') || 'Tree'}>
+		{#if !searching && trail.length > 0}
+			<Command.Item value="up" data-slot="search-up" onSelect={up}>
+				<span class={cn('text-muted-foreground flex shrink-0 items-center justify-center', LEAD[size])}>
+					<ChevronRight aria-hidden="true" class={cn('rotate-180', GLYPH[size])} />
+				</span>
+				<span class={cn('text-muted-foreground min-w-0 flex-1 truncate', TEXT[size])}>Back</span>
+			</Command.Item>
+		{/if}
+		{#each items as item (item.nodePath)}
+			{@const Glyph = glyphFor(item)}
+			<Command.Item
+				value={item.nodePath}
+				data-node-path={item.nodePath}
+				data-entity-type={item.ref?.type}
+				data-entity-id={item.ref?.id}
+				data-selectable={item.selectable ? 'true' : 'false'}
+				onSelect={() => activate(item)}
+			>
+				<Row
+					row={rowOf(item)}
+					{query}
+					crumbs={item.crumbs}
+					{thumbnail}
+					{showCode}
+					{subLabelField}
+					subLabel={subLabelOf(item)}
+					{secondaryField}
+					secondary={secondary ? secondary(item) : undefined}
+					{size}
+					{context}
+				>
+					{#snippet glyph()}<Glyph aria-hidden="true" class={GLYPH[size]} />{/snippet}
+				</Row>
+				{#if item.hasChildren && !searching}
+					<button
+						type="button"
+						data-slot="search-drill"
+						aria-label={`Open ${item.label}`}
+						class="hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring focus-visible:ring-offset-background shrink-0 rounded-sm p-0.5 opacity-70 outline-none transition-colors duration-150 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-2"
+						onclick={(e) => {
+							e.stopPropagation();
+							drill(item);
+						}}
+					>
+						<ChevronRight aria-hidden="true" class={GLYPH[size]} />
+					</button>
+				{/if}
+			</Command.Item>
+		{/each}
+	</Command.Group>
+{/snippet}
+
 <div bind:this={ref} data-slot="hierarchical-search" class={cn('w-full', className)} {...rest}>
-	<!-- Server-side matching only, so the list never filters what came back. -->
-	<Command.Root shouldFilter={false} bind:value={cursor} class="border-border rounded-lg border" onkeydown={onKeydown}>
-		<Command.Input value={query} {placeholder} oninput={(e) => setQuery(e.currentTarget.value)} />
-		<Command.List data-sg-search-list>
-			{#if failure !== null}
-				<StateLine
-					state="error"
-					slotName="search-error"
-					icon={TriangleAlert}
-					label={stateLine('error', { errorLabel }, failure)}
-				/>
-			{:else if loading && rows.length === 0}
-				<SearchSkeleton
-					slotName="search-loading"
-					lead={cn('shrink-0', LEAD[size])}
-					label={stateLine('loading', { loadingLabel })}
-				/>
-			{:else if empty}
-				<StateLine
-					state="empty"
-					slotName="search-empty"
-					icon={Search}
-					label={searching ? noMatchLabel : emptyLabel}
-				/>
-			{:else}
-				<Command.Group heading={searching ? 'Results' : trail.map((c) => c.label).join(' › ') || 'Tree'}>
-					{#if !searching && trail.length > 0}
-						<Command.Item value="up" data-slot="search-up" onSelect={up}>
-							<span
-								class={cn(
-									'text-muted-foreground flex shrink-0 items-center justify-center',
-									LEAD[size]
-								)}
-							>
-								<ChevronRight aria-hidden="true" class={cn('rotate-180', GLYPH[size])} />
-							</span>
-							<span class={cn('text-muted-foreground min-w-0 flex-1 truncate', TEXT[size])}>Back</span>
-						</Command.Item>
-					{/if}
-					{#each rows as item (item.nodePath)}
-						{@const Glyph = glyphFor(item)}
-						<Command.Item
-							value={item.nodePath}
-							data-node-path={item.nodePath}
-							data-entity-type={item.ref?.type}
-							data-entity-id={item.ref?.id}
-							data-selectable={item.selectable ? 'true' : 'false'}
-							onSelect={() => activate(item)}
-						>
-							<Row
-								row={rowOf(item)}
-								{query}
-								crumbs={item.crumbs}
-								{thumbnail}
-								{showCode}
-								{subLabelField}
-								subLabel={subLabelOf(item)}
-								{secondaryField}
-								secondary={secondary ? secondary(item) : undefined}
-								{size}
-								{context}
-							>
-								{#snippet glyph()}<Glyph aria-hidden="true" class={GLYPH[size]} />{/snippet}
-							</Row>
-							{#if item.hasChildren && !searching}
-								<button
-									type="button"
-									data-slot="search-drill"
-									aria-label={`Open ${item.label}`}
-									class="hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring focus-visible:ring-offset-background shrink-0 rounded-sm p-0.5 opacity-70 outline-none transition-colors duration-150 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-2"
-									onclick={(e) => {
-										e.stopPropagation();
-										drill(item);
-									}}
-								>
-									<ChevronRight aria-hidden="true" class={GLYPH[size]} />
-								</button>
-							{/if}
-						</Command.Item>
-					{/each}
-				</Command.Group>
-			{/if}
-		</Command.List>
-	</Command.Root>
+	<SearchControl
+		{load}
+		bind:query
+		request={level.path}
+		readsEmpty
+		commandClass="border-border rounded-lg border"
+		onkeydown={onKeydown}
+		{placeholder}
+		emptyLabel={searching ? noMatchLabel : emptyLabel}
+		{loadingLabel}
+		{errorLabel}
+		keyOf={nodeKey}
+		{leadKey}
+		skeletonLead={cn('shrink-0', LEAD[size])}
+		{rows}
+	/>
 </div>

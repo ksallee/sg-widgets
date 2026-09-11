@@ -1,15 +1,15 @@
-import { Fragment, useEffect, useMemo, useState } from 'react';
+import { Fragment, useCallback, useState } from 'react';
 import type { EntityRef, FieldSpec, PickerRow as PickerRowData, SgContext } from '@sg-widgets/core';
-import { errorText, NO_ROWS_LABEL, pathOf, prependRecent, rowFields, stateLine } from '@sg-widgets/core';
-import { ChevronDown, ListChecks, TriangleAlert } from 'lucide-react';
+import { NO_ROWS_LABEL, pathOf, prependRecent, rowFields } from '@sg-widgets/core';
+import { ChevronDown, ListChecks } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import { CONTROL_GLYPH, type ControlSize } from '@/registry/sg/components/control-classes';
 import { EntityChip } from '@/registry/sg/components/entity-chip';
 import { HierarchicalSearch } from '@/registry/sg/components/hierarchical-search';
 import { PickerRow } from '@/registry/sg/components/picker-row';
-import { SearchSkeleton } from '@/registry/sg/components/search-skeleton';
-import { StateLine } from '@/registry/sg/components/state-line';
+import type { SearchAnswer } from '@/registry/sg/components/search-control';
+import { SearchControl } from '@/registry/sg/components/search-control';
 
 /** What a widget or a publish needs to know about where the user is working. */
 export interface WorkContext {
@@ -164,33 +164,28 @@ export function ContextSelector({
     onOpenChange?.(next);
   };
 
-  const [tasks, setTasks] = useState<MyTask[]>([]);
-  /** True until the first read of the assigned tasks lands. */
-  const [loading, setLoading] = useState(true);
-  const [failure, setFailure] = useState<string | null>(null);
-
   const rootPath = workContext.project ? `/Project/${workContext.project.id}` : '/';
   const chips = [workContext.project, workContext.entity, workContext.task].filter(
     (r): r is EntityRef => r !== null,
   );
 
   /** Tasks under their project, in the order the projects first appear. */
-  const byProject = useMemo(() => {
+  function groupTasks(tasks: MyTask[]): Array<{ project: EntityRef | null; tasks: MyTask[] }> {
     const groups = new Map<string, { project: EntityRef | null; tasks: MyTask[] }>();
-    for (const row of currentUser ? tasks : []) {
+    for (const row of tasks) {
       const key = row.project ? `${row.project.type}:${row.project.id}` : '-';
       const group = groups.get(key);
       if (group) group.tasks.push(row);
       else groups.set(key, { project: row.project, tasks: [row] });
     }
     return [...groups.values()];
-  }, [currentUser, tasks]);
+  }
 
-  useEffect(() => {
-    if (!currentUser) return;
-    let live = true;
-    void context.client
-      .search('Task', {
+  /** The tasks assigned to the current user. */
+  const loadTasks = useCallback(
+    async (): Promise<SearchAnswer<MyTask>> => {
+      if (!currentUser) return { items: [] };
+      const result = await context.client.search('Task', {
         // `task_assignees` is a multi_entity of Group and HumanUser (entity_types/Task).
         filters: {
           logical_operator: 'and',
@@ -205,42 +200,30 @@ export function ContextSelector({
           'step',
         ]),
         page: { size: 50 },
-      })
-      .then((result) => {
-        if (!live) return;
-        setTasks(
-          result.data.map((row) => {
-            const values: Record<string, unknown> = { ...row.attributes };
-            for (const [name, link] of Object.entries(row.relationships)) values[name] = link?.data ?? null;
-            const named = labelField ? values[labelField] : undefined;
-            const label =
-              typeof named === 'string' && named.length > 0
-                ? named
-                : String(row.attributes['content'] ?? `Task #${row.id}`);
-            return {
-              task: { type: 'Task', id: row.id, name: label },
-              project: (row.relationships['project']?.data as EntityRef | null) ?? null,
-              entity: (row.relationships['entity']?.data as EntityRef | null) ?? null,
-              step: (row.relationships['step']?.data as EntityRef | null)?.name ?? '',
-              status: String(row.attributes['sg_status_list'] ?? ''),
-              values,
-            };
-          }),
-        );
-      })
-      .catch((error: unknown) => {
-        if (!live) return;
-        setFailure(errorText(error));
-        setTasks([]);
-      })
-      .finally(() => {
-        if (live) setLoading(false);
       });
-    return () => {
-      live = false;
-    };
+      return {
+        items: result.data.map((row) => {
+          const values: Record<string, unknown> = { ...row.attributes };
+          for (const [name, link] of Object.entries(row.relationships)) values[name] = link?.data ?? null;
+          const named = labelField ? values[labelField] : undefined;
+          const label =
+            typeof named === 'string' && named.length > 0
+              ? named
+              : String(row.attributes['content'] ?? `Task #${row.id}`);
+          return {
+            task: { type: 'Task', id: row.id, name: label },
+            project: (row.relationships['project']?.data as EntityRef | null) ?? null,
+            entity: (row.relationships['entity']?.data as EntityRef | null) ?? null,
+            step: (row.relationships['step']?.data as EntityRef | null)?.name ?? '',
+            status: String(row.attributes['sg_status_list'] ?? ''),
+            values,
+          };
+        }),
+      };
+    },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [context.client, currentUser, thumbnail, labelField, subLabelField, secondaryField, showCode, fields]);
+    [context.client, currentUser, thumbnail, labelField, subLabelField, secondaryField, showCode, fields],
+  );
 
   /** The row a task draws as: the reference and every field the read answered. */
   function rowOf(task: MyTask): PickerRowData {
@@ -261,6 +244,37 @@ export function ContextSelector({
     onRecentsChange?.(prependRecent(recents, next, recentLimit, keyOf));
     onWorkContextChange?.(next);
     setOpen(false);
+  }
+
+  function taskRows({ items }: { items: MyTask[] }) {
+    return groupTasks(items).map((group) => (
+      <Fragment key={group.project ? `${group.project.type}:${group.project.id}` : '-'}>
+        <h5 className={heading}>{group.project?.name ?? 'No project'}</h5>
+        {group.tasks.map((row) => (
+          <button
+            key={row.task.id}
+            type="button"
+            className={rowClass}
+            data-entity-type="Task"
+            data-entity-id={row.task.id}
+            onClick={() => apply({ project: row.project, entity: row.entity, task: row.task })}
+          >
+            <PickerRow
+              row={rowOf(row)}
+              thumbnail={thumbnail}
+              showCode={showCode}
+              subLabelField={subLabelField}
+              subLabel={subLabelOf(row)}
+              secondaryField={secondaryField}
+              secondary={secondary ? secondary(row) : undefined}
+              size={size}
+              context={context}
+              glyph={<ListChecks aria-hidden="true" className="size-4" />}
+            />
+          </button>
+        ))}
+      </Fragment>
+    ));
   }
 
   return (
@@ -310,49 +324,25 @@ export function ContextSelector({
 
           <section data-slot="context-my-tasks" className="flex max-h-52 flex-col overflow-y-auto">
             <h4 className={heading}>My tasks</h4>
-            {failure !== null ? (
-              <StateLine
-                state="error"
-                slotName="context-tasks-error"
-                icon={TriangleAlert}
-                label={stateLine('error', { errorLabel }, failure)}
-              />
-            ) : loading && currentUser ? (
-              <SearchSkeleton lines={2} lead="size-4 shrink-0" label={stateLine('loading', { loadingLabel })} />
-            ) : byProject.length === 0 ? (
-              <p data-slot="context-tasks-empty" className="text-muted-foreground px-2 py-1.5 text-sm">
-                {emptyLabel}
-              </p>
-            ) : (
-              byProject.map((group) => (
-                <Fragment key={group.project ? `${group.project.type}:${group.project.id}` : '-'}>
-                  <h5 className={heading}>{group.project?.name ?? 'No project'}</h5>
-                  {group.tasks.map((row) => (
-                    <button
-                      key={row.task.id}
-                      type="button"
-                      className={rowClass}
-                      data-entity-type="Task"
-                      data-entity-id={row.task.id}
-                      onClick={() => apply({ project: row.project, entity: row.entity, task: row.task })}
-                    >
-                      <PickerRow
-                        row={rowOf(row)}
-                        thumbnail={thumbnail}
-                        showCode={showCode}
-                        subLabelField={subLabelField}
-                        subLabel={subLabelOf(row)}
-                        secondaryField={secondaryField}
-                        secondary={secondary ? secondary(row) : undefined}
-                        size={size}
-                        context={context}
-                        glyph={<ListChecks aria-hidden="true" className="size-4" />}
-                      />
-                    </button>
-                  ))}
-                </Fragment>
-              ))
-            )}
+            <SearchControl<MyTask>
+              load={loadTasks}
+              shell="bare"
+              readsEmpty
+              enabled={currentUser !== null}
+              request={currentUser ? `${currentUser.type}:${currentUser.id}` : ''}
+              errorSlot="context-tasks-error"
+              loadingSlot={null}
+              skeletonLines={2}
+              skeletonLead="size-4 shrink-0"
+              loadingLabel={loadingLabel}
+              errorLabel={errorLabel}
+              rows={taskRows}
+              empty={
+                <p data-slot="context-tasks-empty" className="text-muted-foreground px-2 py-1.5 text-sm">
+                  {emptyLabel}
+                </p>
+              }
+            />
           </section>
 
           <section data-slot="context-hierarchy" className="flex flex-col gap-2">

@@ -67,17 +67,15 @@
 <script lang="ts">
 	import type { HTMLAttributes } from 'svelte/elements';
 	import type { PickerRow, SgContext } from '@sg-widgets/core';
-	import { errorText, NO_ROWS_LABEL, pathOf, prependRecent, rowFields, stateLine } from '@sg-widgets/core';
+	import { NO_ROWS_LABEL, pathOf, prependRecent, rowFields } from '@sg-widgets/core';
 	import ChevronDown from '@lucide/svelte/icons/chevron-down';
 	import ListChecks from '@lucide/svelte/icons/list-checks';
-	import TriangleAlert from '@lucide/svelte/icons/triangle-alert';
 	import * as Popover from '$lib/components/ui/popover/index.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
 	import EntityChip from '$lib/registry/components/entity-chip.svelte';
 	import HierarchicalSearch from '$lib/registry/components/hierarchical-search.svelte';
 	import Row from '$lib/registry/components/picker-row.svelte';
-	import SearchSkeleton from '$lib/registry/components/search-skeleton.svelte';
-	import StateLine from '$lib/registry/components/state-line.svelte';
+	import SearchControl, { type SearchAnswer } from '$lib/registry/components/search-control.svelte';
 
 	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>, HTMLDivElement> & {
 		/** The widget context. Every read goes through it, so widgets on a page share one cache. */
@@ -147,74 +145,58 @@
 		...rest
 	}: Props = $props();
 
-	let tasks = $state<MyTask[]>([]);
-	/** True until the first read of the assigned tasks lands. */
-	let loading = $state(true);
-	let failure = $state<string | null>(null);
-
 	const rootPath = $derived(workContext.project ? `/Project/${workContext.project.id}` : '/');
 	const chips = $derived(
 		[workContext.project, workContext.entity, workContext.task].filter((r): r is EntityRef => r !== null)
 	);
+
 	/** Tasks under their project, in the order the projects first appear. */
-	const byProject = $derived.by(() => {
+	function groupTasks(tasks: MyTask[]): Array<{ project: EntityRef | null; tasks: MyTask[] }> {
 		const groups = new Map<string, { project: EntityRef | null; tasks: MyTask[] }>();
-		for (const row of currentUser ? tasks : []) {
+		for (const row of tasks) {
 			const key = row.project ? `${row.project.type}:${row.project.id}` : '-';
 			const group = groups.get(key);
 			if (group) group.tasks.push(row);
 			else groups.set(key, { project: row.project, tasks: [row] });
 		}
 		return [...groups.values()];
-	});
+	}
 
-	$effect(() => {
+	/** The tasks assigned to the current user. */
+	async function loadTasks(): Promise<SearchAnswer<MyTask>> {
 		const user = currentUser;
-		if (!user) return;
-		let live = true;
-		void context.client
-			.search('Task', {
-				// `task_assignees` is a multi_entity of Group and HumanUser (entity_types/Task).
-				filters: { logical_operator: 'and', conditions: [['task_assignees', 'in', [{ type: user.type, id: user.id }]]] },
-				// A Task is named by `content`: it has no `code` and no `name` (entity_types/Task).
-				fields: rowFields({ thumbnail, labelField, subLabelField, secondaryField, showCode, fields }, [
-					'content',
-					'sg_status_list',
-					'project',
-					'entity',
-					'step'
-				]),
-				page: { size: 50 }
+		if (!user) return { items: [] };
+		const result = await context.client.search('Task', {
+			// `task_assignees` is a multi_entity of Group and HumanUser (entity_types/Task).
+			filters: { logical_operator: 'and', conditions: [['task_assignees', 'in', [{ type: user.type, id: user.id }]]] },
+			// A Task is named by `content`: it has no `code` and no `name` (entity_types/Task).
+			fields: rowFields({ thumbnail, labelField, subLabelField, secondaryField, showCode, fields }, [
+				'content',
+				'sg_status_list',
+				'project',
+				'entity',
+				'step'
+			]),
+			page: { size: 50 }
+		});
+		return {
+			items: result.data.map((row) => {
+				const values: Record<string, unknown> = { ...row.attributes };
+				for (const [name, link] of Object.entries(row.relationships)) values[name] = link?.data ?? null;
+				const named = labelField ? values[labelField] : undefined;
+				const label =
+					typeof named === 'string' && named.length > 0 ? named : String(row.attributes['content'] ?? `Task #${row.id}`);
+				return {
+					task: { type: 'Task', id: row.id, name: label },
+					project: (row.relationships['project']?.data as EntityRef | null) ?? null,
+					entity: (row.relationships['entity']?.data as EntityRef | null) ?? null,
+					step: (row.relationships['step']?.data as EntityRef | null)?.name ?? '',
+					status: String(row.attributes['sg_status_list'] ?? ''),
+					values
+				};
 			})
-			.then((result) => {
-				if (!live) return;
-				tasks = result.data.map((row) => {
-					const values: Record<string, unknown> = { ...row.attributes };
-					for (const [name, link] of Object.entries(row.relationships)) values[name] = link?.data ?? null;
-					const named = labelField ? values[labelField] : undefined;
-					const label = typeof named === 'string' && named.length > 0 ? named : String(row.attributes['content'] ?? `Task #${row.id}`);
-					return {
-						task: { type: 'Task', id: row.id, name: label },
-						project: (row.relationships['project']?.data as EntityRef | null) ?? null,
-						entity: (row.relationships['entity']?.data as EntityRef | null) ?? null,
-						step: (row.relationships['step']?.data as EntityRef | null)?.name ?? '',
-						status: String(row.attributes['sg_status_list'] ?? ''),
-						values
-					};
-				});
-			})
-			.catch((error: unknown) => {
-				if (!live) return;
-				failure = errorText(error);
-				tasks = [];
-			})
-			.finally(() => {
-				if (live) loading = false;
-			});
-		return () => {
-			live = false;
 		};
-	});
+	}
 
 	function setOpen(next: boolean): void {
 		if (next === open) return;
@@ -258,6 +240,39 @@
 	to the current user, and a drill-down over the navigation tree. Assigned tasks are
 	one `_search` on Task filtered by `task_assignees`, grouped under their project.
 -->
+{#snippet noTasks()}
+	<p data-slot="context-tasks-empty" class="text-muted-foreground px-2 py-1.5 text-sm">{emptyLabel}</p>
+{/snippet}
+
+{#snippet taskRows({ items }: { items: MyTask[]; query: string; loading: boolean })}
+	{#each groupTasks(items) as group (group.project ? `${group.project.type}:${group.project.id}` : '-')}
+		<h5 class={heading}>{group.project?.name ?? 'No project'}</h5>
+		{#each group.tasks as row (row.task.id)}
+			<button
+				type="button"
+				class={rowClass}
+				data-entity-type="Task"
+				data-entity-id={row.task.id}
+				onclick={() => apply({ project: row.project, entity: row.entity, task: row.task })}
+			>
+				<Row
+					row={rowOf(row)}
+					{thumbnail}
+					{showCode}
+					{subLabelField}
+					subLabel={subLabelOf(row)}
+					{secondaryField}
+					secondary={secondary ? secondary(row) : undefined}
+					{size}
+					{context}
+				>
+					{#snippet glyph()}<ListChecks aria-hidden="true" class="size-4" />{/snippet}
+				</Row>
+			</button>
+		{/each}
+	{/each}
+{/snippet}
+
 <div bind:this={ref} data-slot="context-selector" class={cn('w-full', className)} {...rest}>
 	<Popover.Root bind:open={() => open, setOpen}>
 		<Popover.Trigger
@@ -308,51 +323,21 @@
 
 			<section data-slot="context-my-tasks" class="flex max-h-52 flex-col overflow-y-auto">
 				<h4 class={heading}>My tasks</h4>
-				{#if failure !== null}
-					<StateLine
-						state="error"
-						slotName="context-tasks-error"
-						icon={TriangleAlert}
-						label={stateLine('error', { errorLabel }, failure)}
-					/>
-				{:else if loading && currentUser}
-					<SearchSkeleton
-						lines={2}
-						lead="size-4 shrink-0"
-						label={stateLine('loading', { loadingLabel })}
-					/>
-				{:else if byProject.length === 0}
-					<p data-slot="context-tasks-empty" class="text-muted-foreground px-2 py-1.5 text-sm">
-						{emptyLabel}
-					</p>
-				{:else}
-					{#each byProject as group (group.project ? `${group.project.type}:${group.project.id}` : '-')}
-						<h5 class={heading}>{group.project?.name ?? 'No project'}</h5>
-						{#each group.tasks as row (row.task.id)}
-							<button
-								type="button"
-								class={rowClass}
-								data-entity-type="Task"
-								data-entity-id={row.task.id}
-								onclick={() => apply({ project: row.project, entity: row.entity, task: row.task })}
-							>
-								<Row
-									row={rowOf(row)}
-									{thumbnail}
-									{showCode}
-									{subLabelField}
-									subLabel={subLabelOf(row)}
-									{secondaryField}
-									secondary={secondary ? secondary(row) : undefined}
-									{size}
-									{context}
-								>
-									{#snippet glyph()}<ListChecks aria-hidden="true" class="size-4" />{/snippet}
-								</Row>
-							</button>
-						{/each}
-					{/each}
-				{/if}
+				<SearchControl
+					load={loadTasks}
+					shell="bare"
+					readsEmpty
+					enabled={currentUser !== null}
+					request={currentUser ? `${currentUser.type}:${currentUser.id}` : ''}
+					errorSlot="context-tasks-error"
+					loadingSlot={null}
+					skeletonLines={2}
+					skeletonLead="size-4 shrink-0"
+					{loadingLabel}
+					{errorLabel}
+					rows={taskRows}
+					empty={noTasks}
+				/>
 			</section>
 
 			<section data-slot="context-hierarchy" class="flex flex-col gap-2">

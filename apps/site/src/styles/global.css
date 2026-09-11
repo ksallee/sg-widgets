@@ -116,6 +116,12 @@
   --color-input: var(--input);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
@@ -179,6 +185,12 @@
   --accent-foreground: oklch(0.3562 0 0); /* text.default */
   --destructive: oklch(0.5763 0.2186 27.6323); /* status.error #dd2222 */
   --destructive-foreground: oklch(1 0 0);
+  --success: oklch(0.5559 0.1457 129.3125); /* status.success #6a9728, darkened so white reads 4.5:1 */
+  --success-foreground: oklch(1 0 0);
+  --warning: oklch(0.782 0.1643 69.5839); /* status.warning #faa21b */
+  --warning-foreground: oklch(0.3562 0 0); /* text.default, which an amber carries rather than white */
+  --info: oklch(0.5635 0.1233 238.2409); /* reference.accent #0696d7, darkened so white reads 4.5:1 */
+  --info-foreground: oklch(1 0 0);
   --border: oklch(0.8289 0 0); /* divider.heavyweight over surface.level200 */
   --input: oklch(0.7905 0 0); /* border.base over surface.level200 */
   --ring: oklch(0.6395 0.1412 238.2409); /* reference.accent #0696d7, which halo.focus tints */
@@ -232,6 +244,12 @@
   --accent-foreground: oklch(0.9702 0 0);
   --destructive: oklch(0.6507 0.1858 23.8376); /* status.error #eb5555 */
   --destructive-foreground: oklch(0.2369 0.0137 253.0936);
+  --success: oklch(0.7117 0.1513 127.6839); /* status.success #87b340 */
+  --success-foreground: oklch(0.2369 0.0137 253.0936); /* surface.level350 */
+  --warning: oklch(0.8203 0.1452 74.6168); /* status.warning #fbb549 */
+  --warning-foreground: oklch(0.2369 0.0137 253.0936);
+  --info: oklch(0.7002 0.1253 232.5245); /* reference.accent #38abdf */
+  --info-foreground: oklch(0.2369 0.0137 253.0936);
   --border: oklch(0.4124 0.0225 252.7439); /* divider.heavyweight over surface.level350 */
   --input: oklch(0.5704 0.0305 252.6174); /* border.base over surface.level350 */
   --ring: oklch(0.7002 0.1253 232.5245); /* reference.accent */

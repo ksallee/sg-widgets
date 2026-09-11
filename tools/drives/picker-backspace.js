@@ -1,6 +1,7 @@
-// Backspace in an empty query walks the chips of a token field: the first press
-// arms the last chip, the second removes it. Typing disarms it again, and a query
-// with text keeps Backspace for the text.
+// The chip keyboard model of a token field, walked in one go: Backspace in an empty
+// query takes the caret to the last chip, the arrows walk the row, Backspace and Delete
+// remove the chip under the caret and leave it on the neighbour, and a printable key
+// gives the caret back to the input and lands in the query.
 //
 //   pnpm qa --start --path /widgets/entity-multi-picker/ --framework both --drive tools/drives/picker-backspace.js
 
@@ -48,8 +49,9 @@ for (const framework of ['svelte', 'react']) {
   await wait(200);
 
   const chips = () => $$('[data-chip]', box);
-  const armed = () => $$('[data-chip][data-armed="true"]', box);
   const names = () => chips().map((chip) => chip.textContent.trim());
+  /** The chip holding the caret, by the `data-armed` every picker's chip carries. */
+  const caretChip = () => chips().findIndex((chip) => chip.dataset.armed === 'true');
 
   const control = $('[data-slot="entity-picker-control"]', box);
   const input = $('[data-slot="entity-picker-input"]', control);
@@ -58,8 +60,8 @@ for (const framework of ['svelte', 'react']) {
     continue;
   }
   const started = names();
-  if (started.length < 2) {
-    failures.push(`${framework}: the token field starts with ${started.length} chips, wanted at least 2`);
+  if (started.length < 3) {
+    failures.push(`${framework}: the token field starts with ${started.length} chips, wanted at least 3`);
     continue;
   }
   const last = started[started.length - 1];
@@ -68,50 +70,67 @@ for (const framework of ['svelte', 'react']) {
   await wait(200);
   input.focus({ preventScroll: true });
 
-  // A query with text keeps Backspace for the text: no chip is armed.
+  // A query with text keeps Backspace for the text: the caret stays in the input.
   typeInto(input, 'prop');
   await wait(100);
   key(input, 'Backspace');
   await wait(100);
-  const armedWhileTyping = armed().length;
-  if (armedWhileTyping > 0) failures.push(`${framework}: Backspace armed a chip while the query read "prop"`);
+  const reachedWhileTyping = caretChip();
+  if (reachedWhileTyping >= 0) failures.push(`${framework}: Backspace reached a chip while the query read "prop"`);
 
   typeInto(input, '');
   await wait(100);
 
-  // First Backspace: the last chip is armed and every chip is still there.
+  // Backspace in an empty query: the caret takes the last chip and the row is whole.
   key(input, 'Backspace');
-  await until(() => armed().length > 0, 1500);
-  const afterFirst = armed();
+  await until(() => caretChip() >= 0, 1500);
+  const afterFirst = caretChip();
   const heldAfterFirst = names().length;
-  if (afterFirst.length !== 1) failures.push(`${framework}: the first Backspace armed ${afterFirst.length} chips, wanted 1`);
-  else if (afterFirst[0] !== chips()[chips().length - 1]) {
-    failures.push(`${framework}: the first Backspace armed a chip other than the last`);
+  if (afterFirst !== started.length - 1) {
+    failures.push(`${framework}: Backspace left the caret on chip ${afterFirst}, wanted ${started.length - 1}`);
   }
   if (heldAfterFirst !== started.length) {
-    failures.push(`${framework}: the first Backspace already removed a chip (${heldAfterFirst} of ${started.length} left)`);
+    failures.push(`${framework}: Backspace already removed a chip (${heldAfterFirst} of ${started.length} left)`);
   }
 
-  // Second Backspace: the armed chip goes, and nothing is left armed.
+  // The arrows walk the row, and ArrowRight past the last chip gives the caret back.
+  key(input, 'ArrowLeft');
+  await wait(150);
+  const afterLeft = caretChip();
+  if (afterLeft !== started.length - 2) {
+    failures.push(`${framework}: ArrowLeft left the caret on chip ${afterLeft}, wanted ${started.length - 2}`);
+  }
+  key(input, 'ArrowRight');
+  await wait(150);
+  key(input, 'ArrowRight');
+  await wait(150);
+  const afterRight = caretChip();
+  if (afterRight >= 0) failures.push(`${framework}: ArrowRight past the last chip left the caret on chip ${afterRight}`);
+
+  // Delete takes the chip under the caret and leaves the caret on its neighbour.
   key(input, 'Backspace');
+  await until(() => caretChip() >= 0, 1500);
+  key(input, 'Delete');
   const shrunk = await until(() => (names().length === started.length - 1 ? names() : null), 2000);
   if (!shrunk) {
-    failures.push(`${framework}: the second Backspace removed no chip`);
+    failures.push(`${framework}: Delete removed no chip`);
     continue;
   }
-  if (shrunk.includes(last)) failures.push(`${framework}: the second Backspace removed a chip other than "${last}"`);
-  if (armed().length > 0) failures.push(`${framework}: a chip stayed armed after the removal`);
+  if (shrunk.includes(last)) failures.push(`${framework}: Delete removed a chip other than "${last}"`);
+  const afterDelete = caretChip();
+  if (afterDelete !== shrunk.length - 1) {
+    failures.push(`${framework}: the removal left the caret on chip ${afterDelete}, wanted ${shrunk.length - 1}`);
+  }
 
-  // Arming again, then typing: the chip is released rather than removed.
-  key(input, 'Backspace');
-  await until(() => armed().length > 0, 1500);
-  typeInto(input, 'a');
+  // A printable key gives the caret back to the input and lands in the query.
   key(input, 'a');
-  await wait(150);
-  const armedAfterTyping = armed().length;
+  await wait(200);
+  const afterTyping = caretChip();
   const heldAfterTyping = names().length;
-  if (armedAfterTyping > 0) failures.push(`${framework}: typing left a chip armed`);
+  const wrote = input.value;
+  if (afterTyping >= 0) failures.push(`${framework}: typing left the caret on chip ${afterTyping}`);
   if (heldAfterTyping !== shrunk.length) failures.push(`${framework}: typing removed a chip`);
+  if (wrote !== 'a') failures.push(`${framework}: typing over a chip wrote "${wrote}" into the query, wanted "a"`);
 
   typeInto(input, '');
   key(input, 'Escape');
@@ -119,12 +138,16 @@ for (const framework of ['svelte', 'react']) {
 
   seen[framework] = {
     started: started.length,
-    armedWhileTyping,
-    armedAfterFirst: afterFirst.length,
+    reachedWhileTyping,
+    afterFirst,
     heldAfterFirst,
-    heldAfterSecond: shrunk.length,
+    afterLeft,
+    afterRight,
     removed: last,
-    armedAfterTyping,
+    heldAfterDelete: shrunk.length,
+    afterDelete,
+    afterTyping,
+    wrote,
   };
 }
 
@@ -136,7 +159,7 @@ await wait(200);
 return {
   verdict:
     failures.length === 0
-      ? 'PASS the first Backspace arms the last chip, the second removes it, and typing releases it'
+      ? 'PASS Backspace takes the caret to the last chip, the arrows walk the row, Delete removes the one under it, and typing gives the caret back'
       : `FAIL ${failures.join('; ')}`,
   seen,
 };

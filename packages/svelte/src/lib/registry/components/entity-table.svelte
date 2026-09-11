@@ -190,6 +190,8 @@
 		editorPlacement?: EditorPlacement;
 		/** Show the programmatic field path beside the header's display name. */
 		showCode?: boolean;
+		/** A menu on every header: sort, hide and pin. Off unless a caller has a use for it. */
+		columnMenu?: boolean;
 		/** How the set is walked: a footer with a page number, a load-more row, or the scroller. */
 		paging?: PagingMode;
 		/** Rows per page offered in the footer. `pages` mode only. */
@@ -243,6 +245,7 @@
 		editorFor,
 		editorPlacement,
 		showCode = false,
+		columnMenu = false,
 		paging = 'pages',
 		pageSizes = [25, 50, 100],
 		maxHeight = '28rem',
@@ -914,6 +917,7 @@
 											<ChevronsUpDown aria-hidden="true" class="size-4 shrink-0 opacity-50" />
 										{/if}
 									</button>
+									{#if columnMenu}
 									<DropdownMenu.Root>
 										<DropdownMenu.Trigger
 											aria-label="{column.header} column menu"
@@ -959,6 +963,7 @@
 											</DropdownMenu.Item>
 										</DropdownMenu.Content>
 									</DropdownMenu.Root>
+									{/if}
 								</div>
 								{#if entry.resizable}
 									<span

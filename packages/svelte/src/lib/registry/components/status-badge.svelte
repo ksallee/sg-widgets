@@ -19,28 +19,15 @@
 		md: 'size-4',
 		lg: 'size-5'
 	};
-
-	/** `spriteStyle()` keys are camelCase; an inline style attribute wants CSS spelling. */
-	function inlineStyle(style: Record<string, string>): string {
-		return Object.entries(style)
-			.map(([key, value]) => `${key.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}:${value}`)
-			.join(';');
-	}
 </script>
 
 <script lang="ts">
 	import type { HTMLAttributes } from 'svelte/elements';
 	import type { FieldSchema, StatusRecord } from '@sg-widgets/core';
-	import {
-		foregroundFor,
-		parseBgColor,
-		rgbToCss,
-		spriteStyle,
-		statusLabel,
-		stockIconSource
-	} from '@sg-widgets/core';
+	import { statusGlyph, statusLabel, statusPaint } from '@sg-widgets/core';
 	import X from '@lucide/svelte/icons/x';
 	import { cn, type WithElementRef } from '$lib/utils.js';
+	import StatusGlyph from '$lib/registry/components/status-glyph.svelte';
 
 	// `color` is a deprecated HTML attribute Svelte types as `never`, so it is dropped
 	// before the badge's own prop of that name is declared.
@@ -86,22 +73,17 @@
 	const name = $derived(status?.name || (field ? statusLabel(field, code) : code) || code);
 	const text = $derived(label === 'code' ? code : name);
 	const other = $derived(label === 'code' ? name : code);
-	const rgb = $derived(color ? parseBgColor(status?.bgColor) : null);
+	const paint = $derived(color ? statusPaint(status) : null);
 	const style = $derived(
-		rgb
-			? `background-color:${rgbToCss(rgb)};color:${foregroundFor(rgb) === 'black' ? '#000' : '#fff'}`
-			: undefined
+		paint ? `background-color:${paint.background};color:${paint.foreground}` : undefined
 	);
 	// An `html` icon carries the label itself, so it replaces the text rather than
 	// preceding it, and such a status has no image to show in icon-only mode
 	// (010_status_icons).
-	const icon = $derived(status?.icon ?? null);
-	const textIcon = $derived(icon?.displayType === 'html' ? icon.html || text : null);
-	const showGlyph = $derived(variant !== 'text' && icon !== null && textIcon === null);
+	const glyph = $derived(statusGlyph(status, siteUrl));
+	const textIcon = $derived(glyph.kind === 'html' ? glyph.html || text : null);
+	const showGlyph = $derived(variant !== 'text' && glyph.kind !== 'none' && textIcon === null);
 	const showText = $derived(variant !== 'icon' || textIcon !== null);
-	const stock = $derived(
-		icon?.displayType === 'image_map' ? stockIconSource(icon.imageMapKey, siteUrl) : null
-	);
 	// A bare icon is the glyph and nothing else, so there is no room for a cross.
 	const showRemove = $derived(removable && variant !== 'icon');
 </script>
@@ -132,39 +114,8 @@
 	the pill already carries a colour of its own.
 -->
 {#snippet content()}
-	{#if showGlyph && icon}
-		{#if icon.displayType === 'image'}
-			<img
-				src={icon.dataUrl}
-				alt=""
-				aria-hidden="true"
-				class={cn('shrink-0 [image-rendering:crisp-edges]', GLYPH[size])}
-			/>
-		{:else if icon.displayType === 'image_map' && stock}
-			{#if stock.kind === 'data'}
-				<img
-					src={stock.src}
-					alt=""
-					aria-hidden="true"
-					data-status-icon={icon.imageMapKey}
-					style="width:{stock.cell.w}px;height:{stock.cell.h}px"
-					class="shrink-0 [image-rendering:crisp-edges]"
-				/>
-			{:else if stock.kind === 'sprite'}
-				<span
-					aria-hidden="true"
-					data-status-icon={icon.imageMapKey}
-					style={inlineStyle(spriteStyle(stock))}
-					class="shrink-0"
-				></span>
-			{:else}
-				<span
-					aria-hidden="true"
-					data-status-icon={icon.imageMapKey}
-					class="bg-muted-foreground/40 size-2 shrink-0 rounded-full"
-				></span>
-			{/if}
-		{/if}
+	{#if showGlyph}
+		<StatusGlyph {status} {siteUrl} class={GLYPH[size]} />
 	{/if}
 	<span class={cn('truncate', !showText && 'sr-only')}>{textIcon ?? text}</span>
 {/snippet}
@@ -182,8 +133,8 @@
 			'gap-1.5',
 			BOX[size],
 			variant === 'icon' && 'justify-center',
-			rgb && 'border-transparent ring-1 ring-current/10 ring-inset',
-			color && !rgb && 'bg-muted text-muted-foreground border-transparent',
+			paint && 'border-transparent ring-1 ring-current/10 ring-inset',
+			color && !paint && 'bg-muted text-muted-foreground border-transparent',
 			className
 		)}
 		{...rest}

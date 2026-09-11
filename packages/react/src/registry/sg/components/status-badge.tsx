@@ -1,15 +1,9 @@
 import type * as React from 'react';
-import type { FieldSchema, StatusIcon, StatusRecord } from '@sg-widgets/core';
-import {
-  foregroundFor,
-  parseBgColor,
-  rgbToCss,
-  spriteStyle,
-  statusLabel,
-  stockIconSource,
-} from '@sg-widgets/core';
+import type { FieldSchema, StatusRecord } from '@sg-widgets/core';
+import { statusGlyph, statusLabel, statusPaint } from '@sg-widgets/core';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { StatusGlyph } from '@/registry/sg/components/status-glyph';
 
 /** How much of the status to show. */
 export type StatusBadgeVariant = 'both' | 'icon' | 'text';
@@ -92,23 +86,21 @@ export function StatusBadge({
   const name = status?.name || (field ? statusLabel(field, code) : code) || code;
   const text = label === 'code' ? code : name;
   const other = label === 'code' ? name : code;
-  const rgb = color ? parseBgColor(status?.bgColor) : null;
-  const style = rgb
-    ? { backgroundColor: rgbToCss(rgb), color: foregroundFor(rgb) === 'black' ? '#000' : '#fff' }
-    : undefined;
+  const paint = color ? statusPaint(status) : null;
+  const style = paint ? { backgroundColor: paint.background, color: paint.foreground } : undefined;
   // An `html` icon carries the label itself, so it replaces the text rather than
   // preceding it, and such a status has no image to show in icon-only mode
   // (010_status_icons).
-  const icon = status?.icon ?? null;
-  const textIcon = icon?.displayType === 'html' ? icon.html || text : null;
-  const showGlyph = variant !== 'text' && icon !== null && textIcon === null;
+  const glyph = statusGlyph(status, siteUrl);
+  const textIcon = glyph.kind === 'html' ? glyph.html || text : null;
+  const showGlyph = variant !== 'text' && glyph.kind !== 'none' && textIcon === null;
   const showText = variant !== 'icon' || textIcon !== null;
   // A bare icon is the glyph and nothing else, so there is no room for a cross.
   const showRemove = removable && variant !== 'icon';
 
   const content = (
     <>
-      {showGlyph ? <StatusGlyph icon={icon} size={size} siteUrl={siteUrl} /> : null}
+      {showGlyph ? <StatusGlyph status={status} siteUrl={siteUrl} className={GLYPH[size]} /> : null}
       <span className={cn('truncate', !showText && 'sr-only')}>{textIcon ?? text}</span>
     </>
   );
@@ -125,8 +117,8 @@ export function StatusBadge({
         'gap-1.5',
         BOX[size],
         variant === 'icon' && 'justify-center',
-        rgb && 'border-transparent ring-1 ring-current/10 ring-inset',
-        color && !rgb && 'bg-muted text-muted-foreground border-transparent',
+        paint && 'border-transparent ring-1 ring-current/10 ring-inset',
+        color && !paint && 'bg-muted text-muted-foreground border-transparent',
         className,
       )}
       {...rest}
@@ -148,57 +140,5 @@ export function StatusBadge({
         content
       )}
     </span>
-  );
-}
-
-/**
- * The picture for an `image` or `image_map` icon (010_status_icons). An `image` icon is
- * a self-contained data URI. An `image_map` icon names a cell of the stock sprite:
- * cells of the shipped statuses are bundled in core and draw with no site access, any
- * other stock icon draws from the site's own copy of the sprite and so needs `siteUrl`,
- * and a key with neither resolves to a neutral dot. The key stays on the element as
- * `data-status-icon`.
- */
-function StatusGlyph({ icon, size, siteUrl }: { icon: StatusIcon; size: StatusBadgeSize; siteUrl?: string }) {
-  if (icon.displayType === 'image') {
-    return (
-      <img
-        src={icon.dataUrl}
-        alt=""
-        aria-hidden="true"
-        className={cn('shrink-0 [image-rendering:crisp-edges]', GLYPH[size])}
-      />
-    );
-  }
-  if (icon.displayType === 'html') return null;
-  const stock = stockIconSource(icon.imageMapKey, siteUrl);
-  if (stock.kind === 'data') {
-    return (
-      <img
-        src={stock.src}
-        alt=""
-        aria-hidden="true"
-        data-status-icon={icon.imageMapKey}
-        style={{ width: `${stock.cell.w}px`, height: `${stock.cell.h}px` }}
-        className="shrink-0 [image-rendering:crisp-edges]"
-      />
-    );
-  }
-  if (stock.kind === 'sprite') {
-    return (
-      <span
-        aria-hidden="true"
-        data-status-icon={icon.imageMapKey}
-        style={spriteStyle(stock)}
-        className="shrink-0"
-      />
-    );
-  }
-  return (
-    <span
-      aria-hidden="true"
-      data-status-icon={icon.imageMapKey}
-      className="bg-muted-foreground/40 size-2 shrink-0 rounded-full"
-    />
   );
 }

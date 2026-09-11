@@ -20,6 +20,12 @@
 	};
 	/** A badge inside a control sits one step down the leaf ladder. */
 	const BADGE: Record<StatusPickerSize, 'sm' | 'md'> = { sm: 'sm', md: 'sm', lg: 'md' };
+	/** A row's leading glyph, on the leaf ladder the shared row draws it at. */
+	const ROW_GLYPH: Record<StatusPickerSize, string> = {
+		sm: 'size-3.5',
+		md: 'size-4',
+		lg: 'size-5'
+	};
 
 	const TRIGGER =
 		'border-input bg-background hover:bg-muted/30 focus-visible:ring-ring focus-visible:ring-offset-background aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 flex w-full min-w-0 items-center rounded-lg border text-sm outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 aria-invalid:ring-2';
@@ -27,7 +33,7 @@
 
 <script lang="ts">
 	import type { HTMLAttributes } from 'svelte/elements';
-	import type { SgContext, StatusOption, StatusRecord } from '@sg-widgets/core';
+	import type { PickerRow, SgContext, StatusOption, StatusRecord } from '@sg-widgets/core';
 	import { NO_ROWS_LABEL, stateLine } from '@sg-widgets/core';
 	import SearchX from '@lucide/svelte/icons/search-x';
 	import TriangleAlert from '@lucide/svelte/icons/triangle-alert';
@@ -35,8 +41,10 @@
 	import * as Select from '$lib/components/ui/select/index.js';
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
+	import Row from '$lib/registry/components/picker-row.svelte';
 	import StateLine from '$lib/registry/components/state-line.svelte';
 	import StatusBadge from '$lib/registry/components/status-badge.svelte';
+	import StatusGlyph from '$lib/registry/components/status-glyph.svelte';
 
 	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>, HTMLDivElement> & {
 		/** The widget context. The options and the status table are read through it, once per page. */
@@ -62,8 +70,12 @@
 		readonly?: boolean;
 		disabled?: boolean;
 		invalid?: boolean;
-		/** Show the raw code instead of the label. The other one stays in the tooltip. */
+		/** Draw the code as the row's right-aligned secondary, when it says more than the label. */
 		showCode?: boolean;
+		/** The muted line under a row's label. */
+		subLabel?: (option: StatusOption) => string;
+		/** A row's right-aligned value, of the caller's own making. Wins over the code. */
+		secondary?: (option: StatusOption) => string;
 		/** The site the stock sprite is served from, passed to every badge. Defaults to the context's. */
 		siteUrl?: string;
 		size?: StatusPickerSize;
@@ -89,7 +101,9 @@
 		readonly = false,
 		disabled = false,
 		invalid = false,
-		showCode = false,
+		showCode = true,
+		subLabel,
+		secondary,
 		siteUrl = undefined,
 		size = 'md',
 		open = $bindable(false),
@@ -195,6 +209,17 @@
 		value = undefined;
 		onValueChange?.(undefined);
 	}
+
+	/** The shared row a status is drawn as. There is no entity behind a code, so it carries no values. */
+	function rowOf(option: StatusOption): PickerRow {
+		return { type: 'Status', id: 0, name: option.label, values: {} };
+	}
+
+	/** The right-aligned value: the caller's, else the code when it says more than the label. */
+	function secondaryOf(option: StatusOption): string | undefined {
+		if (secondary) return secondary(option) || undefined;
+		return showCode && option.code !== option.label ? option.code : undefined;
+	}
 </script>
 
 {#snippet badge(code: string)}
@@ -203,7 +228,6 @@
 		status={query.statuses.get(code) ?? null}
 		field={badgeField}
 		size={BADGE[size]}
-		label={showCode ? 'code' : 'name'}
 		siteUrl={site}
 		class="min-w-0"
 	/>
@@ -247,8 +271,28 @@
 	{:else}
 		<Select.Group>
 			{#each rows as option (option.code)}
-				<Select.Item value={option.code} label={option.label} class="py-1.5 pl-2">
-					{@render badge(option.code)}
+				<Select.Item
+					data-status-code={option.code}
+					value={option.code}
+					label={option.label}
+					class="py-1.5 pl-2"
+				>
+					<Row
+						row={rowOf(option)}
+						subLabel={subLabel?.(option)}
+						secondary={secondaryOf(option)}
+						{size}
+						{context}
+					>
+						{#snippet glyph()}
+							<StatusGlyph
+								status={query.statuses.get(option.code) ?? null}
+								siteUrl={site}
+								fallback
+								class={ROW_GLYPH[size]}
+							/>
+						{/snippet}
+					</Row>
 				</Select.Item>
 			{/each}
 		</Select.Group>
@@ -264,6 +308,10 @@
 	(probe 009). A code the option set does not carry still renders, as itself: a row
 	may legally hold one (field_types/status_list). When a later option set drops the
 	selected code, the picker clears it and emits once.
+
+	A row is the shared picker row of rule 9: the status icon as the leading glyph, the
+	display label, and the code right-aligned. The badge stays in the control, where a
+	status is a value rather than a row.
 -->
 <div
 	bind:this={ref}

@@ -358,9 +358,12 @@ export function PickerControl({
         return;
       case 'remove':
         event.preventDefault();
+        // The caret moves before the chip goes: focus leaving a removed chip would read
+        // to the primitive as leaving the picker, and it would close the popup.
+        if (intent.then === null) inputRef.current?.focus({ preventScroll: true });
+        else focusChip(chipsRef.current, intent.then);
         setArmedChip(intent.then);
         onRemoveAt?.(intent.index);
-        if (intent.then === null) inputRef.current?.focus({ preventScroll: true });
         return;
       case 'type':
         event.preventDefault();
@@ -401,6 +404,15 @@ export function PickerControl({
       pagingRef.current = false;
       details.cancel();
       return;
+    }
+    // The caret moving between the chips and the input stays inside the picker; the
+    // primitive reads it as focus leaving, since the chips are drawn here.
+    if (!next && details.reason === 'focus-out') {
+      const to = ((details.event as FocusEvent | undefined)?.relatedTarget ?? document.activeElement) as Node | null;
+      if (to && controlRef.current?.contains(to)) {
+        details.cancel();
+        return;
+      }
     }
     // A summary control holds no input, so the click that opened it lands outside the
     // popup a moment later; a press on the control is never a dismissal.

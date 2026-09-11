@@ -1,4 +1,4 @@
-// Change the page size, walk to page 2, sort a header, hide a column from its menu,
+// Change the page size, walk to page 2, sort a header, see no column menu,
 // edit a description in place, then group by status.
 // Both islands stay mounted, so everything is scoped to the pane on show.
 const notes = [];
@@ -71,22 +71,12 @@ const afterSort = firstCode();
 notes.push(`first row: ${beforeSort} -> ${afterSort}`);
 if (!afterSort || afterSort === beforeSort) return { verdict: 'FAIL the first row did not change after sorting', notes };
 
-// Hide a column from its own menu: one header fewer, and the picker beside it follows.
-const before = heads().length;
-const menu = await open(
-  pane().querySelector('[data-slot="entity-table"] th[data-column="user"] [data-slot="dropdown-menu-trigger"]'),
-  'menuitem',
-);
-const hide = menu.find((i) => i.textContent.trim() === 'Hide column');
-if (!hide) return { verdict: `FAIL the column menu offered ${menu.length} items, none of them Hide column`, notes };
-press(hide);
-if (!(await until(() => heads().length === before - 1))) {
-  return { verdict: `FAIL hiding left ${heads().length} headers, expected ${before - 1}`, notes };
+// The column menu is opt-in and the demo leaves it off: no header carries a trigger.
+// Hiding a column goes through the column picker in the toolbar, which its own drive covers.
+if (pane().querySelector('[data-slot="entity-table"] th [data-slot="dropdown-menu-trigger"]')) {
+  return { verdict: 'FAIL a header carries a column menu although columnMenu is off', notes };
 }
-if (pane().querySelector('[data-slot="entity-table"] th[data-column="user"]')) {
-  return { verdict: 'FAIL the hidden column is still in the header', notes };
-}
-notes.push(`hiding a column left ${heads().length} headers of ${before}`);
+notes.push('no column menu on the headers');
 
 // Inline edit: double-click the description, type, Enter. No editorFor is given, so the
 // cell opens the field editor's own control for the type.
@@ -102,7 +92,8 @@ const setter = Object.getOwnPropertyDescriptor(input.constructor.prototype, 'val
 setter.call(input, typed);
 input.dispatchEvent(new Event('input', { bubbles: true }));
 await wait(200);
-input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+// A text cell edits in a textarea inside a popover: Ctrl with Enter commits.
+input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', ctrlKey: true, bubbles: true }));
 const shownNow = () => bodyRows()[0].querySelector('td[data-column="description"]')?.textContent.trim();
 if (!(await until(() => shownNow() === typed))) {
   return { verdict: `FAIL the cell reads "${shownNow()}", expected "${typed}"`, notes };
@@ -122,4 +113,4 @@ if (!(await until(() => bodyRows().length === rowsBefore - stated))) {
 }
 notes.push(`collapsing the first group hid ${stated} rows`);
 
-return { verdict: 'PASS page size, paging, sorting, hiding, inline edit and grouping', notes };
+return { verdict: 'PASS page size, paging, sorting, no column menu, popover edit and grouping', notes };

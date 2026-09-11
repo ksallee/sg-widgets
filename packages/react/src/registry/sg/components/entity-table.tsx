@@ -203,6 +203,8 @@ export interface EntityTableProps extends Omit<React.HTMLAttributes<HTMLDivEleme
   editorPlacement?: EditorPlacement;
   /** Show the programmatic field path beside the header's display name. */
   showCode?: boolean;
+  /** A menu on every header: sort, hide and pin. Off unless a caller has a use for it. */
+  columnMenu?: boolean;
   /** How the set is walked: a footer with a page number, a load-more row, or the scroller. */
   paging?: PagingMode;
   /** Rows per page offered in the footer. `pages` mode only. */
@@ -293,6 +295,7 @@ export function EntityTable({
   editorFor,
   editorPlacement,
   showCode = false,
+  columnMenu = false,
   paging = 'pages',
   pageSizes = [25, 50, 100],
   maxHeight = '28rem',
@@ -847,6 +850,7 @@ export function EntityTable({
                               <ChevronsUpDown aria-hidden="true" className="size-4 shrink-0 opacity-50" />
                             ) : null}
                           </button>
+                          {columnMenu ? (
                           <DropdownMenu>
                             <DropdownMenuTrigger
                               aria-label={`${column.header} column menu`}
@@ -896,6 +900,7 @@ export function EntityTable({
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
+                          ) : null}
                         </div>
                         {header && header.column.getCanResize() ? (
                           <span

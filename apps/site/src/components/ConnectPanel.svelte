@@ -123,18 +123,22 @@
 	const rowClass = 'flex items-center gap-2';
 	const noteClass = 'text-sm text-muted-foreground';
 
-	/** A source pick reloads the page; the panel opens again after it so the pick reads back. */
 	const REOPEN = 'sg-connect:reopen';
 
-	function pickSource(next: DemoSource): void {
-		if (next === source) return;
-		setDemoSource(next);
+	/** Every pick reloads the page; the panel opens again after it so the pick reads back. */
+	function reloadAndReopen(): void {
 		try {
 			sessionStorage.setItem(REOPEN, '1');
 		} catch {
 			// Storage refused: the panel stays closed after the reload.
 		}
 		location.reload();
+	}
+
+	function pickSource(next: DemoSource): void {
+		if (next === source) return;
+		setDemoSource(next);
+		reloadAndReopen();
 	}
 
 	function editSite(): void {
@@ -146,7 +150,7 @@
 		const value = siteDraft.trim();
 		if (!value) return;
 		setDemoSiteUrl(value);
-		location.reload();
+		reloadAndReopen();
 	}
 
 	async function signIn(): Promise<void> {
@@ -155,7 +159,7 @@
 		try {
 			// The launcher hands the token out once, so one poll runs and it runs here.
 			await logIn(live.siteUrl, (url) => window.open(url, '_blank', 'noopener'));
-			location.reload();
+			reloadAndReopen();
 		} catch (error) {
 			refusal = error instanceof Error ? error.message : String(error);
 		} finally {
@@ -165,12 +169,12 @@
 
 	function signOut(): void {
 		logOut();
-		location.reload();
+		reloadAndReopen();
 	}
 
 	function pickProject(value: { id: number; name?: string } | null): void {
 		setDemoProject(value ? { id: value.id, name: value.name } : null);
-		location.reload();
+		reloadAndReopen();
 	}
 
 	onMount(() => {

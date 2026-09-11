@@ -274,8 +274,8 @@ export function PickerControl({
       event.preventDefault();
       inputRef.current?.focus({ preventScroll: true });
     }
-    // A press on the control toggles the list; a press on the caret only ever opens it.
-    setOpen(onCaret ? true : !open);
+    // A press anywhere on the control toggles the list, the caret included; typing opens it again.
+    setOpen(!open);
   }
 
   // A summary trigger has no caret of its own, so the popup's search box takes it.
@@ -549,6 +549,8 @@ export function PickerControl({
   const typing = (next: string, reason: string): void => {
     if (reason === 'item-press') return;
     onQueryChange(next);
+    // Typing asks for the list: a press may have closed it a moment ago.
+    if (reason === 'input-change' && interactive && !open) setOpen(true);
   };
 
   return multiple ? (

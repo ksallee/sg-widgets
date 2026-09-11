@@ -257,7 +257,7 @@
 		cn(
 			buttonVariants({ variant: inline ? 'ghost' : 'outline' }),
 			'select-none',
-			inline ? 'absolute right-0.5 h-3.5 w-5 rounded-sm p-0' : STEPPER[size]
+			inline ? 'absolute right-0.5 z-10 h-3.5 w-5 rounded-sm p-0' : STEPPER[size]
 		)
 	);
 	const glyphClass = $derived(inline ? 'size-3' : CONTROL_GLYPH[size]);

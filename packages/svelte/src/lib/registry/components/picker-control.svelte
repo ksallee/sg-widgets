@@ -241,6 +241,12 @@
 	const counted = $derived(summary === 'count' && chipRow && multiple);
 
 	/** A press anywhere in the field opens the list, and a token field takes the caret. */
+	/** Typing asks for the list: a press may have closed it a moment ago. */
+	function typed(next: string): void {
+		query = next;
+		if (interactive && !open) setOpen(true);
+	}
+
 	function openFromControl(event: PointerEvent): void {
 		if (!interactive) return;
 		const target = event.target as HTMLElement | null;
@@ -251,8 +257,8 @@
 		const onCaret = target === inputEl;
 		if (!onCaret) event.preventDefault();
 		if (inline && !onCaret) inputEl?.focus({ preventScroll: true });
-		// A press on the control toggles the list; a press on the caret only ever opens it.
-		setOpen(onCaret ? true : !open);
+		// A press anywhere on the control toggles the list, the caret included; typing opens it again.
+		setOpen(!open);
 	}
 
 	// A summary trigger has no caret of its own, so the popup's search box takes it.
@@ -347,7 +353,7 @@
 		aria-label={placeholder}
 		readonly={readonly || undefined}
 		placeholder={inputPlaceholder ?? (labels.length > 0 ? '' : placeholder)}
-		oninput={(e) => (query = e.currentTarget.value)}
+		oninput={(e) => typed(e.currentTarget.value)}
 		onkeydown={onKey}
 		class={tokenInput ? PICKER_TOKEN_INPUT : PICKER_INPUT}
 	/>
@@ -442,7 +448,7 @@
 						data-slot={`${slot}-input`}
 						aria-label={searchPlaceholder}
 						placeholder={searchPlaceholder}
-						oninput={(e) => (query = e.currentTarget.value)}
+						oninput={(e) => typed(e.currentTarget.value)}
 						onkeydown={onKey}
 						class={PICKER_SEARCH}
 					/>

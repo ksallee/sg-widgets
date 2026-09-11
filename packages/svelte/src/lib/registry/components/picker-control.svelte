@@ -306,7 +306,8 @@
 			query,
 			count: labels.length,
 			armed,
-			editable: interactive
+			editable: interactive,
+			multiple
 		});
 		if (!holdsArmed(event.key)) armed = null;
 		switch (intent.kind) {
@@ -373,6 +374,7 @@
 		onpointerdown={openFromControl}
 		role="group"
 		aria-disabled={inert ? 'true' : undefined}
+		data-multiple={multiple ? 'true' : undefined}
 		data-invalid={invalid && !inline ? 'true' : undefined}
 		data-readonly={readonly ? 'true' : undefined}
 		data-empty={labels.length === 0 ? '' : undefined}
@@ -539,8 +541,8 @@
 <!--
 	The control and the popup every picker in this registry wears.
 
-	The box and its states, the press rule (a press on the control toggles the list, a
-	press on the caret only opens it), where the caret lands on open, the keyboard model
+	The box and its states, the press rule (a press anywhere on the control toggles the
+	list, the caret included), where the caret lands on open, the keyboard model
 	of core's `pickerKeyIntent`, the inline token field against the summary trigger with
 	its chip row, and the popup shell: the search row, the list, the empty, loading and
 	error block, and the load-more row. A picker supplies its rows, its row renderer and

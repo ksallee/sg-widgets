@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { holdsArmed, pickerKeyIntent, type PickerKeyState } from '../src/picker-keys.js';
 
 function state(over: Partial<PickerKeyState> = {}): PickerKeyState {
-  return { open: true, query: '', count: 3, armed: null, editable: true, ...over };
+  return { open: true, query: '', count: 3, armed: null, editable: true, multiple: true, ...over };
 }
 
 describe('pickerKeyIntent', () => {
@@ -19,9 +19,18 @@ describe('pickerKeyIntent', () => {
   it('leaves a Backspace alone with no chip to take, and on a control that takes no edits', () => {
     expect(pickerKeyIntent('Backspace', state({ count: 0 }))).toEqual({ kind: 'nothing' });
     expect(pickerKeyIntent('Backspace', state({ editable: false }))).toEqual({ kind: 'nothing' });
+    expect(pickerKeyIntent('Backspace', state({ multiple: false, count: 0 }))).toEqual({ kind: 'nothing' });
   });
 
-  it('takes the single picker down its one chip', () => {
+  it('clears a single picker in one press, armed or not', () => {
+    expect(pickerKeyIntent('Backspace', state({ multiple: false, count: 1 }))).toEqual({ kind: 'remove', index: 0 });
+    expect(pickerKeyIntent('Backspace', state({ multiple: false, count: 1, armed: 0 }))).toEqual({
+      kind: 'remove',
+      index: 0,
+    });
+  });
+
+  it('arms a multi picker holding one chip rather than removing it', () => {
     expect(pickerKeyIntent('Backspace', state({ count: 1 }))).toEqual({ kind: 'arm', index: 0 });
     expect(pickerKeyIntent('Backspace', state({ count: 1, armed: 0 }))).toEqual({ kind: 'remove', index: 0 });
   });

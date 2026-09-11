@@ -185,8 +185,8 @@ export interface PickerControlProps {
 /**
  * The control and the popup every picker in this registry wears.
  *
- * The box and its states, the press rule (a press on the control toggles the list, a
- * press on the caret only opens it), the outside-press guard, where the caret lands on
+ * The box and its states, the press rule (a press anywhere on the control toggles the
+ * list, the caret included), the outside-press guard, where the caret lands on
  * open, the keyboard model of core's `pickerKeyIntent`, the inline token field against
  * the summary trigger with its chip row, and the popup shell: the search row, the list,
  * the empty, loading and error block, and the load-more row. A picker supplies its rows,
@@ -314,6 +314,7 @@ export function PickerControl({
       count: labels.length,
       armed,
       editable: interactive,
+      multiple,
     });
     if (!holdsArmed(event.key)) setArmedChip(null);
     switch (intent.kind) {
@@ -389,6 +390,7 @@ export function PickerControl({
       onPointerDown={openFromControl}
       role="group"
       aria-disabled={inert ? 'true' : undefined}
+      data-multiple={multiple ? 'true' : undefined}
       data-invalid={invalid && !inline ? 'true' : undefined}
       data-readonly={readonly ? 'true' : undefined}
       data-empty={labels.length === 0 ? '' : undefined}

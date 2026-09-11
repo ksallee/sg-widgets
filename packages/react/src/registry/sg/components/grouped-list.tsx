@@ -6,6 +6,7 @@ import type {
   EntityRow,
   EntitySource,
   FieldSpec,
+  PagingMode,
   RowDisabledFn,
   RowIdFn,
   SgContext,
@@ -17,24 +18,31 @@ import {
   cellValue,
   describePaging,
   displayNameOf,
-  groupRows,
+  groupRowsKeyed,
+  hasFailedPage,
+  loadsOnArrowDown,
+  nextEnabledIndex,
+  NO_ROWS_LABEL,
   rowIdOf,
   rowIsDisabled,
   rowKey,
   sameFilters,
   sameSort,
+  shouldLoadNext,
+  sourceModeFor,
+  stateLine,
   toColumn,
   toggleId,
 } from '@sg-widgets/core';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { ChevronLeft, ChevronRight, CircleAlert, Inbox } from 'lucide-react';
+import { ChevronRight, CircleAlert, Inbox } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import { CollectionFooter } from '@/registry/sg/components/collection-footer';
 import { FieldValue } from '@/registry/sg/components/field-value';
+import { StateLine } from '@/registry/sg/components/state-line';
 import { Thumbnail } from '@/registry/sg/components/thumbnail';
 
 export type GroupedListDensity = 'compact' | 'default';
@@ -143,13 +151,18 @@ export interface GroupedListProps extends Omit<React.HTMLAttributes<HTMLDivEleme
   footer?: React.ReactNode;
   /** Rows per page offered in the footer. `pages` mode only. */
   pageSizes?: number[];
+  /** How the set is walked: a footer with a page number, a load-more row, or the scroller. */
+  paging?: PagingMode;
   maxHeight?: string;
   /** Rows and headers above which the list is virtualised. */
   virtualizeAfter?: number;
+  /** Shown when the read returned nothing. */
   emptyLabel?: string;
+  /** The accessible name of the skeletons a read stands behind. */
+  loadingLabel?: string;
+  /** Shown in place of what the failed read said. */
+  errorLabel?: string;
 }
-
-const stateClass = 'text-muted-foreground flex items-center justify-center gap-2 py-10 text-sm';
 
 /**
  * Rows under collapsible group headers.
@@ -160,9 +173,12 @@ const stateClass = 'text-muted-foreground flex items-center justify-center gap-2
  * a fixed-size leading slot, a label, an optional sub-label under it, and an optional
  * right-aligned secondary value, so text always starts at the same x.
  *
- * In `pages` mode the footer walks the set with an explicit page number and reads
- * "n to m of N" once `_summarize` has counted it; a read carries no total of its own
- * (006_pagination, 020_summarize).
+ * `paging` says how the set is walked, and the source follows it. In `pages` the footer
+ * walks with an explicit page number and reads "n to m of N" once `_summarize` has
+ * counted it; a read carries no total of its own (006_pagination, 020_summarize). In
+ * `more` a row at the bottom appends the next page and in `scroll` the scroller does;
+ * either way a page whose first rows continue the last group grows that group. A page
+ * that fails leaves its rows and says why at the bottom, with a retry.
  */
 export function GroupedList({
   source,
@@ -197,9 +213,12 @@ export function GroupedList({
   header,
   footer,
   pageSizes = [25, 50, 100],
+  paging = 'more',
   maxHeight = '28rem',
   virtualizeAfter = 100,
-  emptyLabel = 'No rows',
+  emptyLabel = NO_ROWS_LABEL,
+  loadingLabel,
+  errorLabel,
   className,
   ...rest
 }: GroupedListProps) {
@@ -212,6 +231,11 @@ export function GroupedList({
     if (source.status === 'idle') void source.load();
   }, [source]);
   useEffect(() => {
+    // `paging` is the one prop a caller sets, so the source follows it rather than the
+    // other way round. Setting a mode it already holds is a no-op.
+    void source.setMode(sourceModeFor(paging));
+  }, [source, paging]);
+  useEffect(() => {
     // A group is only whole when the server put its rows together, so the group path
     // leads the sort. Setting it reads the first page again.
     if (snapshot.sort[0]?.path !== groupBy.path) {
@@ -223,22 +247,23 @@ export function GroupedList({
   }, [source, groupBy.path, snapshot.sort]);
 
   const rows = snapshot.rows;
-  const paging = describePaging(snapshot);
+  const pager = describePaging(snapshot);
+  const loadingText = stateLine('loading', { loadingLabel });
+  /** A page that failed under rows already loaded, which the bottom line reports. */
+  const pageError = hasFailedPage(snapshot);
   const rowClass = ROW[density];
   const subColumn = subLabelField ? toColumn(subLabelField) : null;
   const secondaryColumn = secondaryField ? toColumn(secondaryField) : null;
-  const [pageDraft, setPageDraft] = useState('');
   const rowId = (row: EntityRow): string => rowIdOf(row, getRowId);
   const rowDisabled = (row: EntityRow): boolean => rowIsDisabled(row, isRowDisabled);
+  const disabledAt = (index: number): boolean => {
+    const row = rows[index];
+    return row === undefined || rowDisabled(row);
+  };
 
-  const groups = useMemo(() => {
-    let run = 0;
-    return groupRows(rows, groupBy.path).map((bucket) => ({
-      key: `group:${run++}:${JSON.stringify(bucket.value ?? null)}`,
-      value: bucket.value,
-      rows: bucket.rows,
-    }));
-  }, [rows, groupBy.path]);
+  // A page whose first rows carry the value the last group carries grows that group
+  // rather than opening a second one, and the key it is collapsed under stands.
+  const groups = useMemo(() => groupRowsKeyed(rows, groupBy.path), [rows, groupBy.path]);
 
   const [ownSelection, setOwnSelection] = useState<EntityRef[]>([]);
   const selection = selectionProp ?? ownSelection;
@@ -304,13 +329,6 @@ export function GroupedList({
     return typeof raw === 'string' && raw.length > 0 && raw !== labelOf(row) ? raw : '';
   }
 
-  function goToPage(value: string): void {
-    const wanted = Number(value);
-    setPageDraft('');
-    if (!Number.isFinite(wanted) || wanted < 1) return;
-    void source.setPage(paging.pageCount === null ? wanted : Math.min(wanted, paging.pageCount));
-  }
-
   /* virtual rows --------------------------------------------------------- */
 
   /** Headers and rows as one stream, which is what a virtualised list walks. */
@@ -347,6 +365,102 @@ export function GroupedList({
           slice: flat.slice(firstItem.index, lastItem.index + 1),
         };
 
+  /* the cursor ----------------------------------------------------------- */
+
+  /** The row a cursor is waiting on, until the page it asked for lands. */
+  const [wantedRow, setWantedRow] = useState<number | null>(null);
+  const root = useRef<HTMLDivElement>(null);
+
+  /** Put the cursor on one row, drawing it first where it is outside the window. */
+  function focusRow(index: number): void {
+    const at = Math.max(0, Math.min(index, rows.length - 1));
+    const row = rows[at];
+    if (!row) return;
+    const key = rowId(row);
+    const put = (): void => {
+      const label = root.current?.querySelector<HTMLElement>(
+        `li[data-row-key="${CSS.escape(key)}"] [data-slot="grouped-list-row-label"]`,
+      );
+      if (!label) return;
+      label.focus({ preventScroll: true });
+      label.scrollIntoView({ block: 'nearest' });
+    };
+    if (virtualized) {
+      const line = flat.findIndex((item) => item.row !== null && rowId(item.row) === key);
+      if (line >= 0) virtualizer.scrollToIndex(line);
+      requestAnimationFrame(put);
+    } else put();
+  }
+
+  /**
+   * The arrows walk the rows. On the last loaded row ArrowDown asks for the next page
+   * instead, and the cursor stays where it is until those rows arrive.
+   */
+  function onRowKeyDown(event: React.KeyboardEvent, row: EntityRow): void {
+    if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+    const key = rowId(row);
+    const from = rows.findIndex((entry) => rowId(entry) === key);
+    if (from < 0) return;
+    event.preventDefault();
+    if (event.key === 'ArrowDown' && loadsOnArrowDown(snapshot, paging, from + 1)) {
+      setWantedRow(from + 1);
+      void source.loadMore();
+      return;
+    }
+    focusRow(nextEnabledIndex(rows.length, from, event.key === 'ArrowDown' ? 1 : -1, disabledAt));
+  }
+
+  const focusLatest = useLatest(focusRow);
+  useEffect(() => {
+    if (wantedRow === null) return;
+    if (snapshot.status === 'error') setWantedRow(null);
+    else if (rows.length > wantedRow) {
+      setWantedRow(null);
+      focusLatest.current(wantedRow);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wantedRow, rows, snapshot.status]);
+
+  /* scroll paging -------------------------------------------------------- */
+
+  // The virtualiser walks headers and rows as one stream, so the lines below the window
+  // count headers as well and a header only makes the scroller ask later.
+  const below = lastItem ? flat.length - 1 - lastItem.index : -1;
+  useEffect(() => {
+    if (!virtualized || below < 0) return;
+    if (shouldLoadNext(snapshot, { paging, lastVisible: rows.length - 1 - below })) void source.loadMore();
+  }, [source, paging, virtualized, below, snapshot, rows.length]);
+
+  // A list short enough not to be virtualised has no range to read, so the last row
+  // carries a sentinel instead.
+  // The element is held as state, not as a ref: a read that redraws the rows replaces the
+  // sentinel, and the observer has to move to the one that is on the page now.
+  const [sentinel, setSentinel] = useState<HTMLDivElement | null>(null);
+  const showSentinel = paging === 'scroll' && snapshot.hasMore && !pageError && snapshot.status !== 'loadingMore';
+  const snapshotLatest = useLatest(snapshot);
+  useEffect(() => {
+    const scroller = scrollRef.current;
+    const target = sentinel;
+    if (!scroller || !target) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((entry) => entry.isIntersecting)) return;
+        const state = snapshotLatest.current;
+        if (shouldLoadNext(state, { paging, lastVisible: state.rows.length - 1 })) void source.loadMore();
+      },
+      { root: scroller, rootMargin: '200px' },
+    );
+    observer.observe(target);
+    return () => observer.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [source, paging, sentinel]);
+
+  /** Read the page that failed again: the one a pager is on, or the one that was appended. */
+  function retryPage(): void {
+    if (paging === 'pages') void source.setPage(snapshot.page);
+    else void source.loadMore();
+  }
+
   /** The window as runs of one group, so a group still draws one box around its rows. */
   const blocks: Array<{ group: (typeof groups)[number]; header: boolean; rows: EntityRow[]; from: number }> = [];
   window_.slice.forEach((item, offset) => {
@@ -360,7 +474,7 @@ export function GroupedList({
   });
 
   return (
-    <div data-slot="grouped-list" className={cn('flex w-full min-w-0 flex-col gap-2', className)} {...rest}>
+    <div ref={root} data-slot="grouped-list" className={cn('flex w-full min-w-0 flex-col gap-2', className)} {...rest}>
       {header ? (
         <div data-slot="grouped-list-header" className="flex w-full min-w-0 flex-wrap items-center gap-2">
           {header}
@@ -371,24 +485,23 @@ export function GroupedList({
         ref={scrollRef}
         data-slot="grouped-list-scroll"
         style={{ maxHeight }}
-        className="border-border w-full overflow-auto rounded-md border"
+        className="border-border w-full overflow-auto rounded-lg border"
       >
-        {snapshot.status === 'error' ? (
-          <p className={cn(stateClass, 'text-destructive')}>
-            <CircleAlert aria-hidden="true" className="size-4 shrink-0" />
-            {snapshot.error?.message}
-          </p>
+        {snapshot.status === 'error' && !pageError ? (
+          <StateLine
+            state="error"
+            pad="table"
+            icon={CircleAlert}
+            label={stateLine('error', { errorLabel }, snapshot.error?.message)}
+          />
         ) : snapshot.status === 'loading' ? (
-          <div className="flex flex-col gap-2 p-2">
+          <div className="flex flex-col gap-2 p-2" aria-busy="true" aria-label={loadingText}>
             {Array.from({ length: 8 }, (_, index) => (
               <Skeleton key={index} className="h-6 w-full" />
             ))}
           </div>
         ) : rows.length === 0 ? (
-          <p className={stateClass}>
-            <Inbox aria-hidden="true" className="size-4 shrink-0" />
-            {emptyLabel}
-          </p>
+          <StateLine state="empty" pad="table" icon={Inbox} label={emptyLabel} />
         ) : (
           <>
             {window_.before > 0 ? <div aria-hidden="true" style={{ height: `${window_.before}px` }} /> : null}
@@ -491,8 +604,10 @@ export function GroupedList({
                             ) : null}
                             <button
                               type="button"
+                              data-slot="grouped-list-row-label"
                               disabled={disabled}
                               onClick={() => (selectable ? toggle(row) : onSelect?.(row))}
+                              onKeyDown={(event) => onRowKeyDown(event, row)}
                               className="focus-visible:ring-ring focus-visible:ring-offset-background flex min-w-0 flex-1 flex-col items-start rounded-sm text-left outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
                             >
                               <span className="flex w-full min-w-0 items-center gap-1.5">
@@ -558,94 +673,48 @@ export function GroupedList({
               );
             })}
             {window_.after > 0 ? <div aria-hidden="true" style={{ height: `${window_.after}px` }} /> : null}
-            {paging.mode === 'infinite' && snapshot.hasMore ? (
+            {pageError ? (
+              <StateLine
+                state="error"
+                slotName="grouped-list-page-error"
+                pad="none"
+                className="p-2"
+                icon={CircleAlert}
+                label={stateLine('error', { errorLabel }, snapshot.error?.message)}
+              >
+                <Button variant="outline" size="sm" onClick={retryPage}>
+                  Retry
+                </Button>
+              </StateLine>
+            ) : snapshot.status === 'loadingMore' ? (
+              <div
+                data-slot="grouped-list-loading"
+                className="p-2"
+                aria-busy="true"
+                aria-label={loadingText}
+              >
+                <Skeleton className="h-4 w-full" />
+              </div>
+            ) : paging === 'more' && snapshot.hasMore ? (
               <div data-slot="grouped-list-load-more" className="flex justify-center p-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={snapshot.status === 'loadingMore'}
-                  onClick={() => void source.loadMore()}
-                >
-                  {snapshot.status === 'loadingMore' ? 'Loading…' : 'Load more'}
+                <Button variant="outline" size="sm" onClick={() => void source.loadMore()}>
+                  Load more
                 </Button>
               </div>
+            ) : showSentinel ? (
+              <div ref={setSentinel} data-slot="grouped-list-sentinel" aria-hidden="true" className="h-4" />
             ) : null}
           </>
         )}
       </div>
 
-      <div
-        data-slot="grouped-list-footer"
-        className="text-muted-foreground flex w-full min-w-0 flex-wrap items-center justify-between gap-2 text-xs"
-      >
-        {paging.mode === 'pages' ? (
-          <>
-            <div data-slot="grouped-list-page-size" className="flex items-center gap-2">
-              <span>Rows per page</span>
-              <Select value={String(paging.pageSize)} onValueChange={(value) => void source.setPageSize(Number(value))}>
-                <SelectTrigger aria-label="Rows per page" className="h-7 w-auto min-w-16">
-                  <span data-slot="select-value" className="tabular-nums">
-                    {paging.pageSize}
-                  </span>
-                </SelectTrigger>
-                <SelectContent>
-                  {pageSizes.map((option) => (
-                    <SelectItem key={option} value={String(option)}>
-                      {option}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div data-slot="grouped-list-pager" className="flex items-center gap-2">
-              <span data-slot="grouped-list-range" className="tabular-nums">
-                {paging.rangeLabel}
-              </span>
-              <Button
-                variant="outline"
-                size="icon-sm"
-                aria-label="Previous page"
-                disabled={!paging.hasPrevious || snapshot.status === 'loading'}
-                onClick={() => void source.setPage(paging.page - 1)}
-              >
-                <ChevronLeft aria-hidden="true" />
-              </Button>
-              <Input
-                type="number"
-                min="1"
-                inputMode="numeric"
-                aria-label="Page number"
-                className="h-7 w-14 text-center tabular-nums"
-                value={pageDraft === '' ? String(paging.page) : pageDraft}
-                onChange={(event) => setPageDraft(event.currentTarget.value)}
-                onKeyDown={(event) => {
-                  if (event.key !== 'Enter') return;
-                  event.preventDefault();
-                  goToPage(event.currentTarget.value);
-                }}
-                onBlur={(event) => goToPage(event.currentTarget.value)}
-              />
-              {paging.pageCount !== null ? <span className="tabular-nums">of {paging.pageCount}</span> : null}
-              <Button
-                variant="outline"
-                size="icon-sm"
-                aria-label="Next page"
-                disabled={!paging.hasNext || snapshot.status === 'loading'}
-                onClick={() => void source.setPage(paging.page + 1)}
-              >
-                <ChevronRight aria-hidden="true" />
-              </Button>
-            </div>
-          </>
-        ) : (
-          <>
-            <span data-slot="grouped-list-loaded" className="tabular-nums">
-              {paging.loadedLabel}
-            </span>
-            {snapshot.status === 'loadingMore' ? <span>Loading…</span> : null}
-          </>
-        )}
-      </div>
+      <CollectionFooter
+        source={source}
+        pager={pager}
+        pageSizes={pageSizes}
+        loading={snapshot.status === 'loading'}
+        slotName="grouped-list"
+      />
 
       {footer ? (
         <div data-slot="grouped-list-footer-region" className="flex w-full min-w-0 flex-wrap items-center gap-2">

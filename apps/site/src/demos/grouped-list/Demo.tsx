@@ -3,7 +3,7 @@ import type { CollectionColumn, EntityRef, EntityRow, StatusRecord } from '@sg-w
 import { cellValue, condition, createEntitySource, resolveColumns } from '@sg-widgets/core';
 import { GroupedList } from '@/registry/sg/components/grouped-list';
 import { StatusBadge } from '@/registry/sg/components/status-badge';
-import { createDemoContext } from '../_shared/client';
+import { createDemoClient, createDemoContext } from '../_shared/client';
 import { DemoContextProvider } from '../_shared/react';
 
 const GROUP = 'step.Step.code';
@@ -38,6 +38,34 @@ export default function GroupedListDemo() {
     [context],
   );
 
+  /** A filter no Task matches, so the list draws the caller's own empty label. */
+  const emptySource = useMemo(
+    () =>
+      createEntitySource({
+        client: context.client,
+        entityType: 'Task',
+        fields: FIELDS,
+        filters: condition('content', 'is', 'no such task'),
+        mode: 'pages',
+        pageSize: 25,
+      }),
+    [context],
+  );
+
+  /** A client whose next read can be armed to fail, so the error line is on the page. */
+  const failing = useMemo(() => createDemoClient(), []);
+  const failedSource = useMemo(
+    () =>
+      createEntitySource({
+        client: failing.context.client,
+        entityType: 'Task',
+        fields: FIELDS,
+        mode: 'infinite',
+        pageSize: 25,
+      }),
+    [failing],
+  );
+
   const [data, setData] = useState<Loaded | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [compact, setCompact] = useState(false);
@@ -62,7 +90,7 @@ export default function GroupedListDemo() {
 
   const leading = (row: EntityRow) => {
     const code = String(cellValue(row, 'sg_status_list') ?? '');
-    return <StatusBadge code={code} status={data.statuses[code] ?? null} variant="icon" size="sm" />;
+    return <StatusBadge code={code} status={data.statuses[code] ?? null} variant="glyph" size="sm" />;
   };
 
   return (
@@ -79,6 +107,7 @@ export default function GroupedListDemo() {
         <GroupedList
           source={source}
           context={context}
+          paging="pages"
           groupBy={data.columns[0]!}
           labelField="content"
           subLabelField={data.columns[1]!}
@@ -89,6 +118,43 @@ export default function GroupedListDemo() {
           density={compact ? 'compact' : 'default'}
           onSelectionChange={setSelected}
         />
+
+        <section className="flex w-full min-w-0 flex-col gap-3" data-demo-case="states">
+          <h4 className="text-muted-foreground text-xs font-medium">Empty and error</h4>
+          <GroupedList
+            source={emptySource}
+            context={context}
+            paging="pages"
+            groupBy={data.columns[0]!}
+            labelField="content"
+            statuses={data.statuses}
+            maxHeight="12rem"
+            emptyLabel="No Task in this window"
+          />
+          <GroupedList
+            source={failedSource}
+            context={failing.context}
+            paging="more"
+            groupBy={data.columns[0]!}
+            labelField="content"
+            statuses={data.statuses}
+            maxHeight="12rem"
+          />
+          <button
+            type="button"
+            className={toggle}
+            data-arm-failure
+            onClick={() => {
+              failing.mock.failNext({ status: 503, message: 'Flow PT API error 503' });
+              // The read a page already made is cached, so the armed call is only
+              // reached once the cache lets it through.
+              failing.context.invalidate();
+              void failedSource.load();
+            }}
+          >
+            Arm the next read to fail
+          </button>
+        </section>
       </div>
     </DemoContextProvider>
   );

@@ -1,11 +1,15 @@
 <script lang="ts" module>
 	export type ListSelectSize = 'sm' | 'md' | 'lg';
 
-	/** The control ladder of `docs/design-rules.md`: 8 / 9 / 10. */
+	/**
+	 * The control ladder of `docs/design-rules.md`: 8 / 9 / 10, with the leading inset of
+	 * rule 3. The height carries `!`
+	 * because the select trigger sets its own under a `data-size` selector.
+	 */
 	const BOX: Record<ListSelectSize, string> = {
-		sm: 'h-8',
-		md: 'h-9',
-		lg: 'h-10'
+		sm: 'h-8! px-2',
+		md: 'h-9! px-3',
+		lg: 'h-10! px-3'
 	};
 
 	/** The sentinel the clear entry carries; the field itself is cleared with null. */

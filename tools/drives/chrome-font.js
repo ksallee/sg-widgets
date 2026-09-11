@@ -6,15 +6,12 @@
 //     --palette catppuccin --drive tools/drives/chrome-font.js
 //
 // The palette is whatever the run was dressed with, read back off `:root`, so the same
-// file covers all ten.
+// file covers every palette.
 
-/** The family each palette's `--font-sans` starts with; the five without a block keep Geist. */
+/** The family each palette's `--font-sans` starts with; the three without a block keep Geist. */
 const FAMILY = {
   default: 'Geist Variable',
-  stone: 'Geist Variable',
-  zinc: 'Geist Variable',
-  mauve: 'Geist Variable',
-  mist: 'Geist Variable',
+  nova: 'Geist Variable',
   vercel: 'Geist Variable',
   supabase: 'Outfit Variable',
   claude: 'ui-sans-serif',

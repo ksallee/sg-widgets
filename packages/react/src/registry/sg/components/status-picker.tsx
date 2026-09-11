@@ -1,6 +1,12 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import type { ReactNode } from 'react';
-import type { SgContext, StatusOption, StatusRecord } from '@sg-widgets/core';
+import type {
+  PickerRow as PickerRowData,
+  SgContext,
+  StatusOption,
+  StatusRecord,
+} from '@sg-widgets/core';
+import { NO_ROWS_LABEL, stateLine } from '@sg-widgets/core';
 import { SearchX, TriangleAlert, X } from 'lucide-react';
 import {
   Select,
@@ -11,20 +17,23 @@ import {
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import { PickerRow } from '@/registry/sg/components/picker-row';
+import { StateLine } from '@/registry/sg/components/state-line';
 import { StatusBadge } from '@/registry/sg/components/status-badge';
 
 export type StatusPickerSize = 'sm' | 'md' | 'lg';
 
 /**
- * Controls follow the input ladder of `docs/design-rules.md`. `data-empty` takes the
- * leading inset down one step, so an empty control is tighter than a filled one. The
- * height carries `!` because the select trigger sets its own under a `data-size`
- * selector, and is fixed, so there is no vertical inset to take.
+ * Controls follow the input ladder of `docs/design-rules.md`. A filled control's leading
+ * inset matches the room above and below its badge, so the badge sits evenly inside the
+ * border; `data-empty` gives the reading inset of a plain input back. The height carries
+ * `!` because the select trigger sets its own under a `data-size` selector, and is fixed,
+ * so there is no vertical inset to take.
  */
 const BOX: Record<StatusPickerSize, string> = {
-  sm: 'h-8! px-2 data-empty:pl-1.5',
-  md: 'h-9! px-3 data-empty:pl-2',
-  lg: 'h-10! px-3 data-empty:pl-2',
+  sm: 'h-8! pr-2 pl-[5px] data-empty:pl-1.5',
+  md: 'h-9! pr-3 pl-[5px] data-empty:pl-2',
+  lg: 'h-10! pr-3 pl-0.5 data-empty:pl-2',
 };
 const GLYPH: Record<StatusPickerSize, string> = {
   sm: 'size-4',
@@ -35,7 +44,7 @@ const GLYPH: Record<StatusPickerSize, string> = {
 const BADGE: Record<StatusPickerSize, 'sm' | 'md'> = { sm: 'sm', md: 'sm', lg: 'md' };
 
 const TRIGGER =
-  'border-input bg-background focus-visible:ring-ring focus-visible:ring-offset-background aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 flex w-full min-w-0 items-center rounded-md border text-sm outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 aria-invalid:ring-2';
+  'border-input bg-background hover:bg-muted/30 focus-visible:ring-ring focus-visible:ring-offset-background aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 flex w-full min-w-0 items-center rounded-lg border text-sm outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 aria-invalid:ring-2';
 
 export interface StatusPickerProps extends React.HTMLAttributes<HTMLDivElement> {
   /** The root element. */
@@ -54,13 +63,22 @@ export interface StatusPickerProps extends React.HTMLAttributes<HTMLDivElement> 
   value?: string;
   onValueChange?: (value: string | undefined) => void;
   placeholder?: string;
+  /** Shown when the field offers nothing. */
   emptyLabel?: string;
+  /** The accessible name of the skeletons a read stands behind. */
+  loadingLabel?: string;
+  /** Shown in place of what the failed read said. */
+  errorLabel?: string;
   clearable?: boolean;
   readonly?: boolean;
   disabled?: boolean;
   invalid?: boolean;
-  /** Show the raw code instead of the label. The other one stays in the tooltip. */
+  /** Draw the code as the row's right-aligned secondary, when it says more than the label. */
   showCode?: boolean;
+  /** The muted line under a row's label. */
+  subLabel?: (option: StatusOption) => string;
+  /** A row's right-aligned value, of the caller's own making. Wins over the code. */
+  secondary?: (option: StatusOption) => string;
   /** The site the stock sprite is served from, passed to every badge. Defaults to the context's. */
   siteUrl?: string;
   size?: StatusPickerSize;
@@ -138,6 +156,10 @@ function statusOptionStore(
  * (probe 009). A code the option set does not carry still renders, as itself: a row
  * may legally hold one (field_types/status_list). When a later option set drops the
  * selected code, the picker clears it and emits once.
+ *
+ * A row is the shared picker row of rule 9: the status icon as the leading glyph, the
+ * display label, and the code right-aligned. The badge stays in the control, where a
+ * status is a value rather than a row.
  */
 export function StatusPicker({
   context,
@@ -148,12 +170,16 @@ export function StatusPicker({
   value,
   onValueChange,
   placeholder = 'Select a status',
-  emptyLabel = 'No status on this field.',
+  emptyLabel = NO_ROWS_LABEL,
+  loadingLabel,
+  errorLabel,
   clearable = true,
   readonly = false,
   disabled = false,
   invalid = false,
-  showCode = false,
+  showCode = true,
+  subLabel,
+  secondary,
   siteUrl,
   size = 'md',
   open: openProp,
@@ -210,11 +236,24 @@ export function StatusPicker({
       status={query.statuses.get(code) ?? null}
       field={badgeField}
       size={BADGE[size]}
-      label={showCode ? 'code' : 'name'}
       siteUrl={site}
       className="min-w-0"
     />
   );
+
+  /** The shared row a status is drawn as. There is no entity behind a code, so it carries no values. */
+  const rowOf = (option: StatusOption): PickerRowData => ({
+    type: 'Status',
+    id: 0,
+    name: option.label,
+    values: {},
+  });
+
+  /** The right-aligned value: the caller's, else the code when it says more than the label. */
+  const secondaryOf = (option: StatusOption): string | undefined => {
+    if (secondary) return secondary(option) || undefined;
+    return showCode && option.code !== option.label ? option.code : undefined;
+  };
 
   // The value keeps clear of the clear control, which floats over the trigger.
   const selection = (
@@ -229,17 +268,21 @@ export function StatusPicker({
   let list: ReactNode;
   if (query.error !== null) {
     list = (
-      <div
-        data-slot="status-picker-error"
-        className="text-destructive flex items-center justify-center gap-1.5 py-6 text-center text-sm"
-      >
-        <TriangleAlert aria-hidden="true" className="size-4 shrink-0" />
-        <span className="truncate">{query.error}</span>
-      </div>
+      <StateLine
+        state="error"
+        slotName="status-picker-error"
+        icon={TriangleAlert}
+        label={stateLine('error', { errorLabel }, query.error)}
+      />
     );
   } else if (query.loading) {
     list = (
-      <div data-slot="status-picker-loading" className="flex flex-col gap-2 p-1">
+      <div
+        data-slot="status-picker-loading"
+        className="flex flex-col gap-2 p-1"
+        aria-busy="true"
+        aria-label={stateLine('loading', { loadingLabel })}
+      >
         {[0, 1, 2].map((row) => (
           <Skeleton key={row} className="h-8 w-full" />
         ))}
@@ -247,20 +290,35 @@ export function StatusPicker({
     );
   } else if (rows.length === 0) {
     list = (
-      <div
-        data-slot="status-picker-empty"
-        className="text-muted-foreground flex items-center justify-center gap-1.5 py-6 text-center text-sm"
-      >
-        <SearchX aria-hidden="true" className="size-4 shrink-0" />
-        <span className="truncate">{emptyLabel}</span>
-      </div>
+      <StateLine state="empty" slotName="status-picker-empty" icon={SearchX} label={emptyLabel} />
     );
   } else {
     list = (
       <SelectGroup>
         {rows.map((option) => (
-          <SelectItem key={option.code} value={option.code} className="py-1.5 pl-2">
-            {badge(option.code)}
+          <SelectItem
+            key={option.code}
+            data-status-code={option.code}
+            value={option.code}
+            className="py-1.5 pl-2"
+          >
+            <PickerRow
+              row={rowOf(option)}
+              subLabel={subLabel?.(option)}
+              secondary={secondaryOf(option)}
+              size={size}
+              context={context}
+              glyph={
+                <StatusBadge
+                  code={option.code}
+                  status={query.statuses.get(option.code) ?? null}
+                  field={badgeField}
+                  variant="glyph"
+                  size={size}
+                  siteUrl={site}
+                />
+              }
+            />
           </SelectItem>
         ))}
       </SelectGroup>
@@ -305,7 +363,7 @@ export function StatusPicker({
             >
               {selection}
             </SelectTrigger>
-            <SelectContent align="start" alignItemWithTrigger={false} className="p-0">
+            <SelectContent align="start" alignItemWithTrigger={false} className="p-1">
               {list}
             </SelectContent>
           </Select>

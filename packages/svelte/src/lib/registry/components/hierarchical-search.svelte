@@ -58,10 +58,13 @@
 		breadcrumb,
 		hierarchyEntity,
 		hydrate,
+		NO_MATCH_LABEL,
+		NO_ROWS_LABEL,
 		pathOf,
 		pathRefs,
 		rowFields,
-		scopeToProject
+		scopeToProject,
+		stateLine
 	} from '@sg-widgets/core';
 	import Box from '@lucide/svelte/icons/box';
 	import ChevronRight from '@lucide/svelte/icons/chevron-right';
@@ -78,6 +81,7 @@
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
 	import Row from '$lib/registry/components/picker-row.svelte';
+	import StateLine from '$lib/registry/components/state-line.svelte';
 
 	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>, HTMLDivElement> & {
 		/** The widget context. Every read goes through it, so widgets on a page share one cache. */
@@ -104,6 +108,14 @@
 		fields?: string[];
 		onSelect?: (entity: EntityRef, path: EntityRef[]) => void;
 		placeholder?: string;
+		/** Shown when a level holds nothing. */
+		emptyLabel?: string;
+		/** Shown when the query matches nothing. */
+		noMatchLabel?: string;
+		/** The accessible name of the skeletons a read stands behind. */
+		loadingLabel?: string;
+		/** Shown in place of what the failed read said. */
+		errorLabel?: string;
 		size?: HierarchicalSearchSize;
 		class?: string;
 	};
@@ -122,6 +134,10 @@
 		fields = [],
 		onSelect,
 		placeholder = 'Search the hierarchy…',
+		emptyLabel = NO_ROWS_LABEL,
+		noMatchLabel = NO_MATCH_LABEL,
+		loadingLabel,
+		errorLabel,
 		size = 'md',
 		class: className,
 		ref = $bindable(null),
@@ -354,19 +370,23 @@
 -->
 <div bind:this={ref} data-slot="hierarchical-search" class={cn('w-full', className)} {...rest}>
 	<!-- Server-side matching only, so the list never filters what came back. -->
-	<Command.Root shouldFilter={false} bind:value={cursor} class="border-border rounded-md border" onkeydown={onKeydown}>
+	<Command.Root shouldFilter={false} bind:value={cursor} class="border-border rounded-lg border" onkeydown={onKeydown}>
 		<Command.Input value={query} {placeholder} oninput={(e) => setQuery(e.currentTarget.value)} />
 		<Command.List data-sg-search-list>
 			{#if failure !== null}
-				<div
-					data-slot="search-error"
-					class="text-muted-foreground flex items-center justify-center gap-1.5 py-6 text-sm"
-				>
-					<TriangleAlert aria-hidden="true" class="size-4" />
-					<span class="truncate">{failure}</span>
-				</div>
+				<StateLine
+					state="error"
+					slotName="search-error"
+					icon={TriangleAlert}
+					label={stateLine('error', { errorLabel }, failure)}
+				/>
 			{:else if loading && rows.length === 0}
-				<div data-slot="search-loading" class="flex flex-col gap-2 p-1" aria-busy="true">
+				<div
+					data-slot="search-loading"
+					class="flex flex-col gap-2 p-1"
+					aria-busy="true"
+					aria-label={stateLine('loading', { loadingLabel })}
+				>
 					{#each [0, 1, 2] as line (line)}
 						<div class="flex items-center gap-2 px-2 py-1.5">
 							<Skeleton class={cn('shrink-0', LEAD[size])} />
@@ -378,13 +398,12 @@
 					{/each}
 				</div>
 			{:else if empty}
-				<div
-					data-slot="search-empty"
-					class="text-muted-foreground flex items-center justify-center gap-1.5 py-6 text-sm"
-				>
-					<Search aria-hidden="true" class="size-4" />
-					<span>{searching ? 'Nothing matches every word' : 'Nothing below this level'}</span>
-				</div>
+				<StateLine
+					state="empty"
+					slotName="search-empty"
+					icon={Search}
+					label={searching ? noMatchLabel : emptyLabel}
+				/>
 			{:else}
 				<Command.Group heading={searching ? 'Results' : trail.map((c) => c.label).join(' › ') || 'Tree'}>
 					{#if !searching && trail.length > 0}

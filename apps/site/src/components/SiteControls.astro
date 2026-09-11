@@ -13,7 +13,7 @@
  * width so the header does not shift when the panel arrives.
  */
 import Select from '@astrojs/starlight/components/Select.astro';
-import { palettes } from './demo-prefs';
+import { defaultPalette, palettes } from './demo-prefs';
 ---
 
 <span class="sg-palette">
@@ -23,7 +23,7 @@ import { palettes } from './demo-prefs';
     options={palettes.map((palette) => ({
       label: palette.label,
       value: palette.name,
-      selected: palette.name === 'default',
+      selected: palette.name === defaultPalette,
     }))}
     width="9.5em"
   />

@@ -10,9 +10,9 @@
 	 * clear and open controls.
 	 */
 	const BOX: Record<ContextSelectorSize, string> = {
-		sm: 'min-h-8 px-2 py-1 data-empty:pl-1.5 data-empty:py-0.5',
-		md: 'min-h-9 px-3 py-1 data-empty:pl-2 data-empty:py-0.5',
-		lg: 'min-h-10 px-3 py-1 data-empty:pl-2 data-empty:py-0.5'
+		sm: 'min-h-8 pr-2 pl-[5px] py-0.5 data-empty:pl-1.5 data-empty:py-0',
+		md: 'min-h-9 pr-3 pl-[5px] py-1 data-empty:pl-2 data-empty:py-0.5',
+		lg: 'min-h-10 pr-3 pl-1 py-0.5 data-empty:pl-2 data-empty:py-0'
 	};
 	const GLYPH: Record<ContextSelectorSize, string> = { sm: 'size-4', md: 'size-4', lg: 'size-5' };
 	/** A chip inside a control sits one step down the leaf ladder. */
@@ -66,7 +66,7 @@
 <script lang="ts">
 	import type { HTMLAttributes } from 'svelte/elements';
 	import type { PickerRow, SgContext } from '@sg-widgets/core';
-	import { pathOf, rowFields } from '@sg-widgets/core';
+	import { NO_ROWS_LABEL, pathOf, rowFields, stateLine } from '@sg-widgets/core';
 	import ChevronDown from '@lucide/svelte/icons/chevron-down';
 	import ListChecks from '@lucide/svelte/icons/list-checks';
 	import TriangleAlert from '@lucide/svelte/icons/triangle-alert';
@@ -76,6 +76,7 @@
 	import EntityChip from '$lib/registry/components/entity-chip.svelte';
 	import HierarchicalSearch from '$lib/registry/components/hierarchical-search.svelte';
 	import Row from '$lib/registry/components/picker-row.svelte';
+	import StateLine from '$lib/registry/components/state-line.svelte';
 
 	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>, HTMLDivElement> & {
 		/** The widget context. Every read goes through it, so widgets on a page share one cache. */
@@ -105,6 +106,12 @@
 		showCode?: boolean;
 		/** Extra fields to request, so a caller's own sub-label or secondary can read them. */
 		fields?: string[];
+		/** Shown when the person has no task assigned. */
+		emptyLabel?: string;
+		/** The accessible name of the skeletons a read stands behind. */
+		loadingLabel?: string;
+		/** Shown in place of what the failed read said. */
+		errorLabel?: string;
 		size?: ContextSelectorSize;
 		/** Whether the popover is showing, two-way. */
 		open?: boolean;
@@ -128,6 +135,9 @@
 		secondary,
 		showCode = false,
 		fields = [],
+		emptyLabel = NO_ROWS_LABEL,
+		loadingLabel,
+		errorLabel,
 		size = 'md',
 		open = $bindable(false),
 		onOpenChange,
@@ -251,12 +261,12 @@
 			data-size={size}
 			data-empty={chips.length === 0 ? '' : undefined}
 			class={cn(
-				'border-border bg-background hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring focus-visible:ring-offset-background flex w-full min-w-0 items-center gap-2 rounded-md border text-left outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2',
+				'border-border bg-background hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring focus-visible:ring-offset-background flex w-full min-w-0 items-center gap-1.5 rounded-lg border text-left text-sm outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2',
 				BOX[size]
 			)}
 			aria-label={`Context: ${label(workContext)}`}
 		>
-			<span class="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+			<span class="flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden">
 				{#if chips.length === 0}
 					<span class="text-muted-foreground text-sm">No context</span>
 				{:else}
@@ -295,12 +305,18 @@
 			<section data-slot="context-my-tasks" class="flex max-h-52 flex-col overflow-y-auto">
 				<h4 class={heading}>My tasks</h4>
 				{#if failure !== null}
-					<p class="text-muted-foreground flex items-center justify-center gap-1.5 py-6 text-sm">
-						<TriangleAlert aria-hidden="true" class="size-4" />
-						<span class="truncate">{failure}</span>
-					</p>
+					<StateLine
+						state="error"
+						slotName="context-tasks-error"
+						icon={TriangleAlert}
+						label={stateLine('error', { errorLabel }, failure)}
+					/>
 				{:else if loading && currentUser}
-					<div class="flex flex-col gap-2 p-1" aria-busy="true">
+					<div
+						class="flex flex-col gap-2 p-1"
+						aria-busy="true"
+						aria-label={stateLine('loading', { loadingLabel })}
+					>
 						{#each [0, 1] as line (line)}
 							<div class="flex items-center gap-2 px-2 py-1.5">
 								<Skeleton class="size-4 shrink-0" />
@@ -312,7 +328,9 @@
 						{/each}
 					</div>
 				{:else if byProject.length === 0}
-					<p class="text-muted-foreground px-2 py-1.5 text-sm">No tasks assigned.</p>
+					<p data-slot="context-tasks-empty" class="text-muted-foreground px-2 py-1.5 text-sm">
+						{emptyLabel}
+					</p>
 				{:else}
 					{#each byProject as group (group.project ? `${group.project.type}:${group.project.id}` : '-')}
 						<h5 class={heading}>{group.project?.name ?? 'No project'}</h5>

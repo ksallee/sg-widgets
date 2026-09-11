@@ -17,7 +17,7 @@ const toggle =
 const group = 'flex flex-col gap-2';
 const label = 'text-muted-foreground text-xs font-medium tracking-wide uppercase';
 
-/** The demo holds every third row back, to show what a disabled row does. */
+/** The demo holds every third card back, to show what a disabled card does. */
 const isRowDisabled = (row: EntityRow): boolean => row.id % 3 === 0;
 
 export default function EntityGridDemo() {
@@ -112,7 +112,7 @@ export default function EntityGridDemo() {
       </section>
 
       <section className={group} data-testid="grid-disabled">
-        <h4 className={label}>Every third row disabled</h4>
+        <h4 className={label}>Every third card disabled</h4>
         <EntityGrid
           source={sources.short}
           context={context}

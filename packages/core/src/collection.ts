@@ -16,6 +16,7 @@
  * sort path against the schema before offering it (026_result_order).
  */
 import type { EntityRow, SearchResult, SgClient } from './client.js';
+import type { EditorPlacement } from './edit.js';
 import { isSortable } from './filter-ux.js';
 import { isNumericType } from './field-types.js';
 import type { EntityRef, FilterNode, WireGroup } from './filter.js';
@@ -84,7 +85,10 @@ export interface EntitySource {
   readonly total: number | null;
   /** Read the first page, discarding anything already loaded, and count the set in `pages` mode. */
   load(): Promise<void>;
-  /** Append the next page. A no-op in `pages` mode, while another read is in flight, or when there is no more. */
+  /**
+   * Append the next page. A no-op in `pages` mode, while another read is in flight,
+   * or when there is no more. Calling it again is what retries a page that failed.
+   */
   loadMore(): Promise<void>;
   /** Read every page already shown again, keeping the row count. */
   refresh(): Promise<void>;
@@ -92,6 +96,8 @@ export interface EntitySource {
   setSort(sort: SortSpec[]): Promise<void>;
   /** Show one page of the set. `pages` mode only. */
   setPage(page: number): Promise<void>;
+  /** Walk the set a page at a time, or append page after page. Opens at the first page. */
+  setMode(mode: SourceMode): Promise<void>;
   /** Change the rows per page and open at the first one. */
   setPageSize(size: number): Promise<void>;
   /** Total rows the filter matches, through `_summarize` (020_summarize). Null when the site did not answer the key. */
@@ -270,7 +276,8 @@ export function createEntitySource(options: EntitySourceOptions): EntitySource {
     },
 
     loadMore(): Promise<void> {
-      if (state.mode === 'pages' || inFlight || !state.hasMore || state.status === 'error') return Promise.resolve();
+      // A failed page leaves its rows and its error in place, and asking again is the retry.
+      if (state.mode === 'pages' || inFlight || !state.hasMore) return Promise.resolve();
       return run(() => read(1, 'loadingMore', state.rows, Math.floor(state.rows.length / state.pageSize) + 1));
     },
 
@@ -299,6 +306,12 @@ export function createEntitySource(options: EntitySourceOptions): EntitySource {
     setPage(page: number): Promise<void> {
       if (state.mode !== 'pages') return Promise.resolve();
       set({ page: Math.max(1, Math.floor(page)) });
+      return reread();
+    },
+
+    setMode(mode: SourceMode): Promise<void> {
+      if (state.mode === mode) return Promise.resolve();
+      set({ mode, page: 1 });
       return reread();
     },
 
@@ -427,6 +440,8 @@ export interface ColumnSpec {
   field?: FieldSchema | null;
   /** Override the sortability the data type implies. */
   sortable?: boolean;
+  /** Override where this column's editor opens. */
+  editorPlacement?: EditorPlacement;
 }
 
 /** A column with every question answered, which is what a collection widget takes. */
@@ -442,6 +457,8 @@ export interface CollectionColumn {
   sortable: boolean;
   /** The schema of the field the path lands on, for a status label out of `display_values`. */
   field: FieldSchema | null;
+  /** Where this column's editor opens. Absent leaves it to the data type. */
+  editorPlacement?: EditorPlacement;
 }
 
 /**
@@ -473,6 +490,7 @@ export async function resolveColumns(
         field,
       };
       if (spec.width !== undefined) column.width = spec.width;
+      if (spec.editorPlacement !== undefined) column.editorPlacement = spec.editorPlacement;
       return column;
     }),
   );

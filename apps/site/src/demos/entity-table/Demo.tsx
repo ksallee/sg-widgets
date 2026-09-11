@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { CollectionColumn, EntityRef, FilterGroup, SortKey, StatusRecord } from '@sg-widgets/core';
+import type { CollectionColumn, EditorPlacement, EntityRef, FilterGroup, PagingMode, SortKey, StatusRecord } from '@sg-widgets/core';
 import { condition, createEntitySource, emptyFilter, group, resolveColumns, toSortSpecs } from '@sg-widgets/core';
 import { ColumnPicker } from '@/registry/sg/components/column-picker';
 import { EntityTable } from '@/registry/sg/components/entity-table';
@@ -21,6 +21,16 @@ const WIDTHS: Record<string, number> = {
 const PATHS = Object.keys(WIDTHS);
 const SHOWN = ['code', 'entity', 'sg_status_list', 'image', 'description', 'user'];
 const FACETS = ['sg_status_list'];
+const PLACEMENTS: Array<{ value: EditorPlacement; label: string }> = [
+  { value: 'popover', label: 'Popover editor' },
+  { value: 'inline', label: 'Inline editor' },
+];
+
+const PAGING: Array<{ value: PagingMode; label: string }> = [
+  { value: 'pages', label: 'Pages' },
+  { value: 'more', label: 'Load more' },
+  { value: 'scroll', label: 'Scroll' },
+];
 
 const toggle =
   'inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-background px-2 text-sm ' +
@@ -57,6 +67,8 @@ export default function EntityTableDemo() {
   const [picking, setPicking] = useState(false);
   const [grouped, setGrouped] = useState(false);
   const [compact, setCompact] = useState(false);
+  const [paging, setPaging] = useState<PagingMode>('pages');
+  const [placement, setPlacement] = useState<EditorPlacement>('popover');
   const [selected, setSelected] = useState<EntityRef[]>([]);
   const sort = useMemo(() => toSortSpecs(sortKeys), [sortKeys]);
 
@@ -105,6 +117,32 @@ export default function EntityTableDemo() {
           <button type="button" className={toggle} aria-pressed={compact} onClick={() => setCompact(!compact)}>
             Compact
           </button>
+          <div className="flex flex-wrap items-center gap-2" data-testid="paging-modes">
+            {PAGING.map((mode) => (
+              <button
+                key={mode.value}
+                type="button"
+                className={toggle}
+                aria-pressed={paging === mode.value}
+                onClick={() => setPaging(mode.value)}
+              >
+                {mode.label}
+              </button>
+            ))}
+          </div>
+          <div className="flex flex-wrap items-center gap-2" data-testid="editor-placements">
+            {PLACEMENTS.map((option) => (
+              <button
+                key={option.label}
+                type="button"
+                className={toggle}
+                aria-pressed={placement === option.value}
+                onClick={() => setPlacement(option.value)}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
           <span className="text-muted-foreground text-xs tabular-nums" data-testid="selection-count">
             {selected.length} selected
           </span>
@@ -115,12 +153,14 @@ export default function EntityTableDemo() {
           onColumnsChange={setColumns}
           selection={selected}
           onSelectionChange={setSelected}
-          filters={filter}
+          filters={scope ? group('and', [scope, filter]) : filter}
           sort={sort}
           statuses={statuses}
           context={context}
           selectable
           editable
+          paging={paging}
+          editorPlacement={placement}
           density={compact ? 'compact' : 'default'}
           groupBy={grouped ? 'sg_status_list' : null}
           toolbarStart={
@@ -156,7 +196,7 @@ export default function EntityTableDemo() {
             </>
           }
           toolbarEnd={
-            <SortPicker entityType="Version" context={context} size="sm" value={sortKeys} onChange={setSortKeys} />
+            <SortPicker entityType="Version" context={context} size="sm" paths={columns.map((column) => column.path)} value={sortKeys} onChange={setSortKeys} />
           }
         />
       </div>

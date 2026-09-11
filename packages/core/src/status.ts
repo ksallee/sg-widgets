@@ -7,6 +7,7 @@
  * stored value, not corruption (probe 009, field_types/status_list).
  */
 import type { FieldSchema } from './schema.js';
+import { spriteStyle, stockIconSource, type SpriteCell } from './status-icons.js';
 
 export interface StatusOption {
   code: string;
@@ -78,4 +79,53 @@ export function relativeLuminance({ r, g, b }: Rgb): number {
 /** Black or white, whichever contrasts more with the given colour. */
 export function foregroundFor(rgb: Rgb): 'black' | 'white' {
   return relativeLuminance(rgb) > 0.4 ? 'black' : 'white';
+}
+
+/**
+ * What a status paints with: its own `bg_color` and a readable ink on it. Null when
+ * the status carries no colour, which is every option of a plain `list` field.
+ */
+export interface StatusPaint {
+  background: string;
+  foreground: string;
+}
+
+export function statusPaint(status: Pick<StatusRecord, 'bgColor'> | null | undefined): StatusPaint | null {
+  const rgb = parseBgColor(status?.bgColor);
+  if (!rgb) return null;
+  return { background: rgbToCss(rgb), foreground: foregroundFor(rgb) === 'black' ? '#000' : '#fff' };
+}
+
+/**
+ * What a status draws as its glyph (010_status_icons). `image` is a self-contained
+ * data URI; `cell` is a bundled sprite cell and `sprite` one the site serves, both
+ * sized by that cell; `html` is the label itself, so it replaces the text rather than
+ * preceding it; `dot` stands in for a stock key this client has no cell for, and
+ * `none` is a status naming no icon at all.
+ */
+export type StatusGlyph =
+  | { kind: 'none' }
+  | { kind: 'html'; html: string }
+  | { kind: 'image'; src: string }
+  | { kind: 'cell'; imageMapKey: string; src: string; cell: SpriteCell }
+  | { kind: 'sprite'; imageMapKey: string; style: Record<string, string> }
+  | { kind: 'dot'; imageMapKey: string };
+
+/** The glyph a status draws, from its icon and whichever sprite can serve it. */
+export function statusGlyph(
+  status: Pick<StatusRecord, 'icon'> | null | undefined,
+  siteUrl?: string,
+): StatusGlyph {
+  const icon = status?.icon;
+  if (!icon) return { kind: 'none' };
+  if (icon.displayType === 'html') return { kind: 'html', html: icon.html };
+  if (icon.displayType === 'image') return { kind: 'image', src: icon.dataUrl };
+  const source = stockIconSource(icon.imageMapKey, siteUrl);
+  if (source.kind === 'data') {
+    return { kind: 'cell', imageMapKey: icon.imageMapKey, src: source.src, cell: source.cell };
+  }
+  if (source.kind === 'sprite') {
+    return { kind: 'sprite', imageMapKey: icon.imageMapKey, style: spriteStyle(source) };
+  }
+  return { kind: 'dot', imageMapKey: icon.imageMapKey };
 }

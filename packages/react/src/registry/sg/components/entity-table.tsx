@@ -2,10 +2,12 @@ import type * as React from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import type {
   CollectionColumn,
+  EditorPlacement,
   EntityRef,
   EntityRow,
   EntitySource,
   FieldSchema,
+  PagingMode,
   RowDisabledFn,
   RowIdFn,
   SgContext,
@@ -16,8 +18,13 @@ import type {
 import {
   cellValue,
   describePaging,
+  editorPlacementFor,
+  hasFailedPage,
   idsForRefs,
   isEditableType,
+  loadsOnArrowDown,
+  nextEnabledIndex,
+  NO_ROWS_LABEL,
   preferencesOf,
   rowIdOf,
   rowIsDisabled,
@@ -25,6 +32,9 @@ import {
   sameIds,
   sameRefs,
   sameSort,
+  shouldLoadNext,
+  sourceModeFor,
+  stateLine,
 } from '@sg-widgets/core';
 import {
   columnGroupingFeature,
@@ -45,7 +55,6 @@ import {
   ArrowLeftToLine,
   ArrowUp,
   ArrowUpDown,
-  ChevronLeft,
   ChevronRight,
   ChevronsUpDown,
   CircleAlert,
@@ -63,13 +72,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
+import { CollectionFooter } from '@/registry/sg/components/collection-footer';
 import { FieldEditor } from '@/registry/sg/components/field-editor';
 import { FieldValue } from '@/registry/sg/components/field-value';
+import { StateLine } from '@/registry/sg/components/state-line';
 
 export type EntityTableDensity = 'compact' | 'default';
 export type EntityTableSize = 'sm' | 'md' | 'lg';
@@ -187,15 +196,27 @@ export interface EntityTableProps extends Omit<React.HTMLAttributes<HTMLDivEleme
   /** Opens an editor on a double-click or Enter in an editable cell. */
   editable?: boolean;
   editorFor?: EditorFor;
+  /**
+   * Where every cell editor opens. A column carrying its own `editorPlacement`
+   * wins over it; with neither, the data type decides.
+   */
+  editorPlacement?: EditorPlacement;
   /** Show the programmatic field path beside the header's display name. */
   showCode?: boolean;
+  /** How the set is walked: a footer with a page number, a load-more row, or the scroller. */
+  paging?: PagingMode;
   /** Rows per page offered in the footer. `pages` mode only. */
   pageSizes?: number[];
   /** Height of the scrolling body. */
   maxHeight?: string;
   /** Rows above which the body is virtualised. */
   virtualizeAfter?: number;
+  /** Shown when the read returned nothing. */
   emptyLabel?: string;
+  /** The accessible name of the skeletons a read stands behind. */
+  loadingLabel?: string;
+  /** Shown in place of what the failed read said. */
+  errorLabel?: string;
   /** Left region of the toolbar above the table. */
   toolbarStart?: React.ReactNode;
   /** Right region of the toolbar above the table. */
@@ -222,8 +243,6 @@ const features = tableFeatures({
   rowSelectionFeature,
 });
 
-const stateClass = 'text-muted-foreground flex items-center justify-center gap-2 py-10 text-sm';
-
 /**
  * A page of rows, one column per field path.
  *
@@ -235,10 +254,12 @@ const stateClass = 'text-muted-foreground flex items-center justify-center gap-2
  * because a sort on a field that cannot be sorted is a silent 200 no-op
  * (026_result_order).
  *
- * In `pages` mode the footer walks the set with an explicit page number and reads
- * "n to m of N" once `_summarize` has counted it; a read carries no total of its own
- * (006_pagination, 020_summarize). In `infinite` mode the last row loads the next
- * page and the footer counts what is loaded.
+ * `paging` says how the set is walked, and the source follows it. In `pages` the footer
+ * walks with an explicit page number and reads "n to m of N" once `_summarize` has
+ * counted it; a read carries no total of its own (006_pagination, 020_summarize). In
+ * `more` a row at the bottom appends the next page, in `scroll` the scroller does, and
+ * both count what is loaded in the footer. A page that fails leaves its rows and says
+ * why at the bottom, with a retry.
  *
  * An edit writes one field through `updateRow`, which follows the write with a
  * re-read: the write's own answer is the whole record but resolves no dotted path
@@ -270,11 +291,15 @@ export function EntityTable({
   onFiltersChange,
   editable = false,
   editorFor,
+  editorPlacement,
   showCode = false,
+  paging = 'pages',
   pageSizes = [25, 50, 100],
   maxHeight = '28rem',
   virtualizeAfter = 100,
-  emptyLabel = 'No rows',
+  emptyLabel = NO_ROWS_LABEL,
+  loadingLabel,
+  errorLabel,
   toolbarStart,
   toolbarEnd,
   row: rowRender,
@@ -294,6 +319,11 @@ export function EntityTable({
     if (source.status === 'idle') void source.load();
   }, [source]);
   useEffect(() => {
+    // `paging` is the one prop a caller sets, so the source follows it rather than the
+    // other way round. Setting a mode it already holds is a no-op.
+    void source.setMode(sourceModeFor(paging));
+  }, [source, paging]);
+  useEffect(() => {
     // A group is only whole when the server put its rows together, so the group path
     // leads the sort. Setting it reads the first page again.
     if (groupBy && snapshot.sort[0]?.path !== groupBy) {
@@ -306,16 +336,23 @@ export function EntityTable({
   const prefs = preferencesOf(context);
   const rows = snapshot.rows;
   const sort = snapshot.sort;
-  const paging = describePaging(snapshot);
+  const pager = describePaging(snapshot);
+  const loadingText = stateLine('loading', { loadingLabel });
   const rowHeight = ROW_HEIGHT[density];
   const cellClass = cn(CELL[density], TEXT[size]);
   const byPath = useMemo(() => new Map(columns.map((column) => [column.path, column])), [columns]);
 
   const rowId = (row: EntityRow): string => rowIdOf(row, getRowId);
   const rowDisabled = (row: EntityRow): boolean => rowIsDisabled(row, isRowDisabled);
+  const disabledAt = (index: number): boolean => {
+    const row = rows[index];
+    return row === undefined || rowDisabled(row);
+  };
+  /** A page that failed under rows already loaded, which the bottom line reports. */
+  const pageError = hasFailedPage(snapshot);
 
   const root = useRef<HTMLDivElement>(null);
-  const [editing, setEditing] = useState<{ key: string; path: string } | null>(null);
+  const [editing, setEditing] = useState<{ key: string; path: string; placement: EditorPlacement } | null>(null);
   // Enter can arrive in the same tick as the change that produced the value, before a
   // re-render, so the committed value is read off a ref rather than off state.
   const draft = useRef<unknown>(null);
@@ -323,7 +360,6 @@ export function EntityTable({
   const [cellError, setCellError] = useState<{ key: string; path: string; message: string } | null>(null);
   const [dragging, setDragging] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<string | null>(null);
-  const [pageDraft, setPageDraft] = useState('');
 
   /* the table ------------------------------------------------------------ */
 
@@ -472,6 +508,98 @@ export function EntityTable({
           slice: modelRows.slice(first.index, last.index + 1),
         };
 
+  /* scroll paging -------------------------------------------------------- */
+
+  // Rows below the window's end, headers included, so a group header only ever makes
+  // the scroller ask later.
+  const below = last ? modelRows.length - 1 - last.index : -1;
+  useEffect(() => {
+    if (!virtualized || below < 0) return;
+    if (shouldLoadNext(snapshot, { paging, lastVisible: rows.length - 1 - below })) void source.loadMore();
+  }, [source, paging, virtualized, below, snapshot, rows.length]);
+
+  // A body short enough not to be virtualised has no range to read, so the last row
+  // carries a sentinel instead.
+  // The element is held as state, not as a ref: a read that redraws the body replaces the
+  // row, and the observer has to move to the row that is on the page now.
+  const [sentinel, setSentinel] = useState<HTMLTableRowElement | null>(null);
+  const showSentinel = paging === 'scroll' && snapshot.hasMore && !pageError && snapshot.status !== 'loadingMore';
+  const snapshotLatest = useLatest(snapshot);
+  useEffect(() => {
+    const root = scrollRef.current;
+    const target = sentinel;
+    if (!root || !target) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((entry) => entry.isIntersecting)) return;
+        const state = snapshotLatest.current;
+        if (shouldLoadNext(state, { paging, lastVisible: state.rows.length - 1 })) void source.loadMore();
+      },
+      { root, rootMargin: '200px' },
+    );
+    observer.observe(target);
+    return () => observer.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [source, paging, sentinel]);
+
+  /* the cursor ----------------------------------------------------------- */
+
+  /** The row and column a cursor is waiting on, until the page it asked for lands. */
+  const [wanted, setWanted] = useState<{ index: number; column: string | null } | null>(null);
+
+  /** Put the cursor on one row, drawing it first where it is outside the window. */
+  function focusRow(index: number, column: string | null): void {
+    const at = Math.max(0, Math.min(index, rows.length - 1));
+    const row = rows[at];
+    if (!row) return;
+    const key = rowId(row);
+    const put = (): void => {
+      const tr = root.current?.querySelector<HTMLElement>(`tr[data-row-key="${CSS.escape(key)}"]`);
+      const cell = column ? tr?.querySelector<HTMLElement>(`td[data-column="${CSS.escape(column)}"][tabindex]`) : null;
+      const target = cell ?? tr?.querySelector<HTMLElement>('td[tabindex],button,input');
+      if (!target) return;
+      target.focus({ preventScroll: true });
+      target.scrollIntoView({ block: 'nearest' });
+    };
+    if (virtualized) {
+      const model = modelRows.findIndex((entry) => entry.id === key);
+      if (model >= 0) virtualizer.scrollToIndex(model);
+      requestAnimationFrame(put);
+    } else put();
+  }
+
+  /**
+   * The arrows walk one column of the body. On the last loaded row they ask for the
+   * next page instead, and the cursor stays where it is until those rows arrive.
+   */
+  function onRowsKeyDown(event: React.KeyboardEvent): void {
+    if (editing !== null || (event.key !== 'ArrowDown' && event.key !== 'ArrowUp')) return;
+    const target = event.target as HTMLElement | null;
+    const tr = target?.closest<HTMLElement>('tr[data-row-key]');
+    if (!tr) return;
+    const from = rows.findIndex((row) => rowId(row) === tr.dataset['rowKey']);
+    if (from < 0) return;
+    const column = target?.closest<HTMLElement>('td[data-column]')?.dataset['column'] ?? null;
+    event.preventDefault();
+    if (event.key === 'ArrowDown' && loadsOnArrowDown(snapshot, paging, from + 1)) {
+      setWanted({ index: from + 1, column });
+      void source.loadMore();
+      return;
+    }
+    focusRow(nextEnabledIndex(rows.length, from, event.key === 'ArrowDown' ? 1 : -1, disabledAt), column);
+  }
+
+  const focusLatest = useLatest(focusRow);
+  useEffect(() => {
+    if (!wanted) return;
+    if (snapshot.status === 'error') setWanted(null);
+    else if (rows.length > wanted.index) {
+      setWanted(null);
+      focusLatest.current(wanted.index, wanted.column);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wanted, rows, snapshot.status]);
+
   /* sorting -------------------------------------------------------------- */
 
   const sortOf = (path: string): SortSpec | undefined => sort.find((key) => key.path === path);
@@ -515,12 +643,17 @@ export function EntityTable({
     return Boolean(editorFor?.(column.dataType)) || isEditableType(column.dataType);
   }
 
+  /** The column's own placement, then the table's, then the data type's. */
+  function placementFor(column: CollectionColumn): EditorPlacement {
+    return column.editorPlacement ?? editorPlacement ?? editorPlacementFor(column.dataType);
+  }
+
   function openEditor(key: string, column: CollectionColumn, row: EntityRow, value: unknown): void {
     if (!canEditColumn(column, row)) return;
     setCellError(null);
     draft.current = value;
     setDraftValue(value);
-    setEditing({ key, path: column.path });
+    setEditing({ key, path: column.path, placement: placementFor(column) });
   }
 
   async function commit(row: EntityRow, column: CollectionColumn, value: unknown): Promise<void> {
@@ -572,13 +705,21 @@ export function EntityTable({
     element?.querySelector<HTMLElement>('input,textarea,button')?.focus({ preventScroll: true });
   };
 
+  /** A popover editor drives its own close and reports it; the cell commits what it holds. */
+  function editorClosed(row: EntityRow, column: CollectionColumn, mode: 'display' | 'edit'): void {
+    if (mode !== 'display' || placementFor(column) !== 'popover') return;
+    releaseEditor();
+    void commit(row, column, draft.current);
+  }
+
   const isEditing = (key: string, path: string): boolean => editing?.key === key && editing.path === path;
 
-  // A press outside the open cell commits it.
+  // A press outside the open cell commits it. A popover editor dismisses itself and
+  // reports the close, so the cell listens only for the editor drawn in it.
   const outside = useRef<(event: PointerEvent) => void>(() => {});
   outside.current = (event: PointerEvent): void => {
     const open = editing;
-    if (open === null) return;
+    if (open === null || open.placement === 'popover') return;
     const target = event.target as Element | null;
     const cell = root.current?.querySelector<HTMLElement>(
       `tr[data-row-key="${CSS.escape(open.key)}"] td[data-column="${CSS.escape(open.path)}"]`,
@@ -599,11 +740,10 @@ export function EntityTable({
 
   /* paging --------------------------------------------------------------- */
 
-  function goToPage(value: string): void {
-    const wanted = Number(value);
-    setPageDraft('');
-    if (!Number.isFinite(wanted) || wanted < 1) return;
-    void source.setPage(paging.pageCount === null ? wanted : Math.min(wanted, paging.pageCount));
+  /** Read the page that failed again: the one a pager is on, or the one that was appended. */
+  function retryPage(): void {
+    if (paging === 'pages') void source.setPage(snapshot.page);
+    else void source.loadMore();
   }
 
   /** Sticky offset for a column pinned to the start; nothing for the rest. */
@@ -630,7 +770,7 @@ export function EntityTable({
         ref={scrollRef}
         data-slot="entity-table-scroll"
         style={{ maxHeight }}
-        className="border-border relative w-full overflow-auto rounded-md border [&>[data-slot=table-container]]:overflow-visible"
+        className="border-border relative w-full overflow-auto rounded-lg border [&>[data-slot=table-container]]:overflow-visible"
       >
         <Table style={{ tableLayout: 'fixed', width: `${totalWidth}px` }}>
           <colgroup>
@@ -779,7 +919,11 @@ export function EntityTable({
             </TableRow>
           </TableHeader>
 
-          <TableBody>
+          <TableBody
+            onKeyDown={onRowsKeyDown}
+            aria-busy={snapshot.status === 'loading' ? 'true' : undefined}
+            aria-label={snapshot.status === 'loading' ? loadingText : undefined}
+          >
             {snapshot.status === 'loading' ? (
               Array.from({ length: 8 }, (_, index) => (
                 <TableRow key={index}>
@@ -790,22 +934,21 @@ export function EntityTable({
                   ))}
                 </TableRow>
               ))
-            ) : snapshot.status === 'error' ? (
+            ) : snapshot.status === 'error' && !pageError ? (
               <TableRow>
                 <TableCell colSpan={leafColumns.length}>
-                  <span className={cn(stateClass, 'text-destructive')}>
-                    <CircleAlert aria-hidden="true" className="size-4 shrink-0" />
-                    {snapshot.error?.message}
-                  </span>
+                  <StateLine
+                    state="error"
+                    pad="table"
+                    icon={CircleAlert}
+                    label={stateLine('error', { errorLabel }, snapshot.error?.message)}
+                  />
                 </TableCell>
               </TableRow>
             ) : modelRows.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={leafColumns.length}>
-                  <span className={stateClass}>
-                    <Inbox aria-hidden="true" className="size-4 shrink-0" />
-                    {emptyLabel}
-                  </span>
+                  <StateLine state="empty" pad="table" icon={Inbox} label={emptyLabel} />
                 </TableCell>
               </TableRow>
             ) : (
@@ -942,8 +1085,10 @@ export function EntityTable({
                                   <div
                                     data-slot="entity-table-editor"
                                     role="presentation"
-                                    ref={focusEditor}
-                                    onKeyDown={(event) => editorKeyDown(event, row, column)}
+                                    ref={placementFor(column) === 'inline' ? focusEditor : undefined}
+                                    onKeyDown={(event) =>
+                                      placementFor(column) === 'inline' && editorKeyDown(event, row, column)
+                                    }
                                   >
                                     <FieldEditor
                                       value={draftValue}
@@ -963,6 +1108,8 @@ export function EntityTable({
                                       timeZone={prefs.timeZone}
                                       frameRate={prefs.frameRate}
                                       mode="edit"
+                                      onModeChange={(next) => editorClosed(row, column, next)}
+                                      editorPlacement={placementFor(column)}
                                       size="sm"
                                     />
                                   </div>
@@ -992,19 +1139,44 @@ export function EntityTable({
                   );
                 })}
                 {window_.after > 0 ? <tr aria-hidden="true" style={{ height: `${window_.after}px` }} /> : null}
-                {paging.mode === 'infinite' && snapshot.hasMore ? (
+                {pageError ? (
+                  <TableRow data-slot="entity-table-page-error" className="hover:bg-transparent">
+                    <TableCell colSpan={leafColumns.length} className="p-2">
+                      <StateLine
+                        state="error"
+                        pad="none"
+                        icon={CircleAlert}
+                        label={stateLine('error', { errorLabel }, snapshot.error?.message)}
+                      >
+                        <Button variant="outline" size="sm" onClick={retryPage}>
+                          Retry
+                        </Button>
+                      </StateLine>
+                    </TableCell>
+                  </TableRow>
+                ) : snapshot.status === 'loadingMore' ? (
+                  <TableRow
+                    data-slot="entity-table-loading"
+                    className="hover:bg-transparent"
+                    aria-busy="true"
+                    aria-label={loadingText}
+                  >
+                    <TableCell colSpan={leafColumns.length} className="p-2">
+                      <Skeleton className="h-4 w-full" />
+                    </TableCell>
+                  </TableRow>
+                ) : paging === 'more' && snapshot.hasMore ? (
                   <TableRow data-slot="entity-table-load-more" className="hover:bg-transparent">
                     <TableCell colSpan={leafColumns.length} className="p-2 text-center">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={snapshot.status === 'loadingMore'}
-                        onClick={() => void source.loadMore()}
-                      >
-                        {snapshot.status === 'loadingMore' ? 'Loading…' : 'Load more'}
+                      <Button variant="outline" size="sm" onClick={() => void source.loadMore()}>
+                        Load more
                       </Button>
                     </TableCell>
                   </TableRow>
+                ) : showSentinel ? (
+                  <tr ref={setSentinel} data-slot="entity-table-sentinel" aria-hidden="true">
+                    <td colSpan={leafColumns.length} />
+                  </tr>
                 ) : null}
               </>
             )}
@@ -1012,81 +1184,13 @@ export function EntityTable({
         </Table>
       </div>
 
-      <div
-        data-slot="entity-table-footer"
-        className="text-muted-foreground flex w-full min-w-0 flex-wrap items-center justify-between gap-2 text-xs"
-      >
-        {paging.mode === 'pages' ? (
-          <>
-            <div data-slot="entity-table-page-size" className="flex items-center gap-2">
-              <span>Rows per page</span>
-              <Select
-                value={String(paging.pageSize)}
-                onValueChange={(value) => void source.setPageSize(Number(value))}
-              >
-                <SelectTrigger aria-label="Rows per page" className="h-7 w-auto min-w-16">
-                  <span data-slot="select-value" className="tabular-nums">
-                    {paging.pageSize}
-                  </span>
-                </SelectTrigger>
-                <SelectContent>
-                  {pageSizes.map((option) => (
-                    <SelectItem key={option} value={String(option)}>
-                      {option}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div data-slot="entity-table-pager" className="flex items-center gap-2">
-              <span data-slot="entity-table-range" className="tabular-nums">
-                {paging.rangeLabel}
-              </span>
-              <Button
-                variant="outline"
-                size="icon-sm"
-                aria-label="Previous page"
-                disabled={!paging.hasPrevious || snapshot.status === 'loading'}
-                onClick={() => void source.setPage(paging.page - 1)}
-              >
-                <ChevronLeft aria-hidden="true" />
-              </Button>
-              <Input
-                type="number"
-                min="1"
-                inputMode="numeric"
-                aria-label="Page number"
-                className="h-7 w-14 text-center tabular-nums"
-                value={pageDraft === '' ? String(paging.page) : pageDraft}
-                onChange={(event) => setPageDraft(event.currentTarget.value)}
-                onKeyDown={(event) => {
-                  if (event.key !== 'Enter') return;
-                  event.preventDefault();
-                  goToPage(event.currentTarget.value);
-                }}
-                onBlur={(event) => goToPage(event.currentTarget.value)}
-              />
-              {paging.pageCount !== null ? <span className="tabular-nums">of {paging.pageCount}</span> : null}
-              <Button
-                variant="outline"
-                size="icon-sm"
-                aria-label="Next page"
-                disabled={!paging.hasNext || snapshot.status === 'loading'}
-                onClick={() => void source.setPage(paging.page + 1)}
-              >
-                <ChevronRight aria-hidden="true" />
-              </Button>
-            </div>
-          </>
-        ) : (
-          <>
-            <span data-slot="entity-table-loaded" className="tabular-nums">
-              {paging.loadedLabel}
-            </span>
-            {snapshot.status === 'loadingMore' ? <span>Loading…</span> : null}
-          </>
-        )}
-      </div>
+      <CollectionFooter
+        source={source}
+        pager={pager}
+        pageSizes={pageSizes}
+        loading={snapshot.status === 'loading'}
+        slotName="entity-table"
+      />
     </div>
   );
 }

@@ -31,6 +31,8 @@
 		value: SortKey[];
 		/** Paths to keep out of the field list, each hiding itself and everything under it. */
 		hidePaths?: string[];
+		/** Only these paths are offered; a link stays in the list while a path runs through it. */
+		paths?: string[];
 		size?: SortPickerSize;
 		disabled?: boolean;
 		/** Both the keys and the `sort` string they serialise to. */
@@ -46,6 +48,7 @@
 		context,
 		value = $bindable([]),
 		hidePaths = [],
+		paths,
 		size = 'md',
 		disabled = false,
 		onChange,
@@ -82,6 +85,12 @@
 	$effect(() => {
 		for (const key of value) resolveLabel(key.field);
 	});
+
+	/** A path the caller offers, or a link a caller's path runs through. */
+	function offered(path: string): boolean {
+		if (!paths) return true;
+		return paths.includes(path) || paths.some((p) => p.startsWith(`${path}.`));
+	}
 
 	const chosen = $derived(value.map((k) => k.field));
 	const label = $derived(
@@ -250,10 +259,10 @@
 				deepLinks
 				clearable={false}
 				exclude={chosen}
-				filter={(field) => isSortable(field.dataType)}
+				filter={(field, path) => isSortable(field.dataType) && offered(path)}
 				placeholder="Add a field"
 				searchPlaceholder="Add a field…"
-				emptyLabel="No field left to sort on."
+				emptyLabel="No field left to sort on"
 				onValueChange={add}
 			/>
 		</Popover.Content>

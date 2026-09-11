@@ -37,6 +37,9 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/global-search.
 | `recents` | `EntityRef[]` | `[]` | Rows picked before, newest first, shown on an empty query. |
 | `recentLimit` | `number` | `5` | How many recents survive a pick. |
 | `placeholder` | `string` | `'Search…'` | Text in the search input. |
+| `emptyLabel` | `string` | `'No match'` | Shown when a query matches nothing. |
+| `loadingLabel` | `string` | `'Loading…'` | Names the skeletons a read stands behind, for a screen reader. |
+| `errorLabel` | `string` | — | Shown in place of what the failed read said. |
 | `label` | `string` | `'Search'` | Text on the trigger. |
 | `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Trigger heights 8, 9 and 10, and the row's leading slot. |
 | `class` / `className` | `string` | — | Merged after the widget's own classes. |

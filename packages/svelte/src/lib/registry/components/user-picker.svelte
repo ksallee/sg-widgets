@@ -68,7 +68,6 @@
 		fields = [],
 		searchFields = [],
 		placeholder = 'Search for a person',
-		emptyLabel = 'No person matches.',
 		open = $bindable(false),
 		ref = $bindable(null),
 		...rest
@@ -93,6 +92,5 @@
 	filters={userFilters(includeInactive, filters)}
 	subLabel={userSubLabel}
 	{placeholder}
-	{emptyLabel}
 	{...rest}
 />

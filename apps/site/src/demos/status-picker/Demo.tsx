@@ -2,6 +2,10 @@ import { useState } from 'react';
 import { StatusPicker } from '@/registry/sg/components/status-picker';
 import { getDemoContext } from '../_shared/client';
 
+/** An invented pipeline stage per code, for the row secondary a caller supplies. */
+const STAGE: Record<string, string> = { ip: 'Animation', rev: 'Review', fin: 'Delivery' };
+const stageOf = (option: { code: string }) => STAGE[option.code] ?? '';
+
 const group = 'flex flex-col gap-2';
 const label = 'text-muted-foreground text-xs font-medium tracking-wide uppercase';
 const row = 'flex flex-wrap items-start gap-3';
@@ -83,7 +87,9 @@ export default function StatusPickerDemo() {
       </section>
 
       <section className={group}>
-        <h4 className={label}>A code the field does not carry, and the code instead of the label</h4>
+        <h4 className={label}>
+          A code the field does not carry, rows without the code, and a secondary of the caller's own
+        </h4>
         <div className={row}>
           <div className={box} data-demo="unknown">
             <StatusPicker
@@ -94,13 +100,23 @@ export default function StatusPickerDemo() {
               onValueChange={setUnknown}
             />
           </div>
-          <div className={box}>
+          <div className={box} data-demo="no-code">
             <StatusPicker
               context={context}
               entityType="Version"
               projectId={projectId}
               value="ip"
-              showCode
+              showCode={false}
+              clearable={false}
+            />
+          </div>
+          <div className={box} data-demo="own-secondary">
+            <StatusPicker
+              context={context}
+              entityType="Version"
+              projectId={projectId}
+              value="ip"
+              secondary={stageOf}
               clearable={false}
             />
           </div>

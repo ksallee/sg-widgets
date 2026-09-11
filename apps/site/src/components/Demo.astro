@@ -24,6 +24,7 @@
  * at duration-150.
  */
 import DemoToolbar from './DemoToolbar.astro';
+import { defaultPalette } from './demo-prefs';
 
 interface Props {
   /** Directory name under `src/demos/`. */
@@ -61,7 +62,7 @@ if (!svelteDemos[`../demos/${name}/Demo.svelte`] || !reactDemos[`../demos/${name
 >
   <DemoToolbar title={title} />
 
-  <div class="sg-demo grid gap-px bg-border" data-stage data-theme="default" data-radius="default">
+  <div class="sg-demo grid gap-px bg-border" data-stage data-theme={defaultPalette} data-radius="default">
     <section class="min-w-0 bg-background p-4" data-pane="svelte">
       <h3 class="pb-3 text-xs font-medium tracking-wide text-muted-foreground uppercase" data-pane-title>
         Svelte

@@ -1,18 +1,47 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import type { PointerEvent as ReactPointerEvent, ReactNode, RefObject } from 'react';
-import type { ChipRow, PickerSummary, SgContext, StatusOption, StatusRecord } from '@sg-widgets/core';
+import type {
+  ChipRow,
+  PickerRow as PickerRowData,
+  PickerSummary,
+  SgContext,
+  StatusOption,
+  StatusRecord,
+} from '@sg-widgets/core';
 import {
   holdsArmed,
   matchesTokens,
+  NO_MATCH_LABEL,
   pickerKeyIntent,
   scrollHighlightedIntoView,
+  stateLine,
   summariseSelection,
 } from '@sg-widgets/core';
 import { Combobox as ComboboxPrimitive } from '@base-ui/react';
-import { ChevronsUpDown, Search, SearchX, TriangleAlert, X } from 'lucide-react';
+import { ChevronDown, Search, SearchX, TriangleAlert, X } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import {
+  CHIP_GAP,
+  OVERFLOW_RESERVE,
+  PICKER_ANCHORED_POPUP,
+  PICKER_ARMED,
+  PICKER_BOX,
+  PICKER_CHIP as BADGE,
+  PICKER_CONTROL,
+  PICKER_GLYPH,
+  PICKER_TRAILING,
+  PICKER_ICON_BUTTON,
+  PICKER_LIST,
+  PICKER_PILL,
+  PICKER_ROW,
+  PICKER_SEARCH,
+  PICKER_SEARCH_ROW,
+  PICKER_TOKEN_INPUT,
+} from '@/registry/sg/components/picker-classes';
+import { PickerRow } from '@/registry/sg/components/picker-row';
+import { StateLine } from '@/registry/sg/components/state-line';
 import { StatusBadge, type StatusBadgeVariant } from '@/registry/sg/components/status-badge';
 
 export type StatusMultiPickerSize = 'sm' | 'md' | 'lg';
@@ -20,43 +49,6 @@ export type StatusMultiPickerSize = 'sm' | 'md' | 'lg';
  * What the control shows for the selection. `both` is the old spelling of `chips`.
  * `icons` drops the labels and `names` reads the labels as one line of text.
  */
-
-/**
- * Controls follow the input ladder of `docs/design-rules.md`. `data-empty` takes the
- * leading and the vertical inset down one step, so an empty control is tighter than a
- * filled one; `min-h` holds the ladder and the trailing inset stays reserve for the
- * clear and open controls.
- */
-const PICKER_BOX: Record<StatusMultiPickerSize, string> = {
-  sm: 'min-h-8 px-2 py-1 data-empty:pl-1.5 data-empty:py-0.5',
-  md: 'min-h-9 px-3 py-1 data-empty:pl-2 data-empty:py-0.5',
-  lg: 'min-h-10 px-3 py-1 data-empty:pl-2 data-empty:py-0.5',
-};
-const PICKER_GLYPH: Record<StatusMultiPickerSize, string> = {
-  sm: 'size-4',
-  md: 'size-4',
-  lg: 'size-5',
-};
-/** A badge inside a control sits one step down the leaf ladder. */
-const BADGE: Record<StatusMultiPickerSize, 'sm' | 'md'> = { sm: 'sm', md: 'sm', lg: 'md' };
-
-/** The bordered field the badges and the query input sit in. */
-const PICKER_CONTROL =
-  'border-input bg-background has-[:focus-visible]:ring-ring has-[:focus-visible]:ring-offset-background has-aria-invalid:border-destructive has-aria-invalid:ring-destructive/20 dark:has-aria-invalid:ring-destructive/40 data-invalid:border-destructive data-invalid:ring-destructive/20 dark:data-invalid:ring-destructive/40 relative flex w-full min-w-0 flex-wrap items-center gap-1.5 rounded-md border text-sm transition-colors duration-150 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-offset-2 has-aria-invalid:ring-2 data-invalid:ring-2';
-/** The caret inside a token field: no box of its own, it borrows the control's. */
-const PICKER_INPUT =
-  'placeholder:text-muted-foreground relative min-w-[2ch] flex-1 bg-transparent outline-none disabled:cursor-not-allowed';
-/** The search box a summary trigger keeps in its popup instead. */
-const PICKER_SEARCH_ROW = 'border-border flex items-center gap-1.5 border-b px-3';
-const PICKER_SEARCH =
-  'placeholder:text-muted-foreground h-9 w-full min-w-0 bg-transparent text-sm outline-none disabled:cursor-not-allowed';
-/** The `+n` pill. A press on it opens the list, where the hidden ones are. */
-const PICKER_PILL =
-  'text-muted-foreground hover:text-foreground focus-visible:ring-ring focus-visible:ring-offset-background shrink-0 rounded-sm text-xs tabular-nums outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2';
-/** Room the `+n` pill needs beside the badges, so it is never the thing that overflows. */
-const OVERFLOW_RESERVE = 40;
-/** The badge row's `gap-1.5`, carried by every measured width. */
-const CHIP_GAP = 6;
 
 /** Every badge laid out, so a hidden one still reports the width it would take. */
 function measureChips(row: HTMLElement): number[] {
@@ -123,21 +115,6 @@ function useChipRow(
     ready: !active || settled,
   };
 }
-/** The popup surface, matching the popover item of each registry. */
-const PICKER_POPUP =
-  'bg-popover text-popover-foreground data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 ring-foreground/10 z-50 w-(--anchor-width) min-w-56 origin-(--transform-origin) overflow-hidden rounded-lg shadow-md ring-1 outline-hidden duration-100';
-/** The scrolling list inside the popup. */
-const PICKER_LIST = 'no-scrollbar max-h-72 scroll-py-1 overflow-x-hidden overflow-y-auto p-1 outline-none';
-/** One row. Highlight and selection share one colour, per `docs/design-rules.md`. */
-const PICKER_ROW =
-  'data-highlighted:bg-accent data-highlighted:text-accent-foreground relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0';
-/** The centred line every empty, loading and error state uses. */
-const PICKER_NOTE = 'flex items-center justify-center gap-1.5 py-6 text-center text-sm';
-/** The clear control, shared by every picker in this registry. */
-/** The chip a Backspace has armed. The keyboard cursor wears the focus ring. */
-const PICKER_ARMED = 'ring-ring ring-offset-background rounded-sm ring-2 ring-offset-1';
-const PICKER_ICON_BUTTON =
-  'hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring focus-visible:ring-offset-background pointer-events-auto shrink-0 rounded-sm p-0.5 opacity-70 outline-none transition-colors duration-150 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-2 motion-safe:active:scale-[0.98]';
 
 export interface StatusMultiPickerProps extends React.HTMLAttributes<HTMLDivElement> {
   /** The root element. */
@@ -157,13 +134,22 @@ export interface StatusMultiPickerProps extends React.HTMLAttributes<HTMLDivElem
   onValueChange?: (value: string[]) => void;
   placeholder?: string;
   searchPlaceholder?: string;
+  /** Shown when the search matches nothing. */
   emptyLabel?: string;
+  /** The accessible name of the skeletons a read stands behind. */
+  loadingLabel?: string;
+  /** Shown in place of what the failed read said. */
+  errorLabel?: string;
   clearable?: boolean;
   readonly?: boolean;
   disabled?: boolean;
   invalid?: boolean;
-  /** Show the raw code instead of the label. The other one stays in the tooltip. */
+  /** Draw the code as the row's right-aligned secondary, when it says more than the label. */
   showCode?: boolean;
+  /** The muted line under a row's label. */
+  subLabel?: (option: StatusOption) => string;
+  /** A row's right-aligned value, of the caller's own making. Wins over the code. */
+  secondary?: (option: StatusOption) => string;
   /** What the control shows for the selection. */
   summary?: PickerSummary;
   /** What one selected status is drawn as. Orthogonal to how many the control shows. */
@@ -250,6 +236,11 @@ function statusOptionStore(
  * A status list has no substring operator, so there is no server-side type-ahead over
  * it: the vocabulary is read once and the query input narrows it in the browser
  * (field_types/status_list).
+ *
+ * A row is the shared picker row of rule 9, after its checkbox: the status icon as the
+ * leading glyph, the display label with the matched runs bold, and the code
+ * right-aligned. The badge stays in the control, where a status is a value rather than
+ * a row.
  */
 export function StatusMultiPicker({
   context,
@@ -261,12 +252,16 @@ export function StatusMultiPicker({
   onValueChange,
   placeholder = 'Select statuses',
   searchPlaceholder = 'Search statuses…',
-  emptyLabel = 'No status matches.',
+  emptyLabel = NO_MATCH_LABEL,
+  loadingLabel,
+  errorLabel,
   clearable = true,
   readonly = false,
   disabled = false,
   invalid = false,
-  showCode = false,
+  showCode = true,
+  subLabel,
+  secondary,
   summary = 'ellipsis',
   badge = 'both',
   max = 0,
@@ -319,8 +314,14 @@ export function StatusMultiPicker({
    * control is a trigger, and keeps its search box at the top of the popup instead.
    */
   const inline = summary === 'chips';
+
+  // Read-only wins over disabled and over the loading window.
+  const inert = !readonly && (disabled || query.loading);
+  const interactive = !readonly && !inert;
+  const showClear = clearable && value.length > 0 && !readonly && !disabled;
+
   /** What the badges look like, so a change to any of it re-measures the row. */
-  const rowKey = `${size}|${summary}|${badge}|${showCode}|${value.map((code) => byCode.get(code)?.label ?? code).join(', ')}`;
+  const rowKey = `${size}|${summary}|${badge}|${interactive}|${value.map((code) => byCode.get(code)?.label ?? code).join(', ')}`;
   const row = useChipRow(summary === 'ellipsis', rowKey, controlRef, badgesRef);
   const plan = summariseSelection(value, (code) => byCode.get(code)?.label ?? code, {
     summary,
@@ -329,10 +330,9 @@ export function StatusMultiPicker({
     fit: row.fit,
   });
 
-  // Read-only wins over disabled and over the loading window.
-  const inert = !readonly && (disabled || query.loading);
-  const interactive = !readonly && !inert;
-  const showClear = clearable && value.length > 0 && !readonly && !disabled;
+  function remove(code: string): void {
+    onValueChange?.(value.filter((c) => c !== code));
+  }
 
   /** A press anywhere in the field opens the list and puts the caret in the input. */
   function openFromControl(event: ReactPointerEvent<HTMLDivElement>): void {
@@ -388,7 +388,7 @@ export function StatusMultiPicker({
       case 'remove': {
         event.preventDefault();
         const code = value[intent.index];
-        if (code !== undefined) onValueChange?.(value.filter((c) => c !== code));
+        if (code !== undefined) remove(code);
         return;
       }
       case 'follow':
@@ -403,15 +403,17 @@ export function StatusMultiPicker({
     }
   }
 
-  const statusBadge = (code: string, variant: StatusBadgeVariant) => (
+  const statusBadge = (code: string, variant: StatusBadgeVariant, removable: boolean) => (
     <StatusBadge
       code={code}
       status={query.statuses.get(code) ?? null}
       field={badgeField}
       variant={variant}
       size={BADGE[size]}
-      label={showCode ? 'code' : 'name'}
       siteUrl={site}
+      removable={removable}
+      onRemove={remove}
+      removeLabel={`Remove ${byCode.get(code)?.label ?? code}`}
       className="min-w-0"
     />
   );
@@ -423,34 +425,30 @@ export function StatusMultiPicker({
       data-chip=""
       data-armed={armed === index ? 'true' : undefined}
       hidden={row.ready && index >= plan.shown.length}
-      className={cn('flex min-w-0 shrink-0 items-center gap-1', armed === index && PICKER_ARMED)}
+      className={cn('flex min-w-0 shrink-0 items-center', armed === index && cn(PICKER_ARMED, 'rounded-sm'))}
     >
-      {statusBadge(code, badge)}
-      {interactive && badge !== 'icon' ? (
-        <button
-          type="button"
-          data-slot="status-multi-picker-remove"
-          aria-label={`Remove ${byCode.get(code)?.label ?? code}`}
-          onClick={() => onValueChange?.(value.filter((c) => c !== code))}
-          className="hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring focus-visible:ring-offset-background pointer-events-auto shrink-0 rounded-sm opacity-60 outline-none transition-colors duration-150 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-2 motion-safe:active:scale-[0.98]"
-        >
-          <X aria-hidden="true" className="size-3" />
-        </button>
-      ) : null}
+      {statusBadge(code, badge, interactive)}
     </span>
   );
 
   let note: ReactNode = null;
   if (query.error !== null) {
     note = (
-      <div data-slot="status-multi-picker-error" className={cn(PICKER_NOTE, 'text-destructive')}>
-        <TriangleAlert aria-hidden="true" className="size-4 shrink-0" />
-        <span className="truncate">{query.error}</span>
-      </div>
+      <StateLine
+        state="error"
+        slotName="status-multi-picker-error"
+        icon={TriangleAlert}
+        label={stateLine('error', { errorLabel }, query.error)}
+      />
     );
   } else if (query.loading) {
     note = (
-      <div data-slot="status-multi-picker-loading" className="flex flex-col gap-2">
+      <div
+        data-slot="status-multi-picker-loading"
+        className="flex flex-col gap-2"
+        aria-busy="true"
+        aria-label={stateLine('loading', { loadingLabel })}
+      >
         {[0, 1, 2].map((row) => (
           <Skeleton key={row} className="h-8 w-full" />
         ))}
@@ -458,12 +456,28 @@ export function StatusMultiPicker({
     );
   } else if (shown.length === 0) {
     note = (
-      <div data-slot="status-multi-picker-empty" className={cn(PICKER_NOTE, 'text-muted-foreground')}>
-        <SearchX aria-hidden="true" className="size-4 shrink-0" />
-        <span className="truncate">{emptyLabel}</span>
-      </div>
+      <StateLine
+        state="empty"
+        slotName="status-multi-picker-empty"
+        icon={SearchX}
+        label={emptyLabel}
+      />
     );
   }
+
+  /** The shared row a status is drawn as. There is no entity behind a code, so it carries no values. */
+  const rowOf = (option: StatusOption): PickerRowData => ({
+    type: 'Status',
+    id: 0,
+    name: option.label,
+    values: {},
+  });
+
+  /** The right-aligned value: the caller's, else the code when it says more than the label. */
+  const secondaryOf = (option: StatusOption): string | undefined => {
+    if (secondary) return secondary(option) || undefined;
+    return showCode && option.code !== option.label ? option.code : undefined;
+  };
 
   function renderRow(code: string): ReactNode {
     const option = byCode.get(code);
@@ -481,7 +495,24 @@ export function StatusMultiPicker({
         <span data-slot="status-multi-picker-check" className="flex h-5 shrink-0 items-center">
           <Checkbox checked={chosen} tabIndex={-1} aria-hidden="true" className="pointer-events-none" />
         </span>
-        {statusBadge(code, 'both')}
+        <PickerRow
+          row={rowOf(option)}
+          query={search}
+          subLabel={subLabel?.(option)}
+          secondary={secondaryOf(option)}
+          size={size}
+          context={context}
+          glyph={
+            <StatusBadge
+              code={code}
+              status={query.statuses.get(code) ?? null}
+              field={badgeField}
+              variant="glyph"
+              size={size}
+              siteUrl={site}
+            />
+          }
+        />
       </ComboboxPrimitive.Item>
     );
   }
@@ -591,7 +622,7 @@ export function StatusMultiPicker({
               readOnly={readonly || undefined}
               placeholder={value.length > 0 ? '' : placeholder}
               onKeyDown={onKey}
-              className={PICKER_INPUT}
+              className={PICKER_TOKEN_INPUT}
             />
           ) : null}
         </div>
@@ -612,7 +643,7 @@ export function StatusMultiPicker({
             <ComboboxPrimitive.Popup
               data-picker="status"
               data-slot="status-multi-picker-content"
-              className={PICKER_POPUP}
+              className={PICKER_ANCHORED_POPUP}
             >
               {inline ? null : (
                 <div data-slot="status-multi-picker-search" className={PICKER_SEARCH_ROW}>
@@ -635,7 +666,7 @@ export function StatusMultiPicker({
         </ComboboxPrimitive.Portal>
 
         {readonly ? null : (
-          <div className="pointer-events-none absolute right-2 flex items-center gap-1">
+          <div className={cn('pointer-events-none absolute top-0 right-2 flex items-center gap-1', PICKER_TRAILING[size])}>
             {showClear ? (
               <button
                 type="button"
@@ -654,9 +685,9 @@ export function StatusMultiPicker({
               data-slot="status-multi-picker-trigger"
               aria-label="Show the statuses"
               disabled={inert}
-              className="focus-visible:ring-ring focus-visible:ring-offset-background pointer-events-auto shrink-0 rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+              className={PICKER_ICON_BUTTON}
             >
-              <ChevronsUpDown aria-hidden="true" className={cn('shrink-0 opacity-50', PICKER_GLYPH[size])} />
+              <ChevronDown aria-hidden="true" className={PICKER_GLYPH[size]} />
             </ComboboxPrimitive.Trigger>
           </div>
         )}

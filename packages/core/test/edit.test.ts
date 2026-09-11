@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   colorToHex,
   editorKindFor,
+  editorPlacementFor,
   formatNumberInput,
   formatTimecodeFrames,
   fromApiDateTime,
@@ -381,6 +382,34 @@ describe('editorKindFor', () => {
       expect(isEditableType(type)).toBe(false);
     }
     expect(isEditableType('text')).toBe(true);
+  });
+
+  it('keeps the checkbox in the cell and gives every other editor a popover', () => {
+    expect(editorPlacementFor('checkbox')).toBe('inline');
+    for (const type of [
+      'status_list',
+      'entity',
+      'list',
+      'text',
+      'number',
+      'float',
+      'percent',
+      'currency',
+      'duration',
+      'timecode',
+      'date',
+      'date_time',
+      'multi_entity',
+      'color',
+      'url',
+    ]) {
+      expect(editorPlacementFor(type)).toBe('popover');
+    }
+  });
+
+  it('leaves a type with no editor in the cell', () => {
+    expect(editorPlacementFor('image')).toBe('inline');
+    expect(editorPlacementFor('calculated')).toBe('inline');
   });
 
   it('asks for a context only where the editor reads the API', () => {

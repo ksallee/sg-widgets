@@ -1,0 +1,58 @@
+---
+/**
+ * The site's mark: two tiles, a widget on a widget, drawn from tokens alone.
+ *
+ * The back tile is the accent, `--primary`, and is the one place the mark carries it.
+ * The front tile is the quiet ink, `currentColor` at 30% flattened over the ground, so
+ * it stays opaque where it covers the accent. It is lifted off the back tile by a gap in
+ * `--mark-ground`, which the surface under the mark sets to its own background token;
+ * the fallback is the page. Every corner is a fraction of `--radius`, so the radius
+ * switch reaches the mark; the `rx` attribute is the value the CSS overrides, for a
+ * browser that does not take the geometry properties as CSS.
+ *
+ * `public/favicon.svg` is this drawing with the default palette's values pinned. A
+ * change here is mirrored there.
+ *
+ * `size` is any CSS length and is the box side.
+ */
+interface Props {
+  size?: string;
+}
+
+const { size = '1em' } = Astro.props;
+---
+
+<svg class="mark" style={`width:${size};height:${size}`} viewBox="0 0 40 40" aria-hidden="true" focusable="false">
+  <rect class="tile accent" x="2" y="2" width="23" height="23" rx="4" />
+  <rect class="tile quiet" x="15" y="15" width="23" height="23" rx="4" />
+</svg>
+
+<style>
+  .mark {
+    display: block;
+    flex: none;
+    --tile-radius: calc(var(--radius) * 0.5);
+    /* Read here, not declared: a value on the mark would outrank what the surface
+       inherits down. */
+    --ground: var(--mark-ground, var(--background));
+  }
+
+  .tile {
+    rx: var(--tile-radius);
+    ry: var(--tile-radius);
+  }
+
+  .accent {
+    fill: var(--primary);
+  }
+
+  /* The gap that lifts the front tile off the back one. `paint-order` puts the fill over
+     the inner half of the stroke, so the whole gap falls outside the tile and the tile
+     keeps its size. */
+  .quiet {
+    fill: color-mix(in oklab, currentColor 30%, var(--ground));
+    stroke: var(--ground);
+    stroke-width: 2.2;
+    paint-order: stroke;
+  }
+</style>

@@ -2,15 +2,16 @@
 	export type StatusPickerSize = 'sm' | 'md' | 'lg';
 
 	/**
-	 * Controls follow the input ladder of `docs/design-rules.md`. `data-empty` takes the
-	 * leading inset down one step, so an empty control is tighter than a filled one. The
-	 * height carries `!` because the select trigger sets its own under a `data-size`
-	 * selector, and is fixed, so there is no vertical inset to take.
+	 * Controls follow the input ladder of `docs/design-rules.md`. A filled control's leading
+	 * inset matches the room above and below its badge, so the badge sits evenly inside the
+	 * border; `data-empty` gives the reading inset of a plain input back. The height carries
+	 * `!` because the select trigger sets its own under a `data-size` selector, and is fixed,
+	 * so there is no vertical inset to take.
 	 */
 	const BOX: Record<StatusPickerSize, string> = {
-		sm: 'h-8! px-2 data-empty:pl-1.5',
-		md: 'h-9! px-3 data-empty:pl-2',
-		lg: 'h-10! px-3 data-empty:pl-2'
+		sm: 'h-8! pr-2 pl-[5px] data-empty:pl-1.5',
+		md: 'h-9! pr-3 pl-[5px] data-empty:pl-2',
+		lg: 'h-10! pr-3 pl-0.5 data-empty:pl-2'
 	};
 	const GLYPH: Record<StatusPickerSize, string> = {
 		sm: 'size-4',
@@ -21,18 +22,21 @@
 	const BADGE: Record<StatusPickerSize, 'sm' | 'md'> = { sm: 'sm', md: 'sm', lg: 'md' };
 
 	const TRIGGER =
-		'border-input bg-background focus-visible:ring-ring focus-visible:ring-offset-background aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 flex w-full min-w-0 items-center rounded-md border text-sm outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 aria-invalid:ring-2';
+		'border-input bg-background hover:bg-muted/30 focus-visible:ring-ring focus-visible:ring-offset-background aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 flex w-full min-w-0 items-center rounded-lg border text-sm outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 aria-invalid:ring-2';
 </script>
 
 <script lang="ts">
 	import type { HTMLAttributes } from 'svelte/elements';
-	import type { SgContext, StatusOption, StatusRecord } from '@sg-widgets/core';
+	import type { PickerRow, SgContext, StatusOption, StatusRecord } from '@sg-widgets/core';
+	import { NO_ROWS_LABEL, stateLine } from '@sg-widgets/core';
 	import SearchX from '@lucide/svelte/icons/search-x';
 	import TriangleAlert from '@lucide/svelte/icons/triangle-alert';
 	import X from '@lucide/svelte/icons/x';
 	import * as Select from '$lib/components/ui/select/index.js';
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
+	import Row from '$lib/registry/components/picker-row.svelte';
+	import StateLine from '$lib/registry/components/state-line.svelte';
 	import StatusBadge from '$lib/registry/components/status-badge.svelte';
 
 	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>, HTMLDivElement> & {
@@ -49,13 +53,22 @@
 		value?: string;
 		onValueChange?: (value: string | undefined) => void;
 		placeholder?: string;
+		/** Shown when the field offers nothing. */
 		emptyLabel?: string;
+		/** The accessible name of the skeletons a read stands behind. */
+		loadingLabel?: string;
+		/** Shown in place of what the failed read said. */
+		errorLabel?: string;
 		clearable?: boolean;
 		readonly?: boolean;
 		disabled?: boolean;
 		invalid?: boolean;
-		/** Show the raw code instead of the label. The other one stays in the tooltip. */
+		/** Draw the code as the row's right-aligned secondary, when it says more than the label. */
 		showCode?: boolean;
+		/** The muted line under a row's label. */
+		subLabel?: (option: StatusOption) => string;
+		/** A row's right-aligned value, of the caller's own making. Wins over the code. */
+		secondary?: (option: StatusOption) => string;
 		/** The site the stock sprite is served from, passed to every badge. Defaults to the context's. */
 		siteUrl?: string;
 		size?: StatusPickerSize;
@@ -74,12 +87,16 @@
 		value = $bindable(undefined),
 		onValueChange,
 		placeholder = 'Select a status',
-		emptyLabel = 'No status on this field.',
+		emptyLabel = NO_ROWS_LABEL,
+		loadingLabel,
+		errorLabel,
 		clearable = true,
 		readonly = false,
 		disabled = false,
 		invalid = false,
-		showCode = false,
+		showCode = true,
+		subLabel,
+		secondary,
 		siteUrl = undefined,
 		size = 'md',
 		open = $bindable(false),
@@ -185,6 +202,17 @@
 		value = undefined;
 		onValueChange?.(undefined);
 	}
+
+	/** The shared row a status is drawn as. There is no entity behind a code, so it carries no values. */
+	function rowOf(option: StatusOption): PickerRow {
+		return { type: 'Status', id: 0, name: option.label, values: {} };
+	}
+
+	/** The right-aligned value: the caller's, else the code when it says more than the label. */
+	function secondaryOf(option: StatusOption): string | undefined {
+		if (secondary) return secondary(option) || undefined;
+		return showCode && option.code !== option.label ? option.code : undefined;
+	}
 </script>
 
 {#snippet badge(code: string)}
@@ -193,7 +221,6 @@
 		status={query.statuses.get(code) ?? null}
 		field={badgeField}
 		size={BADGE[size]}
-		label={showCode ? 'code' : 'name'}
 		siteUrl={site}
 		class="min-w-0"
 	/>
@@ -215,32 +242,52 @@
 
 {#snippet list()}
 	{#if query.error !== null}
-		<div
-			data-slot="status-picker-error"
-			class="text-destructive flex items-center justify-center gap-1.5 py-6 text-center text-sm"
-		>
-			<TriangleAlert aria-hidden="true" class="size-4 shrink-0" />
-			<span class="truncate">{query.error}</span>
-		</div>
+		<StateLine
+			state="error"
+			slotName="status-picker-error"
+			icon={TriangleAlert}
+			label={stateLine('error', { errorLabel }, query.error)}
+		/>
 	{:else if query.loading}
-		<div data-slot="status-picker-loading" class="flex flex-col gap-2 p-1">
+		<div
+			data-slot="status-picker-loading"
+			class="flex flex-col gap-2 p-1"
+			aria-busy="true"
+			aria-label={stateLine('loading', { loadingLabel })}
+		>
 			{#each [0, 1, 2] as row (row)}
 				<Skeleton class="h-8 w-full" />
 			{/each}
 		</div>
 	{:else if rows.length === 0}
-		<div
-			data-slot="status-picker-empty"
-			class="text-muted-foreground flex items-center justify-center gap-1.5 py-6 text-center text-sm"
-		>
-			<SearchX aria-hidden="true" class="size-4 shrink-0" />
-			<span class="truncate">{emptyLabel}</span>
-		</div>
+		<StateLine state="empty" slotName="status-picker-empty" icon={SearchX} label={emptyLabel} />
 	{:else}
 		<Select.Group>
 			{#each rows as option (option.code)}
-				<Select.Item value={option.code} label={option.label} class="py-1.5 pl-2">
-					{@render badge(option.code)}
+				<Select.Item
+					data-status-code={option.code}
+					value={option.code}
+					label={option.label}
+					class="py-1.5 pl-2"
+				>
+					<Row
+						row={rowOf(option)}
+						subLabel={subLabel?.(option)}
+						secondary={secondaryOf(option)}
+						{size}
+						{context}
+					>
+						{#snippet glyph()}
+							<StatusBadge
+								code={option.code}
+								status={query.statuses.get(option.code) ?? null}
+								field={badgeField}
+								variant="glyph"
+								{size}
+								siteUrl={site}
+							/>
+						{/snippet}
+					</Row>
 				</Select.Item>
 			{/each}
 		</Select.Group>
@@ -256,6 +303,10 @@
 	(probe 009). A code the option set does not carry still renders, as itself: a row
 	may legally hold one (field_types/status_list). When a later option set drops the
 	selected code, the picker clears it and emits once.
+
+	A row is the shared picker row of rule 9: the status icon as the leading glyph, the
+	display label, and the code right-aligned. The badge stays in the control, where a
+	status is a value rather than a row.
 -->
 <div
 	bind:this={ref}
@@ -294,7 +345,7 @@
 			>
 				{@render selection()}
 			</Select.Trigger>
-			<Select.Content align="start" class="p-0">
+			<Select.Content align="start" class="p-1">
 				{@render list()}
 			</Select.Content>
 		</Select.Root>

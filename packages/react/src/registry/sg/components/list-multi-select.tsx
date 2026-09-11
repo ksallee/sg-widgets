@@ -20,7 +20,7 @@ const BOX: Record<ListMultiSelectSize, string> = {
 
 /** The trigger, matching the select trigger of each registry. */
 const TRIGGER =
-  'border-input bg-background hover:bg-muted focus-visible:ring-ring focus-visible:ring-offset-background aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 flex w-full min-w-0 items-center justify-between gap-1.5 rounded-md border px-3 text-sm outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 aria-invalid:ring-2';
+  'border-input bg-background hover:bg-muted focus-visible:ring-ring focus-visible:ring-offset-background aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 flex w-full min-w-0 items-center justify-between gap-1.5 rounded-lg border px-3 text-sm outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 aria-invalid:ring-2';
 
 export interface ListMultiSelectProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'defaultValue'> {
   /** The chosen values, each one of the field's valid values (field_types/list). */

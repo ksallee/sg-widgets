@@ -15,9 +15,12 @@ import {
   hierarchySearcher,
   isEmptyValue,
   matchRuns,
+  NO_MATCH_LABEL,
+  NO_ROWS_LABEL,
   pathOf,
   resolveTreeFields,
   sameIds,
+  stateLine,
   TREE_STATUS_FIELDS,
 } from '@sg-widgets/core';
 import { ChevronRight, CircleAlert, Inbox, Loader, Search } from 'lucide-react';
@@ -26,6 +29,7 @@ import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { FieldValue } from '@/registry/sg/components/field-value';
+import { StateLine } from '@/registry/sg/components/state-line';
 import { StatusBadge } from '@/registry/sg/components/status-badge';
 import { Thumbnail } from '@/registry/sg/components/thumbnail';
 
@@ -116,13 +120,18 @@ export interface EntityTreeProps extends DivProps {
   siteUrl?: string;
   label?: string;
   maxHeight?: string;
+  /** Shown when the root holds nothing. */
   emptyLabel?: string;
+  /** Shown when the query matches nothing. */
   noMatchLabel?: string;
+  /** The accessible name of the skeletons a read stands behind. */
+  loadingLabel?: string;
+  /** Shown in place of what the failed read said. */
+  errorLabel?: string;
   size?: EntityTreeSize;
   density?: EntityTreeDensity;
 }
 
-const stateClass = 'text-muted-foreground flex items-center justify-center gap-2 py-10 text-sm';
 const EMPTY_PLAN: TreeFieldPlan = { status: {}, secondary: {}, statuses: null };
 const DEBOUNCE_MS = 250;
 
@@ -179,8 +188,10 @@ export function EntityTree({
   siteUrl,
   label = 'Project hierarchy',
   maxHeight = '24rem',
-  emptyLabel = 'Nothing under this project',
-  noMatchLabel = 'Nothing matches every word',
+  emptyLabel = NO_ROWS_LABEL,
+  noMatchLabel = NO_MATCH_LABEL,
+  loadingLabel,
+  errorLabel,
   size = 'md',
   density = 'default',
   className,
@@ -429,7 +440,7 @@ export function EntityTree({
             aria-label={searchPlaceholder}
             aria-busy={snap.searching ? true : undefined}
             data-slot="entity-tree-search"
-            className="pe-8"
+            className="h-9 px-3 pe-8"
           />
           {snap.searching ? (
             <Loader
@@ -443,29 +454,35 @@ export function EntityTree({
       <div
         data-slot="entity-tree-scroll"
         style={{ maxHeight }}
-        className="border-border w-full overflow-auto rounded-md border p-1"
+        className="border-border w-full overflow-auto rounded-lg border p-1"
       >
         {snap.status === 'error' ? (
-          <p className={cn(stateClass, 'text-destructive')}>
-            <CircleAlert aria-hidden="true" className="size-4 shrink-0" />
-            {snap.error?.message}
-          </p>
+          <StateLine
+            state="error"
+            pad="table"
+            icon={CircleAlert}
+            label={stateLine('error', { errorLabel }, snap.error?.message)}
+          />
         ) : snap.status === 'loading' || snap.status === 'idle' ? (
-          <div className="flex flex-col gap-2 p-1">
+          <div
+            className="flex flex-col gap-2 p-1"
+            aria-busy="true"
+            aria-label={stateLine('loading', { loadingLabel })}
+          >
             {Array.from({ length: 5 }, (_, index) => (
               <Skeleton key={index} className="h-6 w-full" />
             ))}
           </div>
         ) : snap.rows.length === 0 ? (
-          <p className={stateClass}>
-            <Inbox aria-hidden="true" className="size-4 shrink-0" />
-            {emptyLabel}
-          </p>
+          <StateLine state="empty" pad="table" icon={Inbox} label={emptyLabel} />
         ) : noMatch ? (
-          <p data-slot="entity-tree-no-match" className={stateClass}>
-            <Search aria-hidden="true" className="size-4 shrink-0" />
-            {noMatchLabel}
-          </p>
+          <StateLine
+            state="empty"
+            slotName="entity-tree-no-match"
+            pad="table"
+            icon={Search}
+            label={noMatchLabel}
+          />
         ) : (
           <ul
             role="tree"
@@ -509,7 +526,7 @@ export function EntityTree({
                     tabIndex={row.focused && !row.disabled ? 0 : -1}
                     onClick={() => activate(row)}
                     className={cn(
-                      'focus-visible:ring-ring focus-visible:ring-offset-background flex min-w-0 cursor-default gap-1.5 rounded-md outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2',
+                      'focus-visible:ring-ring focus-visible:ring-offset-background flex min-w-0 cursor-default gap-2 rounded-sm outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2',
                       ROW[density],
                       TEXT[size],
                       hasSubLabel ? 'items-start' : 'items-center',
@@ -621,12 +638,12 @@ export function EntityTree({
                     </span>
 
                     {status ? (
-                      // A tree row is dense, so the status is its icon; the name stays in the badge for a reader.
+                      // A tree row is dense, so the status is the bare icon; the name stays in the badge for a reader.
                       <StatusBadge
                         code={status}
                         status={plan.statuses?.[status] ?? null}
                         field={node.entity ? (plan.status[node.entity.type] ?? null) : null}
-                        variant="icon"
+                        variant="glyph"
                         size={LEAF[size]}
                         siteUrl={site}
                         className="shrink-0"

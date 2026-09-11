@@ -77,7 +77,14 @@
 	{#await load()}
 		<p class="text-muted-foreground text-sm">Loading the site…</p>
 	{:then { columns, statuses }}
-		<EntityTable {source} {columns} {statuses} maxHeight="20rem" emptyLabel="No Version matches this filter" />
+		<EntityTable
+			{source}
+			{columns}
+			{statuses}
+			paging="more"
+			maxHeight="20rem"
+			emptyLabel="No Version matches this filter"
+		/>
 	{:catch error}
 		<p class="text-destructive text-sm">{error.message}</p>
 	{/await}

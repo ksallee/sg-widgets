@@ -1,0 +1,54 @@
+---
+/**
+ * The site's wordmark: the mark beside the title.
+ *
+ * The title splits at its first space. The head word is the ink at medium weight, the
+ * tail the muted ink at regular, both in the sans the page wears. The ink is
+ * `currentColor`, so the head word takes the colour of the element around it and the
+ * mark's front tile with it. The type takes its size from that element too; the mark
+ * takes `size`, in `em` by default so it scales with the type. At 1.2em one tile stands
+ * as tall as a capital and the pair as tall as the line.
+ */
+import WordmarkMark from './WordmarkMark.astro';
+
+interface Props {
+  title?: string;
+  /** The mark's box side; any CSS length. */
+  size?: string;
+}
+
+const { title = 'SG Widgets', size = '1.2em' } = Astro.props;
+const [head, ...rest] = title.split(' ');
+const tail = rest.join(' ');
+---
+
+<span class="wordmark">
+  <WordmarkMark size={size} />
+  <span class="type" translate="no"><span class="head">{head}</span> <span class="tail">{tail}</span></span>
+</span>
+
+<style>
+  /* The lockup owns the space between the mark and the type; the space between the two
+     words is a word space, so it stays a typographic one at every size. */
+  .wordmark {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4em;
+    line-height: 1.1;
+    white-space: nowrap;
+    min-width: 0;
+  }
+
+  .type {
+    overflow: hidden;
+  }
+
+  .head {
+    font-weight: 500;
+  }
+
+  .tail {
+    font-weight: 400;
+    color: var(--muted-foreground);
+  }
+</style>

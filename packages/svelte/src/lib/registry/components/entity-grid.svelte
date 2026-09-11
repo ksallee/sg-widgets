@@ -38,6 +38,7 @@
 		EntityRef,
 		EntitySource,
 		FieldSpec,
+		PagingMode,
 		RowDisabledFn,
 		RowIdFn,
 		SgContext,
@@ -48,24 +49,28 @@
 	import {
 		describePaging,
 		firstEnabledIndex,
+		NO_ROWS_LABEL,
+		hasFailedPage,
+		loadsOnArrowDown,
 		nextEnabledIndex,
 		rowIdOf,
 		rowIsDisabled,
 		rowKey,
 		sameFilters,
-		sameSort
+		sameSort,
+		shouldLoadNext,
+		sourceModeFor,
+		stateLine
 	} from '@sg-widgets/core';
 	import { Virtualizer, elementScroll, observeElementOffset, observeElementRect } from '@tanstack/virtual-core';
-	import ChevronLeft from '@lucide/svelte/icons/chevron-left';
-	import ChevronRight from '@lucide/svelte/icons/chevron-right';
 	import CircleAlert from '@lucide/svelte/icons/circle-alert';
 	import Inbox from '@lucide/svelte/icons/inbox';
 	import { Button } from '$lib/components/ui/button/index.js';
-	import { Input } from '$lib/components/ui/input/index.js';
-	import * as Select from '$lib/components/ui/select/index.js';
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
+	import CollectionFooter from '$lib/registry/components/collection-footer.svelte';
 	import EntityCard from '$lib/registry/components/entity-card.svelte';
+	import StateLine from '$lib/registry/components/state-line.svelte';
 
 	type Props = WithElementRef<Omit<HTMLAttributes<HTMLDivElement>, 'children'>, HTMLDivElement> & {
 		/** The rows and the paging behind them. Created with core's `createEntitySource`. */
@@ -105,13 +110,20 @@
 		/** The source's filter, two-way, so a FilterBar drops into the header. */
 		filters?: SourceFilters;
 		onFiltersChange?: (filters: SourceFilters) => void;
+		/** How the set is walked: a footer with a page number, a load-more row, or the scroller. */
+		paging?: PagingMode;
 		/** Rows per page offered in the footer. `pages` mode only. */
 		pageSizes?: number[];
-		/** Height of the scrolling body. In `infinite` mode, reaching its end asks for the next page. */
+		/** Height of the scrolling body. In `scroll` mode, reaching its end asks for the next page. */
 		maxHeight?: string;
 		/** Rows above which the grid is virtualised. */
 		virtualizeAfter?: number;
+		/** Shown when the read returned nothing. */
 		emptyLabel?: string;
+		/** The accessible name of the skeletons a read stands behind. */
+		loadingLabel?: string;
+		/** Shown in place of what the failed read said. */
+		errorLabel?: string;
 		/** Draws one grid cell. Without it, the row is an EntityCard tile. */
 		card?: Snippet<[EntityGridCardContext]>;
 		/** Region above the grid. */
@@ -143,10 +155,13 @@
 		onSortChange,
 		filters = $bindable(),
 		onFiltersChange,
+		paging = 'scroll',
 		pageSizes = [25, 50, 100],
 		maxHeight = '32rem',
 		virtualizeAfter = 100,
-		emptyLabel = 'No rows',
+		emptyLabel = NO_ROWS_LABEL,
+		loadingLabel,
+		errorLabel,
 		card,
 		header,
 		footer,
@@ -161,9 +176,16 @@
 	$effect(() => {
 		if (source.status === 'idle') void source.load();
 	});
+	$effect(() => {
+		// `paging` is the one prop a caller sets, so the source follows it rather than the
+		// other way round. Setting a mode it already holds is a no-op.
+		void source.setMode(sourceModeFor(paging));
+	});
 
 	const rows = $derived(snapshot.rows);
-	const paging = $derived(describePaging(snapshot));
+	const pager = $derived(describePaging(snapshot));
+	/** A page that failed under tiles already loaded, which the bottom line reports. */
+	const pageError = $derived(hasFailedPage(snapshot));
 	// `false` still draws the media block; a path no row carries is the placeholder.
 	const imagePath = $derived(thumbnail === false ? '' : thumbnail);
 
@@ -173,7 +195,6 @@
 		return row === undefined || rowIsDisabled(row, isRowDisabled);
 	};
 
-	let pageDraft = $state('');
 
 	/** The selection as keys, so a row asks whether it is in it in constant time. */
 	const chosenKeys = $derived(new Set((selection ?? []).map(rowKey)));
@@ -218,13 +239,6 @@
 		onSelectionChange?.(next);
 	}
 
-	function goToPage(value: string): void {
-		const wanted = Number(value);
-		pageDraft = '';
-		if (!Number.isFinite(wanted) || wanted < 1) return;
-		void source.setPage(paging.pageCount === null ? wanted : Math.min(wanted, paging.pageCount));
-	}
-
 	/* keyboard ------------------------------------------------------------- */
 
 	let listEl = $state<HTMLDivElement | null>(null);
@@ -257,6 +271,27 @@
 		} else put();
 	}
 
+	/** The tile a cursor is waiting on, until the page it asked for lands. */
+	let wanted = $state<number | null>(null);
+
+	/** Ask for the next page and hold the cursor where it is until those tiles arrive. */
+	function askForPage(to: number): boolean {
+		if (!loadsOnArrowDown(snapshot, paging, to)) return false;
+		wanted = to;
+		void source.loadMore();
+		return true;
+	}
+
+	$effect(() => {
+		const held = wanted;
+		if (held === null) return;
+		if (snapshot.status === 'error') wanted = null;
+		else if (rows.length > held) {
+			wanted = null;
+			untrack(() => focusTile(held));
+		}
+	});
+
 	function onKeydown(event: KeyboardEvent): void {
 		const target = event.target as HTMLElement | null;
 		// Chrome inside a tile, the checkbox, keeps its own keys.
@@ -267,13 +302,13 @@
 		const step = columnCount();
 		switch (event.key) {
 			case 'ArrowRight':
-				focusTile(nextEnabledIndex(rows.length, index, 1, disabledAt));
+				if (!askForPage(index + 1)) focusTile(nextEnabledIndex(rows.length, index, 1, disabledAt));
 				break;
 			case 'ArrowLeft':
 				focusTile(nextEnabledIndex(rows.length, index, -1, disabledAt));
 				break;
 			case 'ArrowDown':
-				focusTile(nextEnabledIndex(rows.length, index, step, disabledAt));
+				if (!askForPage(index + step)) focusTile(nextEnabledIndex(rows.length, index, step, disabledAt));
 				break;
 			case 'ArrowUp':
 				focusTile(nextEnabledIndex(rows.length, index, -step, disabledAt));
@@ -384,17 +419,30 @@
 		};
 	});
 
-	/* infinite scroll ------------------------------------------------------ */
-
+	/* scroll paging -------------------------------------------------------- */
 
 	$effect(() => {
+		// The virtualiser walks lines of tiles, so the row the viewport ends on is the
+		// last tile of the last line it drew.
+		void ticks;
+		if (!virtualized || paging !== 'scroll') return;
+		const items = virtualizer.getVirtualItems();
+		const last = items[items.length - 1];
+		if (!last) return;
+		const lastVisible = (last.index + 1) * Math.max(1, cols) - 1;
+		if (shouldLoadNext(snapshot, { paging, lastVisible })) void source.loadMore();
+	});
+
+	$effect(() => {
+		// A grid short enough not to be virtualised has no range to read, so the last line
+		// carries a sentinel instead.
 		const root = scrollEl;
 		const target = sentinel;
-		if (!root || !target || paging.mode !== 'infinite') return;
+		if (!root || !target || paging !== 'scroll') return;
 		const observer = new IntersectionObserver(
 			(entries) => {
-				// `loadMore` is a no-op while a read is in flight or when the last page was short.
-				if (entries.some((entry) => entry.isIntersecting)) void source.loadMore();
+				if (!entries.some((entry) => entry.isIntersecting)) return;
+				if (shouldLoadNext(snapshot, { paging, lastVisible: rows.length - 1 })) void source.loadMore();
 			},
 			{ root, rootMargin: '200px' }
 		);
@@ -402,7 +450,13 @@
 		return () => observer.disconnect();
 	});
 
-	const stateClass = 'text-muted-foreground flex items-center justify-center gap-2 py-10 text-sm';
+	/** Read the page that failed again: the one a pager is on, or the one that was appended. */
+	function retryPage(): void {
+		if (paging === 'pages') void source.setPage(snapshot.page);
+		else void source.loadMore();
+	}
+
+	const loadingText = $derived(stateLine('loading', { loadingLabel }));
 </script>
 
 <!--
@@ -418,11 +472,12 @@
 	The grid owns the layout and the cursor: one tab stop moves into the tiles, the
 	arrows walk them, and Space selects where Enter opens.
 
-	In `infinite` mode scrolling to the end asks the source for the next page, and
+	`paging` says how the set is walked, and the source follows it. In `scroll` reaching
+	the end of the body asks for the next page, in `more` a row under the tiles does, and
 	paging stops on a short page, never on a missing `links.next`, which the API emits
-	forever (006_pagination). In `pages` mode the footer walks the set with an explicit
-	page number and reads "n to m of N" once `_summarize` has counted it
-	(020_summarize).
+	forever (006_pagination). In `pages` the footer walks the set with an explicit page
+	number and reads "n to m of N" once `_summarize` has counted it (020_summarize). A
+	page that fails leaves its tiles and says why at the bottom, with a retry.
 -->
 <div bind:this={ref} data-slot="entity-grid" class={cn('flex w-full min-w-0 flex-col gap-2', className)} {...rest}>
 	{#if header}
@@ -435,15 +490,19 @@
 		bind:this={scrollEl}
 		data-slot="entity-grid-scroll"
 		style="max-height:{maxHeight}"
-		class="border-border w-full overflow-auto rounded-md border p-3"
+		class="border-border flex w-full flex-col gap-3 overflow-auto rounded-lg border p-3"
 	>
-		{#if snapshot.status === 'error'}
-			<p class={cn(stateClass, 'text-destructive')}>
-				<CircleAlert aria-hidden="true" class="size-4 shrink-0" />
-				{snapshot.error?.message}
-			</p>
+		{#if snapshot.status === 'error' && !pageError}
+			<StateLine
+				state="error"
+				pad="table"
+				icon={CircleAlert}
+				label={stateLine('error', { errorLabel }, snapshot.error?.message)}
+			/>
 		{:else if snapshot.status === 'loading'}
 			<div
+				aria-busy="true"
+				aria-label={loadingText}
 				class={cn('grid', GAP[density])}
 				style="grid-template-columns:repeat(auto-fill,minmax({TILE[size]}px,1fr))"
 			>
@@ -456,10 +515,7 @@
 				{/each}
 			</div>
 		{:else if rows.length === 0}
-			<p class={stateClass}>
-				<Inbox aria-hidden="true" class="size-4 shrink-0" />
-				{emptyLabel}
-			</p>
+			<StateLine state="empty" pad="table" icon={Inbox} label={emptyLabel} />
 		{:else}
 			<div
 				bind:this={listEl}
@@ -490,7 +546,7 @@
 							tabindex={index === active ? 0 : -1}
 							data-row-key={key}
 							data-index={index}
-							class={cn('min-w-0 outline-none', disabled && 'pointer-events-none opacity-50')}
+							class={cn('min-w-0 outline-none', disabled && 'pointer-events-none opacity-50 [&_img]:grayscale')}
 							onfocusin={() => (cursor = index)}
 							onclick={(event) => onTileClick(event, row)}
 						>
@@ -520,7 +576,7 @@
 							tabindex={index === active ? 0 : -1}
 							data-row-key={key}
 							data-index={index}
-							class={disabled ? 'pointer-events-none opacity-50' : undefined}
+							class={disabled ? 'pointer-events-none opacity-50 [&_img]:grayscale' : undefined}
 							onfocusin={() => (cursor = index)}
 							onclick={(event) => onTileClick(event, row)}
 						/>
@@ -530,80 +586,37 @@
 					<div aria-hidden="true" style="grid-column:1/-1;height:{window_.after}px"></div>
 				{/if}
 			</div>
-			{#if paging.mode === 'infinite'}
-				<div bind:this={sentinel} aria-hidden="true" class="h-4"></div>
+			{#if pageError}
+				<StateLine
+					state="error"
+					slotName="entity-grid-page-error"
+					pad="none"
+					icon={CircleAlert}
+					label={stateLine('error', { errorLabel }, snapshot.error?.message)}
+				>
+					<Button variant="outline" size="sm" onclick={retryPage}>Retry</Button>
+				</StateLine>
+			{:else if snapshot.status === 'loadingMore'}
+				<div data-slot="entity-grid-loading" aria-busy="true" aria-label={loadingText}>
+					<Skeleton class="h-4 w-full" />
+				</div>
+			{:else if paging === 'more' && snapshot.hasMore}
+				<div data-slot="entity-grid-load-more" class="flex justify-center">
+					<Button variant="outline" size="sm" onclick={() => void source.loadMore()}>Load more</Button>
+				</div>
+			{:else if paging === 'scroll' && snapshot.hasMore}
+				<div bind:this={sentinel} data-slot="entity-grid-sentinel" aria-hidden="true" class="h-4"></div>
 			{/if}
 		{/if}
 	</div>
 
-	<div
-		data-slot="entity-grid-footer"
-		class="text-muted-foreground flex w-full min-w-0 flex-wrap items-center justify-between gap-2 text-xs"
-	>
-		{#if paging.mode === 'pages'}
-			<div data-slot="entity-grid-page-size" class="flex items-center gap-2">
-				<span>Rows per page</span>
-				<Select.Root
-					type="single"
-					value={String(paging.pageSize)}
-					onValueChange={(value) => void source.setPageSize(Number(value))}
-				>
-					<Select.Trigger aria-label="Rows per page" class="h-7 w-auto min-w-16">
-						<span data-slot="select-value" class="tabular-nums">{paging.pageSize}</span>
-					</Select.Trigger>
-					<Select.Content>
-						{#each pageSizes as option (option)}
-							<Select.Item value={String(option)} label={String(option)} />
-						{/each}
-					</Select.Content>
-				</Select.Root>
-			</div>
-			<div data-slot="entity-grid-pager" class="flex items-center gap-2">
-				<span data-slot="entity-grid-range" class="tabular-nums">{paging.rangeLabel}</span>
-				<Button
-					variant="outline"
-					size="icon-sm"
-					aria-label="Previous page"
-					disabled={!paging.hasPrevious || snapshot.status === 'loading'}
-					onclick={() => void source.setPage(paging.page - 1)}
-				>
-					<ChevronLeft aria-hidden="true" />
-				</Button>
-				<Input
-					type="number"
-					min="1"
-					inputmode="numeric"
-					aria-label="Page number"
-					class="h-7 w-14 text-center tabular-nums"
-					value={pageDraft === '' ? String(paging.page) : pageDraft}
-					oninput={(event) => (pageDraft = event.currentTarget.value)}
-					onkeydown={(event) => {
-						if (event.key !== 'Enter') return;
-						event.preventDefault();
-						goToPage(event.currentTarget.value);
-					}}
-					onblur={(event) => goToPage(event.currentTarget.value)}
-				/>
-				{#if paging.pageCount !== null}
-					<span class="tabular-nums">of {paging.pageCount}</span>
-				{/if}
-				<Button
-					variant="outline"
-					size="icon-sm"
-					aria-label="Next page"
-					disabled={!paging.hasNext || snapshot.status === 'loading'}
-					onclick={() => void source.setPage(paging.page + 1)}
-				>
-					<ChevronRight aria-hidden="true" />
-				</Button>
-			</div>
-		{:else}
-			<span data-slot="entity-grid-loaded" class="tabular-nums">{paging.loadedLabel}</span>
-			{#if snapshot.status === 'loadingMore'}
-				<span>Loading…</span>
-			{/if}
-		{/if}
-	</div>
+	<CollectionFooter
+		{source}
+		{pager}
+		{pageSizes}
+		loading={snapshot.status === 'loading'}
+		slotName="entity-grid"
+	/>
 
 	{#if footer}
 		<div data-slot="entity-grid-footer-region" class="flex w-full min-w-0 flex-wrap items-center gap-2">

@@ -3,9 +3,9 @@
 
 	/** The control ladder of `docs/design-rules.md`: 8 / 9 / 10. */
 	const BOX: Record<ColorEditorSize, string> = {
-		sm: 'h-8',
-		md: 'h-9',
-		lg: 'h-10'
+		sm: 'h-8 px-2',
+		md: 'h-9 px-3',
+		lg: 'h-10 px-3'
 	};
 	const SWATCH: Record<ColorEditorSize, string> = {
 		sm: 'size-8',

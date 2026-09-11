@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import type { EntityRef, FieldSpec, PickerRow as PickerRowData, SgContext } from '@sg-widgets/core';
-import { pathOf, rowFields } from '@sg-widgets/core';
+import { NO_ROWS_LABEL, pathOf, rowFields, stateLine } from '@sg-widgets/core';
 import { ChevronDown, ListChecks, TriangleAlert } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import { EntityChip } from '@/registry/sg/components/entity-chip';
 import { HierarchicalSearch } from '@/registry/sg/components/hierarchical-search';
 import { PickerRow } from '@/registry/sg/components/picker-row';
+import { StateLine } from '@/registry/sg/components/state-line';
 
 /** What a widget or a publish needs to know about where the user is working. */
 export interface WorkContext {
@@ -69,9 +70,9 @@ export type ContextSelectorSize = 'sm' | 'md' | 'lg';
  * clear and open controls.
  */
 const BOX: Record<ContextSelectorSize, string> = {
-  sm: 'min-h-8 px-2 py-1 data-empty:pl-1.5 data-empty:py-0.5',
-  md: 'min-h-9 px-3 py-1 data-empty:pl-2 data-empty:py-0.5',
-  lg: 'min-h-10 px-3 py-1 data-empty:pl-2 data-empty:py-0.5',
+  sm: 'min-h-8 pr-2 pl-[5px] py-0.5 data-empty:pl-1.5 data-empty:py-0',
+  md: 'min-h-9 pr-3 pl-[5px] py-1 data-empty:pl-2 data-empty:py-0.5',
+  lg: 'min-h-10 pr-3 pl-1 py-0.5 data-empty:pl-2 data-empty:py-0',
 };
 const GLYPH: Record<ContextSelectorSize, string> = { sm: 'size-4', md: 'size-4', lg: 'size-5' };
 /** A chip inside a control sits one step down the leaf ladder. */
@@ -108,6 +109,12 @@ export interface ContextSelectorProps extends React.HTMLAttributes<HTMLDivElemen
   showCode?: boolean;
   /** Extra fields to request, so a caller's own sub-label or secondary can read them. */
   fields?: string[];
+  /** Shown when the person has no task assigned. */
+  emptyLabel?: string;
+  /** The accessible name of the skeletons a read stands behind. */
+  loadingLabel?: string;
+  /** Shown in place of what the failed read said. */
+  errorLabel?: string;
   size?: ContextSelectorSize;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -137,6 +144,9 @@ export function ContextSelector({
   secondary,
   showCode = false,
   fields = EMPTY_FIELDS,
+  emptyLabel = NO_ROWS_LABEL,
+  loadingLabel,
+  errorLabel,
   size = 'md',
   open: openProp,
   onOpenChange,
@@ -258,12 +268,12 @@ export function ContextSelector({
           data-size={size}
           data-empty={chips.length === 0 ? '' : undefined}
           className={cn(
-            'border-border bg-background hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring focus-visible:ring-offset-background flex w-full min-w-0 items-center gap-2 rounded-md border text-left outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2',
+            'border-border bg-background hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring focus-visible:ring-offset-background flex w-full min-w-0 items-center gap-1.5 rounded-lg border text-left text-sm outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2',
             BOX[size],
           )}
           aria-label={`Context: ${label(workContext)}`}
         >
-          <span className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+          <span className="flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden">
             {chips.length === 0 ? (
               <span className="text-muted-foreground text-sm">No context</span>
             ) : (
@@ -298,12 +308,18 @@ export function ContextSelector({
           <section data-slot="context-my-tasks" className="flex max-h-52 flex-col overflow-y-auto">
             <h4 className={heading}>My tasks</h4>
             {failure !== null ? (
-              <p className="text-muted-foreground flex items-center justify-center gap-1.5 py-6 text-sm">
-                <TriangleAlert aria-hidden="true" className="size-4" />
-                <span className="truncate">{failure}</span>
-              </p>
+              <StateLine
+                state="error"
+                slotName="context-tasks-error"
+                icon={TriangleAlert}
+                label={stateLine('error', { errorLabel }, failure)}
+              />
             ) : loading && currentUser ? (
-              <div className="flex flex-col gap-2 p-1" aria-busy="true">
+              <div
+                className="flex flex-col gap-2 p-1"
+                aria-busy="true"
+                aria-label={stateLine('loading', { loadingLabel })}
+              >
                 {[0, 1].map((line) => (
                   <div key={line} className="flex items-center gap-2 px-2 py-1.5">
                     <Skeleton className="size-4 shrink-0" />
@@ -315,7 +331,9 @@ export function ContextSelector({
                 ))}
               </div>
             ) : byProject.length === 0 ? (
-              <p className="text-muted-foreground px-2 py-1.5 text-sm">No tasks assigned.</p>
+              <p data-slot="context-tasks-empty" className="text-muted-foreground px-2 py-1.5 text-sm">
+                {emptyLabel}
+              </p>
             ) : (
               byProject.map((group) => (
                 <Fragment key={group.project ? `${group.project.type}:${group.project.id}` : '-'}>

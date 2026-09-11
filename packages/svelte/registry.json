@@ -11,6 +11,22 @@
   },
   "items": [
     {
+      "name": "status-glyph",
+      "type": "registry:component",
+      "title": "Status Glyph",
+      "description": "One Flow Production Tracking status icon, from the site's own image or a cell of the stock sprite.",
+      "dependencies": [
+        "@sg-widgets/core"
+      ],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "src/lib/registry/components/status-glyph.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
       "name": "status-badge",
       "type": "registry:component",
       "title": "Status Badge",
@@ -19,7 +35,9 @@
         "@sg-widgets/core",
         "@lucide/svelte"
       ],
-      "registryDependencies": [],
+      "registryDependencies": [
+        "local:status-glyph"
+      ],
       "files": [
         {
           "path": "src/lib/registry/components/status-badge.svelte",
@@ -57,6 +75,7 @@
         "@lucide/svelte"
       ],
       "registryDependencies": [
+        "local:state-line",
         "local:status-badge",
         "local:thumbnail",
         "checkbox",
@@ -146,6 +165,39 @@
       ]
     },
     {
+      "name": "state-line",
+      "type": "registry:component",
+      "title": "State Line",
+      "description": "The centred empty and error line every data widget draws, with its glyph and its inset.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte"
+      ],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "src/lib/registry/components/state-line.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "picker-classes",
+      "type": "registry:component",
+      "title": "Picker Classes",
+      "description": "The control, popup, list and row classes every picker in this registry wears.",
+      "dependencies": [
+        "@sg-widgets/core"
+      ],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "src/lib/registry/components/picker-classes.ts",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
       "name": "entity-type-picker",
       "type": "registry:component",
       "title": "Entity Type Picker",
@@ -156,6 +208,8 @@
         "bits-ui"
       ],
       "registryDependencies": [
+        "local:picker-classes",
+        "local:state-line",
         "skeleton",
         "checkbox"
       ],
@@ -176,6 +230,7 @@
         "@lucide/svelte"
       ],
       "registryDependencies": [
+        "local:state-line",
         "popover",
         "command",
         "skeleton"
@@ -213,6 +268,7 @@
         "@lucide/svelte"
       ],
       "registryDependencies": [
+        "local:state-line",
         "button",
         "checkbox",
         "command",
@@ -432,7 +488,9 @@
         "local:color-editor",
         "local:status-picker",
         "local:entity-picker",
-        "local:entity-multi-picker"
+        "local:entity-multi-picker",
+        "button",
+        "popover"
       ],
       "files": [
         {
@@ -451,6 +509,7 @@
         "@lucide/svelte"
       ],
       "registryDependencies": [
+        "local:state-line",
         "button",
         "select",
         "skeleton",
@@ -559,6 +618,8 @@
         "@lucide/svelte"
       ],
       "registryDependencies": [
+        "local:picker-row",
+        "local:state-line",
         "local:status-badge",
         "select",
         "skeleton"
@@ -581,6 +642,9 @@
         "bits-ui"
       ],
       "registryDependencies": [
+        "local:picker-classes",
+        "local:picker-row",
+        "local:state-line",
         "local:status-badge",
         "checkbox",
         "skeleton"
@@ -588,6 +652,27 @@
       "files": [
         {
           "path": "src/lib/registry/components/status-multi-picker.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "collection-footer",
+      "type": "registry:component",
+      "title": "Collection Footer",
+      "description": "The pager under a collection: page size, range and arrows in pages, the loaded count otherwise.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte"
+      ],
+      "registryDependencies": [
+        "button",
+        "input",
+        "select"
+      ],
+      "files": [
+        {
+          "path": "src/lib/registry/components/collection-footer.svelte",
           "type": "registry:component"
         }
       ]
@@ -604,6 +689,8 @@
         "@tanstack/virtual-core"
       ],
       "registryDependencies": [
+        "local:collection-footer",
+        "local:state-line",
         "local:field-value",
         "local:field-editor",
         "table",
@@ -632,6 +719,8 @@
         "@tanstack/virtual-core"
       ],
       "registryDependencies": [
+        "local:collection-footer",
+        "local:state-line",
         "local:entity-card",
         "skeleton",
         "input",
@@ -656,6 +745,8 @@
         "@tanstack/virtual-core"
       ],
       "registryDependencies": [
+        "local:collection-footer",
+        "local:state-line",
         "local:field-value",
         "local:thumbnail",
         "checkbox",
@@ -681,6 +772,7 @@
         "@lucide/svelte"
       ],
       "registryDependencies": [
+        "local:state-line",
         "local:field-value",
         "local:status-badge",
         "local:thumbnail",
@@ -706,6 +798,8 @@
         "bits-ui"
       ],
       "registryDependencies": [
+        "local:picker-classes",
+        "local:state-line",
         "local:entity-chip",
         "local:picker-row",
         "skeleton"
@@ -728,6 +822,8 @@
         "bits-ui"
       ],
       "registryDependencies": [
+        "local:picker-classes",
+        "local:state-line",
         "local:entity-chip",
         "local:picker-row",
         "checkbox",
@@ -798,6 +894,7 @@
         "@lucide/svelte"
       ],
       "registryDependencies": [
+        "local:state-line",
         "local:entity-chip",
         "local:picker-row",
         "command",
@@ -823,6 +920,7 @@
         "@lucide/svelte"
       ],
       "registryDependencies": [
+        "local:state-line",
         "local:picker-row",
         "command",
         "skeleton"
@@ -844,6 +942,7 @@
         "@lucide/svelte"
       ],
       "registryDependencies": [
+        "local:state-line",
         "local:entity-chip",
         "local:picker-row",
         "local:hierarchical-search",

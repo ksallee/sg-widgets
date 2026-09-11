@@ -39,7 +39,7 @@ for (const framework of ['svelte', 'react']) {
   const ellipsisEl = value(pane, 'summary-ellipsis-5');
   const ellipsis = { badges: badgeCount(ellipsisEl), hidden: hiddenCount(ellipsisEl), overflow: overflow(ellipsisEl) };
   const iconsEl = value(pane, 'badge-icon-5');
-  const icons = { badges: badgeCount(iconsEl), removes: $$('[data-slot="status-multi-picker-remove"]', iconsEl).length };
+  const icons = { badges: badgeCount(iconsEl), removes: $$('[data-slot="status-badge-remove"]', iconsEl).length };
   // The two frameworks put different whitespace between badges, so the labels are read one by one.
   const names = $$('[data-slot="status-badge"]', value(pane, 'badge-text-2')).map((b) => b.textContent.trim());
   const count = value(pane, 'summary-count-5').textContent.trim();

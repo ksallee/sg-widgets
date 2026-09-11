@@ -16,6 +16,10 @@
 	let switching = $state<string | undefined>('part');
 	let switchTo = $state(otherProjectId);
 
+	/** An invented pipeline stage per code, for the row secondary a caller supplies. */
+	const STAGE: Record<string, string> = { ip: 'Animation', rev: 'Review', fin: 'Delivery' };
+	const stageOf = (option: { code: string }) => STAGE[option.code] ?? '';
+
 	const group = 'flex flex-col gap-2';
 	const label = 'text-muted-foreground text-xs font-medium tracking-wide uppercase';
 	const row = 'flex flex-wrap items-start gap-3';
@@ -60,18 +64,28 @@
 	</section>
 
 	<section class={group}>
-		<h4 class={label}>A code the field does not carry, and the code instead of the label</h4>
+		<h4 class={label}>A code the field does not carry, rows without the code, and a secondary of the caller's own</h4>
 		<div class={row}>
 			<div class={box} data-demo="unknown">
 				<StatusPicker {context} entityType="Version" {projectId} bind:value={unknown} />
 			</div>
-			<div class={box}>
+			<div class={box} data-demo="no-code">
 				<StatusPicker
 					{context}
 					entityType="Version"
 					{projectId}
 					value="ip"
-					showCode
+					showCode={false}
+					clearable={false}
+				/>
+			</div>
+			<div class={box} data-demo="own-secondary">
+				<StatusPicker
+					{context}
+					entityType="Version"
+					{projectId}
+					value="ip"
+					secondary={stageOf}
 					clearable={false}
 				/>
 			</div>

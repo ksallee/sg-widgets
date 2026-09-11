@@ -26,14 +26,16 @@
 		deriveFieldOptions,
 		friendlyFieldPath,
 		iconNameFor,
-		searchFieldOptions
+		NO_MATCH_LABEL,
+		searchFieldOptions,
+		stateLine
 	} from '@sg-widgets/core';
 	import Braces from '@lucide/svelte/icons/braces';
 	import Calendar from '@lucide/svelte/icons/calendar';
 	import CalendarClock from '@lucide/svelte/icons/calendar-clock';
 	import ChevronLeft from '@lucide/svelte/icons/chevron-left';
 	import ChevronRight from '@lucide/svelte/icons/chevron-right';
-	import ChevronsUpDown from '@lucide/svelte/icons/chevrons-up-down';
+	import ChevronDown from '@lucide/svelte/icons/chevron-down';
 	import CircleDollarSign from '@lucide/svelte/icons/circle-dollar-sign';
 	import CircleDot from '@lucide/svelte/icons/circle-dot';
 	import FileText from '@lucide/svelte/icons/file-text';
@@ -62,6 +64,7 @@
 	import * as Popover from '$lib/components/ui/popover/index.js';
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
+	import StateLine from '$lib/registry/components/state-line.svelte';
 
 	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>, HTMLDivElement> & {
 		/** The widget context. The schema is read through it, once per page. */
@@ -95,7 +98,12 @@
 		closeOnSelect?: boolean;
 		placeholder?: string;
 		searchPlaceholder?: string;
+		/** Shown when the search matches nothing. */
 		emptyLabel?: string;
+		/** The accessible name of the skeletons a read stands behind. */
+		loadingLabel?: string;
+		/** Shown in place of what the failed read said. */
+		errorLabel?: string;
 		clearable?: boolean;
 		readonly?: boolean;
 		disabled?: boolean;
@@ -125,7 +133,9 @@
 		closeOnSelect = true,
 		placeholder = 'Select a field',
 		searchPlaceholder = 'Search fields…',
-		emptyLabel = 'No field matches.',
+		emptyLabel = NO_MATCH_LABEL,
+		loadingLabel,
+		errorLabel,
 		clearable = true,
 		readonly = false,
 		disabled = false,
@@ -141,7 +151,14 @@
 	// The context's own service, so every widget on the page shares one schema read.
 	const schema = $derived(context.schema);
 
-	const ICONS: Record<string, typeof Type> = {
+	/** The trailing controls ride the first row, so they stay with it when the value wraps. */
+const TRAILING: Record<FieldPickerSize, string> = {
+	sm: 'h-8',
+	md: 'h-9',
+	lg: 'h-10'
+}
+
+const ICONS: Record<string, typeof Type> = {
 		braces: Braces,
 		calendar: Calendar,
 		'calendar-clock': CalendarClock,
@@ -371,7 +388,7 @@
 			{disabled}
 			title={label ?? placeholder}
 			class={cn(
-				'border-input bg-background focus-visible:ring-ring focus-visible:ring-offset-background aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 flex w-full min-w-0 items-center rounded-md border text-sm outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 aria-invalid:ring-2',
+				'border-input bg-background hover:bg-muted/30 focus-visible:ring-ring focus-visible:ring-offset-background aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 flex w-full min-w-0 items-center rounded-lg border text-sm outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 aria-invalid:ring-2',
 				BOX[size],
 				readonly ? 'pr-3' : showClear ? 'pr-14' : 'pr-8'
 			)}
@@ -453,19 +470,15 @@
 				/>
 				<Command.List>
 					{#if failure}
-						<div
-							data-slot="field-picker-error"
-							class="text-destructive flex items-center justify-center gap-1.5 py-6 text-center text-sm"
-						>
-							<TriangleAlert aria-hidden="true" class="size-4 shrink-0" />
-							<span class="truncate">{failure}</span>
-						</div>
+						<StateLine
+							state="error"
+							slotName="field-picker-error"
+							icon={TriangleAlert}
+							label={stateLine('error', { errorLabel }, failure)}
+						/>
 					{:else if choosing}
 						<Command.Empty>
-							<span class="text-muted-foreground inline-flex items-center gap-1.5">
-								<SearchX aria-hidden="true" class="size-4 shrink-0" />
-								{emptyLabel}
-							</span>
+							<StateLine state="empty" icon={SearchX} label={emptyLabel} pad="none" />
 						</Command.Empty>
 						{#each targets as target (target)}
 							<Command.Item
@@ -482,17 +495,19 @@
 							</Command.Item>
 						{/each}
 					{:else if fields === null}
-						<div data-slot="field-picker-loading" class="flex flex-col gap-2 p-1">
+						<div
+							data-slot="field-picker-loading"
+							class="flex flex-col gap-2 p-1"
+							aria-busy="true"
+							aria-label={stateLine('loading', { loadingLabel })}
+						>
 							{#each [0, 1, 2] as row (row)}
 								<Skeleton class="h-10 w-full" />
 							{/each}
 						</div>
 					{:else}
 						<Command.Empty>
-							<span class="text-muted-foreground inline-flex items-center gap-1.5">
-								<SearchX aria-hidden="true" class="size-4 shrink-0" />
-								{emptyLabel}
-							</span>
+							<StateLine state="empty" icon={SearchX} label={emptyLabel} pad="none" />
 						</Command.Empty>
 						{#each rows as row (row.path)}
 							{@const Glyph = ICONS[iconNameFor(row.dataType)] ?? FileText}
@@ -541,7 +556,7 @@
 	</Popover.Root>
 
 	{#if !readonly}
-		<div class="pointer-events-none absolute right-2 flex items-center gap-1">
+		<div class={cn('pointer-events-none absolute top-0 right-2 flex items-center gap-1', TRAILING[size])}>
 			{#if showClear}
 				<button
 					type="button"
@@ -553,7 +568,7 @@
 					<X aria-hidden="true" class={GLYPH[size]} />
 				</button>
 			{/if}
-			<ChevronsUpDown aria-hidden="true" class={cn('shrink-0 opacity-50', GLYPH[size])} />
+			<ChevronDown aria-hidden="true" class={cn('shrink-0 opacity-50', GLYPH[size])} />
 		</div>
 	{/if}
 </div>

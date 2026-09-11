@@ -43,11 +43,12 @@ The goal is one system: a page mixing ten of our widgets must read as one hand.
   `h-10`). Icons inside controls are `size-4` for sm/md and `size-5` for lg. Thumbnails in list rows are
   `size-6` (sm), `size-8` (md), `size-10` (lg); cards and detail panes use `xl` (h-16) and `2xl` (h-24).
   Avatars follow the first three sizes.
-- A picker control is tighter when it holds nothing. It carries `data-empty`, which takes its leading
-  inset and its vertical inset down one step (md: `pl-3 py-1` becomes `pl-2 py-0.5`), so an empty
-  control reads as a plain input and a filled one gives its value or chips room. `min-h` never
-  changes, so the empty control keeps the ladder and the height holds across the two states; the
-  trailing inset is reserve for the clear and open controls and stays put.
+- A picker control insets its leading edge to match the room above and below the chip or badge it
+  holds, so a value sits evenly inside the border. It carries `data-empty`, which
+  gives that reading inset back and takes the vertical inset down one step (md: `pl-2 py-0.5`), so an
+  empty control reads as a plain input. A control whose filled value is plain text, `FieldPicker`
+  among them, keeps the reading inset in both states. `min-h` never changes, so the height holds
+  across the two states; the trailing inset is reserve for the clear and open controls and stays put.
 - Width is the caller's business: widgets are `w-full` by default and never set a fixed width. A caller
   wraps in a sized container.
 
@@ -80,12 +81,15 @@ tell the user".
 
 - Focus: `focus-visible:ring-2 ring-ring ring-offset-2 ring-offset-background`, never `outline-none`
   without a ring replacement. Focus rings are the shadcn ones, unchanged.
-- Disabled: `opacity-50 pointer-events-none`, plus `aria-disabled`. Readonly keeps full contrast and
+- Disabled: `opacity-50 pointer-events-none`, plus `aria-disabled`; a tile that is mostly a picture
+  also greys it (`[&_img]:grayscale`), since a photo at half opacity still reads as a photo. Readonly keeps full contrast and
   removes affordances (no chevron, no clear button).
 - Invalid: `aria-invalid` and the shadcn `aria-invalid:` ring/border classes, plus room for a message the
   caller renders.
 - Selected rows: `bg-accent text-accent-foreground`. Highlighted (keyboard cursor) uses the same, never a
   second colour.
+- A remove control inside a chip or a badge hovers with a wash of its own foreground
+  (`hover:bg-current/15`), never the destructive tint: the chip and the status badge read the same.
 - Empty, loading and error states are part of every data widget and are visually consistent: a centred
   `text-sm text-muted-foreground` line with a `size-4` icon, `py-6` inside popovers, `py-10` in tables.
 
@@ -144,3 +148,17 @@ request; a list of values a widget draws is `details`.
 
 The row itself is one component per framework, `picker-row`, and every widget that lists entity rows
 composes it rather than drawing a second one.
+
+## 10. Wordmark
+
+The site's mark is two tiles, a widget on a widget: an accent tile behind and a quiet ink tile
+in front, lifted off it by a gap in the colour of the surface under the mark. It reads
+`--primary` for the back tile, `currentColor` at 30% over the ground for the front one,
+`--mark-ground` (falling back to `--background`) for the gap, and a fraction of `--radius` for
+every corner, so it wears whatever palette, theme and radius the page does. Two rules: the
+accent appears once, on the back tile; the front tile stays quiet. The type beside it is the
+title split at its first space, the head word in `--foreground` at medium weight and the tail
+in `--muted-foreground` at regular, in the site's sans. The source of truth is
+`apps/site/src/components/WordmarkMark.astro` for the mark and `Wordmark.astro` for the
+lockup; `apps/site/public/favicon.svg` is the mark with the default palette's values pinned,
+and follows a change to the mark. The mark belongs to the site; no widget package carries it.

@@ -11,7 +11,7 @@
 	const STACK: Record<EntityCardSize, string> = { sm: 'gap-2', md: 'gap-3', lg: 'gap-4' };
 	const NAME: Record<EntityCardSize, string> = { sm: 'text-sm', md: 'text-sm', lg: 'text-base' };
 	const ROWS: Record<EntityCardSize, string> = { sm: 'gap-y-1.5', md: 'gap-y-2', lg: 'gap-y-2' };
-	const BODY: Record<EntityCardSize, string> = { sm: 'p-2', md: 'p-2', lg: 'p-3' };
+	const BODY: Record<EntityCardSize, string> = { sm: 'p-3', md: 'p-3', lg: 'p-4' };
 </script>
 
 <script lang="ts">
@@ -40,6 +40,7 @@
 		pathOf,
 		preferencesOf,
 		renderKindFor,
+		stateLine,
 		urlLink
 	} from '@sg-widgets/core';
 	import Box from '@lucide/svelte/icons/box';
@@ -56,6 +57,7 @@
 	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
+	import StateLine from '$lib/registry/components/state-line.svelte';
 	import StatusBadge from '$lib/registry/components/status-badge.svelte';
 	import Thumbnail from '$lib/registry/components/thumbnail.svelte';
 
@@ -105,6 +107,8 @@
 		frameRate?: number;
 		/** What a field with no value shows. */
 		emptyLabel?: string;
+		/** Shown in place of what the failed read said. */
+		errorLabel?: string;
 	};
 
 	let {
@@ -133,6 +137,7 @@
 		timeZone,
 		frameRate,
 		emptyLabel = 'empty',
+		errorLabel,
 		class: className,
 		ref = $bindable(null),
 		...rest
@@ -198,7 +203,6 @@
 	// list is a new promise and no effect has to guard against the last one.
 	const loaded = $derived(build({ row, entity }, paths, statuses));
 	const site = $derived(siteUrl ?? ctx?.siteUrl ?? '');
-	const stateClass = 'text-muted-foreground flex items-center justify-center gap-2 py-6 text-sm';
 	const linkClass =
 		'focus-visible:ring-ring focus-visible:ring-offset-background truncate underline-offset-2 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-offset-2';
 	/** Chrome over the thumbnail: absent until it is wanted, then a fade and a small rise. */
@@ -311,7 +315,7 @@
 		data-size={size}
 		data-state={selected ? 'selected' : undefined}
 		class={cn(
-			'group/tile border-border bg-card focus-visible:ring-ring focus-visible:ring-offset-background relative flex w-full min-w-0 flex-col overflow-hidden rounded-md border text-left outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2',
+			'group/tile border-border bg-card focus-visible:ring-ring focus-visible:ring-offset-background relative flex w-full min-w-0 flex-col overflow-hidden rounded-lg border text-left outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2',
 			selected && 'bg-accent text-accent-foreground',
 			className
 		)}
@@ -355,24 +359,32 @@
 							/>
 						</span>
 					{/if}
-					{#if card.status}
-						<StatusBadge
-							code={card.status.code}
-							status={table[card.status.code] ?? null}
-							field={card.status.field}
-							variant="icon"
-							size="sm"
-							siteUrl={site}
-							class="bg-background/80 border-transparent shadow-sm"
-						/>
-					{/if}
 				</span>
-				{#if actions}
+				<!-- The status keeps the right corner; the actions appear beside it, never over it. -->
+				{#if actions || card.status}
 					<span
-						data-slot="entity-card-actions"
-						class={cn('absolute top-2 right-2 flex items-center gap-1.5', revealClass, hiddenClass)}
+						data-slot="entity-card-overlay-end"
+						class="absolute top-2 right-2 flex max-w-[calc(100%-1rem)] items-center gap-1.5"
 					>
-						{@render actions()}
+						{#if actions}
+							<span
+								data-slot="entity-card-actions"
+								class={cn('flex items-center gap-1.5', revealClass, hiddenClass)}
+							>
+								{@render actions()}
+							</span>
+						{/if}
+						{#if card.status}
+							<StatusBadge
+								code={card.status.code}
+								status={table[card.status.code] ?? null}
+								field={card.status.field}
+								variant="icon"
+								size="sm"
+								siteUrl={site}
+								class="bg-background/80 border-transparent shadow-sm"
+							/>
+						{/if}
 					</span>
 				{/if}
 			</div>
@@ -406,10 +418,11 @@
 				{/if}
 			</div>
 		{:catch error}
-			<p class={cn(stateClass, 'text-destructive')}>
-				<CircleAlert aria-hidden="true" class="size-4 shrink-0" />
-				{error.message}
-			</p>
+			<StateLine
+				state="error"
+				icon={CircleAlert}
+				label={stateLine('error', { errorLabel }, error.message)}
+			/>
 		{/await}
 	</div>
 {:else}
@@ -480,10 +493,11 @@
 				</dl>
 			{/if}
 		{:catch error}
-			<p class={cn(stateClass, 'text-destructive')}>
-				<CircleAlert aria-hidden="true" class="size-4 shrink-0" />
-				{error.message}
-			</p>
+			<StateLine
+				state="error"
+				icon={CircleAlert}
+				label={stateLine('error', { errorLabel }, error.message)}
+			/>
 		{/await}
 	</div>
 {/if}

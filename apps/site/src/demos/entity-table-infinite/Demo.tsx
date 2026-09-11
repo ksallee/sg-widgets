@@ -58,6 +58,7 @@ export default function EntityTableInfiniteDemo() {
         statuses={statuses}
         context={context}
         showCode
+        paging="more"
         maxHeight="22rem"
       />
     </DemoContextProvider>

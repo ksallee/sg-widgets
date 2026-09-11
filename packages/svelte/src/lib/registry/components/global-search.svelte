@@ -45,7 +45,15 @@
 <script lang="ts">
 	import type { HTMLAttributes } from 'svelte/elements';
 	import type { SgContext } from '@sg-widgets/core';
-	import { hydrate, pathOf, placeholderName, rowFields, scopeToProject } from '@sg-widgets/core';
+	import {
+		hydrate,
+		NO_MATCH_LABEL,
+		pathOf,
+		placeholderName,
+		rowFields,
+		scopeToProject,
+		stateLine
+	} from '@sg-widgets/core';
 	import type { Snippet } from 'svelte';
 	import Search from '@lucide/svelte/icons/search';
 	import TriangleAlert from '@lucide/svelte/icons/triangle-alert';
@@ -54,6 +62,7 @@
 	import { Kbd } from '$lib/components/ui/kbd/index.js';
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
+	import StateLine from '$lib/registry/components/state-line.svelte';
 	import EntityChip from '$lib/registry/components/entity-chip.svelte';
 	import Row from '$lib/registry/components/picker-row.svelte';
 
@@ -94,6 +103,12 @@
 		onRecentsChange?: (recents: EntityRef[]) => void;
 		onSelect?: (entity: EntityRef) => void;
 		placeholder?: string;
+		/** Shown when the query matches nothing. */
+		emptyLabel?: string;
+		/** The accessible name of the skeletons a read stands behind. */
+		loadingLabel?: string;
+		/** Shown in place of what the failed read said. */
+		errorLabel?: string;
 		/** Text on the trigger. */
 		label?: string;
 		class?: string;
@@ -123,6 +138,9 @@
 		onRecentsChange,
 		onSelect,
 		placeholder = 'Search…',
+		emptyLabel = NO_MATCH_LABEL,
+		loadingLabel,
+		errorLabel,
 		label = 'Search',
 		class: className,
 		trigger,
@@ -311,15 +329,19 @@
 	<Command.Input value={query} {placeholder} oninput={(e) => setQuery(e.currentTarget.value)} />
 	<Command.List data-sg-search-list>
 		{#if failure !== null}
-			<div
-				data-slot="search-error"
-				class="text-muted-foreground flex items-center justify-center gap-1.5 py-6 text-sm"
-			>
-				<TriangleAlert aria-hidden="true" class="size-4" />
-				<span class="truncate">{failure}</span>
-			</div>
+			<StateLine
+				state="error"
+				slotName="search-error"
+				icon={TriangleAlert}
+				label={stateLine('error', { errorLabel }, failure)}
+			/>
 		{:else if loading && hits.length === 0}
-			<div data-slot="search-loading" class="flex flex-col gap-2 p-1" aria-busy="true">
+			<div
+				data-slot="search-loading"
+				class="flex flex-col gap-2 p-1"
+				aria-busy="true"
+				aria-label={stateLine('loading', { loadingLabel })}
+			>
 				{#each [0, 1, 2] as line (line)}
 					<div class="flex items-center gap-2 px-2 py-1.5">
 						<Skeleton class="h-6 w-10 shrink-0" />
@@ -331,13 +353,7 @@
 				{/each}
 			</div>
 		{:else if empty}
-			<div
-				data-slot="search-empty"
-				class="text-muted-foreground flex items-center justify-center gap-1.5 py-6 text-sm"
-			>
-				<Search aria-hidden="true" class="size-4" />
-				<span>Nothing matches every word</span>
-			</div>
+			<StateLine state="empty" slotName="search-empty" icon={Search} label={emptyLabel} />
 		{:else if showRecents}
 			<Command.Group heading="Recent">
 				{#each recents as entity (`${entity.type}:${entity.id}`)}
@@ -391,7 +407,7 @@
 		{...rest}
 	>
 		<!-- Server-side matching only, so the list never filters what came back. -->
-		<Command.Root shouldFilter={false} bind:value={cursor} class="border-border rounded-md border">
+		<Command.Root shouldFilter={false} bind:value={cursor} class="border-border rounded-lg border">
 			{@render body()}
 		</Command.Root>
 	</div>

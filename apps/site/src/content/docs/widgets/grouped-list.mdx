@@ -7,6 +7,16 @@ import Demo from '../../../components/Demo.astro';
 
 Renders rows from an entity source as one line each, under collapsible headers of a shared value.
 
+`paging` says how the set is walked, and the source follows it: `more` puts a load-more row under
+the rows, `scroll` loads the next page when the scroller reaches the last loaded row, and `pages`
+draws the pagination footer. The list defaults to `more`. A group's count is the rows loaded under
+it, so a boundary a reader can see is worth more here than one that passes under them while they
+read.
+
+A page whose first rows carry the value the last header carries grows that group rather than opening
+a second one, and a group shut before the page arrived is still shut after it. A page that fails
+leaves its rows and puts one error line under them with a retry.
+
 ## Install
 
 ```sh
@@ -56,10 +66,13 @@ const [group, sub, secondary] = await resolveColumns(context.schema, 'Task', [
 | `collapsed` | `string[]` | `[]` | Keys of the groups that are shut, two-way. |
 | `sort` | `SortSpec[]` | — | The source's sort, two-way, so a SortPicker drops into `header`. |
 | `filters` | `FilterNode \| WireGroup \| null` | — | The source's filter, two-way, so a FilterBar drops into `header`. |
-| `pageSizes` | `number[]` | `[25, 50, 100]` | Rows per page offered in the footer. |
+| `paging` | `'pages' \| 'more' \| 'scroll'` | `'more'` | How the set is walked: a page number, a load-more row, or the scroller. |
+| `pageSizes` | `number[]` | `[25, 50, 100]` | Rows per page offered in the footer. `pages` only. |
 | `maxHeight` | `string` | `'28rem'` | Height of the scrolling body. |
 | `virtualizeAfter` | `number` | `100` | Rows and headers above which the list draws only the lines on screen. |
 | `emptyLabel` | `string` | `'No rows'` | Shown when the read returned nothing. |
+| `loadingLabel` | `string` | `'Loading…'` | Names the skeletons a read stands behind, for a screen reader. |
+| `errorLabel` | `string` | — | Shown in place of what the failed read said. |
 | `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Row text and thumbnail. A compact row takes the step below. |
 | `class` / `className` | `string` | — | Merged after the widget's own classes. |
 
@@ -90,6 +103,8 @@ const [group, sub, secondary] = await resolveColumns(context.schema, 'Task', [
 | Tab | Moves through group headers, checkboxes, rows and the footer. |
 | Enter, Space on a header | Collapses or expands the group. |
 | Enter, Space on a row | Selects it, or emits the select event. |
+| ArrowDown, ArrowUp on a row | Moves the cursor one row. |
+| ArrowDown on the last loaded row | In `more` and `scroll`, asks for the next page. The cursor stays where it is until the rows arrive, then lands on the first of them. |
 | Enter in the page number | Goes to that page. |
 
 A disabled row is skipped by Tab: its checkbox and its own control take no keys and no click.

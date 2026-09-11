@@ -12,10 +12,13 @@ import {
   breadcrumb,
   hierarchyEntity,
   hydrate,
+  NO_MATCH_LABEL,
+  NO_ROWS_LABEL,
   pathOf,
   pathRefs,
   rowFields,
   scopeToProject,
+  stateLine,
 } from '@sg-widgets/core';
 import {
   Box,
@@ -34,6 +37,7 @@ import { Command, CommandGroup, CommandInput, CommandItem, CommandList } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { PickerRow } from '@/registry/sg/components/picker-row';
+import { StateLine } from '@/registry/sg/components/state-line';
 
 /** Types to search, either bare names or names with a filter each. */
 export type HierarchicalSearchTypes = string[] | Record<string, WireCondition[] | null>;
@@ -135,6 +139,14 @@ export interface HierarchicalSearchProps
   fields?: string[];
   onSelect?: (entity: EntityRef, path: EntityRef[]) => void;
   placeholder?: string;
+  /** Shown when a level holds nothing. */
+  emptyLabel?: string;
+  /** Shown when the query matches nothing. */
+  noMatchLabel?: string;
+  /** The accessible name of the skeletons a read stands behind. */
+  loadingLabel?: string;
+  /** Shown in place of what the failed read said. */
+  errorLabel?: string;
   size?: HierarchicalSearchSize;
   className?: string;
 }
@@ -164,6 +176,10 @@ export function HierarchicalSearch({
   fields = EMPTY_FIELDS,
   onSelect,
   placeholder = 'Search the hierarchy…',
+  emptyLabel = NO_ROWS_LABEL,
+  noMatchLabel = NO_MATCH_LABEL,
+  loadingLabel,
+  errorLabel,
   size = 'md',
   className,
   ref,
@@ -382,19 +398,23 @@ export function HierarchicalSearch({
   return (
     <div ref={ref} data-slot="hierarchical-search" className={cn('w-full', className)} {...rest}>
       {/* Server-side matching only, so the list never filters what came back. */}
-      <Command shouldFilter={false} className="border-border rounded-md border" onKeyDown={onKeydown}>
+      <Command shouldFilter={false} className="border-border rounded-lg border" onKeyDown={onKeydown}>
         <CommandInput value={query} placeholder={placeholder} onValueChange={setQuery} />
         <CommandList data-sg-search-list>
           {failure !== null ? (
-            <div
-              data-slot="search-error"
-              className="text-muted-foreground flex items-center justify-center gap-1.5 py-6 text-sm"
-            >
-              <TriangleAlert aria-hidden="true" className="size-4" />
-              <span className="truncate">{failure}</span>
-            </div>
+            <StateLine
+              state="error"
+              slotName="search-error"
+              icon={TriangleAlert}
+              label={stateLine('error', { errorLabel }, failure)}
+            />
           ) : loading && rows.length === 0 ? (
-            <div data-slot="search-loading" className="flex flex-col gap-2 p-1" aria-busy="true">
+            <div
+              data-slot="search-loading"
+              className="flex flex-col gap-2 p-1"
+              aria-busy="true"
+              aria-label={stateLine('loading', { loadingLabel })}
+            >
               {[0, 1, 2].map((line) => (
                 <div key={line} className="flex items-center gap-2 px-2 py-1.5">
                   <Skeleton className={cn('shrink-0', LEAD[size])} />
@@ -406,13 +426,12 @@ export function HierarchicalSearch({
               ))}
             </div>
           ) : empty ? (
-            <div
-              data-slot="search-empty"
-              className="text-muted-foreground flex items-center justify-center gap-1.5 py-6 text-sm"
-            >
-              <Search aria-hidden="true" className="size-4" />
-              <span>{searching ? 'Nothing matches every word' : 'Nothing below this level'}</span>
-            </div>
+            <StateLine
+              state="empty"
+              slotName="search-empty"
+              icon={Search}
+              label={searching ? noMatchLabel : emptyLabel}
+            />
           ) : (
             <CommandGroup heading={searching ? 'Results' : trail.map((c) => c.label).join(' › ') || 'Tree'}>
               {!searching && trail.length > 0 ? (

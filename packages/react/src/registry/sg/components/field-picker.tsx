@@ -5,7 +5,9 @@ import {
   deriveFieldOptions,
   friendlyFieldPath,
   iconNameFor,
+  NO_MATCH_LABEL,
   searchFieldOptions,
+  stateLine,
 } from '@sg-widgets/core';
 import {
   Braces,
@@ -13,7 +15,7 @@ import {
   CalendarClock,
   ChevronLeft,
   ChevronRight,
-  ChevronsUpDown,
+  ChevronDown,
   CircleDollarSign,
   CircleDot,
   FileText,
@@ -49,6 +51,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import { StateLine } from '@/registry/sg/components/state-line';
 
 export type FieldPickerSize = 'sm' | 'md' | 'lg';
 
@@ -66,6 +69,13 @@ const GLYPH: Record<FieldPickerSize, string> = {
   sm: 'size-4',
   md: 'size-4',
   lg: 'size-5',
+};
+
+/** The trailing controls ride the first row, so they stay with it when the value wraps. */
+const TRAILING: Record<FieldPickerSize, string> = {
+  sm: 'h-8',
+  md: 'h-9',
+  lg: 'h-10'
 };
 
 const ICONS: Record<string, typeof Type> = {
@@ -129,7 +139,12 @@ export interface FieldPickerProps extends React.HTMLAttributes<HTMLDivElement> {
   closeOnSelect?: boolean;
   placeholder?: string;
   searchPlaceholder?: string;
+  /** Shown when the search matches nothing. */
   emptyLabel?: string;
+  /** The accessible name of the skeletons a read stands behind. */
+  loadingLabel?: string;
+  /** Shown in place of what the failed read said. */
+  errorLabel?: string;
   clearable?: boolean;
   readonly?: boolean;
   disabled?: boolean;
@@ -170,7 +185,9 @@ export function FieldPicker({
   closeOnSelect = true,
   placeholder = 'Select a field',
   searchPlaceholder = 'Search fields…',
-  emptyLabel = 'No field matches.',
+  emptyLabel = NO_MATCH_LABEL,
+  loadingLabel,
+  errorLabel,
   clearable = true,
   readonly = false,
   disabled = false,
@@ -358,7 +375,7 @@ export function FieldPicker({
           disabled={disabled}
           title={label ?? placeholder}
           className={cn(
-            'border-input bg-background focus-visible:ring-ring focus-visible:ring-offset-background aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 flex w-full min-w-0 items-center rounded-md border text-sm outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 aria-invalid:ring-2',
+            'border-input bg-background hover:bg-muted/30 focus-visible:ring-ring focus-visible:ring-offset-background aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 flex w-full min-w-0 items-center rounded-lg border text-sm outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 aria-invalid:ring-2',
             BOX[size],
             readonly ? 'pr-3' : showClear ? 'pr-14' : 'pr-8',
           )}
@@ -435,20 +452,16 @@ export function FieldPicker({
             />
             <CommandList>
               {failure ? (
-                <div
-                  data-slot="field-picker-error"
-                  className="text-destructive flex items-center justify-center gap-1.5 py-6 text-center text-sm"
-                >
-                  <TriangleAlert aria-hidden="true" className="size-4 shrink-0" />
-                  <span className="truncate">{failure}</span>
-                </div>
+                <StateLine
+                  state="error"
+                  slotName="field-picker-error"
+                  icon={TriangleAlert}
+                  label={stateLine('error', { errorLabel }, failure)}
+                />
               ) : choosing ? (
                 <>
                   <CommandEmpty>
-                    <span className="text-muted-foreground inline-flex items-center gap-1.5">
-                      <SearchX aria-hidden="true" className="size-4 shrink-0" />
-                      {emptyLabel}
-                    </span>
+                    <StateLine state="empty" icon={SearchX} label={emptyLabel} pad="none" />
                   </CommandEmpty>
                   {targets.map((target) => (
                     <CommandItem
@@ -467,7 +480,12 @@ export function FieldPicker({
                   ))}
                 </>
               ) : fields === null ? (
-                <div data-slot="field-picker-loading" className="flex flex-col gap-2 p-1">
+                <div
+                  data-slot="field-picker-loading"
+                  className="flex flex-col gap-2 p-1"
+                  aria-busy="true"
+                  aria-label={stateLine('loading', { loadingLabel })}
+                >
                   {[0, 1, 2].map((row) => (
                     <Skeleton key={row} className="h-10 w-full" />
                   ))}
@@ -475,10 +493,7 @@ export function FieldPicker({
               ) : (
                 <>
                   <CommandEmpty>
-                    <span className="text-muted-foreground inline-flex items-center gap-1.5">
-                      <SearchX aria-hidden="true" className="size-4 shrink-0" />
-                      {emptyLabel}
-                    </span>
+                    <StateLine state="empty" icon={SearchX} label={emptyLabel} pad="none" />
                   </CommandEmpty>
                   {rows.map((row) => {
                     const Glyph = ICONS[iconNameFor(row.dataType)] ?? FileText;
@@ -533,7 +548,7 @@ export function FieldPicker({
       </Popover>
 
       {!readonly ? (
-        <div className="pointer-events-none absolute right-2 flex items-center gap-1">
+        <div className={cn('pointer-events-none absolute top-0 right-2 flex items-center gap-1', TRAILING[size])}>
           {showClear ? (
             <button
               type="button"
@@ -545,7 +560,7 @@ export function FieldPicker({
               <X aria-hidden="true" className={GLYPH[size]} />
             </button>
           ) : null}
-          <ChevronsUpDown aria-hidden="true" className={cn('shrink-0 opacity-50', GLYPH[size])} />
+          <ChevronDown aria-hidden="true" className={cn('shrink-0 opacity-50', GLYPH[size])} />
         </div>
       ) : null}
     </div>

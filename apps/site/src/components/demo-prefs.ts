@@ -21,20 +21,22 @@ export interface Palette {
 /**
  * Called the palette everywhere a name could be read as the light/dark theme Starlight's
  * own select switches. `default` has no block in themes.css and leaves the stage on the
- * nova tokens.
+ * tokens global.css sets, which is why it is also the fallback: a name from a browser
+ * that stored one of the palettes this list has dropped resolves to it and lands on the
+ * same tokens the page had already painted.
  */
 export const palettes: Palette[] = [
   { name: 'default', label: 'Default' },
-  { name: 'stone', label: 'Stone' },
-  { name: 'zinc', label: 'Zinc' },
-  { name: 'mauve', label: 'Mauve' },
-  { name: 'mist', label: 'Mist' },
+  { name: 'nova', label: 'Nova' },
   { name: 'vercel', label: 'Vercel' },
   { name: 'supabase', label: 'Supabase' },
   { name: 'claude', label: 'Claude' },
   { name: 'twitter', label: 'Twitter' },
   { name: 'catppuccin', label: 'Catppuccin' },
 ];
+
+/** The palette a page wears until something says otherwise. */
+export const defaultPalette = palettes[0]!.name;
 
 /* `default` keeps whatever `--radius` the palette sets; the rest override it. */
 export const radii = [
@@ -70,7 +72,7 @@ const FALLBACK: Record<Pref, string> = {
   framework: 'both',
   theme: 'light',
   motion: 'normal',
-  palette: 'default',
+  palette: defaultPalette,
   radius: 'default',
 };
 

@@ -22,9 +22,16 @@ function press(el) {
   }
 }
 
-// A press on the page body, which is what closes an open editor.
+// A press on the page body, which is what closes an open editor. The whole sequence:
+// a cell listens for the pointer going down, a popover for the press that follows.
 function pressOutside() {
-  document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0, pointerType: 'mouse' }));
+  for (const type of ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click']) {
+    document.body.dispatchEvent(
+      type.startsWith('pointer')
+        ? new PointerEvent(type, { bubbles: true, cancelable: true, button: 0, pointerType: 'mouse' })
+        : new MouseEvent(type, { bubbles: true, cancelable: true, view: window, button: 0 }),
+    );
+  }
 }
 
 function setValue(el, text) {
@@ -33,8 +40,8 @@ function setValue(el, text) {
   el.dispatchEvent(new Event('input', { bubbles: true }));
 }
 
-function key(el, name) {
-  el.dispatchEvent(new KeyboardEvent('keydown', { key: name, bubbles: true, cancelable: true }));
+function key(el, name, init = {}) {
+  el.dispatchEvent(new KeyboardEvent('keydown', { key: name, bubbles: true, cancelable: true, ...init }));
 }
 
 async function until(find, label) {
@@ -55,6 +62,12 @@ function openSurfaces() {
 function within(selector) {
   return openSurfaces().flatMap((surface) => (surface.matches(selector) ? [surface] : $$(selector, surface)));
 }
+
+// A text cell opens its editor in a popover, portalled out of the cell; a picker cell
+// opens it in the cell.
+const editorInput = (cell) =>
+  cell.querySelector('input, textarea') ??
+  ($$('[data-field-editor-popover]').find((el) => el.checkVisibility()) ?? cell).querySelector('input, textarea');
 
 const fieldList = () => within('[data-picker="field"]')[0] ?? null;
 const fieldItems = () => (fieldList() ? $$('[data-slot="command-item"]', fieldList()) : []);
@@ -87,31 +100,40 @@ async function run(framework) {
   // A status cell opens the status picker, and Escape closes it.
   step = `${framework}: status cell`;
   cell('sg_status_list').dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
-  const status = await until(() => cell('sg_status_list').querySelector('[data-slot="status-picker"]'), 'a status picker');
+  // The status editor opens in a popover by default, so the picker is looked for there.
+  const statusPicker = () =>
+    document.querySelector('[data-field-editor-popover] [data-slot="status-picker"]') ??
+    cell('sg_status_list').querySelector('[data-slot="status-picker"]');
+  const status = await until(statusPicker, 'a status picker');
   seen.status = status.querySelector('[data-slot="status-picker-value"]')?.textContent.trim() ?? '';
   key(status.querySelector('[data-slot="select-trigger"], [data-slot="status-picker-trigger"]'), 'Escape');
   await until(
-    () => cell('sg_status_list').querySelector('[data-slot="status-picker"]') === null || null,
+    () => statusPicker() === null || null,
     'the status cell to close',
   );
 
   // An entity cell opens the entity picker, and a press outside closes it.
   step = `${framework}: entity cell`;
   cell('entity').dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
-  const entity = await until(() => cell('entity').querySelector('[data-slot="entity-picker"]'), 'an entity picker');
+  // The entity editor opens in a popover by default, so the picker is looked for there.
+  const entityPicker = () =>
+    document.querySelector('[data-field-editor-popover] [data-slot="entity-picker"]') ??
+    cell('entity').querySelector('[data-slot="entity-picker"]');
+  const entity = await until(entityPicker, 'an entity picker');
   seen.entity = entity.querySelector('[data-slot="entity-picker-value"]')?.textContent.trim() ?? '';
   pressOutside();
-  await until(() => cell('entity').querySelector('[data-slot="entity-picker"]') === null || null, 'the entity cell to close');
+  await until(() => entityPicker() === null || null, 'the entity cell to close');
 
   // A text cell commits on Enter. This is the gesture that logged derived_inert.
   step = `${framework}: commit on Enter`;
   const typed = `edited by qa ${framework}`;
   cell('description').dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
-  const input = await until(() => cell('description').querySelector('input, textarea'), 'the text editor');
+  const input = await until(() => editorInput(cell('description')), 'the text editor');
   input.focus();
   setValue(input, typed);
   await wait(120);
-  key(input, 'Enter');
+  // A text field in a popover is a textarea: Enter adds a line, Ctrl with Enter commits.
+  key(input, 'Enter', { ctrlKey: true });
   await until(() => cell('description').textContent.trim() === typed || null, `the cell to read "${typed}"`);
   seen.committed = cell('description').textContent.trim();
 
@@ -119,7 +141,7 @@ async function run(framework) {
   step = `${framework}: commit on an outside press`;
   const alsoTyped = `${typed} again`;
   cell('description').dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
-  const second = await until(() => cell('description').querySelector('input, textarea'), 'the text editor again');
+  const second = await until(() => editorInput(cell('description')), 'the text editor again');
   second.focus();
   setValue(second, alsoTyped);
   await wait(120);

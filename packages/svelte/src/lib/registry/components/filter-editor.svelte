@@ -126,6 +126,7 @@
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
 	import * as ToggleGroup from '$lib/components/ui/toggle-group/index.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
+	import { entityFields } from '$lib/registry/components/entity-fields.svelte.js';
 	import CheckboxEditor from '$lib/registry/components/checkbox-editor.svelte';
 	import StateLine from '$lib/registry/components/state-line.svelte';
 	import ColorEditor from '$lib/registry/components/color-editor.svelte';
@@ -181,19 +182,11 @@
 		...rest
 	}: Props = $props();
 
-	let fields = $state<Record<string, FieldSchema>>({});
-
-	// The schema service caches, so this reaches the network once per type however
-	// often the tree is edited (probe 002).
-	$effect(() => {
-		let live = true;
-		void context.schema.fields(entityType).then((loaded) => {
-			if (live) fields = loaded;
-		});
-		return () => {
-			live = false;
-		};
-	});
+	const schemaFields = entityFields(
+		() => context,
+		() => entityType
+	);
+	const fields = $derived(schemaFields.current);
 
 	/**
 	 * The leaf schema of every dotted path the tree holds, added once and kept.

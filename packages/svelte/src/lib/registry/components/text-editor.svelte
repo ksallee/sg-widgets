@@ -1,12 +1,7 @@
 <script lang="ts" module>
-	export type TextEditorSize = 'sm' | 'md' | 'lg';
+	import type { ControlSize } from '$lib/registry/components/control-classes.js';
 
-	/** The control ladder of `docs/design-rules.md`: 8 / 9 / 10. */
-	const BOX: Record<TextEditorSize, string> = {
-		sm: 'h-8 px-2',
-		md: 'h-9 px-3',
-		lg: 'h-10 px-3'
-	};
+	export type TextEditorSize = ControlSize;
 </script>
 
 <script lang="ts">
@@ -17,6 +12,8 @@
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Textarea } from '$lib/components/ui/textarea/index.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
+	import { CONTROL_BOX } from '$lib/registry/components/control-classes.js';
+	import FieldError from '$lib/registry/components/field-error.svelte';
 
 	type Props = WithElementRef<Omit<HTMLAttributes<HTMLDivElement>, 'oninput'>, HTMLDivElement> & {
 		/** The stored string, or null. There is no empty string in the store (field_types/text). */
@@ -140,7 +137,7 @@
 			{disabled}
 			{readonly}
 			{placeholder}
-			class={BOX[size]}
+			class={CONTROL_BOX[size]}
 			aria-invalid={isInvalid}
 			aria-label={field?.displayName}
 			aria-required={field?.mandatory}
@@ -149,11 +146,5 @@
 			{onkeydown}
 		/>
 	{/if}
-	{#if message}
-		{#if errorMessage}
-			{@render errorMessage(message)}
-		{:else}
-			<p data-slot="field-editor-error" class="text-destructive text-xs">{message}</p>
-		{/if}
-	{/if}
+	<FieldError {message} {errorMessage} />
 </div>

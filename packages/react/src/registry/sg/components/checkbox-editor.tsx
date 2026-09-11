@@ -2,19 +2,16 @@ import type * as React from 'react';
 import type { FieldSchema } from '@sg-widgets/core';
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
+import { CONTROL_HEIGHT, type ControlSize } from '@/registry/sg/components/control-classes';
+import { FieldError } from '@/registry/sg/components/field-error';
 
-export type CheckboxEditorSize = 'sm' | 'md' | 'lg';
+export type CheckboxEditorSize = ControlSize;
 
 /** The switch primitive carries two sizes; the third reuses the larger one. */
 const SWITCH: Record<CheckboxEditorSize, 'sm' | 'default'> = {
   sm: 'sm',
   md: 'default',
   lg: 'default',
-};
-const BOX: Record<CheckboxEditorSize, string> = {
-  sm: 'h-8',
-  md: 'h-9',
-  lg: 'h-10',
 };
 
 export interface CheckboxEditorProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'defaultValue'> {
@@ -75,7 +72,7 @@ export function CheckboxEditor({
       className={cn('flex w-full min-w-0 flex-col gap-2', className)}
       {...rest}
     >
-      <div className={cn('flex w-full min-w-0 items-center gap-2', BOX[size])}>
+      <div className={cn('flex w-full min-w-0 items-center gap-2', CONTROL_HEIGHT[size])}>
         <Switch
           size={SWITCH[size]}
           checked={checked}
@@ -90,13 +87,7 @@ export function CheckboxEditor({
           {label}
         </span>
       </div>
-      {error
-        ? (errorMessage?.(error) ?? (
-            <p data-slot="field-editor-error" className="text-destructive text-xs">
-              {error}
-            </p>
-          ))
-        : null}
+      <FieldError message={error} errorMessage={errorMessage} />
     </div>
   );
 }

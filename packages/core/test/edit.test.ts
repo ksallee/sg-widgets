@@ -10,6 +10,8 @@ import {
   INT32_MAX,
   INT32_MIN,
   isEditableType,
+  isoDay,
+  isoDayParts,
   isParseError,
   isValidListValue,
   numberSteps,
@@ -212,6 +214,28 @@ describe('toApiDate', () => {
 
   it('clears on empty', () => {
     expect(ok(toApiDate(''))).toBeNull();
+  });
+});
+
+describe('isoDayParts and isoDay', () => {
+  it('splits a calendar day and puts it back', () => {
+    expect(isoDayParts('2026-09-02')).toEqual({ year: 2026, month: 9, day: 2 });
+    expect(isoDay({ year: 2026, month: 9, day: 2 })).toBe('2026-09-02');
+  });
+
+  it('pads every part', () => {
+    expect(isoDay({ year: 7, month: 1, day: 3 })).toBe('0007-01-03');
+  });
+
+  it('answers nothing for anything that is not a calendar day', () => {
+    expect(isoDayParts('2026-09-02T13:45:06Z')).toBeNull();
+    expect(isoDayParts('2026-9-2')).toBeNull();
+    expect(isoDayParts(null)).toBeNull();
+    expect(isoDayParts(undefined)).toBeNull();
+  });
+
+  it('ignores the space around it, as a typed day carries', () => {
+    expect(isoDayParts('  2026-09-02 ')).toEqual({ year: 2026, month: 9, day: 2 });
   });
 });
 

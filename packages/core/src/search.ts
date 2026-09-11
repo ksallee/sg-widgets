@@ -204,6 +204,28 @@ export async function scopeToProject(
   return Object.fromEntries(scoped);
 }
 
+/**
+ * The pause a search widget leaves before it asks. Long enough that a typist does
+ * not fire a request a letter, short enough to feel live.
+ */
+export const SEARCH_DEBOUNCE_MS = 250;
+
+/** The types to search, as the map `_text_search` takes: bare names carry no filter. */
+export function searchTypeMap(
+  types: string[] | Record<string, WireCondition[] | null>,
+): Record<string, WireCondition[] | null> {
+  return Array.isArray(types) ? Object.fromEntries(types.map((type) => [type, null])) : types;
+}
+
+/**
+ * A list of what was picked before, newest first: the new entry leads, the one it
+ * repeats is dropped, and the list is cut to `limit`.
+ */
+export function prependRecent<T>(recents: readonly T[], picked: T, limit: number, keyOf: (item: T) => string): T[] {
+  const key = keyOf(picked);
+  return [picked, ...recents.filter((item) => keyOf(item) !== key)].slice(0, limit);
+}
+
 /* -------------------------------------------------------------------------- */
 /* hierarchy paths                                                            */
 /* -------------------------------------------------------------------------- */

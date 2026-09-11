@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { matchRuns, matchesEveryWord, searchWords } from '../src/search.js';
+import { matchRuns, matchesEveryWord, prependRecent, searchTypeMap, searchWords } from '../src/search.js';
 
 describe('searchWords', () => {
   it('splits on whitespace and drops the empties', () => {
@@ -49,5 +49,40 @@ describe('matchesEveryWord', () => {
     expect(matchesEveryWord('Published Ada', 'ad pub')).toBe(true);
     expect(matchesEveryWord('Published Ada', 'pub zzz')).toBe(false);
     expect(matchesEveryWord('Published Ada', '')).toBe(true);
+  });
+});
+
+describe('searchTypeMap', () => {
+  it('gives a bare list of names no filter', () => {
+    expect(searchTypeMap(['Shot', 'Asset'])).toEqual({ Shot: null, Asset: null });
+  });
+
+  it('passes a map through untouched', () => {
+    const map = { Shot: [['project', 'is', { type: 'Project', id: 7 }]] as never };
+    expect(searchTypeMap(map)).toBe(map);
+  });
+});
+
+describe('prependRecent', () => {
+  const keyOf = (ref: { type: string; id: number }): string => `${ref.type}:${ref.id}`;
+
+  it('leads with the new entry and drops the one it repeats', () => {
+    const shot = { type: 'Shot', id: 1 };
+    const asset = { type: 'Asset', id: 2 };
+    expect(prependRecent([asset, shot], shot, 5, keyOf)).toEqual([shot, asset]);
+  });
+
+  it('cuts the list to the limit', () => {
+    const made = [1, 2, 3].map((id) => ({ type: 'Shot', id }));
+    expect(prependRecent(made, { type: 'Shot', id: 9 }, 2, keyOf)).toEqual([
+      { type: 'Shot', id: 9 },
+      { type: 'Shot', id: 1 },
+    ]);
+  });
+
+  it('leaves the list it was given alone', () => {
+    const made = [{ type: 'Shot', id: 1 }];
+    prependRecent(made, { type: 'Shot', id: 2 }, 5, keyOf);
+    expect(made).toEqual([{ type: 'Shot', id: 1 }]);
   });
 });

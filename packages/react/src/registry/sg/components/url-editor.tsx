@@ -3,15 +3,10 @@ import type { FieldSchema, UrlValue, UrlWriteValue } from '@sg-widgets/core';
 import { parseUrlInput } from '@sg-widgets/core';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { CONTROL_BOX, type ControlSize } from '@/registry/sg/components/control-classes';
+import { FieldError } from '@/registry/sg/components/field-error';
 
-export type UrlEditorSize = 'sm' | 'md' | 'lg';
-
-/** The control ladder of `docs/design-rules.md`: 8 / 9 / 10. */
-const BOX: Record<UrlEditorSize, string> = {
-  sm: 'h-8 px-2',
-  md: 'h-9 px-3',
-  lg: 'h-10 px-3',
-};
+export type UrlEditorSize = ControlSize;
 
 export interface UrlEditorProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'defaultValue'> {
   /** The stored object. Only the web-link shape is edited here (field_types/url). */
@@ -126,7 +121,7 @@ export function UrlEditor({
           disabled={disabled || localOnly}
           readOnly={readonly}
           placeholder={placeholder}
-          className={BOX[size]}
+          className={CONTROL_BOX[size]}
           aria-invalid={isInvalid}
           aria-label={field?.displayName}
           aria-required={field?.mandatory}
@@ -142,7 +137,7 @@ export function UrlEditor({
           disabled={disabled || localOnly}
           readOnly={readonly}
           placeholder={namePlaceholder}
-          className={BOX[size]}
+          className={CONTROL_BOX[size]}
           aria-invalid={isInvalid}
           aria-label="Link name"
           onChange={(event) => setNameDraft(event.target.value)}
@@ -156,13 +151,7 @@ export function UrlEditor({
           This value is a local path. Only web links are edited here.
         </p>
       ) : null}
-      {message
-        ? (errorMessage?.(message) ?? (
-            <p data-slot="field-editor-error" className="text-destructive text-xs">
-              {message}
-            </p>
-          ))
-        : null}
+      <FieldError message={message} errorMessage={errorMessage} />
     </div>
   );
 }

@@ -10,6 +10,7 @@ import type {
 } from '@sg-widgets/core';
 import {
   breadcrumb,
+  errorText,
   hierarchyEntity,
   hydrate,
   NO_MATCH_LABEL,
@@ -18,25 +19,16 @@ import {
   pathRefs,
   rowFields,
   scopeToProject,
+  SEARCH_DEBOUNCE_MS,
+  searchTypeMap,
   stateLine,
 } from '@sg-widgets/core';
-import {
-  Box,
-  ChevronRight,
-  Clapperboard,
-  Film,
-  Folder,
-  ListChecks,
-  Search,
-  Tag,
-  TriangleAlert,
-  User,
-  Video,
-} from 'lucide-react';
+import { ChevronRight, Folder, Search, TriangleAlert } from 'lucide-react';
 import { Command, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import { entityGlyph } from '@/registry/sg/components/entity-glyphs';
 import { PickerRow } from '@/registry/sg/components/picker-row';
+import { SearchSkeleton } from '@/registry/sg/components/search-skeleton';
 import { StateLine } from '@/registry/sg/components/state-line';
 
 /** Types to search, either bare names or names with a filter each. */
@@ -63,26 +55,11 @@ export interface HierarchicalSearchRow {
 /** Leaf types a drill-down usually ends on. */
 export const HIERARCHICAL_SEARCH_TYPES = ['Shot', 'Asset', 'Sequence', 'Task'];
 
-const DEBOUNCE_MS = 250;
 /** Each hit costs one path lookup, so the search asks for fewer rows than the endpoint allows. */
 const LEAF_LIMIT = 10;
 
 /** A stable empty list, so the default never changes what a callback depends on. */
 const EMPTY_FIELDS: string[] = [];
-
-const GLYPHS = {
-  Shot: Clapperboard,
-  Asset: Box,
-  Sequence: Film,
-  Version: Video,
-  Task: ListChecks,
-  HumanUser: User,
-  Project: Folder,
-} as const;
-
-function typeMap(types: HierarchicalSearchTypes): Record<string, WireCondition[] | null> {
-  return Array.isArray(types) ? Object.fromEntries(types.map((t) => [t, null])) : types;
-}
 
 /** The project a root path names, for scoping the text search that finds the leaves. */
 function projectOf(rootPath: string): number | null {
@@ -90,9 +67,9 @@ function projectOf(rootPath: string): number | null {
   return match ? Number(match[1]) : null;
 }
 
+/** A level is a folder; a row takes its type's own glyph. */
 function glyphFor(row: HierarchicalSearchRow) {
-  if (!row.ref) return Folder;
-  return GLYPHS[row.ref.type as keyof typeof GLYPHS] ?? Tag;
+  return row.ref ? entityGlyph(row.ref.type) : Folder;
 }
 
 export type HierarchicalSearchSize = 'sm' | 'md' | 'lg';
@@ -204,7 +181,7 @@ export function HierarchicalSearch({
   const browseRow = useCallback(
     (node: HierarchyNode, crumbs: string[]): HierarchicalSearchRow => {
       const ref = hierarchyEntity(node.ref);
-      const allowed = Object.keys(typeMap(entityTypes));
+      const allowed = Object.keys(searchTypeMap(entityTypes));
       return {
         label: node.label,
         crumbs,
@@ -233,7 +210,7 @@ export function HierarchicalSearch({
         setRows(node.children.map((child) => browseRow(child, [...crumbs.map((c) => c.label), node.label])));
       } catch (error) {
         if (id !== requestId.current) return;
-        setFailure(error instanceof Error ? error.message : String(error));
+        setFailure(errorText(error));
         setRows([]);
       } finally {
         if (id === requestId.current) setLoading(false);
@@ -253,7 +230,7 @@ export function HierarchicalSearch({
       setLoading(true);
       setFailure(null);
       try {
-        let types = typeMap(entityTypes);
+        let types = searchTypeMap(entityTypes);
         const projectId = projectOf(rootPath);
         if (projectId !== null) types = await scopeToProject(schema, types, projectId);
         const found = await context.client.textSearch(text, types, { size: LEAF_LIMIT, number: 1 });
@@ -294,7 +271,7 @@ export function HierarchicalSearch({
         );
       } catch (error) {
         if (id !== requestId.current) return;
-        setFailure(error instanceof Error ? error.message : String(error));
+        setFailure(errorText(error));
         setRows([]);
       } finally {
         if (id === requestId.current) setLoading(false);
@@ -316,7 +293,7 @@ export function HierarchicalSearch({
         void browse(here, trail);
         return;
       }
-      timer.current = setTimeout(() => void search(text), DEBOUNCE_MS);
+      timer.current = setTimeout(() => void search(text), SEARCH_DEBOUNCE_MS);
     },
     [browse, here, search, trail],
   );
@@ -409,22 +386,11 @@ export function HierarchicalSearch({
               label={stateLine('error', { errorLabel }, failure)}
             />
           ) : loading && rows.length === 0 ? (
-            <div
-              data-slot="search-loading"
-              className="flex flex-col gap-2 p-1"
-              aria-busy="true"
-              aria-label={stateLine('loading', { loadingLabel })}
-            >
-              {[0, 1, 2].map((line) => (
-                <div key={line} className="flex items-center gap-2 px-2 py-1.5">
-                  <Skeleton className={cn('shrink-0', LEAD[size])} />
-                  <div className="flex min-w-0 flex-1 flex-col gap-1">
-                    <Skeleton className="h-3 w-1/2" />
-                    <Skeleton className="h-2.5 w-1/4" />
-                  </div>
-                </div>
-              ))}
-            </div>
+            <SearchSkeleton
+              slotName="search-loading"
+              lead={cn('shrink-0', LEAD[size])}
+              label={stateLine('loading', { loadingLabel })}
+            />
           ) : empty ? (
             <StateLine
               state="empty"

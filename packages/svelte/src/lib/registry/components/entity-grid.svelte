@@ -56,10 +56,7 @@
 		rowIdOf,
 		rowIsDisabled,
 		rowKey,
-		sameFilters,
-		sameSort,
 		shouldLoadNext,
-		sourceModeFor,
 		stateLine
 	} from '@sg-widgets/core';
 	import { Virtualizer, elementScroll, observeElementOffset, observeElementRect } from '@tanstack/virtual-core';
@@ -68,6 +65,7 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
+	import { bindSource } from '$lib/registry/components/collection-source.svelte.js';
 	import CollectionFooter from '$lib/registry/components/collection-footer.svelte';
 	import EntityCard from '$lib/registry/components/entity-card.svelte';
 	import StateLine from '$lib/registry/components/state-line.svelte';
@@ -170,17 +168,25 @@
 		...rest
 	}: Props = $props();
 
-	// svelte-ignore state_referenced_locally
-	let snapshot = $state(source.snapshot());
-	$effect(() => source.subscribe(() => (snapshot = source.snapshot())));
-	$effect(() => {
-		if (source.status === 'idle') void source.load();
+	const bound = bindSource({
+		source: () => source,
+		paging: () => paging,
+		sort: {
+			get: () => sort,
+			set: (next) => {
+				sort = next;
+				onSortChange?.(next);
+			}
+		},
+		filters: {
+			get: () => filters,
+			set: (next) => {
+				filters = next;
+				onFiltersChange?.(next);
+			}
+		}
 	});
-	$effect(() => {
-		// `paging` is the one prop a caller sets, so the source follows it rather than the
-		// other way round. Setting a mode it already holds is a no-op.
-		void source.setMode(sourceModeFor(paging));
-	});
+	const snapshot = $derived(bound.snapshot);
 
 	const rows = $derived(snapshot.rows);
 	const pager = $derived(describePaging(snapshot));
@@ -198,36 +204,6 @@
 
 	/** The selection as keys, so a row asks whether it is in it in constant time. */
 	const chosenKeys = $derived(new Set((selection ?? []).map(rowKey)));
-
-	/*
-	 * Two-way state.
-	 *
-	 * Each pair is one effect out of the source and one into it, each reading the other
-	 * side untracked, so a change travels once and the two never write to each other.
-	 */
-	$effect(() => {
-		const wanted = sort;
-		if (wanted === undefined || sameSort(wanted, untrack(() => snapshot.sort))) return;
-		void source.setSort([...wanted]);
-	});
-	$effect(() => {
-		const current = snapshot.sort;
-		if (sameSort(current, untrack(() => sort ?? []))) return;
-		sort = [...current];
-		onSortChange?.(sort);
-	});
-
-	$effect(() => {
-		const wanted = filters;
-		if (wanted === undefined || sameFilters(wanted, untrack(() => snapshot.filters))) return;
-		void source.setFilters(wanted);
-	});
-	$effect(() => {
-		const current = snapshot.filters;
-		if (sameFilters(current, untrack(() => filters ?? null))) return;
-		filters = current;
-		onFiltersChange?.(current);
-	});
 
 	function toggle(row: EntityRow): void {
 		if (rowIsDisabled(row, isRowDisabled)) return;
@@ -450,12 +426,6 @@
 		return () => observer.disconnect();
 	});
 
-	/** Read the page that failed again: the one a pager is on, or the one that was appended. */
-	function retryPage(): void {
-		if (paging === 'pages') void source.setPage(snapshot.page);
-		else void source.loadMore();
-	}
-
 	const loadingText = $derived(stateLine('loading', { loadingLabel }));
 </script>
 
@@ -594,7 +564,7 @@
 					icon={CircleAlert}
 					label={stateLine('error', { errorLabel }, snapshot.error?.message)}
 				>
-					<Button variant="outline" size="sm" onclick={retryPage}>Retry</Button>
+					<Button variant="outline" size="sm" onclick={() => bound.retry()}>Retry</Button>
 				</StateLine>
 			{:else if snapshot.status === 'loadingMore'}
 				<div data-slot="entity-grid-loading" aria-busy="true" aria-label={loadingText}>

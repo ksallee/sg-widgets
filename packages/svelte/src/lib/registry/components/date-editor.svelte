@@ -1,36 +1,9 @@
 <script lang="ts" module>
-	import { CalendarDate, type DateValue } from '@internationalized/date';
+	import type { DateValue } from '@internationalized/date';
+	import type { ControlSize } from '$lib/registry/components/control-classes.js';
+	import { fromCalendarDate, toCalendarDate } from '$lib/registry/components/editor-calendar.js';
 
-	export type DateEditorSize = 'sm' | 'md' | 'lg';
-
-	/** The control ladder of `docs/design-rules.md`: 8 / 9 / 10. */
-	const BOX: Record<DateEditorSize, string> = {
-		sm: 'h-8 px-2',
-		md: 'h-9 px-3',
-		lg: 'h-10 px-3'
-	};
-
-	/** The calendar glyph grows one step at `lg`, as the status picker's does. */
-	const GLYPH: Record<DateEditorSize, string> = {
-		sm: 'size-4',
-		md: 'size-4',
-		lg: 'size-5'
-	};
-
-	const DATE_ONLY = /^(\d{4})-(\d{2})-(\d{2})$/;
-
-	/** `YYYY-MM-DD` as a calendar day, or undefined when the string is not one (field_types/date). */
-	function toCalendarDate(value: string | null | undefined): DateValue | undefined {
-		const m = DATE_ONLY.exec(String(value ?? '').trim());
-		if (!m) return undefined;
-		return new CalendarDate(Number(m[1]), Number(m[2]), Number(m[3]));
-	}
-
-	function fromCalendarDate(value: DateValue | undefined): string {
-		if (!value) return '';
-		const pad = (n: number, width = 2) => String(n).padStart(width, '0');
-		return `${pad(value.year, 4)}-${pad(value.month)}-${pad(value.day)}`;
-	}
+	export type DateEditorSize = ControlSize;
 </script>
 
 <script lang="ts">
@@ -44,6 +17,8 @@
 	import { Input } from '$lib/components/ui/input/index.js';
 	import * as Popover from '$lib/components/ui/popover/index.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
+	import { CONTROL_BOX, CONTROL_GLYPH } from '$lib/registry/components/control-classes.js';
+	import FieldError from '$lib/registry/components/field-error.svelte';
 
 	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>, HTMLDivElement> & {
 		/** The stored day, exactly `YYYY-MM-DD`, with no time and no zone (field_types/date). */
@@ -188,11 +163,11 @@
 			class={cn(
 				buttonVariants({ variant: 'outline' }),
 				'w-full justify-start gap-1.5 font-normal tabular-nums',
-				BOX[size],
+				CONTROL_BOX[size],
 				!value && 'text-muted-foreground'
 			)}
 		>
-			<CalendarIcon aria-hidden="true" class={cn(GLYPH[size], 'shrink-0')} />
+			<CalendarIcon aria-hidden="true" class={cn(CONTROL_GLYPH[size], 'shrink-0')} />
 			<span class="truncate">{value ?? placeholder}</span>
 		</Popover.Trigger>
 		<Popover.Content
@@ -212,7 +187,7 @@
 				{disabled}
 				{readonly}
 				{placeholder}
-				class={cn('tabular-nums', BOX[size])}
+				class={cn('tabular-nums', CONTROL_BOX[size])}
 				aria-invalid={isInvalid}
 				aria-label={field?.displayName ?? 'Date'}
 				aria-required={field?.mandatory}
@@ -223,11 +198,5 @@
 			<Calendar type="single" class="p-0" value={day} onValueChange={pick} />
 		</Popover.Content>
 	</Popover.Root>
-	{#if message}
-		{#if errorMessage}
-			{@render errorMessage(message)}
-		{:else}
-			<p data-slot="field-editor-error" class="text-destructive text-xs">{message}</p>
-		{/if}
-	{/if}
+	<FieldError {message} {errorMessage} />
 </div>

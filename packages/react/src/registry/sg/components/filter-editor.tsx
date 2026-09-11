@@ -52,6 +52,7 @@ import { CheckboxEditor } from '@/registry/sg/components/checkbox-editor';
 import { ColorEditor } from '@/registry/sg/components/color-editor';
 import { DateEditor } from '@/registry/sg/components/date-editor';
 import { DateTimeEditor } from '@/registry/sg/components/date-time-editor';
+import { useEntityFields } from '@/registry/sg/components/entity-fields';
 import { EntityMultiPicker } from '@/registry/sg/components/entity-multi-picker';
 import { EntityPicker } from '@/registry/sg/components/entity-picker';
 import { FieldPicker } from '@/registry/sg/components/field-picker';
@@ -221,19 +222,7 @@ export function FilterEditor({
   ref,
   ...rest
 }: FilterEditorProps) {
-  const [fields, setFields] = useState<Record<string, FieldSchema>>({});
-
-  // The schema service caches, so this reaches the network once per type however
-  // often the tree is edited (probe 002).
-  useEffect(() => {
-    let live = true;
-    void context.schema.fields(entityType).then((loaded) => {
-      if (live) setFields(loaded);
-    });
-    return () => {
-      live = false;
-    };
-  }, [context.schema, entityType]);
+  const fields = useEntityFields(context, entityType);
 
   /**
    * The leaf schema of every dotted path the tree holds, added once and kept.

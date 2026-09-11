@@ -3,15 +3,12 @@ import type { FieldSchema } from '@sg-widgets/core';
 import { COLOR_SENTINEL, colorToHex, parseBgColor, parseColorInput, rgbToCss } from '@sg-widgets/core';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { CONTROL_BOX, type ControlSize } from '@/registry/sg/components/control-classes';
+import { FieldError } from '@/registry/sg/components/field-error';
 
-export type ColorEditorSize = 'sm' | 'md' | 'lg';
+export type ColorEditorSize = ControlSize;
 
-/** The control ladder of `docs/design-rules.md`: 8 / 9 / 10. */
-const BOX: Record<ColorEditorSize, string> = {
-  sm: 'h-8 px-2',
-  md: 'h-9 px-3',
-  lg: 'h-10 px-3',
-};
+/** The swatch is the square of the control beside it. */
 const SWATCH: Record<ColorEditorSize, string> = {
   sm: 'size-8',
   md: 'size-9',
@@ -148,7 +145,7 @@ export function ColorEditor({
           disabled={disabled}
           readOnly={readonly}
           placeholder={placeholder}
-          className={cn('font-mono tabular-nums', BOX[size])}
+          className={cn('font-mono tabular-nums', CONTROL_BOX[size])}
           aria-invalid={isInvalid}
           aria-label={field?.displayName}
           aria-required={field?.mandatory}
@@ -165,13 +162,7 @@ export function ColorEditor({
           Takes the colour of the linked pipeline step.
         </p>
       ) : null}
-      {message
-        ? (errorMessage?.(message) ?? (
-            <p data-slot="field-editor-error" className="text-destructive text-xs">
-              {message}
-            </p>
-          ))
-        : null}
+      <FieldError message={message} errorMessage={errorMessage} />
     </div>
   );
 }

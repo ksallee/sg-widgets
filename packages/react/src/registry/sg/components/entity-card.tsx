@@ -25,22 +25,11 @@ import {
   stateLine,
   urlLink,
 } from '@sg-widgets/core';
-import {
-  Box,
-  CircleAlert,
-  Clapperboard,
-  FileBox,
-  Film,
-  Folder,
-  ListChecks,
-  MessageSquare,
-  Tag,
-  User,
-  Video,
-} from 'lucide-react';
+import { CircleAlert, Tag } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import { entityGlyph } from '@/registry/sg/components/entity-glyphs';
 import { StateLine } from '@/registry/sg/components/state-line';
 import { StatusBadge } from '@/registry/sg/components/status-badge';
 import { Thumbnail, type ThumbnailSize } from '@/registry/sg/components/thumbnail';
@@ -56,22 +45,6 @@ const STACK: Record<EntityCardSize, string> = { sm: 'gap-2', md: 'gap-3', lg: 'g
 const NAME: Record<EntityCardSize, string> = { sm: 'text-sm', md: 'text-sm', lg: 'text-base' };
 const ROWS: Record<EntityCardSize, string> = { sm: 'gap-y-1.5', md: 'gap-y-2', lg: 'gap-y-2' };
 const BODY: Record<EntityCardSize, string> = { sm: 'p-3', md: 'p-3', lg: 'p-4' };
-
-/**
- * A glyph per entity type. A stock site has 114 types plus any number of custom
- * ones, so this covers the types a widget meets constantly and falls back to a tag.
- */
-const GLYPHS = {
-  Shot: Clapperboard,
-  Asset: Box,
-  Sequence: Film,
-  Version: Video,
-  Task: ListChecks,
-  HumanUser: User,
-  Project: Folder,
-  Note: MessageSquare,
-  PublishedFile: FileBox,
-} as const;
 
 export interface EntityCardProps extends Omit<HTMLAttributes<HTMLDivElement>, 'children'> {
   /** The cached client, the schema service, the site url and the preferences the card reads through. */
@@ -243,7 +216,7 @@ export function EntityCard({
   const site = siteUrl ?? ctx?.siteUrl ?? '';
   const card = loaded?.card ?? null;
   const table = loaded?.statuses ?? {};
-  const Glyph = card ? (GLYPHS[card.entity.type as keyof typeof GLYPHS] ?? Tag) : Tag;
+  const Glyph = card ? entityGlyph(card.entity.type) : Tag;
   const url = card ? entityDetailUrl(site, card.entity) : null;
 
   function textOf(column: EntityCardColumn): string {

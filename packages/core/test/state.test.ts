@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   ERROR_LABEL,
+  errorText,
   LOADING_LABEL,
   NO_MATCH_LABEL,
   NO_ROWS_LABEL,
@@ -39,5 +40,22 @@ describe('stateLine', () => {
 
   it('trims what the read said', () => {
     expect(stateLine('error', {}, ' timeout ')).toBe('timeout');
+  });
+});
+
+describe('errorText', () => {
+  it("gives an Error's message", () => {
+    expect(errorText(new Error('Flow PT API error 503'))).toBe('Flow PT API error 503');
+  });
+
+  it('renders anything else as itself', () => {
+    expect(errorText('timeout')).toBe('timeout');
+    expect(errorText(404)).toBe('404');
+    expect(errorText(null)).toBe('null');
+  });
+
+  it('feeds a state line, so a rejection is never a blank block', () => {
+    expect(stateLine('error', {}, errorText(new Error(' timeout ')))).toBe('timeout');
+    expect(stateLine('error', {}, errorText(new Error('')))).toBe(ERROR_LABEL);
   });
 });

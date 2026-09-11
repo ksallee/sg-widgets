@@ -1,13 +1,14 @@
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import type { EntityRef, FieldSpec, PickerRow as PickerRowData, SgContext } from '@sg-widgets/core';
-import { NO_ROWS_LABEL, pathOf, rowFields, stateLine } from '@sg-widgets/core';
+import { errorText, NO_ROWS_LABEL, pathOf, prependRecent, rowFields, stateLine } from '@sg-widgets/core';
 import { ChevronDown, ListChecks, TriangleAlert } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import { CONTROL_GLYPH, type ControlSize } from '@/registry/sg/components/control-classes';
 import { EntityChip } from '@/registry/sg/components/entity-chip';
 import { HierarchicalSearch } from '@/registry/sg/components/hierarchical-search';
 import { PickerRow } from '@/registry/sg/components/picker-row';
+import { SearchSkeleton } from '@/registry/sg/components/search-skeleton';
 import { StateLine } from '@/registry/sg/components/state-line';
 
 /** What a widget or a publish needs to know about where the user is working. */
@@ -64,7 +65,7 @@ const rowClass =
 const recentClass =
   'focus-visible:ring-ring focus-visible:ring-offset-background flex w-full min-w-0 items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm outline-none focus-visible:ring-2 focus-visible:ring-offset-2';
 
-export type ContextSelectorSize = 'sm' | 'md' | 'lg';
+export type ContextSelectorSize = ControlSize;
 
 /**
  * Controls follow the input ladder of `docs/design-rules.md`. `data-empty` takes the
@@ -77,7 +78,6 @@ const BOX: Record<ContextSelectorSize, string> = {
   md: 'min-h-9 pr-3 pl-[5px] py-1 data-empty:pl-2 data-empty:py-0.5',
   lg: 'min-h-10 pr-3 pl-1 py-0.5 data-empty:pl-2 data-empty:py-0',
 };
-const GLYPH: Record<ContextSelectorSize, string> = { sm: 'size-4', md: 'size-4', lg: 'size-5' };
 /** A chip inside a control sits one step down the leaf ladder. */
 const CHIP: Record<ContextSelectorSize, 'sm' | 'md'> = { sm: 'sm', md: 'sm', lg: 'md' };
 
@@ -230,7 +230,7 @@ export function ContextSelector({
       })
       .catch((error: unknown) => {
         if (!live) return;
-        setFailure(error instanceof Error ? error.message : String(error));
+        setFailure(errorText(error));
         setTasks([]);
       })
       .finally(() => {
@@ -258,7 +258,7 @@ export function ContextSelector({
   }
 
   function apply(next: WorkContext): void {
-    onRecentsChange?.([next, ...recents.filter((r) => keyOf(r) !== keyOf(next))].slice(0, recentLimit));
+    onRecentsChange?.(prependRecent(recents, next, recentLimit, keyOf));
     onWorkContextChange?.(next);
     setOpen(false);
   }
@@ -285,7 +285,7 @@ export function ContextSelector({
               ))
             )}
           </span>
-          <ChevronDown aria-hidden="true" className={cn('text-muted-foreground shrink-0', GLYPH[size])} />
+          <ChevronDown aria-hidden="true" className={cn('text-muted-foreground shrink-0', CONTROL_GLYPH[size])} />
         </PopoverTrigger>
 
         <PopoverContent className="flex w-96 max-w-[calc(100vw-2rem)] flex-col gap-3 p-3" align="start">
@@ -318,21 +318,7 @@ export function ContextSelector({
                 label={stateLine('error', { errorLabel }, failure)}
               />
             ) : loading && currentUser ? (
-              <div
-                className="flex flex-col gap-2 p-1"
-                aria-busy="true"
-                aria-label={stateLine('loading', { loadingLabel })}
-              >
-                {[0, 1].map((line) => (
-                  <div key={line} className="flex items-center gap-2 px-2 py-1.5">
-                    <Skeleton className="size-4 shrink-0" />
-                    <div className="flex min-w-0 flex-1 flex-col gap-1">
-                      <Skeleton className="h-3 w-1/2" />
-                      <Skeleton className="h-2.5 w-1/4" />
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <SearchSkeleton lines={2} lead="size-4 shrink-0" label={stateLine('loading', { loadingLabel })} />
             ) : byProject.length === 0 ? (
               <p data-slot="context-tasks-empty" className="text-muted-foreground px-2 py-1.5 text-sm">
                 {emptyLabel}

@@ -43,20 +43,11 @@
 		stateLine,
 		urlLink
 	} from '@sg-widgets/core';
-	import Box from '@lucide/svelte/icons/box';
 	import CircleAlert from '@lucide/svelte/icons/circle-alert';
-	import Clapperboard from '@lucide/svelte/icons/clapperboard';
-	import FileBox from '@lucide/svelte/icons/file-box';
-	import Film from '@lucide/svelte/icons/film';
-	import Folder from '@lucide/svelte/icons/folder';
-	import ListChecks from '@lucide/svelte/icons/list-checks';
-	import MessageSquare from '@lucide/svelte/icons/message-square';
-	import Tag from '@lucide/svelte/icons/tag';
-	import User from '@lucide/svelte/icons/user';
-	import Video from '@lucide/svelte/icons/video';
 	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
+	import { entityGlyph } from '$lib/registry/components/entity-glyphs.js';
 	import StateLine from '$lib/registry/components/state-line.svelte';
 	import StatusBadge from '$lib/registry/components/status-badge.svelte';
 	import Thumbnail from '$lib/registry/components/thumbnail.svelte';
@@ -158,22 +149,6 @@
 		card: EntityCardModel;
 		statuses: Record<string, StatusRecord>;
 	}
-
-	/**
-	 * A glyph per entity type. A stock site has 114 types plus any number of custom
-	 * ones, so this covers the types a widget meets constantly and falls back to a tag.
-	 */
-	const GLYPHS: Record<string, typeof Tag> = {
-		Shot: Clapperboard,
-		Asset: Box,
-		Sequence: Film,
-		Version: Video,
-		Task: ListChecks,
-		HumanUser: User,
-		Project: Folder,
-		Note: MessageSquare,
-		PublishedFile: FileBox
-	};
 
 	async function build(
 		source: { row: EntityRow | null; entity: EntityRef | null },
@@ -449,7 +424,7 @@
 				{/each}
 			</div>
 		{:then { card, statuses: table }}
-			{@const Glyph = GLYPHS[card.entity.type] ?? Tag}
+			{@const Glyph = entityGlyph(card.entity.type)}
 			{@const url = entityDetailUrl(site, card.entity)}
 			<div class={cn('flex min-w-0 items-start', HEADER[size])}>
 				<Thumbnail src={card.thumbnail} size={THUMB[size]} alt="" />

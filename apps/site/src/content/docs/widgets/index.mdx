@@ -7,7 +7,7 @@ import Demo from '../../../components/Demo.astro';
 
 Each widget page shows the Svelte and React implementations side by side. The toolbar on an example
 sets the framework, reduced motion and the corner radius; the palette select in the header picks one
-of ten themes for the demo stages, and light or dark follows the theme select next to it. Every one
+of seven palettes for the demo stages, and light or dark follows the theme select next to it. Every one
 of those choices carries to the other examples on the page and to the next page.
 
 Demos run on fixtures until you open Connect in the header, switch it to Live, give it your site and
@@ -43,14 +43,14 @@ binding and its footer. The same names exist in both registries.
 | `picker-classes` | The control, popup, list and row classes every picker wears. | the pickers, picker-control |
 | `control-classes` | The height, inset and glyph ladder every non-picker control wears. | the editors, filter bar, filter dialog, global search, context selector |
 | `leaf-classes` | The ladder and the remove control every badge, chip and avatar wears. | status badge, entity chip, user avatar |
-| `state-line` | The centred empty and error line every data widget draws. | the collections, the pickers, the search widgets, filter editor, entity card |
-| `status-glyph` | One status icon, from the site's own image or a cell of the stock sprite. | status badge, and the badge's `glyph` variant |
-| `entity-glyphs` | A glyph per entity type, with the tag every unlisted type takes. | entity chip, entity card, hierarchical search |
-| `value-editor` | The session every leaf editor runs on: the draft, the commit on blur and on Enter, the Escape that restores, the error, and the box the control stands in. | text, number, url, colour, date and date-time editors |
-| `field-error` | The line a field editor shows under its control when a parse fails. | value-editor, checkbox editor |
-| `editor-calendar` | The calendar day the date editors hand the Calendar primitive. | date editor, date-time editor |
-| `search-skeleton` | The rows a search widget draws while its read is in flight. | search-control |
-| `collection-control` | The state and behaviour every collection shares: the source, the selection and its tri-state, the keyboard cursor, the virtualiser and the paging triggers. The table, the grid and the grouped list are layouts over it. | entity table, entity grid, grouped list |
-| `collection-source` | The binding between a collection and its source: the snapshot, the paging mode and the two-way sort and filter. | collection-control, entity tree |
-| `collection-footer` | The pager under a collection: page size, range and arrows in pages, the loaded count otherwise. | entity table, entity grid, grouped list |
-| `entity-fields` | One entity type's fields, read through the context and kept. | filter bar, filter editor |
+| [`state-line`](/widgets/state-line/) | The centred empty and error line every data widget draws. | the collections, the pickers, the search widgets, filter editor, entity card |
+| [`status-glyph`](/widgets/status-badge/#statusglyph) | One status icon, from the site's own image or a cell of the stock sprite. | status badge, and the badge's `glyph` variant |
+| [`entity-glyphs`](/widgets/entity-chip/#entityglyphs) | A glyph per entity type, with the tag every unlisted type takes. | entity chip, entity card, hierarchical search |
+| [`value-editor`](/widgets/value-editor/) | The session every leaf editor runs on: the draft, the commit on blur and on Enter, the Escape that restores, the error, and the box the control stands in. | text, number, url, colour, date and date-time editors |
+| [`field-error`](/widgets/value-editor/#fielderror) | The line a field editor shows under its control when a parse fails. | value-editor, checkbox editor |
+| [`editor-calendar`](/widgets/value-editor/#editorcalendar) | The calendar day the date editors hand the Calendar primitive. | date editor, date-time editor |
+| [`search-skeleton`](/widgets/search-control/#searchskeleton) | The rows a search widget draws while its read is in flight. | search-control |
+| [`collection-control`](/widgets/collection-control/) | The state and behaviour every collection shares: the source, the selection and its tri-state, the keyboard cursor, the virtualiser and the paging triggers. The table, the grid and the grouped list are layouts over it. | entity table, entity grid, grouped list |
+| [`collection-source`](/widgets/collection-control/#collectionsource) | The binding between a collection and its source: the snapshot, the paging mode and the two-way sort and filter. | collection-control, entity tree |
+| [`collection-footer`](/widgets/collection-control/#collectionfooter) | The pager under a collection: page size, range and arrows in pages, the loaded count otherwise. | entity table, entity grid, grouped list |
+| [`entity-fields`](/widgets/filter-editor/#entityfields) | One entity type's fields, read through the context and kept. | filter bar, filter editor |

@@ -4,6 +4,7 @@ description: A date field as a picker button over a typed day and a calendar.
 ---
 
 import Demo from '../../../components/Demo.astro';
+import Props from '../../../components/Props.astro';
 
 Edits a date field from one button, in every context.
 
@@ -31,23 +32,11 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/date-editor.js
 
 ## Props
 
-| prop | type | default | meaning |
-|---|---|---|---|
-| `value` | `string \| null` | `null` | The stored day. Two-way in Svelte. |
-| `onValueChange` | `(value: string \| null) => void` | — | Called when the input commits or a day is picked. |
-| `field` | `FieldSchema \| null` | `null` | Supplies the accessible label and the required flag. |
-| `inline` | `boolean` | `false` | The row form: the button takes the width of its value. |
-| `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Button height. |
-| `disabled` | `boolean` | `false` | |
-| `readonly` | `boolean` | `false` | Keeps the value readable and does not open the popover. |
-| `invalid` | `boolean` | `false` | Forced invalid state. |
-| `error` | `string \| null` | `null` | A message from the caller, shown in place of the parse error. |
-| `onErrorChange` | `(error: string \| null) => void` | — | Called when the parse error appears or clears. |
-| `placeholder` | `string` | `'YYYY-MM-DD'` | Shown on the button and in the typed day while the field is unset. |
-| `open` | `boolean` | `false` | Whether the calendar popover is showing. Two-way in Svelte. |
-| `class` / `className` | `string` | — | Merged after the widget's own classes. |
+<Props name="date-editor" />
 
 ## Events
+
+<Props name="date-editor" kind="events" />
 
 `onValueChange` fires on commit and on a pick. Input that does not parse emits nothing.
 
@@ -59,13 +48,7 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/date-editor.js
 
 ## Keyboard
 
-| key | does |
-|---|---|
-| `Enter` | On the button, opens the popover. In the typed day, commits it and closes the popover. |
-| `Escape` | In the popover, restores the stored day and closes the popover. |
-| `Space` | Opens the popover, from the button. |
-| `Tab` | Moves from the typed day to the calendar. |
-| arrows | Move between days, inside the calendar. |
+<Props name="date-editor" kind="keyboard" />
 
 ## API behaviour
 

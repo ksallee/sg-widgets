@@ -4,6 +4,7 @@ description: One field, displayed or edited, with the editor chosen by the data 
 ---
 
 import Demo from '../../../components/Demo.astro';
+import Props from '../../../components/Props.astro';
 
 Shows a field value and turns it into the right editor for its data type.
 
@@ -44,35 +45,7 @@ search to that project.
 
 ## Props
 
-| prop | type | default | meaning |
-|---|---|---|---|
-| `value` | `unknown` | `null` | The raw attribute value, as the API returned it. Two-way in Svelte. |
-| `onValueChange` | `(value: unknown) => void` | — | Called when the editor commits. |
-| `dataType` | `string` | the schema's, then `'text'` | Picks the editor. |
-| `field` | `FieldSchema \| null` | `null` | The field schema. |
-| `mode` | `'display' \| 'edit'` | `'display'` | Which half is showing. Two-way in Svelte, controlled in React. |
-| `onModeChange` | `(mode) => void` | — | Called when the toggle moves. |
-| `editable` | `boolean` | `false` | Turns the display half into a control that opens the editor. |
-| `editorPlacement` | `'inline' \| 'popover'` | `'inline'` | Where the editor opens: in place of the value, or in a popover anchored to it. |
-| `statuses` | `Record<string, StatusRecord> \| null` | `null` | Status rows by code, for the display half. |
-| `context` | `SgContext` | — | The widget context: the site preferences, and what the display half reads. |
-| `hoursPerDay` | `number` | the context's | The site's working day, for durations. |
-| `locale` | `string` | the context's, then the runtime's | Passed to the display half. |
-| `timeZone` | `string` | the context's, then the runtime's | Zone a typed wall-clock time is read in. |
-| `frameRate` | `number` | the context's | Frames a second, for timecodes. |
-| `precision` | `number` | — | Decimals on a float. |
-| `symbol` | `string` | `'$'` | Shown before a currency value. |
-| `projectId` | `number` | — | Removes a list field's hidden values, and scopes a status or entity picker. |
-| `multiline` | `boolean` | `true` in a popover | A textarea on a text field. In a textarea Enter adds a line and Cmd or Ctrl with Enter commits. |
-| `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Control height. |
-| `disabled` | `boolean` | `false` | |
-| `readonly` | `boolean` | `false` | |
-| `invalid` | `boolean` | `false` | Forced invalid state. |
-| `error` | `string \| null` | `null` | A message from the caller. |
-| `onErrorChange` | `(error: string \| null) => void` | — | Called when the parse error appears or clears. |
-| `placeholder` | `string` | — | |
-| `emptyLabel` | `string` | `'empty'` | Marker the display half shows for an unset value. |
-| `class` / `className` | `string` | — | Merged after the widget's own classes. |
+<Props name="field-editor" />
 
 ## Events
 
@@ -84,14 +57,7 @@ search to that project.
 
 ## Keyboard
 
-| key | does |
-|---|---|
-| `Enter` | Opens the editor from the display half; commits and closes it from the edit half. |
-| `Space` | Opens the editor from the display half. |
-| `Escape` | Cancels the edit and returns to the display half. |
-| `Tab` | Commits and returns to the display half, unless focus stays inside a popup the editor opened. |
-| a press outside | Commits and returns to the display half. |
-| `Escape`, `Enter` in a popover | Cancels and commits as they do in place; Save and Cancel do the same with the pointer. |
+<Props name="field-editor" kind="keyboard" />
 
 Enter keeps the textarea of a multi-line text field open; leave it with `Tab`.
 

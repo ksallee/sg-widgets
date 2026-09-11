@@ -4,6 +4,7 @@ description: A lazy tree over a project's navigation hierarchy.
 ---
 
 import Demo from '../../../components/Demo.astro';
+import Props from '../../../components/Props.astro';
 
 Walks the navigation tree the web interface draws, one level per call, from a project down to its
 shots and assets.
@@ -50,74 +51,22 @@ Each level's rows are read once per type over the ids the level returned, so `su
 
 ## Props
 
-| prop | type | default | meaning |
-|---|---|---|---|
-| `context` | `SgContext` | required | The widget context. Every read goes through it, so widgets on a page share one cache. |
-| `rootPath` | `string` | — | Where the tree starts, `/Project/<id>`. |
-| `seedPath` | `string \| string[] \| null` | `null` | Opens the tree down to this path, or to the last entry of an incremental path. |
-| `checkable` | `boolean` | `false` | Draws a checkbox per node and reports the checked rows. |
-| `selectionMode` | `'none' \| 'single' \| 'multiple'` | `'single'` | How many nodes may be selected at once. |
-| `selection` | `string[]` | `[]` | Paths of the selected nodes, two-way. |
-| `expanded` | `string[]` | — | Paths of the open nodes, two-way. Setting it opens exactly those, reading whatever level is not loaded. |
-| `isRowDisabled` | `(node) => boolean` | — | True for a node the arrows skip and the selection refuses. |
-| `searchable` | `boolean` | `false` | Shows an input that searches the project and opens the tree onto the hits. |
-| `searchPlaceholder` | `string` | `'Search'` | Placeholder and label of that input. |
-| `expandDepth` | `number` | `3` | Levels a whole-branch expansion opens. |
-| `thumbnail` | `string \| false` | `false` | The image field to draw a thumbnail from. |
-| `labelField` | `string` | — | Field shown as the label, in place of the tree's own. |
-| `subLabelField` | `string \| CollectionColumn \| null` | `null` | Field shown under the label. A resolved column renders it by type. |
-| `subLabel` | `(node) => string` | — | Muted line under the label. Wins over `subLabelField`. |
-| `secondaryField` | `string \| CollectionColumn \| null` | `null` | Right-aligned field, drawn by its data type. A resolved column renders it by type. |
-| `secondary` | `(node) => string` | — | Right-aligned text. Wins over `secondaryField`. |
-| `showCode` | `boolean` | `false` | Show the schema name beside the label on a node that stands for a type. |
-| `fields` | `string[]` | `[]` | Extra fields to request, so a caller's own sub-label or secondary can read them. |
-| `siteUrl` | `string` | the context's | The site the status sprite is served from. |
-| `label` | `string` | `'Project hierarchy'` | Accessible name of the tree. |
-| `maxHeight` | `string` | `'24rem'` | Height of the scrolling body. |
-| `emptyLabel` | `string` | `'No rows'` | Shown when the root has no children. |
-| `noMatchLabel` | `string` | `'No match'` | Shown when a search matched no row. |
-| `loadingLabel` | `string` | `'Loading…'` | Names the skeletons a read stands behind, for a screen reader. |
-| `errorLabel` | `string` | — | Shown in place of what the failed read said. |
-| `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Row text, leading slot and glyphs. |
-| `density` | `'compact' \| 'default'` | `'default'` | Compact halves the vertical row padding. |
-| `class` / `className` | `string` | — | Merged after the widget's own classes. |
+<Props name="entity-tree" />
 
 ## Events
 
-| event | payload | when |
-|---|---|---|
-| `onSelect` | `TreeNode` | A node with nothing under it was chosen. |
-| `onSelectionChange` | `string[]` | The selected paths changed. |
-| `onExpandedChange` | `string[]` | The open paths changed. |
-| `onCheckedChange` | `EntityRef[]` | The checked set changed. Only nodes that stand for a row are reported. |
-| `onError` | `Error` | A read failed. |
+<Props name="entity-tree" kind="events" />
 
 ## Slots
 
-| slot | receives | meaning |
-|---|---|---|
-| `row` | `{ node, id, level, expanded, selected, disabled, match }` | Draws a row's contents: everything after the chevron and the checkbox. |
-| `header` | — | Region above the search input. |
-| `footer` | — | Region below the tree. |
+<Props name="entity-tree" kind="slots" />
 
 ## Keyboard
 
 The tree keeps one tab stop. Focus follows the cursor, and the row it sits on is the one that carries
 `tabindex="0"`.
 
-| key | does |
-|---|---|
-| Down | Moves to the next visible node. |
-| Up | Moves to the previous visible node. |
-| Right | Opens a closed branch, else moves to its first child. |
-| Left | Closes an open branch, else moves to its parent. |
-| Home | Moves to the first node. |
-| End | Moves to the last visible node. |
-| Space | Toggles the node's checkbox. |
-| Enter | Selects the node. |
-| * | Opens every branch at the focus level, `expandDepth` levels deep. |
-| Escape | In the search input, clears it. |
-| a–z, 0–9 | Moves to the next node whose label starts with what was typed. The same letter again walks the matches. |
+<Props name="entity-tree" kind="keyboard" />
 
 A disabled node takes no keys and no click: the arrows and type-ahead step over it, and the cursor
 never lands on it.

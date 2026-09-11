@@ -4,6 +4,7 @@ description: One value of a list field, picked from the set its schema declares.
 ---
 
 import Demo from '../../../components/Demo.astro';
+import Props from '../../../components/Props.astro';
 
 Edits a list field, offering the vocabulary its schema declares.
 
@@ -34,34 +35,7 @@ row already holding a value outside that set keeps a row of its own, labelled wi
 
 ## Props
 
-| prop | type | default | meaning |
-|---|---|---|---|
-| `value` | `string \| null` | `null` | The stored string. Two-way in Svelte. |
-| `onValueChange` | `(value: string \| null) => void` | — | Called on every change. |
-| `field` | `FieldSchema \| null` | `null` | Supplies the valid values, the labels and the hidden values. |
-| `projectId` | `number` | — | Given, the field's hidden values are removed from the list. |
-| `options` | `{ code, label }[]` | — | The set on offer, of the caller's own making. Wins over the field. |
-| `slot` | `string` | `'list-picker'` | The `data-slot` prefix every part of this picker carries. |
-| `picker` | `string` | `'list'` | The `data-picker` the popup carries. |
-| `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Heights 8, 9 and 10. |
-| `disabled` | `boolean` | `false` | Greys the control and takes it out of the tab order. |
-| `readonly` | `boolean` | `false` | Keeps full contrast and drops the chevron, the popup and the clear control. |
-| `invalid` | `boolean` | `false` | Sets `aria-invalid` and the destructive ring. |
-| `error` | `string \| null` | `null` | A message from the caller, drawn under the control. |
-| `placeholder` | `string` | `'Choose'` | Shown while the field is unset. |
-| `emptyLabel` | `string` | `'No rows'` | Shown when the list offers nothing. |
-| `searchable` | `boolean` | `false` | Offers a search box, which narrows the set in the browser. |
-| `searchPlaceholder` | `string` | `'Search values…'` | Placeholder of the search box. |
-| `clearable` | `boolean` | `true` | Offers a control that clears the value. A mandatory field is never clearable. |
-| `showCode` | `boolean` | `false` | Draws the stored string as a row's right-aligned secondary, where it says more than the label. |
-| `secondary` | `(option) => string` | the value | A row's right-aligned value, of the caller's own making. |
-| `subLabel` | `(option) => string` | — | The muted line under a row's label. |
-| `loading` | `boolean` | `false` | A caller's read is in flight: skeletons, and the control is inert. |
-| `loadError` | `string \| null` | `null` | What a caller's read failed with, drawn in place of the list. |
-| `loadingLabel` | `string` | `'Loading…'` | Names the skeletons a read stands behind, for a screen reader. |
-| `errorLabel` | `string` | — | Shown in place of what the failed read said. |
-| `open` | `boolean` | `false` | Whether the popup is showing. Two-way in Svelte. |
-| `class` / `className` | `string` | — | Merged after the widget's own classes. |
+<Props name="list-picker" />
 
 Every other attribute is spread onto the root: `id`, `aria-*`, `data-*`, key handlers and a `ref`
 to the root element.
@@ -72,6 +46,8 @@ slot is empty unless a caller fills it and its secondary is a function rather th
 
 ## Events
 
+<Props name="list-picker" kind="events" />
+
 `onValueChange` fires as soon as a row is chosen, and with `null` when the value is cleared.
 `onErrorChange` fires with `null` on that same change, so a message the caller set clears when the
 field is answered.
@@ -80,23 +56,11 @@ field is answered.
 
 ## Slots
 
-| slot | receives | draws |
-|---|---|---|
-| `mark` | the option | A row's leading mark. Given, every row carries one. |
-| `valueChip` | the chosen string | The control's value, in place of plain text. |
-| `errorMessage` | the message | The line under the control. |
+<Props name="list-picker" kind="slots" />
 
 ## Keyboard
 
-| key | does |
-|---|---|
-| <kbd>Space</kbd>, <kbd>Enter</kbd>, <kbd>↓</kbd> | Opens the list |
-| <kbd>↑</kbd> <kbd>↓</kbd> | Move the highlight |
-| typing | Narrows the list, where the picker is searchable |
-| <kbd>Enter</kbd> | Chooses the highlighted row and closes |
-| <kbd>Backspace</kbd> | In an empty search box, clears the value |
-| <kbd>Esc</kbd> | Closes the list and keeps the value |
-| <kbd>Tab</kbd> | Leaves the control, or reaches the clear control when there is one |
+<Props name="list-picker" kind="keyboard" />
 
 ## API behaviour
 

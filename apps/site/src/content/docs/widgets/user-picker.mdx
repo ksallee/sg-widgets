@@ -4,6 +4,7 @@ description: One person or script account, chosen by server-side search across n
 ---
 
 import Demo from '../../../components/Demo.astro';
+import Props from '../../../components/Props.astro';
 
 Searches people, and optionally script accounts, on the server, with an avatar and an address on
 every row.
@@ -24,14 +25,7 @@ the `user-multi-picker` item instead; this note stands for one release.
 
 ## Props
 
-Every prop of [EntityPicker](/widgets/entity-picker/) except `entityTypes`, plus:
-
-| prop | type | default | meaning |
-|---|---|---|---|
-| `includeApiUsers` | `boolean` | `true` | Search script accounts alongside people. |
-| `includeInactive` | `boolean` | `false` | Offer people whose status is `dis`. |
-
-`placeholder` defaults to `Search for a person`.
+<Props name="user-picker" />
 
 The query is matched against the display-name chain and the email, and against `login` while the
 query holds no whitespace. Both fields are requested so the row can show them. A person's sub-label
@@ -40,11 +34,7 @@ instead.
 
 ## Events
 
-| event | payload | when |
-|---|---|---|
-| `onValueChange` | `EntityRef`, `PickerRow` | The selection changed. |
-| `onError` | `Error` | A read failed. The list shows it inline as well. |
-| `onOpenChange` | `boolean` | The popup opened or closed. Svelte also binds it with `bind:open`. |
+<Props name="user-picker" kind="events" />
 
 ## Slots
 
@@ -52,7 +42,7 @@ None.
 
 ## Keyboard
 
-The same as [EntityPicker](/widgets/entity-picker/).
+<Props name="user-picker" kind="keyboard" />
 
 ## API behaviour
 

@@ -4,6 +4,7 @@ description: The project, row and task a user is working on, changed from recent
 ---
 
 import Demo from '../../../components/Demo.astro';
+import Props from '../../../components/Props.astro';
 
 Shows the project, the linked row and the task the user is working on, and changes them from one
 popover. The assigned tasks are a [`search-control`](/widgets/search-control/) with no query of its
@@ -20,27 +21,7 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/context-select
 
 ## Props
 
-| prop | type | default | meaning |
-|---|---|---|---|
-| `context` | `SgContext` | required | The widget context. Every read goes through it, so widgets on a page share one cache. |
-| `workContext` | `WorkContext` | empty | The project, row and task on show. |
-| `currentUser` | `EntityRef \| null` | `null` | Whose assigned tasks the second section lists. |
-| `recents` | `WorkContext[]` | `[]` | Contexts used before, newest first. |
-| `recentLimit` | `number` | `5` | How many recents survive a change. |
-| `thumbnail` | `string \| false` | `'image'` | Field holding a task row's thumbnail URL. A task with no picture falls back to its glyph. |
-| `labelField` | `string` | `'content'` | Field holding a task row's label. |
-| `subLabelField` | `string \| CollectionColumn \| null` | `null` | The muted line under the label. A resolved column renders it by type. |
-| `subLabel` | `(task) => string` | — | The muted line of your own. Wins over `subLabelField`. |
-| `secondaryField` | `string \| CollectionColumn \| null` | `'sg_status_list'` | The right-aligned value, drawn by its data type. |
-| `secondary` | `(task) => string` | — | Right-aligned text of your own. Wins over `secondaryField`. |
-| `showCode` | `boolean` | `false` | Shows the row's `code` beside the label when the two differ. |
-| `fields` | `string[]` | `[]` | Extra fields to request, so your own sub-label or secondary can read them. |
-| `emptyLabel` | `string` | `'No rows'` | Shown when the person has no task assigned. |
-| `loadingLabel` | `string` | `'Loading…'` | Names the skeletons a read stands behind, for a screen reader. |
-| `errorLabel` | `string` | — | Shown in place of what the failed read said. |
-| `open` | `boolean` | `false` | Whether the popover is open. |
-| `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Trigger heights 8, 9 and 10, and the chips inside it. |
-| `class` / `className` | `string` | — | Merged after the widget's own classes. |
+<Props name="context-selector" />
 
 Every other attribute is spread onto the root: `id`, `aria-*`, `data-*`, key handlers and a
 `ref` to the root element.
@@ -60,11 +41,7 @@ section too, so both lists read the same.
 
 ## Events
 
-| event | payload | when |
-|---|---|---|
-| `onWorkContextChange` | `WorkContext` | The project, entity or task changed. |
-| `onRecentsChange` | `WorkContext[]` | The recents list changed, the newest first. |
-| `onOpenChange` | `boolean` | The popover opened or closed. Svelte also binds it with `bind:open`. |
+<Props name="context-selector" kind="events" />
 
 ## Slots
 
@@ -72,13 +49,7 @@ None.
 
 ## Keyboard
 
-| key | does |
-|---|---|
-| `Enter` / `Space` | Opens the popover from the trigger, and picks the row under focus. |
-| `Tab` | Moves through the recents, the assigned tasks and into the tree. |
-| `Down` / `Up` | Moves through the tree, once focus is in its input. |
-| `Right` / `Left` | Opens the level below a tree row, and goes back up. |
-| `Escape` | Closes the popover and returns focus to the trigger. |
+<Props name="context-selector" kind="keyboard" />
 
 ## API behaviour
 

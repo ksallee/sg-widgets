@@ -4,6 +4,7 @@ description: The query lifecycle and the list every search widget is built on.
 ---
 
 import Demo from '../../../components/Demo.astro';
+import Props from '../../../components/Props.astro';
 
 The pause before a query is asked for, the answer that arrives too late to count, the page under the
 rows, and the list itself. A search built on it supplies the read and draws its own rows.
@@ -69,47 +70,15 @@ same variables.
 
 ## Props
 
-| prop | type | default | meaning |
-|---|---|---|---|
-| `load` | `(request) => Promise<answer>` | — | The read behind the list. Takes the query and the page, answers the rows and `hasMore`. |
-| `query` | `string` | `''` | What the caret holds. Two-way in Svelte. |
-| `onQueryChange` | `(query: string) => void` | — | React: called when the caret changes. |
-| `request` | `string` | `''` | What the read depends on besides the query. A change reads again at once. |
-| `enabled` | `boolean` | `true` | Nothing is read while this is off. |
-| `readsEmpty` | `boolean` | `false` | An empty query reads too, rather than emptying the list. |
-| `paging` | `boolean` | `false` | A further page is asked for on a load-more row under the rows. |
-| `debounceMs` | `number` | `250` | The pause before a typed query is asked for. |
-| `shell` | `'command' \| 'dialog' \| 'bare'` | `'command'` | What is drawn around the list. |
-| `commandClass` | `string` | — | Classes on the command box. |
-| `onKeyDown` | `(event, items) => void` | — | Keys the wrapper owns, on the command box, with the rows they act on. Spelled `onkeydown` in Svelte. |
-| `open` | `boolean` | `false` | Whether the dialog is showing. Two-way in Svelte. |
-| `onOpenChange` | `(open: boolean) => void` | — | |
-| `title` | `string` | `'Search'` | The dialog's accessible name. |
-| `description` | `string` | — | The line under it. |
-| `placeholder` | `string` | `'Search…'` | |
-| `emptyLabel` | `string` | `'No match'` | Shown when the read answered nothing. |
-| `loadingLabel` | `string` | `'Loading…'` | The accessible name of the skeletons. |
-| `errorLabel` | `string` | what the read said | Shown in place of the failed read's own message. |
-| `errorSlot` | `string \| null` | `'search-error'` | The `data-slot` of the error line. |
-| `loadingSlot` | `string \| null` | `'search-loading'` | The `data-slot` of the skeleton block. |
-| `emptySlot` | `string \| null` | `'search-empty'` | The `data-slot` of the empty line. |
-| `skeletonLines` | `number` | `3` | How many rows the skeletons stand in for. |
-| `skeletonLead` | `string` | `'h-6 w-10 shrink-0'` | The leading slot of a skeleton row. |
+<Props name="search-control" />
 
 ## Slots
 
-| Svelte | React | receives | draws |
-|---|---|---|---|
-| `rows` | `rows` | the rows read, the query and whether a read is in flight | The rows of the list, as items of the command box or as plain rows under a bare shell. |
-| `empty` | `empty` | nothing | Drawn in place of the empty line. |
+<Props name="search-control" kind="slots" />
 
 ## Keyboard
 
-| key | does |
-|---|---|
-| `ArrowDown` / `ArrowUp` | Moves the highlight, through a load-more page. |
-| `Enter` | Takes the highlighted row, or reads the next page on the load-more row. |
-| `Escape` | With a query, clears it and the rows and keeps the caret in the box. With no query, the shell takes it: a dialog or a popover closes, and the inline box does nothing. |
+<Props name="search-control" kind="keyboard" />
 
 A press inside the list that replaces the rows returns the caret to the box, so the rows that
 replaced them take the highlight and the arrows go on walking the list.
@@ -131,3 +100,13 @@ Nothing here is API behaviour of its own. A search that pages a text search read
 only sign of another one, since a read carries no total and `links.next` is emitted forever
 (`006_pagination`); `hasMorePage` in core answers that, and the wrapper passes the result as
 `hasMore`.
+
+## SearchSkeleton
+
+The rows a search draws while its read is in flight. Skeletons are shaped like the rows they stand
+in for, so a list holds its place when the page lands: the same inset, the same height and the same
+zero gap. `lead` is the leading slot's shape, which is a thumbnail in one widget and a glyph in
+another. The block carries the accessible name the state line gives it, so a reader hears what is
+happening rather than nothing.
+
+<Props name="search-skeleton" />

@@ -4,6 +4,7 @@ description: Quick facet pills over one entity type, bound to a filter tree.
 ---
 
 import Demo from '../../../components/Demo.astro';
+import Props from '../../../components/Props.astro';
 
 A row of facet pills. Each lists one field's values with a count and ticking them adds a condition to
 the bound tree. A More filters pill opens the same tree in the full editor.
@@ -26,27 +27,14 @@ the dialog; a pill holding one reads its condition as text.
 
 ## Props
 
-| prop | type | default | meaning |
-|---|---|---|---|
-| `entityType` | `string` | required | Type the pills and the counts read on. |
-| `context` | `SgContext` | required | The widget context. Every read goes through it, so widgets on a page share one cache. |
-| `facets` | `string[]` | required | Field names to offer as pills, in order. |
-| `value` | `FilterGroup` | `emptyFilter()` | The tree the pills write into. Two-way in Svelte through `bind:value`. |
-| `counts` | `(field, filters) => Promise<Record<string, number>>` | — | Counts per value for one facet. Wire it to a `_summarize` grouping call. |
-| `sampleSize` | `number` | `200` | Rows read for the tally when `counts` is not given. |
-| `hidePaths` | `string[]` | `[]` | Passed through to the dialog. |
-| `disabled` | `boolean` | `false` | Blocks every pill. |
-| `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Pill heights 8, 9 and 10. |
-| `class` / `className` | `string` | — | Merged after the widget's own classes. |
+<Props name="filter-bar" />
 
 Every other attribute is spread onto the root: `id`, `aria-*`, `data-*`, key handlers and a
 `ref` to the root element.
 
 ## Events
 
-| event | payload | when |
-|---|---|---|
-| `onChange` | `FilterGroup` | The tree changed, on every tick and on Apply in the dialog. Svelte also binds it with `bind:value`. |
+<Props name="filter-bar" kind="events" />
 
 ## Slots
 
@@ -54,13 +42,7 @@ None. The dialog behind More filters takes the editor's slots.
 
 ## Keyboard
 
-| key | does |
-|---|---|
-| `Tab` | Moves from pill to pill, and to a pill's remove control. |
-| `Enter`, `Space` | Opens the value list under the cursor. |
-| `Arrow` keys | Move the cursor in the open list. |
-| `Enter` | Ticks and unticks the value under the cursor. |
-| `Escape` | Closes the open list. |
+<Props name="filter-bar" kind="keyboard" />
 
 ## API behaviour
 

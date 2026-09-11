@@ -4,6 +4,7 @@ description: The columns of a grid as a field picker over the ordered list it fi
 ---
 
 import Demo from '../../../components/Demo.astro';
+import Props from '../../../components/Props.astro';
 
 Chooses the columns of a grid. A field picker sits over the list of chosen paths; picking a field
 appends it, and each row is dragged into the order the columns will be drawn in.
@@ -26,36 +27,7 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/column-picker.
 
 ## Props
 
-| prop | type | default | meaning |
-|---|---|---|---|
-| `context` | `SgContext` | required | The widget context. The schema is read through it, once per page. |
-| `entityType` | `string` | required | The type every path starts on. |
-| `value` | `string[]` | `[]` | The chosen dotted paths, in the order they are shown. |
-| `onValueChange` | `(value: string[]) => void` | — | Receives the new array on every add, remove and move. |
-| `layout` | `'list' \| 'dual'` | `'list'` | `list` is the field picker over the ordered list; `dual` is the two lists side by side. |
-| `showCount` | `boolean` | `false` | Show how many columns are chosen under the list. |
-| `deepLinks` | `boolean` | `true` | Allow descending through entity fields. |
-| `maxDepth` | `number` | `2` | How many hops a path may take. |
-| `dataTypes` | `string \| string[]` | — | Data types a field must have to be selected. |
-| `validTypes` | `string[]` | — | A field is selectable only if it links one of these. |
-| `exclude` | `string[]` | — | Full dotted paths to drop. |
-| `hidePaths` | `string[]` | — | Dotted prefixes to drop, along with everything beneath them. |
-| `filterableOnly` | `boolean` | `false` | Drop the data types the API refuses in a filter. |
-| `extraFields` | `{ name, displayName? }[]` | — | Synthetic entries offered at the root only. |
-| `filter` | `(field, path) => boolean` | — | Your own visibility test over the schema and the candidate's full path. |
-| `placeholder` | `string` | `'Add a column'` | Placeholder of the field picker. |
-| `searchPlaceholder` | `string` | `'Search fields…'` | Shown in the search box. |
-| `emptyLabel` | `string` | `'Nothing chosen'` | Shown while no column is chosen. |
-| `noMatchLabel` | `string` | `'No match'` | Shown when the search over the fields on offer matches nothing. |
-| `loadingLabel` | `string` | `'Loading…'` | Names the skeletons a read stands behind, for a screen reader. |
-| `errorLabel` | `string` | — | Shown in place of what the failed read said. |
-| `availableLabel` | `string` | `'Available'` | Heading of the left list, `dual` only. |
-| `chosenLabel` | `string` | `'Columns'` | Heading of the right list, `dual` only. |
-| `readonly` | `boolean` | `false` | Shows the chosen list alone, with no controls. |
-| `disabled` | `boolean` | `false` | |
-| `invalid` | `boolean` | `false` | Puts the invalid ring on the field picker, or on both lists under `dual`. |
-| `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Row height. |
-| `className` / `class` | `string` | — | Merged after the widget's own classes. |
+<Props name="column-picker" />
 
 Every other attribute is spread onto the root: `id`, `aria-*`, `data-*`, key handlers and a
 `ref` to the root element.
@@ -81,9 +53,7 @@ narrow panel stacks on a wide page.
 
 ## Events
 
-| event | payload | when |
-|---|---|---|
-| `onValueChange` | `string[]` | A column is added, removed or moved. |
+<Props name="column-picker" kind="events" />
 
 ## Slots
 
@@ -91,22 +61,7 @@ None.
 
 ## Keyboard
 
-| key | does |
-|---|---|
-| `Enter`, `Space` on the picker | Open the field list. |
-| `Up`, `Down` | Walk the field list. |
-| `Enter` | Add the field under the cursor. A link that cannot be chosen descends instead. |
-| `Right` | Descend into the link under the cursor. |
-| `Left` | Back one level. |
-| `Escape` | Close the field list. |
-| `Tab` | Moves through the picker, then the grip and remove button of each chosen row. |
-| `Space`, `Enter` on the grip | Picks the row up for the arrow keys. |
-| `Up`, `Down` while carrying a row | Move it one place. |
-| `Space`, `Enter` while carrying a row | Drop it where it is. |
-| `Escape` while carrying a row | Put it back where it was. |
-| `Alt` + `Up` | Move the chosen row holding focus one place earlier. |
-| `Alt` + `Down` | Move it one place later. |
-| `Delete`, `Backspace` | Remove it. |
+<Props name="column-picker" kind="keyboard" />
 
 Dragging a grip moves the row under the pointer once it has travelled four pixels; the list scrolls
 when the pointer nears an edge, and `Escape` cancels the drag.

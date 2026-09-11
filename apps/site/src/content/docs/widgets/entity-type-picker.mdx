@@ -4,6 +4,7 @@ description: One entity type of a site, chosen from a searchable list.
 ---
 
 import Demo from '../../../components/Demo.astro';
+import Props from '../../../components/Props.astro';
 
 Picks one entity type of a site, from a searchable list of everything the site has enabled.
 
@@ -21,26 +22,7 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/entity-type-pi
 
 ## Props
 
-| prop | type | default | meaning |
-|---|---|---|---|
-| `context` | `SgContext` | required | The widget context. The site's enabled types are read through it, once per page. |
-| `value` | `string \| null` | `null` | The chosen type code. Two-way in Svelte. |
-| `onValueChange` | `(value) => void` | — | Receives the code, or `null` on clear. |
-| `allow` | `string[]` | — | Codes on offer. Empty or absent means every enabled type. |
-| `deny` | `string[]` | — | Codes withheld, applied after `allow`. |
-| `placeholder` | `string` | `'Select an entity type'` | Shown while nothing is chosen. |
-| `searchPlaceholder` | `string` | `'Search types…'` | Shown in the search box. |
-| `emptyLabel` | `string` | `'No match'` | Shown when the search matches nothing. |
-| `loadingLabel` | `string` | `'Loading…'` | Names the skeletons a read stands behind, for a screen reader. |
-| `errorLabel` | `string` | — | Shown in place of what the failed read said. |
-| `clearable` | `boolean` | `true` | Show the clear control once something is chosen. |
-| `readonly` | `boolean` | `false` | Keeps full contrast and removes the chevron and the clear control. |
-| `disabled` | `boolean` | `false` | |
-| `invalid` | `boolean` | `false` | Applies the invalid ring and `aria-invalid`. |
-| `showCode` | `boolean` | `true` | Shows the code under the display name where the two differ. |
-| `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | |
-| `open` | `boolean` | `false` | Whether the popup is showing. Two-way in Svelte. |
-| `className` / `class` | `string` | — | Merged after the widget's own classes. |
+<Props name="entity-type-picker" />
 
 Every other attribute is spread onto the root: `id`, `aria-*`, `data-*`, key handlers and a
 `ref` to the root element.
@@ -54,10 +36,7 @@ caller narrowing the set sees the list change with no second call.
 
 ## Events
 
-| event | payload | when |
-|---|---|---|
-| `onValueChange` | `string \| null` | A type is chosen, or the clear control is pressed. |
-| `onOpenChange` | `boolean` | The popup opened or closed. Svelte also binds it with `bind:open`. |
+<Props name="entity-type-picker" kind="events" />
 
 ## Slots
 
@@ -65,14 +44,7 @@ None.
 
 ## Keyboard
 
-| key | does |
-|---|---|
-| any text | Narrows the rows, from the caret in the control. |
-| `Enter`, `Space` | On the chevron, opens the list. |
-| `Down`, `Up` | Move the cursor through the rows and keep it in view. The last row holds it rather than wrapping. |
-| `Enter` | Choose the highlighted type and close the list. |
-| `Backspace` | In an empty search box, clears the value. |
-| `Escape` | Close, keeping the value and clearing the query. On a closed picker it does nothing. |
+<Props name="entity-type-picker" kind="keyboard" />
 
 ## API behaviour
 

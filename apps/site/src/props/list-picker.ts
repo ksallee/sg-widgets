@@ -1,0 +1,48 @@
+import type { PropsFile } from './_types';
+
+export default {
+  extends: { name: 'picker-control', omit: ['multiple', 'keys', 'onSelect', 'labels', 'items', 'rowCount', 'chipKeys', 'chipsSlot', 'summary', 'max', 'chipRow', 'inline', 'tokenInput', 'inputPlaceholder', 'textValue', 'rowKey', 'inert', 'query', 'onQueryChange', 'onRemoveAt', 'onClear', 'anchored', 'count', 'empty', 'hasMore', 'onLoadMore', 'overflowLabel', 'itemToStringLabel', 'controlProps', 'chip', 'rows'] },
+  props: [
+    { name: 'value', type: '`string | null`', default: '`null`', meaning: 'The stored string. Two-way in Svelte.' },
+    { name: 'onValueChange', type: '`(value: string | null) => void`', default: '—', meaning: 'Called on every change.' },
+    { name: 'field', type: '`FieldSchema | null`', default: '`null`', meaning: 'Supplies the valid values, the labels and the hidden values.' },
+    { name: 'projectId', type: '`number`', default: '—', meaning: 'Given, the field\'s hidden values are removed from the list.' },
+    { name: 'options', type: '`{ code, label }[]`', default: '—', meaning: 'The set on offer, of the caller\'s own making. Wins over the field.' },
+    { name: 'slot', type: '`string`', default: '`\'list-picker\'`', meaning: 'The `data-slot` prefix every part of this picker carries.' },
+    { name: 'picker', type: '`string`', default: '`\'list\'`', meaning: 'The `data-picker` the popup carries.' },
+    { name: 'disabled', type: '`boolean`', default: '`false`', meaning: 'Greys the control and takes it out of the tab order.' },
+    { name: 'readonly', type: '`boolean`', default: '`false`', meaning: 'Keeps full contrast and drops the chevron, the popup and the clear control.' },
+    { name: 'invalid', type: '`boolean`', default: '`false`', meaning: 'Sets `aria-invalid` and the destructive ring.' },
+    { name: 'error', type: '`string | null`', default: '`null`', meaning: 'A message from the caller, drawn under the control.' },
+    { name: 'placeholder', type: '`string`', default: '`\'Choose\'`', meaning: 'Shown while the field is unset.' },
+    { name: 'emptyLabel', type: '`string`', default: '`\'No rows\'`', meaning: 'Shown when the list offers nothing.' },
+    { name: 'searchable', type: '`boolean`', default: '`false`', meaning: 'Offers a search box, which narrows the set in the browser.' },
+    { name: 'searchPlaceholder', type: '`string`', default: '`\'Search values…\'`', meaning: 'Placeholder of the search box.' },
+    { name: 'clearable', type: '`boolean`', default: '`true`', meaning: 'Offers a control that clears the value. A mandatory field is never clearable.' },
+    { name: 'showCode', type: '`boolean`', default: '`false`', meaning: 'Draws the stored string as a row\'s right-aligned secondary, where it says more than the label.' },
+    { name: 'secondary', type: '`(option) => string`', default: 'the value', meaning: 'A row\'s right-aligned value, of the caller\'s own making.' },
+    { name: 'subLabel', type: '`(option) => string`', default: '—', meaning: 'The muted line under a row\'s label.' },
+    { name: 'loading', type: '`boolean`', default: '`false`', meaning: 'A caller\'s read is in flight: skeletons, and the control is inert.' },
+    { name: 'loadError', type: '`string | null`', default: '`null`', meaning: 'What a caller\'s read failed with, drawn in place of the list.' },
+    { name: 'loadingLabel', type: '`string`', default: '`\'Loading…\'`', meaning: 'Names the skeletons a read stands behind, for a screen reader.' },
+    { name: 'errorLabel', type: '`string`', default: '—', meaning: 'Shown in place of what the failed read said.' },
+    { name: 'class / className', type: '`string`', default: '—', meaning: 'Merged after the widget\'s own classes.' },
+  ],
+  slots: [
+    { name: 'mark', receives: 'the option', draws: 'A row\'s leading mark. Given, every row carries one.' },
+    { name: 'valueChip', receives: 'the chosen string', draws: 'The control\'s value, in place of plain text.' },
+    { name: 'errorMessage', receives: 'the message', draws: 'The line under the control.' },
+  ],
+  keyboard: [
+    { key: '<kbd>Space</kbd>, <kbd>Enter</kbd>, <kbd>↓</kbd>', does: 'Opens the list' },
+    { key: '<kbd>↑</kbd> <kbd>↓</kbd>', does: 'Move the highlight' },
+    { key: 'typing', does: 'Narrows the list, where the picker is searchable' },
+    { key: '<kbd>Enter</kbd>', does: 'Chooses the highlighted row and closes' },
+    { key: '<kbd>Backspace</kbd>', does: 'In an empty search box, clears the value' },
+    { key: '<kbd>Esc</kbd>', does: 'Closes the list and keeps the value' },
+    { key: '<kbd>Tab</kbd>', does: 'Leaves the control, or reaches the clear control when there is one' },
+  ],
+  events: [
+    { name: 'onErrorChange', payload: '`string | null`', when: 'The message changed.' },
+  ],
+} satisfies PropsFile;

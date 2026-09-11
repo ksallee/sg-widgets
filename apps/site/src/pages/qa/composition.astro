@@ -1,0 +1,21 @@
+---
+/**
+ * A QA harness, not a docs page: one screen assembled from the widgets, in both
+ * frameworks, so `pnpm qa` measures the set in one drive and shoots it side by side.
+ * It sits outside Starlight and outside the sidebar, and nothing links to it.
+ */
+import '../../styles/global.css';
+import Demo from '../../components/Demo.astro';
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>One screen, every widget</title>
+  </head>
+  <body class="sg-demo bg-background text-foreground p-4">
+    <Demo name="composition" title="One screen: toolbar, table, tree, grid, editors, pickers" />
+  </body>
+</html>

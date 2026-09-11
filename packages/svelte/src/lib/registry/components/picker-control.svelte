@@ -22,6 +22,8 @@
 		labels: string[];
 		/** A stable key per chip, so a removal does not redraw the row. Defaults to the label. */
 		chipKeys?: string[];
+		/** The `data-slot` of the chip row. Defaults to `<slot>-chips`. */
+		chipsSlot?: string;
 		/** What the control shows for the selection. */
 		summary?: PickerSummary;
 		/** Chips drawn before the rest becomes `+n`. `0` lets the row fit what it can. */
@@ -127,6 +129,7 @@
 		onSelect,
 		labels,
 		chipKeys,
+		chipsSlot,
 		summary = 'chips',
 		max = 0,
 		chipRow = false,
@@ -381,7 +384,7 @@
 					-->
 					<span
 						bind:this={chipsEl}
-						data-slot={`${slot}-chips`}
+						data-slot={chipsSlot ?? `${slot}-chips`}
 						class={cn(
 							'flex min-w-0 items-center gap-1.5 [&>[hidden]]:hidden',
 							plan.oneLine ? 'flex-nowrap overflow-hidden' : 'flex-wrap',

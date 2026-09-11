@@ -301,6 +301,7 @@ export function StatusMultiPicker({
         keys={value}
         onSelect={(next) => onValueChange?.(next)}
         labels={value.map((code) => byCode.get(code)?.label ?? code)}
+        chipsSlot="status-multi-picker-badges"
         items={shown.map((option) => option.code)}
         renderItem={renderItem}
         renderChip={(index, armed, hidden) => {

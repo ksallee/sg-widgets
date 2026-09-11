@@ -117,6 +117,8 @@ export interface PickerControlProps {
   onSelect: (keys: string[]) => void;
   /** One label per chosen key: the summary, the title and the measured row read it. */
   labels: string[];
+  /** The `data-slot` of the chip row. Defaults to `<slot>-chips`. */
+  chipsSlot?: string;
   /** The item keys the list offers, in order. */
   items: string[];
   /** One row of the list. */
@@ -192,6 +194,7 @@ export function PickerControl({
   keys,
   onSelect,
   labels,
+  chipsSlot,
   items,
   renderItem,
   renderChip,
@@ -400,7 +403,7 @@ export function PickerControl({
             */
             <span
               ref={chipsRef}
-              data-slot={`${slot}-chips`}
+              data-slot={chipsSlot ?? `${slot}-chips`}
               className={cn(
                 'flex min-w-0 items-center gap-1.5 [&>[hidden]]:hidden',
                 plan.oneLine ? 'flex-nowrap overflow-hidden' : 'flex-wrap',

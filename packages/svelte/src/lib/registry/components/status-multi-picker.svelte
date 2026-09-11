@@ -244,6 +244,7 @@
 		onSelect={setSelected}
 		labels={value.map((code) => byCode.get(code)?.label ?? code)}
 		chipKeys={value}
+		chipsSlot="status-multi-picker-badges"
 		{summary}
 		max={badgeMax}
 		chipRow

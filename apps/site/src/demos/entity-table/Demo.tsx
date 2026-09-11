@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { CollectionColumn, EntityRef, FilterGroup, PagingMode, SortKey, StatusRecord } from '@sg-widgets/core';
+import type { CollectionColumn, EditorPlacement, EntityRef, FilterGroup, PagingMode, SortKey, StatusRecord } from '@sg-widgets/core';
 import { condition, createEntitySource, emptyFilter, group, resolveColumns, toSortSpecs } from '@sg-widgets/core';
 import { ColumnPicker } from '@/registry/sg/components/column-picker';
 import { EntityTable } from '@/registry/sg/components/entity-table';
@@ -21,6 +21,12 @@ const WIDTHS: Record<string, number> = {
 const PATHS = Object.keys(WIDTHS);
 const SHOWN = ['code', 'entity', 'sg_status_list', 'image', 'description', 'user'];
 const FACETS = ['sg_status_list'];
+const PLACEMENTS: Array<{ value: EditorPlacement | undefined; label: string }> = [
+  { value: undefined, label: 'Editors: auto' },
+  { value: 'inline', label: 'Inline' },
+  { value: 'popover', label: 'Popover' },
+];
+
 const PAGING: Array<{ value: PagingMode; label: string }> = [
   { value: 'pages', label: 'Pages' },
   { value: 'more', label: 'Load more' },
@@ -63,6 +69,8 @@ export default function EntityTableDemo() {
   const [grouped, setGrouped] = useState(false);
   const [compact, setCompact] = useState(false);
   const [paging, setPaging] = useState<PagingMode>('pages');
+  // `undefined` leaves each cell on its data type's own placement.
+  const [placement, setPlacement] = useState<EditorPlacement | undefined>(undefined);
   const [selected, setSelected] = useState<EntityRef[]>([]);
   const sort = useMemo(() => toSortSpecs(sortKeys), [sortKeys]);
 
@@ -124,6 +132,19 @@ export default function EntityTableDemo() {
               </button>
             ))}
           </div>
+          <div className="flex flex-wrap items-center gap-2" data-testid="editor-placements">
+            {PLACEMENTS.map((option) => (
+              <button
+                key={option.label}
+                type="button"
+                className={toggle}
+                aria-pressed={placement === option.value}
+                onClick={() => setPlacement(option.value)}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
           <span className="text-muted-foreground text-xs tabular-nums" data-testid="selection-count">
             {selected.length} selected
           </span>
@@ -141,6 +162,7 @@ export default function EntityTableDemo() {
           selectable
           editable
           paging={paging}
+          editorPlacement={placement}
           density={compact ? 'compact' : 'default'}
           groupBy={grouped ? 'sg_status_list' : null}
           toolbarStart={

@@ -18,15 +18,16 @@ import { StatusBadge } from '@/registry/sg/components/status-badge';
 export type StatusPickerSize = 'sm' | 'md' | 'lg';
 
 /**
- * Controls follow the input ladder of `docs/design-rules.md`. `data-empty` takes the
- * leading inset down one step, so an empty control is tighter than a filled one. The
- * height carries `!` because the select trigger sets its own under a `data-size`
- * selector, and is fixed, so there is no vertical inset to take.
+ * Controls follow the input ladder of `docs/design-rules.md`. A filled control's leading
+ * inset matches the room above and below its badge, so the badge sits evenly inside the
+ * border; `data-empty` gives the reading inset of a plain input back. The height carries
+ * `!` because the select trigger sets its own under a `data-size` selector, and is fixed,
+ * so there is no vertical inset to take.
  */
 const BOX: Record<StatusPickerSize, string> = {
-  sm: 'h-8! px-2 data-empty:pl-1.5',
-  md: 'h-9! px-3 data-empty:pl-2',
-  lg: 'h-10! px-3 data-empty:pl-2',
+  sm: 'h-8! pr-2 pl-[5px] data-empty:pl-1.5',
+  md: 'h-9! pr-3 pl-[5px] data-empty:pl-2',
+  lg: 'h-10! pr-3 pl-0.5 data-empty:pl-2',
 };
 const GLYPH: Record<StatusPickerSize, string> = {
   sm: 'size-4',
@@ -37,7 +38,7 @@ const GLYPH: Record<StatusPickerSize, string> = {
 const BADGE: Record<StatusPickerSize, 'sm' | 'md'> = { sm: 'sm', md: 'sm', lg: 'md' };
 
 const TRIGGER =
-  'border-input bg-background focus-visible:ring-ring focus-visible:ring-offset-background aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 flex w-full min-w-0 items-center rounded-md border text-sm outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 aria-invalid:ring-2';
+  'border-input bg-background hover:bg-muted/30 focus-visible:ring-ring focus-visible:ring-offset-background aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 flex w-full min-w-0 items-center rounded-md border text-sm outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 aria-invalid:ring-2';
 
 export interface StatusPickerProps extends React.HTMLAttributes<HTMLDivElement> {
   /** The root element. */

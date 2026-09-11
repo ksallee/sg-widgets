@@ -4,8 +4,9 @@
 //
 // Returns one row per picker, per framework, per size, with the computed padding of the
 // control, its height, and the x of the first thing drawn inside it. The verdict holds
-// when every pair is tighter empty than filled, the empty control keeps the 8/9/10
-// ladder, md holds its height across the two states, and the frameworks agree.
+// when a chip-valued control is tighter filled than empty and a text-valued one is
+// tighter empty than filled, the empty control keeps the 8/9/10 ladder, md holds its
+// height across the two states, and the frameworks agree.
 
 const CONTROL = [
   '[data-slot$="-control"]',
@@ -16,6 +17,23 @@ const CONTROL = [
 ].join(',');
 
 const LADDER = { sm: 32, md: 36, lg: 40 };
+
+// Controls that put a chip or a badge in the value: the filled leading inset matches the
+// room above and below it, so the chip sits evenly, and the empty state gives the reading
+// inset of a plain input back. The rest show their value as text and keep that inset in
+// both states.
+const CHIP_VALUED = new Set([
+  'entity-picker',
+  'entity-multi-picker',
+  'user-picker',
+  'user-multi-picker',
+  'project-picker',
+  'project-multi-picker',
+  'status-picker',
+  'status-multi-picker',
+  'entity-type-picker',
+  'entity-type-multi-picker',
+]);
 
 const px = (value) => Math.round(parseFloat(value) * 100) / 100;
 
@@ -75,7 +93,11 @@ for (const [name, pair] of pairs) {
   }
   if (!empty.marked) failures.push(`${name}: the empty control carries no data-empty`);
   if (filled.marked) failures.push(`${name}: the filled control carries data-empty`);
-  if (!(empty.left < filled.left)) {
+  if (CHIP_VALUED.has(name.split('|')[1])) {
+    if (!(filled.left < empty.left)) {
+      failures.push(`${name}: padding-left ${filled.left} filled is not under ${empty.left} empty`);
+    }
+  } else if (!(empty.left < filled.left)) {
     failures.push(`${name}: padding-left ${empty.left} empty is not under ${filled.left} filled`);
   }
   if (empty.top > filled.top) {
@@ -113,7 +135,7 @@ for (const [name, pair] of pairs) {
 
 const verdict =
   failures.length === 0
-    ? `PASS ${pairs.size} picker/size pairs over both frameworks: empty is tighter than filled, the empty ladder is 8/9/10, md holds its height across the states and the frameworks agree`
+    ? `PASS ${pairs.size} picker/size pairs over both frameworks: a chip-valued control is tighter filled and a text-valued one tighter empty, the empty ladder is 8/9/10, md holds its height across the states and the frameworks agree`
     : `FAIL ${failures.length} checks over ${pairs.size} pairs: ${failures.slice(0, 10).join('; ')}`;
 
 return { verdict, pairs: pairs.size, failures, rows };

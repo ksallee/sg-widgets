@@ -35,7 +35,7 @@
 	import CalendarClock from '@lucide/svelte/icons/calendar-clock';
 	import ChevronLeft from '@lucide/svelte/icons/chevron-left';
 	import ChevronRight from '@lucide/svelte/icons/chevron-right';
-	import ChevronsUpDown from '@lucide/svelte/icons/chevrons-up-down';
+	import ChevronDown from '@lucide/svelte/icons/chevron-down';
 	import CircleDollarSign from '@lucide/svelte/icons/circle-dollar-sign';
 	import CircleDot from '@lucide/svelte/icons/circle-dot';
 	import FileText from '@lucide/svelte/icons/file-text';
@@ -151,7 +151,14 @@
 	// The context's own service, so every widget on the page shares one schema read.
 	const schema = $derived(context.schema);
 
-	const ICONS: Record<string, typeof Type> = {
+	/** The trailing controls ride the first row, so they stay with it when the value wraps. */
+const TRAILING: Record<FieldPickerSize, string> = {
+	sm: 'h-8',
+	md: 'h-9',
+	lg: 'h-10'
+}
+
+const ICONS: Record<string, typeof Type> = {
 		braces: Braces,
 		calendar: Calendar,
 		'calendar-clock': CalendarClock,
@@ -381,7 +388,7 @@
 			{disabled}
 			title={label ?? placeholder}
 			class={cn(
-				'border-input bg-background focus-visible:ring-ring focus-visible:ring-offset-background aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 flex w-full min-w-0 items-center rounded-md border text-sm outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 aria-invalid:ring-2',
+				'border-input bg-background hover:bg-muted/30 focus-visible:ring-ring focus-visible:ring-offset-background aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 flex w-full min-w-0 items-center rounded-md border text-sm outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 aria-invalid:ring-2',
 				BOX[size],
 				readonly ? 'pr-3' : showClear ? 'pr-14' : 'pr-8'
 			)}
@@ -549,7 +556,7 @@
 	</Popover.Root>
 
 	{#if !readonly}
-		<div class="pointer-events-none absolute right-2 flex items-center gap-1">
+		<div class={cn('pointer-events-none absolute top-0 right-2 flex items-center gap-1', TRAILING[size])}>
 			{#if showClear}
 				<button
 					type="button"
@@ -561,7 +568,7 @@
 					<X aria-hidden="true" class={GLYPH[size]} />
 				</button>
 			{/if}
-			<ChevronsUpDown aria-hidden="true" class={cn('shrink-0 opacity-50', GLYPH[size])} />
+			<ChevronDown aria-hidden="true" class={cn('shrink-0 opacity-50', GLYPH[size])} />
 		</div>
 	{/if}
 </div>

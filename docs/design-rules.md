@@ -43,11 +43,12 @@ The goal is one system: a page mixing ten of our widgets must read as one hand.
   `h-10`). Icons inside controls are `size-4` for sm/md and `size-5` for lg. Thumbnails in list rows are
   `size-6` (sm), `size-8` (md), `size-10` (lg); cards and detail panes use `xl` (h-16) and `2xl` (h-24).
   Avatars follow the first three sizes.
-- A picker control is tighter when it holds nothing. It carries `data-empty`, which takes its leading
-  inset and its vertical inset down one step (md: `pl-3 py-1` becomes `pl-2 py-0.5`), so an empty
-  control reads as a plain input and a filled one gives its value or chips room. `min-h` never
-  changes, so the empty control keeps the ladder and the height holds across the two states; the
-  trailing inset is reserve for the clear and open controls and stays put.
+- A picker control insets its leading edge to match the room above and below the chip or badge it
+  holds, so a value sits evenly inside the border. It carries `data-empty`, which
+  gives that reading inset back and takes the vertical inset down one step (md: `pl-2 py-0.5`), so an
+  empty control reads as a plain input. A control whose filled value is plain text, `FieldPicker`
+  among them, keeps the reading inset in both states. `min-h` never changes, so the height holds
+  across the two states; the trailing inset is reserve for the clear and open controls and stays put.
 - Width is the caller's business: widgets are `w-full` by default and never set a fixed width. A caller
   wraps in a sized container.
 

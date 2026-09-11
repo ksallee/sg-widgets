@@ -297,6 +297,42 @@ export function requestGate(): RequestGate {
   };
 }
 
+/**
+ * How long a press stays answerable for what it set off. A press that replaces the
+ * rows under it does so while the event it started is still unfolding, and each
+ * framework flushes that on its own schedule, so the mark outlives the press by a
+ * little and no longer.
+ */
+export const PRESS_WINDOW_MS = 400;
+
+/**
+ * The press a replacement is the consequence of.
+ *
+ * A press inside a list that replaces the rows under it leaves the caret on a row
+ * that is gone. `mark` is the press; `takes` answers true once, to whatever the
+ * press led to inside the window.
+ */
+export interface PressGate {
+  /** A press landed inside the list. */
+  mark: () => void;
+  /** True when a press is still answerable, and spends it. */
+  takes: () => boolean;
+}
+
+export function pressGate(windowMs: number = PRESS_WINDOW_MS): PressGate {
+  let at = Number.NEGATIVE_INFINITY;
+  return {
+    mark: () => {
+      at = Date.now();
+    },
+    takes: () => {
+      const fresh = Date.now() - at < windowMs;
+      at = Number.NEGATIVE_INFINITY;
+      return fresh;
+    },
+  };
+}
+
 /** The types to search, as the map `_text_search` takes: bare names carry no filter. */
 export function searchTypeMap(
   types: string[] | Record<string, WireCondition[] | null>,

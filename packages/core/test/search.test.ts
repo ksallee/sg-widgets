@@ -4,6 +4,7 @@ import {
   matchRuns,
   matchesEveryWord,
   prependRecent,
+  pressGate,
   projectOfPath,
   queryPlan,
   requestGate,
@@ -163,5 +164,21 @@ describe('requestGate', () => {
     gate.cancel();
     expect(gate.holds(ticket)).toBe(false);
     expect(gate.holds(gate.next())).toBe(true);
+  });
+});
+
+describe('pressGate', () => {
+  it('answers a replacement the press led to, once', () => {
+    const gate = pressGate();
+    gate.mark();
+    expect(gate.takes()).toBe(true);
+    expect(gate.takes()).toBe(false);
+  });
+
+  it('answers nothing outside the window, and nothing at all without a press', () => {
+    expect(pressGate().takes()).toBe(false);
+    const stale = pressGate(0);
+    stale.mark();
+    expect(stale.takes()).toBe(false);
   });
 });

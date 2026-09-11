@@ -1,11 +1,12 @@
 import type * as React from 'react';
 import type { ReactNode } from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { RequestGate } from '@sg-widgets/core';
+import type { PressGate, RequestGate } from '@sg-widgets/core';
 import {
   errorText,
   listStatus,
   NO_MATCH_LABEL,
+  pressGate,
   queryPlan,
   requestGate,
   searchKeyIntent,
@@ -131,6 +132,7 @@ export function SearchControl<T>({
   const [loading, setLoading] = useState(() => enabled && queryPlan(query, readsEmpty) !== 'clear');
 
   const [gate] = useState<RequestGate>(() => requestGate());
+  const [press] = useState<PressGate>(() => pressGate());
   const loadRef = useRef(load);
   loadRef.current = load;
   const queryRef = useRef(query);
@@ -139,6 +141,10 @@ export function SearchControl<T>({
   changeRef.current = onQueryChange;
   /** Held as state, so the listener below is attached when a dialog shell mounts its box. */
   const [inputEl, setInputEl] = useState<HTMLInputElement | null>(null);
+  const inputRef = useRef(inputEl);
+  inputRef.current = inputEl;
+  const openRef = useRef(open);
+  openRef.current = open;
 
   const run = useCallback(
     async (text: string, nextPage: number): Promise<void> => {
@@ -163,6 +169,33 @@ export function SearchControl<T>({
     [gate],
   );
 
+  /**
+   * A press inside the list that replaces the rows leaves the caret on a row that is
+   * gone. The box takes it back, so the arrows go on walking the rows that replaced
+   * them. A shell the press closed keeps the caret: there is nothing left to focus.
+   */
+  const refocus = useCallback((): void => {
+    if (!press.takes()) return;
+    if (shell === 'dialog' && !openRef.current) return;
+    const el = inputRef.current;
+    if (!el?.isConnected) return;
+    el.focus({ preventScroll: true });
+  }, [press, shell]);
+
+  // A press is read off the command box in capture, so a row that stops the event
+  // on its way up still counts as one.
+  useEffect(() => {
+    const root = inputEl?.closest('[data-slot="command"]');
+    if (!root) return;
+    const mark = (): void => press.mark();
+    root.addEventListener('pointerdown', mark, true);
+    root.addEventListener('click', mark, true);
+    return () => {
+      root.removeEventListener('pointerdown', mark, true);
+      root.removeEventListener('click', mark, true);
+    };
+  }, [inputEl, press]);
+
   // Empty the list and ask again, at once or once the pause has elapsed. Taking the
   // next ticket is the cancellation: a read already in flight for what has just been
   // replaced can no longer write its answer.
@@ -171,6 +204,7 @@ export function SearchControl<T>({
     setItems([]);
     setPage(1);
     setHasMore(false);
+    refocus();
     if (!enabled) {
       setLoading(false);
       return;

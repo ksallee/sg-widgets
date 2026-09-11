@@ -22,6 +22,7 @@
 		errorText,
 		listStatus,
 		NO_MATCH_LABEL,
+		pressGate,
 		queryPlan,
 		requestGate,
 		searchKeyIntent,
@@ -117,7 +118,9 @@
 	let loading = $state(untrack(() => enabled && queryPlan(query, readsEmpty) !== 'clear'));
 
 	const gate = requestGate();
+	const press = pressGate();
 	let timer: ReturnType<typeof setTimeout> | undefined;
+	let inputEl = $state<HTMLInputElement | null>(null);
 
 	const asked = $derived(readsEmpty || query.trim().length > 0);
 	const view = $derived(searchView({ error: failure, loading, count: items.length, asked }));
@@ -148,6 +151,18 @@
 		}
 	}
 
+	/**
+	 * A press inside the list that replaces the rows leaves the caret on a row that is
+	 * gone. The box takes it back, so the arrows go on walking the rows that replaced
+	 * them. A shell the press closed keeps the caret: there is nothing left to focus.
+	 */
+	function refocus(): void {
+		if (!press.takes()) return;
+		if (shell === 'dialog' && !open) return;
+		if (!inputEl?.isConnected) return;
+		inputEl.focus({ preventScroll: true });
+	}
+
 	/** Empty the list and ask again, at once or once the pause has elapsed. */
 	function restart(text: string, on: boolean): void {
 		clearTimeout(timer);
@@ -157,6 +172,7 @@
 		items = [];
 		page = 1;
 		hasMore = false;
+		refocus();
 		if (!on) {
 			loading = false;
 			return;
@@ -180,6 +196,20 @@
 		void request;
 		untrack(() => restart(text, on));
 		return () => clearTimeout(timer);
+	});
+
+	// A press is read off the command box in capture, so a row that stops the event
+	// on its way up still counts as one.
+	$effect(() => {
+		const root = inputEl?.closest('[data-slot="command"]');
+		if (!root) return;
+		const mark = (): void => press.mark();
+		root.addEventListener('pointerdown', mark, true);
+		root.addEventListener('click', mark, true);
+		return () => {
+			root.removeEventListener('pointerdown', mark, true);
+			root.removeEventListener('click', mark, true);
+		};
 	});
 
 	/**
@@ -252,6 +282,7 @@
 
 {#snippet inside()}
 	<Command.Input
+		bind:ref={inputEl}
 		value={query}
 		{placeholder}
 		oninput={(e) => (query = e.currentTarget.value)}

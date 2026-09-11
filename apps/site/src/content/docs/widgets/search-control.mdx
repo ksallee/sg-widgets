@@ -111,6 +111,9 @@ same variables.
 | `Enter` | Takes the highlighted row, or reads the next page on the load-more row. |
 | `Escape` | With a query, clears it and the rows and keeps the caret in the box. With no query, the shell takes it: a dialog or a popover closes, and the inline box does nothing. |
 
+A press inside the list that replaces the rows returns the caret to the box, so the rows that
+replaced them take the highlight and the arrows go on walking the list.
+
 Anything else a wrapper needs reaches it through `onKeyDown`, which is handed the rows on show:
 the hierarchical search walks the tree with Left and Right that way.
 

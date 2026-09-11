@@ -53,7 +53,37 @@ for (const framework of ['svelte', 'react']) {
   }
   notes.push(`${framework}: browsed the project root, ${sequences.length} sequences one level down`);
 
-  /* 3. Searching answers breadcrumbs, and Enter emits the leaf with its path.
+  /* 3. A drill by mouse hands the caret back to the box, so Up and Down keep walking. */
+  const shotsRow = items().find((i) => i.textContent.includes('Shots'));
+  const drill = shotsRow?.querySelector('[data-slot="search-drill"]');
+  if (!drill) return fail(`${framework}: the Shots row has no drill control`);
+  drill.focus({ preventScroll: true });
+  drill.click();
+  const drilled = await until(() => {
+    const rows = items().filter((i) => i.dataset.entityType === 'Sequence');
+    return rows.length ? rows : null;
+  });
+  if (!drilled) return fail(`${framework}: the drill control did not open the Shots folder`);
+  if (document.activeElement !== input) {
+    return fail(`${framework}: after a mouse drill the caret is on ${document.activeElement?.tagName ?? 'nothing'}`);
+  }
+  const highlight = () => items().findIndex((i) => i.hasAttribute('data-highlighted'));
+  const landed = highlight();
+  press(document.activeElement, 'ArrowDown');
+  await wait(60);
+  press(document.activeElement, 'ArrowDown');
+  await wait(60);
+  const walked = highlight();
+  if (walked < 0 || walked === landed) {
+    return fail(`${framework}: after a mouse drill the highlight stayed at ${landed}`);
+  }
+  press(input, 'ArrowLeft');
+  if (!(await until(() => items().length === 2 && !$('[data-slot="search-up"]', root)))) {
+    return fail(`${framework}: Left did not go back up after a mouse drill`);
+  }
+  notes.push(`${framework}: a mouse drill left the caret in the box, Down walked ${landed} -> ${walked}`);
+
+  /* 4. Searching answers breadcrumbs, and Enter emits the leaf with its path.
         `comp` is the task on that shot in the fixtures; `fx` sits on other shots. */
   type(input, 'sh010_0010 comp');
   const results = await until(() => {

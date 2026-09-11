@@ -1,12 +1,14 @@
 ---
 title: EntityTypePicker
-description: One entity type of a site, or several, chosen from a searchable list.
+description: One entity type of a site, chosen from a searchable list.
 ---
 
 import Demo from '../../../components/Demo.astro';
 
-Picks one entity type of a site, or several, from a searchable list of everything the site has
-enabled.
+Picks one entity type of a site, from a searchable list of everything the site has enabled.
+
+Single and multi: [EntityTypeMultiPicker](/widgets/entity-type-multi-picker/) takes several types.
+This picker takes `multiple` no more; a caller passing it moves to the multi picker.
 
 ## Install
 
@@ -15,16 +17,15 @@ pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/entity-type-picker.jso
 pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/entity-type-picker.json
 ```
 
-<Demo name="entity-type-picker" title="EntityTypePicker: allow and deny lists, multi mode, summary modes, sizes and states" />
+<Demo name="entity-type-picker" title="EntityTypePicker: allow and deny lists, codes, sizes and states" />
 
 ## Props
 
 | prop | type | default | meaning |
 |---|---|---|---|
 | `context` | `SgContext` | required | The widget context. The site's enabled types are read through it, once per page. |
-| `value` | `string \| string[] \| null` | `null` | A type code, or an array of them in multi mode. |
-| `multiple` | `boolean` | `false` | Keep the list open and take several types. |
-| `onValueChange` | `(value) => void` | — | Receives the code, `null` on clear, or the new array in multi mode. |
+| `value` | `string \| null` | `null` | The chosen type code. Two-way in Svelte. |
+| `onValueChange` | `(value) => void` | — | Receives the code, or `null` on clear. |
 | `allow` | `string[]` | — | Codes on offer. Empty or absent means every enabled type. |
 | `deny` | `string[]` | — | Codes withheld, applied after `allow`. |
 | `placeholder` | `string` | `'Select an entity type'` | Shown while nothing is chosen. |
@@ -37,8 +38,6 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/entity-type-pi
 | `disabled` | `boolean` | `false` | |
 | `invalid` | `boolean` | `false` | Applies the invalid ring and `aria-invalid`. |
 | `showCode` | `boolean` | `true` | Shows the code under the display name where the two differ. |
-| `summary` | `'chips' \| 'ellipsis' \| 'count'` | `'ellipsis'` | What the control shows for the selection in multi mode. |
-| `max` | `number` | `0` | Chips drawn before the rest becomes `+n`. `0` lets the row fit what it can. |
 | `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | |
 | `open` | `boolean` | `false` | Whether the popup is showing. Two-way in Svelte. |
 | `className` / `class` | `string` | — | Merged after the widget's own classes. |
@@ -47,16 +46,8 @@ Every other attribute is spread onto the root: `id`, `aria-*`, `data-*`, key han
 `ref` to the root element.
 
 Each row shows the display name, with the code beneath it in mono when the two differ, unless
-`showCode` is off. In multi mode every row carries a checkbox and the list stays open across
-selections.
-
-`chips` makes the control a token field: every chip, wrapped, with the caret beside them, and
-`+n` after the last chip `max` allows.
-`ellipsis` makes it a one-line trigger: as many whole chips as the row fits, never a cut one,
-then `+n` inline after the last, the whole list in the tooltip, and the search box at the top of
-the popup.
-`count` makes it the same trigger reading `3 selected`.
-A single picker is always a token field, whatever `summary` says.
+`showCode` is off. The control is a token field: the value is one chip, with the caret beside it.
+A pick closes the list.
 
 `allow` is applied first and `deny` second, both to the derived list rather than to the read, so a
 caller narrowing the set sees the list change with no second call.
@@ -65,7 +56,7 @@ caller narrowing the set sees the list change with no second call.
 
 | event | payload | when |
 |---|---|---|
-| `onValueChange` | `string \| string[] \| null` | A type is chosen or unchosen, or the clear control is pressed. |
+| `onValueChange` | `string \| null` | A type is chosen, or the clear control is pressed. |
 | `onOpenChange` | `boolean` | The popup opened or closed. Svelte also binds it with `bind:open`. |
 
 ## Slots
@@ -76,11 +67,11 @@ None.
 
 | key | does |
 |---|---|
-| any text | Narrows the rows, from the caret in a token field and from the popup's search box otherwise. |
+| any text | Narrows the rows, from the caret in the control. |
 | `Enter`, `Space` | On the chevron, opens the list. |
 | `Down`, `Up` | Move the cursor through the rows and keep it in view. The last row holds it rather than wrapping. |
-| `Enter` | Choose the highlighted type. In multi mode, toggles it and keeps the list open. |
-| `Backspace` | In an empty search box, highlights the last chip. A second one removes it. |
+| `Enter` | Choose the highlighted type and close the list. |
+| `Backspace` | In an empty search box, clears the value. |
 | `Escape` | Close, keeping the value and clearing the query. On a closed picker it does nothing. |
 
 ## API behaviour

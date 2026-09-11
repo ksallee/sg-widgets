@@ -32,6 +32,7 @@ import { EntityMultiPicker } from '@/registry/sg/components/entity-multi-picker'
 import { EntityPicker } from '@/registry/sg/components/entity-picker';
 import { EntityTable } from '@/registry/sg/components/entity-table';
 import { EntityTree } from '@/registry/sg/components/entity-tree';
+import { EntityTypeMultiPicker } from '@/registry/sg/components/entity-type-multi-picker';
 import { EntityTypePicker } from '@/registry/sg/components/entity-type-picker';
 import { FieldPicker } from '@/registry/sg/components/field-picker';
 import { FilterBar } from '@/registry/sg/components/filter-bar';
@@ -178,6 +179,7 @@ export default function CompositionDemo() {
       ['status-picker', 'Status', <StatusPicker context={context} entityType="Version" projectId={projectId} size={size} value="ip" />, 'status-picker-control'],
       ['status-multi-picker', 'Statuses', <StatusMultiPicker context={context} entityType="Version" projectId={projectId} size={size} value={['ip', 'apr']} />, null],
       ['entity-type-picker', 'Type', <EntityTypePicker context={context} size={size} value="Shot" />, null],
+      ['entity-type-multi-picker', 'Types', <EntityTypeMultiPicker context={context} size={size} value={['Shot', 'Asset']} />, null],
       ['field-picker', 'Field', <FieldPicker context={context} entityType="Version" size={size} value="code" />, 'field-picker-trigger'],
       ['context-selector', 'Context', <ContextSelector context={context} size={size} workContext={work} currentUser={PERSON} />, null],
     ];

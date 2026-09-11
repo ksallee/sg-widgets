@@ -1,4 +1,5 @@
-// Open the palette with the hotkey, type two words, read the groups, pick with the keyboard.
+// Open the palette with the hotkey (the demo's is Cmd+/, since the docs site's own search holds Cmd+K),
+// type two words, read the groups, pick with the keyboard.
 const notes = [];
 const fail = (m) => { notes.push('FAIL ' + m); return { verdict: 'FAIL ' + m, notes }; };
 
@@ -31,7 +32,7 @@ const inList = (sel) => (list() ? $$(sel, list()) : []);
 
 /* 1. The hotkey reaches both islands on the page. */
 if (dialogs().length !== 0) return fail('a dialog was open before anything was pressed');
-document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true, bubbles: true, cancelable: true }));
+document.body.dispatchEvent(new KeyboardEvent('keydown', { key: '/', metaKey: true, bubbles: true, cancelable: true }));
 if (!(await until(() => dialogs().length === 2))) return fail(`Cmd+K opened ${dialogs().length} palettes, wanted 2`);
 notes.push('Cmd+K opened both palettes');
 for (let i = 0; i < 4 && dialogs().length > 0; i++) {

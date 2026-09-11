@@ -26,7 +26,7 @@ export default function Demo() {
         <GlobalSearch
           context={context}
           entityTypes={TYPES}
-          hotkey
+          hotkey="/"
           recents={recents}
           onRecentsChange={setRecents}
           onSelect={setPicked}

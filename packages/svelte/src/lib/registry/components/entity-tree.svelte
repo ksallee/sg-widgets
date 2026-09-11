@@ -509,7 +509,7 @@
 							tabindex={row.focused && !disabled ? 0 : -1}
 							onclick={() => activate(row)}
 							class={cn(
-								'focus-visible:ring-ring focus-visible:ring-offset-background flex min-w-0 cursor-default gap-2 rounded-sm outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2',
+								'focus-visible:ring-ring focus-visible:ring-offset-background relative flex min-w-0 focus-visible:z-10 cursor-default gap-2 rounded-sm outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2',
 								ROW[density],
 								TEXT[size],
 								hasSubLabel ? 'items-start' : 'items-center',

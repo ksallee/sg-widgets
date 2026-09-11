@@ -472,7 +472,7 @@ export function GroupedList({
                               disabled={disabled}
                               onClick={() => (selectable ? control.toggle(row) : onSelect?.(row))}
                               onKeyDown={(event) => onRowKeyDown(event, row)}
-                              className="focus-visible:ring-ring focus-visible:ring-offset-background flex min-w-0 flex-1 flex-col items-start rounded-sm text-left outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+                              className="focus-visible:ring-ring focus-visible:ring-offset-background relative flex min-w-0 focus-visible:z-10 flex-1 flex-col items-start rounded-sm text-left outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
                             >
                               <span className="flex w-full min-w-0 items-center gap-1.5">
                                 <span className={cn('min-w-0 truncate', TEXT[size])} title={label}>

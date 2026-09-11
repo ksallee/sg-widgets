@@ -102,8 +102,8 @@ export const PICKER_ROW =
 export const PICKER_ICON_BUTTON =
 	'hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring focus-visible:ring-offset-background pointer-events-auto shrink-0 rounded-sm p-0.5 opacity-70 outline-none transition-colors duration-150 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-2 motion-safe:active:scale-[0.98]';
 
-/** The chip a Backspace has armed. The keyboard cursor wears the focus ring. */
-export const PICKER_ARMED = 'ring-ring ring-offset-background ring-2 ring-offset-1';
+/** The chip a Backspace has armed: the focus ring, inset so the chip row's clipping and the control's edge never cut it. */
+export const PICKER_ARMED = 'ring-ring ring-2 ring-inset';
 
 /** A chosen code in the control. A code is not a row, so it has no thumbnail. */
 export const PICKER_TEXT_CHIP =

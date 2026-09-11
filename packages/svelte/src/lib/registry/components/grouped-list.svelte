@@ -494,7 +494,7 @@
 											{disabled}
 											onclick={() => (selectable ? control.toggle(row) : onSelect?.(row))}
 											onkeydown={(event) => onRowKeydown(event, row)}
-											class="focus-visible:ring-ring focus-visible:ring-offset-background flex min-w-0 flex-1 flex-col items-start rounded-sm text-left outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+											class="focus-visible:ring-ring focus-visible:ring-offset-background relative flex min-w-0 focus-visible:z-10 flex-1 flex-col items-start rounded-sm text-left outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
 										>
 											<span class="flex w-full min-w-0 items-center gap-1.5">
 												<span class={cn('min-w-0 truncate', TEXT[size])} title={label}>{label}</span>

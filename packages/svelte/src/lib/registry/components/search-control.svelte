@@ -209,8 +209,11 @@
 	the skeletons, the empty line, the rows and the live row that says what the list is
 	doing. A wrapper supplies the read behind it and draws its own rows.
 -->
-{#snippet body()}
+{#snippet status()}
 	<Command.Status data-slot="search-status">{announcement}</Command.Status>
+{/snippet}
+
+{#snippet body()}
 	{#if view === 'error'}
 		<StateLine
 			state="error"
@@ -254,12 +257,14 @@
 		oninput={(e) => (query = e.currentTarget.value)}
 		onkeydown={onInputKeydown}
 	/>
+	{@render status()}
 	<Command.List data-sg-search-list>
 		{@render body()}
 	</Command.List>
 {/snippet}
 
 {#if shell === 'bare'}
+	{@render status()}
 	{@render body()}
 {:else if shell === 'dialog'}
 	<!-- Server-side matching only, so the list never filters what came back. -->

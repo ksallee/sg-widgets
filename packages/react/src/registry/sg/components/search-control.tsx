@@ -226,7 +226,6 @@ export function SearchControl<T>({
 
   const body = (
     <>
-      {status}
       {view === 'error' ? (
         <StateLine
           state="error"
@@ -258,11 +257,19 @@ export function SearchControl<T>({
     </>
   );
 
-  if (shell === 'bare') return body;
+  if (shell === 'bare') {
+    return (
+      <>
+        {status}
+        {body}
+      </>
+    );
+  }
 
   const inside = (
     <>
       <CommandInput ref={setInputEl} placeholder={placeholder} />
+      {status}
       <CommandList data-sg-search-list>{body}</CommandList>
     </>
   );

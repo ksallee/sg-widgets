@@ -2,13 +2,6 @@
 	import type { PickerSummary } from '@sg-widgets/core';
 
 	export type StatusMultiPickerSize = 'sm' | 'md' | 'lg';
-
-	/** A row's leading glyph, on the leaf ladder the shared row draws it at. */
-	const ROW_GLYPH: Record<StatusMultiPickerSize, string> = {
-		sm: 'size-3.5',
-		md: 'size-4',
-		lg: 'size-5'
-	};
 </script>
 
 <script lang="ts">
@@ -54,7 +47,6 @@
 		PICKER_TOKEN_INPUT
 	} from '$lib/registry/components/picker-classes.js';
 	import StatusBadge, { type StatusBadgeVariant } from '$lib/registry/components/status-badge.svelte';
-	import StatusGlyph from '$lib/registry/components/status-glyph.svelte';
 
 	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>, HTMLDivElement> & {
 		/** The widget context. The options and the status table are read through it, once per page. */
@@ -595,11 +587,13 @@
 									{context}
 								>
 									{#snippet glyph()}
-										<StatusGlyph
+										<StatusBadge
+											code={option.code}
 											status={query.statuses.get(option.code) ?? null}
+											field={badgeField}
+											variant="glyph"
+											{size}
 											siteUrl={site}
-											fallback
-											class={ROW_GLYPH[size]}
 										/>
 									{/snippet}
 								</Row>

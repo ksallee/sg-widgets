@@ -65,8 +65,9 @@ const CONTROL = {
 /** A row in a list: the inset and the gap of rule 2, the row radius of rule 1. */
 const ROW =
   '[data-slot="entity-tree-item-label"],[data-slot="command-item"],[data-slot$="-option"],[data-slot="grouped-list-row"],[data-slot="picker-row"]';
-/** A chip or a badge: a glyph beside its text, one step under the control. */
-const CHIP = '[data-slot="entity-chip"],[data-slot="status-badge"]';
+/** A chip or a badge: a glyph beside its text, one step under the control. The bare
+ *  glyph variant of the status badge is a leading mark, not a chip. */
+const CHIP = '[data-slot="entity-chip"],[data-slot="status-badge"]:not([data-variant="glyph"])';
 /** A picker's own text chip, where it draws one instead of an entity chip. */
 const TEXT_CHIP = '[data-slot$="-chip"]';
 /** The icon buttons a control reserves its trailing inset for. */

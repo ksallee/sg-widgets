@@ -90,7 +90,7 @@ export default function GroupedListDemo() {
 
   const leading = (row: EntityRow) => {
     const code = String(cellValue(row, 'sg_status_list') ?? '');
-    return <StatusBadge code={code} status={data.statuses[code] ?? null} variant="icon" size="sm" />;
+    return <StatusBadge code={code} status={data.statuses[code] ?? null} variant="glyph" size="sm" />;
   };
 
   return (

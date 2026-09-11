@@ -43,16 +43,8 @@ import {
 import { PickerRow } from '@/registry/sg/components/picker-row';
 import { StateLine } from '@/registry/sg/components/state-line';
 import { StatusBadge, type StatusBadgeVariant } from '@/registry/sg/components/status-badge';
-import { StatusGlyph } from '@/registry/sg/components/status-glyph';
 
 export type StatusMultiPickerSize = 'sm' | 'md' | 'lg';
-
-/** A row's leading glyph, on the leaf ladder the shared row draws it at. */
-const ROW_GLYPH: Record<StatusMultiPickerSize, string> = {
-  sm: 'size-3.5',
-  md: 'size-4',
-  lg: 'size-5',
-};
 /**
  * What the control shows for the selection. `both` is the old spelling of `chips`.
  * `icons` drops the labels and `names` reads the labels as one line of text.
@@ -511,11 +503,13 @@ export function StatusMultiPicker({
           size={size}
           context={context}
           glyph={
-            <StatusGlyph
+            <StatusBadge
+              code={code}
               status={query.statuses.get(code) ?? null}
+              field={badgeField}
+              variant="glyph"
+              size={size}
               siteUrl={site}
-              fallback
-              className={ROW_GLYPH[size]}
             />
           }
         />

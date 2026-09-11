@@ -757,7 +757,6 @@
         "https://sg-widgets.dev/r/react/picker-row.json",
         "https://sg-widgets.dev/r/react/state-line.json",
         "https://sg-widgets.dev/r/react/status-badge.json",
-        "https://sg-widgets.dev/r/react/status-glyph.json",
         "select",
         "skeleton"
       ],
@@ -788,7 +787,6 @@
         "https://sg-widgets.dev/r/react/picker-row.json",
         "https://sg-widgets.dev/r/react/state-line.json",
         "https://sg-widgets.dev/r/react/status-badge.json",
-        "https://sg-widgets.dev/r/react/status-glyph.json",
         "checkbox",
         "skeleton"
       ],

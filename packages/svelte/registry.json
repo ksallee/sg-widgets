@@ -621,7 +621,6 @@
         "local:picker-row",
         "local:state-line",
         "local:status-badge",
-        "local:status-glyph",
         "select",
         "skeleton"
       ],
@@ -647,7 +646,6 @@
         "local:picker-row",
         "local:state-line",
         "local:status-badge",
-        "local:status-glyph",
         "checkbox",
         "skeleton"
       ],

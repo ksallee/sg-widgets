@@ -78,7 +78,7 @@
 
 {#snippet leading(row: EntityRow)}
 	{@const code = String(cellValue(row, 'sg_status_list') ?? '')}
-	<StatusBadge {code} status={statusTable[code] ?? null} variant="icon" size="sm" />
+	<StatusBadge {code} status={statusTable[code] ?? null} variant="glyph" size="sm" />
 {/snippet}
 
 {#await load()}

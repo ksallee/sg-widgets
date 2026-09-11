@@ -1,6 +1,6 @@
-// Both status pickers list the shared picker row: the status glyph, the label and the
-// code, never a badge. `showCode={false}` drops the code, a caller's own secondary
-// replaces it, and a pick still lands in the control as a badge.
+// Both status pickers list the shared picker row: the bare status glyph, the label and
+// the code, never a pill badge. `showCode={false}` drops the code, a caller's own
+// secondary replaces it, and a pick still lands in the control as a badge.
 //
 //   pnpm qa --start --path /widgets/status-picker/ --framework both --drive tools/drives/status-picker-rows.js
 //
@@ -65,18 +65,18 @@ async function frame(path) {
 function anatomy(row) {
   return {
     code: row.dataset.statusCode ?? '',
-    glyph: Boolean(row.querySelector('[data-slot="status-glyph"]')),
+    glyph: Boolean(row.querySelector('[data-slot="picker-row-leading"] [data-slot="status-glyph"]')),
     leading: Boolean(row.querySelector('[data-slot="picker-row-leading"]')),
     label: row.querySelector('[data-slot="picker-row-name"]')?.textContent.trim() ?? '',
     secondary: row.querySelector('[data-slot="picker-row-secondary"]')?.textContent.trim() ?? '',
-    badge: Boolean(row.querySelector('[data-slot="status-badge"]')),
+    badge: Boolean(row.querySelector('[data-slot="status-badge"]:not([data-variant="glyph"])')),
   };
 }
 
 function readRows(rows, where) {
   const drawn = rows.map(anatomy);
   for (const row of drawn) {
-    if (row.badge) failures.push(`${where}: ${row.code} still draws a badge in the list`);
+    if (row.badge) failures.push(`${where}: ${row.code} still draws a pill badge in the list`);
     if (!row.leading || !row.glyph) failures.push(`${where}: ${row.code} has no status glyph`);
     if (!row.label) failures.push(`${where}: ${row.code} has no label`);
   }

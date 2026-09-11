@@ -20,12 +20,6 @@
 	};
 	/** A badge inside a control sits one step down the leaf ladder. */
 	const BADGE: Record<StatusPickerSize, 'sm' | 'md'> = { sm: 'sm', md: 'sm', lg: 'md' };
-	/** A row's leading glyph, on the leaf ladder the shared row draws it at. */
-	const ROW_GLYPH: Record<StatusPickerSize, string> = {
-		sm: 'size-3.5',
-		md: 'size-4',
-		lg: 'size-5'
-	};
 
 	const TRIGGER =
 		'border-input bg-background hover:bg-muted/30 focus-visible:ring-ring focus-visible:ring-offset-background aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 flex w-full min-w-0 items-center rounded-lg border text-sm outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 aria-invalid:ring-2';
@@ -44,7 +38,6 @@
 	import Row from '$lib/registry/components/picker-row.svelte';
 	import StateLine from '$lib/registry/components/state-line.svelte';
 	import StatusBadge from '$lib/registry/components/status-badge.svelte';
-	import StatusGlyph from '$lib/registry/components/status-glyph.svelte';
 
 	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>, HTMLDivElement> & {
 		/** The widget context. The options and the status table are read through it, once per page. */
@@ -285,11 +278,13 @@
 						{context}
 					>
 						{#snippet glyph()}
-							<StatusGlyph
+							<StatusBadge
+								code={option.code}
 								status={query.statuses.get(option.code) ?? null}
+								field={badgeField}
+								variant="glyph"
+								{size}
 								siteUrl={site}
-								fallback
-								class={ROW_GLYPH[size]}
 							/>
 						{/snippet}
 					</Row>

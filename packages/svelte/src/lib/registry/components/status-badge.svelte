@@ -1,6 +1,6 @@
 <script lang="ts" module>
-	/** How much of the status to show. */
-	export type StatusBadgeVariant = 'both' | 'icon' | 'text';
+	/** How much of the status to show. `glyph` is the bare icon, with no pill around it. */
+	export type StatusBadgeVariant = 'both' | 'icon' | 'text' | 'glyph';
 	export type StatusBadgeSize = 'sm' | 'md' | 'lg';
 	/** Which of the two names the badge puts on show; the other one goes in the tooltip. */
 	export type StatusBadgeLabel = 'name' | 'code';
@@ -84,8 +84,10 @@
 	const textIcon = $derived(glyph.kind === 'html' ? glyph.html || text : null);
 	const showGlyph = $derived(variant !== 'text' && glyph.kind !== 'none' && textIcon === null);
 	const showText = $derived(variant !== 'icon' || textIcon !== null);
+	// The bare glyph has no pill, so no colour, no text and no room for a cross.
+	const bare = $derived(variant === 'glyph');
 	// A bare icon is the glyph and nothing else, so there is no room for a cross.
-	const showRemove = $derived(removable && variant !== 'icon');
+	const showRemove = $derived(removable && variant !== 'icon' && !bare);
 </script>
 
 <!--
@@ -112,6 +114,13 @@
 	gives, so the cross keeps its contrast on every colour. Its hover is a translucent
 	wash of that foreground rather than the destructive tint the entity chip uses, since
 	the pill already carries a colour of its own.
+
+	`glyph` is the icon alone, in its own colour, with no pill around it: no border, no
+	background, no inset, sized like a row glyph. It is what a list row's leading slot
+	draws, where a bordered pill would read as a second surface. The label stays as the
+	accessible name and the tooltip, `color` has nothing to paint, and there is no room
+	for a cross. A status with no icon to draw takes the neutral dot, so a row always
+	carries a leading mark.
 -->
 {#snippet content()}
 	{#if showGlyph}
@@ -126,20 +135,28 @@
 		data-slot="status-badge"
 		data-status-code={code}
 		data-status-known={known ? 'true' : 'false'}
+		data-variant={variant}
 		title={other}
-		{style}
+		style={bare ? undefined : style}
 		class={cn(
-			'border-border bg-background inline-flex max-w-full min-w-0 items-center rounded-md border px-1.5 align-middle text-xs font-medium',
-			'gap-1.5',
-			BOX[size],
-			variant === 'icon' && 'justify-center',
-			paint && 'border-transparent ring-1 ring-current/10 ring-inset',
-			color && !paint && 'bg-muted text-muted-foreground border-transparent',
+			bare
+				? cn('inline-flex shrink-0 items-center justify-center align-middle', GLYPH[size])
+				: cn(
+						'border-border bg-background inline-flex max-w-full min-w-0 items-center rounded-md border px-1.5 align-middle text-xs font-medium',
+						'gap-1.5',
+						BOX[size],
+						variant === 'icon' && 'justify-center',
+						paint && 'border-transparent ring-1 ring-current/10 ring-inset',
+						color && !paint && 'bg-muted text-muted-foreground border-transparent'
+					),
 			className
 		)}
 		{...rest}
 	>
-		{#if showRemove}
+		{#if bare}
+			<StatusGlyph {status} {siteUrl} fallback class={GLYPH[size]} />
+			<span class="sr-only">{text}</span>
+		{:else if showRemove}
 			<span class="flex min-w-0 items-center gap-1.5">{@render content()}</span>
 			<button
 				type="button"

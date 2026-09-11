@@ -501,12 +501,14 @@
 				{:else if loading}
 					<div
 						data-slot={`${slot}-loading`}
-						class="flex flex-col gap-2"
+						class="flex flex-col"
 						aria-busy="true"
 						aria-label={loadingText}
 					>
 						{#each [0, 1, 2] as row (row)}
-							<Skeleton class="h-8 w-full" />
+							<div class="flex items-center px-2 py-1.5">
+								<Skeleton class="h-5 w-full" />
+							</div>
 						{/each}
 					</div>
 				{:else if empty}

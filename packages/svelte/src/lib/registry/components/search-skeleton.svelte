@@ -21,7 +21,7 @@
 	like the rows they stand in for, so the block belongs beside them rather than in
 	`state-line`, which draws the empty and the error line.
 -->
-<div data-slot={slotName} class="flex flex-col gap-2 p-1" aria-busy="true" aria-label={label}>
+<div data-slot={slotName} class="flex flex-col" aria-busy="true" aria-label={label}>
 	{#each { length: lines } as _, line (line)}
 		<div class="flex items-center gap-2 px-2 py-1.5">
 			<Skeleton class={cn(lead)} />

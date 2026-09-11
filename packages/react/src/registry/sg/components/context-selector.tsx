@@ -345,7 +345,7 @@ export function ContextSelector({
             />
           </section>
 
-          <section data-slot="context-hierarchy" className="flex flex-col gap-2">
+          <section data-slot="context-hierarchy" className="flex flex-col">
             <h4 className={heading}>Browse</h4>
             <HierarchicalSearch
               context={context}

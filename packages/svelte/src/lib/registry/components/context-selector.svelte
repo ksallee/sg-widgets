@@ -340,7 +340,7 @@
 				/>
 			</section>
 
-			<section data-slot="context-hierarchy" class="flex flex-col gap-2">
+			<section data-slot="context-hierarchy" class="flex flex-col">
 				<h4 class={heading}>Browse</h4>
 				<HierarchicalSearch
 					{context}

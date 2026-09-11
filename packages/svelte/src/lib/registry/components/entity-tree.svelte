@@ -448,9 +448,11 @@
 				label={stateLine('error', { errorLabel }, snap.error?.message)}
 			/>
 		{:else if snap.status === 'loading' || snap.status === 'idle'}
-			<div class="flex flex-col gap-2 p-1" aria-busy="true" aria-label={loadingText}>
+			<div class="flex flex-col" aria-busy="true" aria-label={loadingText}>
 				{#each { length: 5 } as _, index (index)}
-					<Skeleton class="h-6 w-full" />
+					<div class={cn('flex items-center', ROW[density])}>
+						<Skeleton class="h-5 w-full" />
+					</div>
 				{/each}
 			</div>
 		{:else if snap.rows.length === 0}

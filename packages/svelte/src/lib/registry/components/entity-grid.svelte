@@ -350,7 +350,7 @@
 				style="grid-template-columns:repeat(auto-fill,minmax({TILE[size]}px,1fr))"
 			>
 				{#each { length: 8 } as _, index (index)}
-					<div class="flex flex-col gap-2">
+					<div class="flex flex-col gap-1.5">
 						<Skeleton class="aspect-video w-full" />
 						<Skeleton class="h-4 w-3/4" />
 						<Skeleton class="h-3 w-1/2" />

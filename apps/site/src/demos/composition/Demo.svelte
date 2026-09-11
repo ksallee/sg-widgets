@@ -37,7 +37,7 @@
 	import FieldPicker from '$lib/registry/components/field-picker.svelte';
 	import FilterBar from '$lib/registry/components/filter-bar.svelte';
 	import GlobalSearch from '$lib/registry/components/global-search.svelte';
-	import ListSelect from '$lib/registry/components/list-select.svelte';
+	import ListPicker from '$lib/registry/components/list-picker.svelte';
 	import NumberEditor from '$lib/registry/components/number-editor.svelte';
 	import ProjectPicker from '$lib/registry/components/project-picker.svelte';
 	import SortPicker from '$lib/registry/components/sort-picker.svelte';
@@ -180,7 +180,7 @@
 			class={cell}
 			data-qa-widget="status-picker"
 			data-qa-size={size}
-			data-qa-popup={size === 'md' ? 'select-trigger' : undefined}
+			data-qa-popup={size === 'md' ? 'status-picker-control' : undefined}
 		>
 			<span class={cellLabel}>Status</span>
 			<StatusPicker {context} entityType="Version" {projectId} {size} value="ip" />
@@ -317,9 +317,9 @@
 					<span class={fieldLabel}>Flagged</span>
 					<CheckboxEditor bind:value={flagged} field={{ displayName: 'Flagged', mandatory: false }} />
 				</div>
-				<div class={field} data-qa-widget="list-select" data-qa-size="md">
+				<div class={field} data-qa-widget="list-picker" data-qa-size="md">
 					<span class={fieldLabel}>Version type</span>
-					<ListSelect bind:value={listValue} field={versionType} />
+					<ListPicker bind:value={listValue} field={versionType} />
 				</div>
 				<div class={field} data-qa-widget="color-editor" data-qa-size="md">
 					<span class={fieldLabel}>Colour</span>

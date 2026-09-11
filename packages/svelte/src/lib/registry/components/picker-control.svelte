@@ -36,6 +36,10 @@
 		tokenInput?: boolean;
 		/** What the caret shows. */
 		inputPlaceholder?: string;
+		/** A summary control keeps a search row. A fixed set has nothing to search. */
+		searchable?: boolean;
+		/** The filled value is plain text, so the control keeps the reading inset in both states. */
+		textValue?: boolean;
 		/** The row keys on show, so a changed list follows the highlight. */
 		rowCount?: number;
 		/** What the chips look like, so a change to any of it re-measures the row. */
@@ -109,6 +113,7 @@
 		PICKER_ROW,
 		PICKER_SEARCH,
 		PICKER_SEARCH_ROW,
+		PICKER_TEXT_BOX,
 		PICKER_TOKEN_INPUT,
 		PICKER_TRAILING
 	} from '$lib/registry/components/picker-classes.js';
@@ -136,6 +141,8 @@
 		inline = true,
 		tokenInput = true,
 		inputPlaceholder,
+		searchable = true,
+		textValue = false,
 		rowCount = 0,
 		rowKey,
 		size = 'md',
@@ -372,7 +379,7 @@
 		title={plan.title || placeholder}
 		class={cn(
 			PICKER_CONTROL,
-			PICKER_BOX[size],
+			(textValue ? PICKER_TEXT_BOX : PICKER_BOX)[size],
 			plan.oneLine && 'flex-nowrap',
 			readonly ? 'pr-3' : showClear ? 'pr-14' : 'pr-8'
 		)}
@@ -440,7 +447,7 @@
 			sideOffset={4}
 			class={anchored ? PICKER_ANCHORED_POPUP : PICKER_POPUP}
 		>
-			{#if !inline}
+			{#if !inline && searchable}
 				<div data-slot={`${slot}-search`} class={PICKER_SEARCH_ROW}>
 					<Search aria-hidden="true" class="size-4 shrink-0 opacity-50" />
 					<Combobox.Input
@@ -453,6 +460,16 @@
 						class={PICKER_SEARCH}
 					/>
 				</div>
+			{:else if !inline}
+				<!-- Nothing to search, and still the one caret: it holds the focus and the keys. -->
+				<Combobox.Input
+					bind:ref={inputEl}
+					data-slot={`${slot}-input`}
+					aria-label={placeholder}
+					readonly
+					onkeydown={onKey}
+					class="sr-only"
+				/>
 			{/if}
 			<div bind:this={listEl} data-slot={`${slot}-list`} class={PICKER_LIST}>
 				{#if error !== null && error !== ''}

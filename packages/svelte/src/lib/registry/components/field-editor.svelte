@@ -78,7 +78,7 @@
 	import EntityMultiPicker from '$lib/registry/components/entity-multi-picker.svelte';
 	import EntityPicker from '$lib/registry/components/entity-picker.svelte';
 	import FieldValue from '$lib/registry/components/field-value.svelte';
-	import ListSelect from '$lib/registry/components/list-select.svelte';
+	import ListPicker from '$lib/registry/components/list-picker.svelte';
 	import NumberEditor from '$lib/registry/components/number-editor.svelte';
 	import StatusPicker from '$lib/registry/components/status-picker.svelte';
 	import TextEditor from '$lib/registry/components/text-editor.svelte';
@@ -510,7 +510,7 @@
 				{errorMessage}
 			/>
 		{:else if kind === 'list'}
-			<ListSelect
+			<ListPicker
 				value={value as string | null}
 				onValueChange={emit}
 				field={field ?? null}

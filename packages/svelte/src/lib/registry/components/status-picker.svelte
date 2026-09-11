@@ -1,45 +1,17 @@
 <script lang="ts" module>
 	export type StatusPickerSize = 'sm' | 'md' | 'lg';
-
-	/**
-	 * Controls follow the input ladder of `docs/design-rules.md`. A filled control's leading
-	 * inset matches the room above and below its badge, so the badge sits evenly inside the
-	 * border; `data-empty` gives the reading inset of a plain input back. The height carries
-	 * `!` because the select trigger sets its own under a `data-size` selector, and is fixed,
-	 * so there is no vertical inset to take.
-	 */
-	const BOX: Record<StatusPickerSize, string> = {
-		sm: 'h-8! pr-2 pl-[5px] data-empty:pl-1.5',
-		md: 'h-9! pr-3 pl-[5px] data-empty:pl-2',
-		lg: 'h-10! pr-3 pl-0.5 data-empty:pl-2'
-	};
-	const GLYPH: Record<StatusPickerSize, string> = {
-		sm: 'size-4',
-		md: 'size-4',
-		lg: 'size-5'
-	};
-	/** A badge inside a control sits one step down the leaf ladder. */
-	const BADGE: Record<StatusPickerSize, 'sm' | 'md'> = { sm: 'sm', md: 'sm', lg: 'md' };
-
-	const TRIGGER =
-		'border-input bg-background hover:bg-muted/30 focus-visible:ring-ring focus-visible:ring-offset-background aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 flex w-full min-w-0 items-center rounded-lg border text-sm outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 aria-invalid:ring-2';
 </script>
 
 <script lang="ts">
 	import type { HTMLAttributes } from 'svelte/elements';
-	import type { PickerRow, SgContext, StatusOption, StatusRecord } from '@sg-widgets/core';
-	import { NO_ROWS_LABEL, stateLine } from '@sg-widgets/core';
-	import SearchX from '@lucide/svelte/icons/search-x';
-	import TriangleAlert from '@lucide/svelte/icons/triangle-alert';
-	import X from '@lucide/svelte/icons/x';
-	import * as Select from '$lib/components/ui/select/index.js';
-	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
-	import { cn, type WithElementRef } from '$lib/utils.js';
-	import Row from '$lib/registry/components/picker-row.svelte';
-	import StateLine from '$lib/registry/components/state-line.svelte';
+	import type { SgContext, StatusOption, StatusRecord } from '@sg-widgets/core';
+	import { NO_ROWS_LABEL } from '@sg-widgets/core';
+	import ListPicker from '$lib/registry/components/list-picker.svelte';
+	import { PICKER_CHIP as BADGE } from '$lib/registry/components/picker-classes.js';
 	import StatusBadge from '$lib/registry/components/status-badge.svelte';
+	import type { WithElementRef } from '$lib/utils.js';
 
-	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>, HTMLDivElement> & {
+	type Props = WithElementRef<Omit<HTMLAttributes<HTMLDivElement>, 'slot'>, HTMLDivElement> & {
 		/** The widget context. The options and the status table are read through it, once per page. */
 		context: SgContext;
 		entityType: string;
@@ -157,20 +129,6 @@
 	const badgeField = $derived({
 		displayValues: Object.fromEntries(query.options.map((option) => [option.code, option.label]))
 	});
-	const unknown = $derived(
-		value !== undefined && value !== '' && !query.options.some((option) => option.code === value)
-	);
-	// A stored code outside the usable set is legal, so it still gets a row (probe 009).
-	const rows = $derived(
-		unknown && value ? [...query.options, { code: value, label: value }] : query.options
-	);
-	const title = $derived(
-		value ? (rows.find((option) => option.code === value)?.label ?? value) : placeholder
-	);
-
-	// Read-only wins over disabled and over the loading window.
-	const inert = $derived(!readonly && (disabled || query.loading));
-	const showClear = $derived(clearable && Boolean(value) && !readonly && !disabled);
 
 	// The first option set is not a change: it is what the widget was mounted to show.
 	let seen: string | null = null;
@@ -186,180 +144,74 @@
 		}
 	});
 
-	function setOpen(next: boolean): void {
-		const wanted = readonly || inert ? false : next;
-		if (wanted === open) return;
-		open = wanted;
-		onOpenChange?.(open);
-	}
-
-	function pick(code: string): void {
-		value = code === '' ? undefined : code;
+	function pick(next: string | null): void {
+		value = next ?? undefined;
 		onValueChange?.(value);
 	}
-
-	function clear(): void {
-		value = undefined;
-		onValueChange?.(undefined);
-	}
-
-	/** The shared row a status is drawn as. There is no entity behind a code, so it carries no values. */
-	function rowOf(option: StatusOption): PickerRow {
-		return { type: 'Status', id: 0, name: option.label, values: {} };
-	}
-
-	/** The right-aligned value: the caller's, else the code when it says more than the label. */
-	function secondaryOf(option: StatusOption): string | undefined {
-		if (secondary) return secondary(option) || undefined;
-		return showCode && option.code !== option.label ? option.code : undefined;
-	}
 </script>
-
-{#snippet badge(code: string)}
-	<StatusBadge
-		{code}
-		status={query.statuses.get(code) ?? null}
-		field={badgeField}
-		size={BADGE[size]}
-		siteUrl={site}
-		class="min-w-0"
-	/>
-{/snippet}
-
-{#snippet selection()}
-	<!-- The value keeps clear of the clear control, which floats over the trigger. -->
-	<span
-		data-slot="status-picker-value"
-		class={cn('flex min-w-0 flex-1 items-center', showClear && 'pr-8')}
-	>
-		{#if value}
-			{@render badge(value)}
-		{:else}
-			<span class="text-muted-foreground truncate">{placeholder}</span>
-		{/if}
-	</span>
-{/snippet}
-
-{#snippet list()}
-	{#if query.error !== null}
-		<StateLine
-			state="error"
-			slotName="status-picker-error"
-			icon={TriangleAlert}
-			label={stateLine('error', { errorLabel }, query.error)}
-		/>
-	{:else if query.loading}
-		<div
-			data-slot="status-picker-loading"
-			class="flex flex-col gap-2 p-1"
-			aria-busy="true"
-			aria-label={stateLine('loading', { loadingLabel })}
-		>
-			{#each [0, 1, 2] as row (row)}
-				<Skeleton class="h-8 w-full" />
-			{/each}
-		</div>
-	{:else if rows.length === 0}
-		<StateLine state="empty" slotName="status-picker-empty" icon={SearchX} label={emptyLabel} />
-	{:else}
-		<Select.Group>
-			{#each rows as option (option.code)}
-				<Select.Item
-					data-status-code={option.code}
-					value={option.code}
-					label={option.label}
-					class="py-1.5 pl-2"
-				>
-					<Row
-						row={rowOf(option)}
-						subLabel={subLabel?.(option)}
-						secondary={secondaryOf(option)}
-						{size}
-						{context}
-					>
-						{#snippet glyph()}
-							<StatusBadge
-								code={option.code}
-								status={query.statuses.get(option.code) ?? null}
-								field={badgeField}
-								variant="glyph"
-								{size}
-								siteUrl={site}
-							/>
-						{/snippet}
-					</Row>
-				</Select.Item>
-			{/each}
-		</Select.Group>
-	{/if}
-{/snippet}
 
 <!--
 	One status, picked from the codes a project offers.
 
-	The options are `valid_values` minus the project's `hidden_values`, read with
-	`project_id`; over several projects they are the intersection of those sets. REST
-	does not enforce `hidden_values` on write, so the subtraction is the client's job
-	(probe 009). A code the option set does not carry still renders, as itself: a row
-	may legally hold one (field_types/status_list). When a later option set drops the
-	selected code, the picker clears it and emits once.
+	The list picker with a status row and a badge for its value. The options are
+	`valid_values` minus the project's `hidden_values`, read with `project_id`; over
+	several projects they are the intersection of those sets. REST does not enforce
+	`hidden_values` on write, so the subtraction is the client's job (probe 009). A code
+	the option set does not carry still renders, as itself: a row may legally hold one
+	(field_types/status_list). When a later option set drops the selected code, the
+	picker clears it and emits once.
 
 	A row is the shared picker row of rule 9: the status icon as the leading glyph, the
 	display label, and the code right-aligned. The badge stays in the control, where a
 	status is a value rather than a row.
 -->
-<div
-	bind:this={ref}
-	data-slot="status-picker"
-	data-size={size}
-	data-loading={query.loading ? 'true' : undefined}
-	class={cn('relative flex w-full min-w-0 items-center', className)}
+<ListPicker
+	bind:ref
+	slot="status-picker"
+	picker="status"
+	options={query.options}
+	value={value ?? null}
+	onValueChange={pick}
+	{placeholder}
+	{emptyLabel}
+	{loadingLabel}
+	{errorLabel}
+	loading={query.loading}
+	loadError={query.error}
+	{clearable}
+	clearLabel="Clear the status"
+	triggerLabel="Show the statuses"
+	{readonly}
+	{disabled}
+	{invalid}
+	{showCode}
+	{subLabel}
+	{secondary}
+	{size}
+	bind:open
+	{onOpenChange}
+	class={className}
 	{...rest}
 >
-	{#if readonly}
-		<div
-			data-slot="status-picker-trigger"
-			data-readonly="true"
-			data-empty={value ? undefined : ''}
-			aria-readonly="true"
-			aria-invalid={invalid ? 'true' : undefined}
-			{title}
-			class={cn(TRIGGER, BOX[size], 'pr-3')}
-		>
-			{@render selection()}
-		</div>
-	{:else}
-		<Select.Root
-			type="single"
-			value={value ?? ''}
-			onValueChange={pick}
-			disabled={inert}
-			bind:open={() => open, setOpen}
-			items={rows.map((option) => ({ value: option.code, label: option.label }))}
-		>
-			<Select.Trigger
-				data-empty={value ? undefined : ''}
-				aria-invalid={invalid ? 'true' : undefined}
-				{title}
-				class={cn(TRIGGER, BOX[size])}
-			>
-				{@render selection()}
-			</Select.Trigger>
-			<Select.Content align="start" class="p-1">
-				{@render list()}
-			</Select.Content>
-		</Select.Root>
+	{#snippet valueChip(code: string)}
+		<StatusBadge
+			{code}
+			status={query.statuses.get(code) ?? null}
+			field={badgeField}
+			size={BADGE[size]}
+			siteUrl={site}
+			class="min-w-0"
+		/>
+	{/snippet}
 
-		{#if showClear}
-			<button
-				type="button"
-				data-slot="status-picker-clear"
-				aria-label="Clear the status"
-				onclick={clear}
-				class="hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring focus-visible:ring-offset-background absolute right-8 shrink-0 rounded-sm p-0.5 opacity-70 transition-colors duration-150 outline-none hover:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-2 motion-safe:active:scale-[0.98]"
-			>
-				<X aria-hidden="true" class={GLYPH[size]} />
-			</button>
-		{/if}
-	{/if}
-</div>
+	{#snippet mark(option: StatusOption)}
+		<StatusBadge
+			code={option.code}
+			status={query.statuses.get(option.code) ?? null}
+			field={badgeField}
+			variant="glyph"
+			{size}
+			siteUrl={site}
+		/>
+	{/snippet}
+</ListPicker>

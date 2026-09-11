@@ -19,7 +19,7 @@ import { DateTimeEditor } from '@/registry/sg/components/date-time-editor';
 import { EntityMultiPicker } from '@/registry/sg/components/entity-multi-picker';
 import { EntityPicker } from '@/registry/sg/components/entity-picker';
 import { FieldValue } from '@/registry/sg/components/field-value';
-import { ListSelect } from '@/registry/sg/components/list-select';
+import { ListPicker } from '@/registry/sg/components/list-picker';
 import { NumberEditor } from '@/registry/sg/components/number-editor';
 import { StatusPicker } from '@/registry/sg/components/status-picker';
 import { TextEditor } from '@/registry/sg/components/text-editor';
@@ -411,7 +411,7 @@ export function FieldEditor({
           {...shared}
         />
       ) : kind === 'list' ? (
-        <ListSelect value={value as string | null} onValueChange={emit} projectId={projectId} {...shared} />
+        <ListPicker value={value as string | null} onValueChange={emit} projectId={projectId} {...shared} />
       ) : kind === 'url' ? (
         <UrlEditor
           value={value as UrlValue | null}

@@ -27,6 +27,17 @@ export const PICKER_BOX: Record<PickerSize, string> = {
 };
 
 /**
+ * The box a control whose filled value is plain text sits in. Rule 3 of
+ * `docs/design-rules.md`: there is no chip to sit level with, so the control keeps the
+ * reading inset, and `data-empty` takes it one step tighter.
+ */
+export const PICKER_TEXT_BOX: Record<PickerSize, string> = {
+	sm: 'min-h-8 px-2 data-empty:pl-1.5',
+	md: 'min-h-9 px-3 data-empty:pl-2',
+	lg: 'min-h-10 px-3 data-empty:pl-2'
+};
+
+/**
  * The trailing controls ride the first row of the control: they centre on a control that
  * holds one line and stay with that row when the value wraps below it. Only md stretches
  * past its chip row to hold the ladder, so one height cannot serve both states there; it

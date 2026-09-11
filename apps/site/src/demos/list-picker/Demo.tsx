@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ListMultiSelect } from '@/registry/sg/components/list-multi-select';
+import { ListPicker } from '@/registry/sg/components/list-picker';
 
 const versionType = {
   displayName: 'Version Type',
@@ -19,10 +19,11 @@ const cell = 'px-3 py-2 align-top';
 const typeCell = 'text-muted-foreground w-28 px-3 py-2 align-top font-mono text-xs';
 const valueCell = 'text-muted-foreground truncate font-mono text-xs';
 
-export default function ListMultiSelectDemo() {
-  const [type, setType] = useState<string[]>(['Type A']);
-  const [shot, setShot] = useState<string[]>(['VFX', '2D']);
-  const [scoped, setScoped] = useState<string[]>(['Full CG']);
+export default function ListPickerDemo() {
+  const [type, setType] = useState<string | null>('Type A');
+  const [shot, setShot] = useState<string | null>('VFX');
+  const [scoped, setScoped] = useState<string | null>('Full CG');
+  const [searched, setSearched] = useState<string | null>(null);
 
   return (
     <table className="w-full table-fixed border-collapse text-left">
@@ -32,8 +33,8 @@ export default function ListMultiSelectDemo() {
             valid values
           </th>
           <td className={cell}>
-            <div className="flex w-full min-w-0 flex-col gap-2">
-              <ListMultiSelect value={type} onValueChange={setType} field={versionType} />
+            <div data-demo="values" className="flex w-full min-w-0 flex-col gap-2">
+              <ListPicker value={type} onValueChange={setType} field={versionType} />
               <p className={valueCell}>{JSON.stringify(type)}</p>
             </div>
           </td>
@@ -43,8 +44,8 @@ export default function ListMultiSelectDemo() {
             display values
           </th>
           <td className={cell}>
-            <div className="flex w-full min-w-0 flex-col gap-2">
-              <ListMultiSelect value={shot} onValueChange={setShot} field={shotType} />
+            <div data-demo="labels" className="flex w-full min-w-0 flex-col gap-2">
+              <ListPicker value={shot} onValueChange={setShot} field={shotType} showCode />
               <p className={valueCell}>{JSON.stringify(shot)}</p>
             </div>
           </td>
@@ -54,9 +55,20 @@ export default function ListMultiSelectDemo() {
             project 63
           </th>
           <td className={cell}>
-            <div className="flex w-full min-w-0 flex-col gap-2">
-              <ListMultiSelect value={scoped} onValueChange={setScoped} field={shotType} projectId={63} />
+            <div data-demo="project" className="flex w-full min-w-0 flex-col gap-2">
+              <ListPicker value={scoped} onValueChange={setScoped} field={shotType} projectId={63} />
               <p className={valueCell}>{JSON.stringify(scoped)}</p>
+            </div>
+          </td>
+        </tr>
+        <tr className="border-border border-b">
+          <th scope="row" className={typeCell}>
+            searchable
+          </th>
+          <td className={cell}>
+            <div data-demo="searchable" className="flex w-full min-w-0 flex-col gap-2">
+              <ListPicker value={searched} onValueChange={setSearched} field={shotType} searchable />
+              <p className={valueCell}>{JSON.stringify(searched)}</p>
             </div>
           </td>
         </tr>
@@ -65,9 +77,9 @@ export default function ListMultiSelectDemo() {
             disabled
           </th>
           <td className={cell}>
-            <div className="flex w-full min-w-0 flex-col gap-2">
-              <ListMultiSelect value={['Type B']} field={versionType} disabled />
-              <p className={valueCell}>["Type B"]</p>
+            <div data-demo="disabled" className="flex w-full min-w-0 flex-col gap-2">
+              <ListPicker value="Type B" field={versionType} disabled />
+              <p className={valueCell}>"Type B"</p>
             </div>
           </td>
         </tr>

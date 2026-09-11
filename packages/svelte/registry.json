@@ -533,20 +533,64 @@
       ]
     },
     {
-      "name": "list-select",
+      "name": "list-picker",
       "type": "registry:component",
-      "title": "List Editor",
-      "description": "A list field as a select over its valid values.",
+      "title": "List Picker",
+      "description": "One value of a list field, picked from the set its schema declares.",
       "dependencies": [
         "@sg-widgets/core",
-        "@lucide/svelte"
+        "@lucide/svelte",
+        "bits-ui"
       ],
       "registryDependencies": [
-        "select"
+        "local:picker-control",
+        "local:picker-row",
+        "local:picker-classes"
       ],
       "files": [
         {
-          "path": "src/lib/registry/components/list-select.svelte",
+          "path": "src/lib/registry/components/list-picker.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "list-select",
+      "type": "registry:component",
+      "title": "List Select",
+      "description": "Deprecated: the former name of list-picker, which it re-exports.",
+      "dependencies": [
+        "@sg-widgets/core"
+      ],
+      "registryDependencies": [
+        "local:list-picker"
+      ],
+      "files": [
+        {
+          "path": "src/lib/registry/components/list-select.ts",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "list-multi-picker",
+      "type": "registry:component",
+      "title": "List Multi Picker",
+      "description": "Several values of a list field, picked from the set its schema declares.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte",
+        "bits-ui"
+      ],
+      "registryDependencies": [
+        "local:picker-control",
+        "local:picker-row",
+        "local:picker-classes",
+        "checkbox"
+      ],
+      "files": [
+        {
+          "path": "src/lib/registry/components/list-multi-picker.svelte",
           "type": "registry:component"
         }
       ]
@@ -555,20 +599,16 @@
       "name": "list-multi-select",
       "type": "registry:component",
       "title": "List Multi Select",
-      "description": "Several values of a list field, chosen from its valid values with checkboxes.",
+      "description": "Deprecated: the former name of list-multi-picker, which it re-exports.",
       "dependencies": [
-        "@sg-widgets/core",
-        "@lucide/svelte",
-        "bits-ui"
+        "@sg-widgets/core"
       ],
       "registryDependencies": [
-        "local:picker-control",
-        "local:picker-classes",
-        "checkbox"
+        "local:list-multi-picker"
       ],
       "files": [
         {
-          "path": "src/lib/registry/components/list-multi-select.svelte",
+          "path": "src/lib/registry/components/list-multi-select.ts",
           "type": "registry:component"
         }
       ]
@@ -786,11 +826,9 @@
         "@lucide/svelte"
       ],
       "registryDependencies": [
-        "local:picker-row",
-        "local:state-line",
-        "local:status-badge",
-        "select",
-        "skeleton"
+        "local:list-picker",
+        "local:picker-classes",
+        "local:status-badge"
       ],
       "files": [
         {

@@ -4,7 +4,7 @@
 //     --drive tools/drives/filter-editor-values.js
 //
 // The nested any-of holds a list of values, a colour and two relative windows, so the
-// list editor, ListMultiSelect, ColorEditor and the count-and-unit pair are all on the
+// list editor, ListMultiPicker, ColorEditor and the count-and-unit pair are all on the
 // page at once.
 async function until(test, tries = 200) {
   for (let i = 0; i < tries && !test(); i += 1) await wait(50);
@@ -29,11 +29,11 @@ for (const pane of panes()) {
     framework,
     lists: $$('[data-slot="filter-list"]', pane).length,
     listValues: $$('[data-slot="filter-list-value"]', pane).length,
-    multiSelects: $$('[data-slot="list-multi-select"]', pane).length,
+    multiSelects: $$('[data-slot="list-multi-picker"]', pane).length,
     colours: $$('[data-slot="color-editor"]', pane).length,
     windows: $$('[data-slot="filter-window"]', pane).length,
     counts: $$('[data-slot="filter-window"] input[aria-label="Count"]', pane).map((i) => i.value),
-    units: $$('[data-slot="filter-window"] [data-slot="list-select"]', pane).map((s) => s.textContent.trim()),
+    units: $$('[data-slot="filter-window"] [data-slot="list-picker"]', pane).map((s) => s.textContent.trim()),
     errors: $$('.text-destructive', pane).map((el) => el.textContent.trim()),
   };
   report.push(seen);

@@ -44,7 +44,7 @@ const CONTROL = {
   'user-picker': '[data-slot="entity-picker-control"]',
   'user-multi-picker': '[data-slot="entity-picker-control"]',
   'project-picker': '[data-slot="entity-picker-control"]',
-  'status-picker': '[data-slot="select-trigger"]',
+  'status-picker': '[data-slot="status-picker-control"]',
   'status-multi-picker': '[data-slot="status-multi-picker-control"]',
   'entity-type-picker': '[data-slot="entity-type-picker-control"]',
   'field-picker': '[data-slot="field-picker-trigger"]',
@@ -57,7 +57,7 @@ const CONTROL = {
   'number-editor': '[data-slot="number-editor-field"] [data-slot="input"]',
   'date-editor': '[data-slot="date-editor-trigger"]',
   'date-time-editor': '[data-slot="date-time-editor-trigger"]',
-  'list-select': '[data-slot="select-trigger"]',
+  'list-picker': '[data-slot="list-picker-control"]',
   'color-editor': '[data-slot="input"]',
   'url-editor': '[data-slot="url-editor-url"]',
 };

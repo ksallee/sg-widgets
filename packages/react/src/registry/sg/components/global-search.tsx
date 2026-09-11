@@ -176,6 +176,8 @@ export function GlobalSearch({
 
   const [query, setQueryState] = useState('');
   const [hits, setHits] = useState<SearchHit[]>([]);
+  /** The highlighted row. cmdk owns it between pages; a new page moves it to its first row. */
+  const [cursor, setCursor] = useState('');
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -233,6 +235,9 @@ export function GlobalSearch({
         if (id !== requestId.current) return;
         setHits((current) => (nextPage === 1 ? found : [...current, ...found]));
         setPage(nextPage);
+        // A page lands under the row that asked for it: the highlight moves to its first
+        // row, so the list stays where the reader was instead of returning to the top.
+        if (nextPage > 1 && found[0]) setCursor(`${found[0].ref.type}:${found[0].ref.id}`);
         // The answer carries no `links`, so a full page is the only sign of another one (probe 006).
         setHasMore(rows.length === PAGE_SIZE);
       } catch (error) {
@@ -417,7 +422,7 @@ export function GlobalSearch({
         {...rest}
       >
         {/* Server-side matching only, so the list never filters what came back. */}
-        <Command shouldFilter={false} className="border-border rounded-lg border">
+        <Command shouldFilter={false} value={cursor} onValueChange={setCursor} className="border-border rounded-lg border">
           {body}
         </Command>
       </div>
@@ -450,7 +455,9 @@ export function GlobalSearch({
         </Button>
       )}
       <CommandDialog open={open} onOpenChange={setOpen} title="Search" description="Search across the site by name.">
-        <Command shouldFilter={false}>{body}</Command>
+        <Command shouldFilter={false} value={cursor} onValueChange={setCursor}>
+          {body}
+        </Command>
       </CommandDialog>
     </div>
   );

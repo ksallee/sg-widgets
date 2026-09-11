@@ -245,6 +245,9 @@
 	const heading = 'text-muted-foreground px-2 py-1.5 text-xs font-medium';
 	const rowClass =
 		'hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring focus-visible:ring-offset-background flex w-full min-w-0 items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2';
+	/** A recent is a row of chips, and the chips carry the hover; the row itself stays quiet. */
+	const recentClass =
+		'focus-visible:ring-ring focus-visible:ring-offset-background flex w-full min-w-0 items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm outline-none focus-visible:ring-2 focus-visible:ring-offset-2';
 </script>
 
 <!--
@@ -291,7 +294,7 @@
 					<p class="text-muted-foreground px-2 py-1.5 text-sm">Nothing yet.</p>
 				{:else}
 					{#each recents as recent (keyOf(recent))}
-						<button type="button" class={rowClass} onclick={() => apply(recent)}>
+						<button type="button" class={recentClass} onclick={() => apply(recent)}>
 							<span class="flex min-w-0 flex-1 flex-wrap items-center gap-2">
 								{#each [recent.project, recent.entity, recent.task].filter((r) => r !== null) as chip (`${chip.type}:${chip.id}`)}
 									<EntityChip entity={chip} size={CHIP[size]} {context} />

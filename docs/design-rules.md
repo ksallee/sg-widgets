@@ -81,7 +81,8 @@ tell the user".
 
 - Focus: `focus-visible:ring-2 ring-ring ring-offset-2 ring-offset-background`, never `outline-none`
   without a ring replacement. Focus rings are the shadcn ones, unchanged.
-- Disabled: `opacity-50 pointer-events-none`, plus `aria-disabled`. Readonly keeps full contrast and
+- Disabled: `opacity-50 pointer-events-none`, plus `aria-disabled`; a tile that is mostly a picture
+  also greys it (`[&_img]:grayscale`), since a photo at half opacity still reads as a photo. Readonly keeps full contrast and
   removes affordances (no chevron, no clear button).
 - Invalid: `aria-invalid` and the shadcn `aria-invalid:` ring/border classes, plus room for a message the
   caller renders.

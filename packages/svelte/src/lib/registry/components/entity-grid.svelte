@@ -546,7 +546,7 @@
 							tabindex={index === active ? 0 : -1}
 							data-row-key={key}
 							data-index={index}
-							class={cn('min-w-0 outline-none', disabled && 'pointer-events-none opacity-50')}
+							class={cn('min-w-0 outline-none', disabled && 'pointer-events-none opacity-50 [&_img]:grayscale')}
 							onfocusin={() => (cursor = index)}
 							onclick={(event) => onTileClick(event, row)}
 						>
@@ -576,7 +576,7 @@
 							tabindex={index === active ? 0 : -1}
 							data-row-key={key}
 							data-index={index}
-							class={disabled ? 'pointer-events-none opacity-50' : undefined}
+							class={disabled ? 'pointer-events-none opacity-50 [&_img]:grayscale' : undefined}
 							onfocusin={() => (cursor = index)}
 							onclick={(event) => onTileClick(event, row)}
 						/>

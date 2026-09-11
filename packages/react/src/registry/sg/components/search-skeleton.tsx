@@ -19,7 +19,7 @@ export interface SearchSkeletonProps {
  */
 export function SearchSkeleton({ label, lines = 3, lead = 'h-6 w-10 shrink-0', slotName }: SearchSkeletonProps) {
   return (
-    <div data-slot={slotName} className="flex flex-col gap-2 p-1" aria-busy="true" aria-label={label}>
+    <div data-slot={slotName} className="flex flex-col" aria-busy="true" aria-label={label}>
       {Array.from({ length: lines }, (_, line) => (
         <div key={line} className="flex items-center gap-2 px-2 py-1.5">
           <Skeleton className={cn(lead)} />

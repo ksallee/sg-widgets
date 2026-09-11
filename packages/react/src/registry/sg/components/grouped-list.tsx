@@ -357,9 +357,11 @@ export function GroupedList({
             label={stateLine('error', { errorLabel }, snapshot.error?.message)}
           />
         ) : view === 'loading' ? (
-          <div className="flex flex-col gap-2 p-2" aria-busy="true" aria-label={loadingText}>
+          <div className="flex flex-col" aria-busy="true" aria-label={loadingText}>
             {Array.from({ length: 8 }, (_, index) => (
-              <Skeleton key={index} className="h-6 w-full" />
+              <div key={index} className={cn('border-border/50 flex items-center border-b last:border-b-0', rowClass)}>
+                <Skeleton className="h-5 w-full" />
+              </div>
             ))}
           </div>
         ) : view === 'empty' ? (

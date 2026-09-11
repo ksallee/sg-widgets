@@ -229,14 +229,14 @@
 			<div data-qa-widget="sort-picker" data-qa-size="md" data-qa-popup="sort-trigger">
 				<SortPicker entityType="Version" {context} bind:value={sortKeys} />
 			</div>
-			<div data-qa-widget="column-picker" data-qa-size="md">
+			<div data-qa-widget="column-picker" data-qa-size="md" data-qa-popup="popover-trigger">
 				<Popover.Root>
 					<Popover.Trigger>
 						{#snippet child({ props })}
 							<Button variant="outline" {...props}>Columns</Button>
 						{/snippet}
 					</Popover.Trigger>
-					<Popover.Content strategy="fixed" align="start" class="w-72">
+					<Popover.Content strategy="fixed" align="start" class="w-72 p-3">
 						<ColumnPicker
 							{context}
 							entityType="Version"

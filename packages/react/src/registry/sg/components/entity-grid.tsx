@@ -326,7 +326,7 @@ export function EntityGrid({
             style={columns}
           >
             {Array.from({ length: 8 }, (_, index) => (
-              <div key={index} className="flex flex-col gap-2">
+              <div key={index} className="flex flex-col gap-1.5">
                 <Skeleton className="aspect-video w-full" />
                 <Skeleton className="h-4 w-3/4" />
                 <Skeleton className="h-3 w-1/2" />

@@ -477,12 +477,14 @@ export function PickerControl({
     note = (
       <div
         data-slot={`${slot}-loading`}
-        className="flex flex-col gap-2"
+        className="flex flex-col"
         aria-busy="true"
         aria-label={loadingText}
       >
         {[0, 1, 2].map((one) => (
-          <Skeleton key={one} className="h-8 w-full" />
+          <div key={one} className="flex items-center px-2 py-1.5">
+            <Skeleton className="h-5 w-full" />
+          </div>
         ))}
       </div>
     );

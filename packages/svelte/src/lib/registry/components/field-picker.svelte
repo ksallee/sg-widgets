@@ -517,12 +517,15 @@ const ICONS: Record<string, typeof Type> = {
 					{:else if fields === null}
 						<div
 							data-slot="field-picker-loading"
-							class="flex flex-col gap-2 p-1"
+							class="flex flex-col"
 							aria-busy="true"
 							aria-label={stateLine('loading', { loadingLabel })}
 						>
 							{#each [0, 1, 2] as row (row)}
-								<Skeleton class="h-10 w-full" />
+								<div class="flex flex-col gap-1 px-2 py-1.5">
+									<Skeleton class="h-5 w-2/3" />
+									<Skeleton class="h-3 w-1/4" />
+								</div>
 							{/each}
 						</div>
 					{:else}

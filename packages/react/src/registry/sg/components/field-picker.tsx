@@ -504,12 +504,15 @@ export function FieldPicker({
               ) : fields === null ? (
                 <div
                   data-slot="field-picker-loading"
-                  className="flex flex-col gap-2 p-1"
+                  className="flex flex-col"
                   aria-busy="true"
                   aria-label={stateLine('loading', { loadingLabel })}
                 >
                   {[0, 1, 2].map((row) => (
-                    <Skeleton key={row} className="h-10 w-full" />
+                    <div key={row} className="flex flex-col gap-1 px-2 py-1.5">
+                      <Skeleton className="h-5 w-2/3" />
+                      <Skeleton className="h-3 w-1/4" />
+                    </div>
                   ))}
                 </div>
               ) : (

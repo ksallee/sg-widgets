@@ -392,9 +392,11 @@
 				label={stateLine('error', { errorLabel }, snapshot.error?.message)}
 			/>
 		{:else if view === 'loading'}
-			<div class="flex flex-col gap-2 p-2" aria-busy="true" aria-label={loadingText}>
+			<div class="flex flex-col" aria-busy="true" aria-label={loadingText}>
 				{#each { length: 8 } as _, index (index)}
-					<Skeleton class="h-6 w-full" />
+					<div class={cn('border-border/50 flex items-center border-b last:border-b-0', rowClass)}>
+						<Skeleton class="h-5 w-full" />
+					</div>
 				{/each}
 			</div>
 		{:else if view === 'empty'}

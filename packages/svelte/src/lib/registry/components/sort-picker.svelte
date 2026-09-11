@@ -183,7 +183,7 @@
 			class="flex w-96 flex-col gap-3 p-3"
 			align="start"
 		>
-			<div class="flex min-w-0 flex-col gap-2" data-slot="sort-keys" {@attach sortable.attach}>
+			<div class="flex min-w-0 flex-col" data-slot="sort-keys" {@attach sortable.attach}>
 				{#each value as key, i (key.field)}
 					<div
 						class={cn(
@@ -203,7 +203,7 @@
 							onkeydown={(event) => onKeyKeys(event, i)}
 							aria-label={`Reorder ${nameOf(key.field)}`}
 							title="Drag to reorder, or press Space and use the arrow keys"
-							class="cursor-grab touch-none active:cursor-grabbing"
+							class="cursor-grab touch-none rounded-sm active:cursor-grabbing"
 						>
 							<GripVerticalIcon />
 						</Button>
@@ -232,6 +232,7 @@
 							size="icon-sm"
 							aria-label="Remove"
 							data-slot="sort-remove"
+							class="rounded-sm"
 							onclick={() => commit(value.filter((_, j) => j !== i))}
 						>
 							<XIcon />

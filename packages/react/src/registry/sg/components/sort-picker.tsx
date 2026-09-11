@@ -171,7 +171,7 @@ export function SortPicker({
           ) : null}
         </PopoverTrigger>
         <PopoverContent data-picker="sort" className="flex w-96 flex-col gap-3 p-3" align="start">
-          <div className="flex min-w-0 flex-col gap-2" data-slot="sort-keys" ref={sortableRef}>
+          <div className="flex min-w-0 flex-col" data-slot="sort-keys" ref={sortableRef}>
             {value.map((key, i) => (
               <div
                 key={key.field}
@@ -192,7 +192,7 @@ export function SortPicker({
                   onKeyDown={(event) => onKeyKeys(event, i)}
                   aria-label={`Reorder ${nameOf(key.field)}`}
                   title="Drag to reorder, or press Space and use the arrow keys"
-                  className="cursor-grab touch-none active:cursor-grabbing"
+                  className="cursor-grab touch-none rounded-sm active:cursor-grabbing"
                 >
                   <GripVerticalIcon />
                 </Button>
@@ -223,6 +223,7 @@ export function SortPicker({
                   size="icon-sm"
                   aria-label="Remove"
                   data-slot="sort-remove"
+                  className="rounded-sm"
                   onClick={() => commit(value.filter((_, j) => j !== i))}
                 >
                   <XIcon />

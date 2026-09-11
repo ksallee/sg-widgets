@@ -458,13 +458,11 @@ export function EntityTree({
             label={stateLine('error', { errorLabel }, snap.error?.message)}
           />
         ) : snap.status === 'loading' || snap.status === 'idle' ? (
-          <div
-            className="flex flex-col gap-2 p-1"
-            aria-busy="true"
-            aria-label={stateLine('loading', { loadingLabel })}
-          >
+          <div className="flex flex-col" aria-busy="true" aria-label={stateLine('loading', { loadingLabel })}>
             {Array.from({ length: 5 }, (_, index) => (
-              <Skeleton key={index} className="h-6 w-full" />
+              <div key={index} className={cn('flex items-center', ROW[density])}>
+                <Skeleton className="h-5 w-full" />
+              </div>
             ))}
           </div>
         ) : snap.rows.length === 0 ? (

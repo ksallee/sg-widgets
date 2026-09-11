@@ -17,7 +17,15 @@ The goal is one system: a page mixing ten of our widgets must read as one hand.
 
 - Parents own the gap. A flex or grid container sets `gap-*`; children never carry `m*`, `mt-*`, `ml-*`
   to space themselves from siblings. If you reach for a margin, you are missing a container.
-- Padding belongs to the surface that has a border or background, not to its content.
+- A parent owns a zero gap too. A list of rows is a flex column with no gap, as every popup list is,
+  so hover, drop-target and dragging fills run edge to edge. `gap-2` is for items in a row - chips,
+  buttons, a glyph and its text - never for rows in a list.
+- Padding belongs to the surface that has a border or background, not to its content. A row's padding
+  is the inset of its own surface, never spacing between rows.
+- The height ladder of rule 3 is for controls. A row's height follows its content, and `size` moves a
+  row's text and its glyphs, as it does in the pickers.
+- Skeletons stand in for rows: same inset, same height, same zero gap, so a list holds its place when
+  data lands.
 - One scale, used everywhere:
 
   | role | class |

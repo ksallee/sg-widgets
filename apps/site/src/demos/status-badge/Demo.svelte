@@ -43,6 +43,11 @@
 		icon: { displayType: 'image_map', imageMapKey: 'icon_x_thin_white' }
 	};
 
+	/** A selection the cross can take from. */
+	const REMOVABLE = ['ip', 'apr', 'hld'];
+	let removed = $state<string[]>([]);
+	const shown = $derived(REMOVABLE.filter((code) => !removed.includes(code)));
+
 	const data = load();
 	const group = 'flex flex-col gap-2';
 	const label = 'text-muted-foreground text-xs font-medium tracking-wide uppercase';
@@ -84,6 +89,32 @@
 				<StatusBadge code="ip" status={statuses['ip']} {field} color />
 				<StatusBadge code="hld" status={statuses['hld']} {field} color />
 				<StatusBadge code="omt" status={statuses['omt']} {field} color />
+			</div>
+		</section>
+
+		<section class={group} data-demo="removable">
+			<h4 class={label}>Removable, with the cross inside the pill</h4>
+			<div class={row}>
+				{#each shown as code (code)}
+					<StatusBadge
+						{code}
+						status={statuses[code]}
+						{field}
+						color
+						removable
+						onRemove={(c) => (removed = [...removed, c])}
+					/>
+				{/each}
+				<StatusBadge code="rev" status={statuses['rev']} {field} color variant="icon" removable />
+				{#if shown.length === 0}
+					<button
+						type="button"
+						class="text-muted-foreground hover:text-foreground focus-visible:ring-ring focus-visible:ring-offset-background text-sm underline underline-offset-2 outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+						onclick={() => (removed = [])}
+					>
+						Put them back
+					</button>
+				{/if}
 			</div>
 		</section>
 

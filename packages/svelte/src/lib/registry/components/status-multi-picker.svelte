@@ -194,9 +194,14 @@
 	 */
 	const inline = $derived(summary === 'chips');
 
+	// Read-only wins over disabled and over the loading window.
+	const inert = $derived(!readonly && (disabled || query.loading));
+	const interactive = $derived(!readonly && !inert);
+	const showClear = $derived(clearable && value.length > 0 && !readonly && !disabled);
+
 	/** What the badges look like, so a change to any of it re-measures the row. */
 	const rowKey = $derived(
-		`${size}|${summary}|${badge}|${showCode}|${value.map((code) => byCode.get(code)?.label ?? code).join(', ')}`
+		`${size}|${summary}|${badge}|${showCode}|${interactive}|${value.map((code) => byCode.get(code)?.label ?? code).join(', ')}`
 	);
 	let badgesEl = $state<HTMLElement | null>(null);
 	let available = $state(0);
@@ -257,11 +262,6 @@
 					: undefined
 		})
 	);
-
-	// Read-only wins over disabled and over the loading window.
-	const inert = $derived(!readonly && (disabled || query.loading));
-	const interactive = $derived(!readonly && !inert);
-	const showClear = $derived(clearable && value.length > 0 && !readonly && !disabled);
 
 	/** A press anywhere in the field opens the list, and a token field takes the caret. */
 	function openFromControl(event: PointerEvent): void {
@@ -358,7 +358,7 @@
 	}
 </script>
 
-{#snippet statusBadge(code: string, variant: StatusBadgeVariant)}
+{#snippet statusBadge(code: string, variant: StatusBadgeVariant, removable: boolean)}
 	<StatusBadge
 		{code}
 		status={query.statuses.get(code) ?? null}
@@ -367,6 +367,9 @@
 		size={BADGE[size]}
 		label={showCode ? 'code' : 'name'}
 		siteUrl={site}
+		{removable}
+		onRemove={remove}
+		removeLabel={`Remove ${byCode.get(code)?.label ?? code}`}
 		class="min-w-0"
 	/>
 {/snippet}
@@ -377,20 +380,9 @@
 		data-chip=""
 		data-armed={armed === index ? 'true' : undefined}
 		hidden={ready && index >= plan.shown.length}
-		class={cn('flex min-w-0 shrink-0 items-center gap-1', armed === index && cn(PICKER_ARMED, 'rounded-sm'))}
+		class={cn('flex min-w-0 shrink-0 items-center', armed === index && cn(PICKER_ARMED, 'rounded-sm'))}
 	>
-		{@render statusBadge(code, badge)}
-		{#if interactive && badge !== 'icon'}
-			<button
-				type="button"
-				data-slot="status-multi-picker-remove"
-				aria-label={`Remove ${byCode.get(code)?.label ?? code}`}
-				onclick={() => remove(code)}
-				class="hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring focus-visible:ring-offset-background pointer-events-auto shrink-0 rounded-sm opacity-60 outline-none transition-colors duration-150 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-2 motion-safe:active:scale-[0.98]"
-			>
-				<X aria-hidden="true" class="size-3" />
-			</button>
-		{/if}
+		{@render statusBadge(code, badge, interactive)}
 	</span>
 {/snippet}
 
@@ -563,7 +555,7 @@
 								<span data-slot="status-multi-picker-check" class="flex h-5 shrink-0 items-center">
 									<Checkbox checked={chosen} tabindex={-1} aria-hidden="true" class="pointer-events-none" />
 								</span>
-								{@render statusBadge(option.code, 'both')}
+								{@render statusBadge(option.code, 'both', false)}
 							</Combobox.Item>
 						{/each}
 					{/if}

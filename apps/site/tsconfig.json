@@ -14,6 +14,8 @@
     // the registry sources in the workspace packages.
     "paths": {
       "@/*": ["../../packages/react/src/*"],
+      "@base-ui/react": ["../../packages/react/node_modules/@base-ui/react"],
+      "bits-ui": ["../../packages/svelte/node_modules/bits-ui"],
       "$lib": ["../../packages/svelte/src/lib/index.ts"],
       "$lib/*": ["../../packages/svelte/src/lib/*"],
       "@sg-widgets/core": ["../../packages/core/src/index.ts"]

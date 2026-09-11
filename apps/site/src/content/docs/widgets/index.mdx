@@ -30,13 +30,13 @@ cost one schema read and one status table. Wire your own client, or the shipped 
 ## Shared parts
 
 A widget is built from parts the registry also holds. They install with the widgets that need
-them and have no page of their own; a picker pulls in its base, its row and its classes the way a
-table pulls in its source binding and its footer. The same names exist in both registries.
+them; a picker pulls in its base, its row and its classes the way a table pulls in its source
+binding and its footer. The same names exist in both registries.
 
 | part | what it is | used by |
 |---|---|---|
-| `picker-control` | The control box and popup shell every picker is built on: the press rule, the caret, the keyboard model, inline and summary modes, the search row, the list, the state line and the load-more row. | entity, entity multi, status multi and entity type pickers, list multi select |
-| `picker-row` | The row every picker, search and tree draws: a picture, a highlighted label, a sub-label and a typed secondary. | the pickers, global search, hierarchical search, context selector |
+| [`picker-control`](/widgets/picker-control/) | The control box and popup shell every picker is built on: the press rule, the caret, the keyboard model, inline and summary modes, the search row, the list, the state line and the load-more row. | entity, entity multi, status multi and entity type pickers, list multi select |
+| [`picker-row`](/widgets/picker-control/#pickerrow) | The row every picker, search and tree draws: a picture, a highlighted label, a sub-label and a typed secondary. | the pickers, global search, hierarchical search, context selector |
 | `picker-classes` | The control, popup, list and row classes every picker wears. | the pickers, picker-control |
 | `control-classes` | The height, inset and glyph ladder every non-picker control wears. | the editors, filter bar, filter dialog, global search, context selector |
 | `leaf-classes` | The ladder and the remove control every badge, chip and avatar wears. | status badge, entity chip, user avatar |

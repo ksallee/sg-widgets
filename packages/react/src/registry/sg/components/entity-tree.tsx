@@ -440,7 +440,7 @@ export function EntityTree({
             aria-label={searchPlaceholder}
             aria-busy={snap.searching ? true : undefined}
             data-slot="entity-tree-search"
-            className="pe-8"
+            className="h-9 pe-8"
           />
           {snap.searching ? (
             <Loader

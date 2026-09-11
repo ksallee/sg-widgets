@@ -53,7 +53,7 @@ export function CollectionFooter({ source, pager, pageSizes, loading, slotName }
               value={String(pager.pageSize)}
               onValueChange={(value) => void source.setPageSize(Number(value))}
             >
-              <SelectTrigger aria-label="Rows per page" className="h-7 w-auto min-w-16">
+              <SelectTrigger aria-label="Rows per page" className="h-8 w-auto min-w-16">
                 <span data-slot="select-value" className="tabular-nums">
                   {pager.pageSize}
                 </span>
@@ -73,7 +73,7 @@ export function CollectionFooter({ source, pager, pageSizes, loading, slotName }
             </span>
             <Button
               variant="outline"
-              size="icon-sm"
+              size="icon"
               aria-label="Previous page"
               disabled={!pager.hasPrevious || loading}
               onClick={() => void source.setPage(pager.page - 1)}
@@ -85,7 +85,7 @@ export function CollectionFooter({ source, pager, pageSizes, loading, slotName }
               min="1"
               inputMode="numeric"
               aria-label="Page number"
-              className="h-7 w-14 text-center tabular-nums"
+              className="h-8 w-14 text-center tabular-nums"
               value={pageDraft === '' ? String(pager.page) : pageDraft}
               onChange={(event) => setPageDraft(event.currentTarget.value)}
               onKeyDown={(event) => {
@@ -98,7 +98,7 @@ export function CollectionFooter({ source, pager, pageSizes, loading, slotName }
             {pager.pageCount !== null ? <span className="tabular-nums">of {pager.pageCount}</span> : null}
             <Button
               variant="outline"
-              size="icon-sm"
+              size="icon"
               aria-label="Next page"
               disabled={!pager.hasNext || loading}
               onClick={() => void source.setPage(pager.page + 1)}

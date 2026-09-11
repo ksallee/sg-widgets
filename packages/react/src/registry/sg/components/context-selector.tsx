@@ -70,9 +70,9 @@ export type ContextSelectorSize = 'sm' | 'md' | 'lg';
  * clear and open controls.
  */
 const BOX: Record<ContextSelectorSize, string> = {
-  sm: 'min-h-8 px-2 py-1 data-empty:pl-1.5 data-empty:py-0.5',
+  sm: 'min-h-8 px-2 py-0.5 data-empty:pl-1.5 data-empty:py-0',
   md: 'min-h-9 px-3 py-1 data-empty:pl-2 data-empty:py-0.5',
-  lg: 'min-h-10 px-3 py-1 data-empty:pl-2 data-empty:py-0.5',
+  lg: 'min-h-10 px-3 py-0.5 data-empty:pl-2 data-empty:py-0',
 };
 const GLYPH: Record<ContextSelectorSize, string> = { sm: 'size-4', md: 'size-4', lg: 'size-5' };
 /** A chip inside a control sits one step down the leaf ladder. */
@@ -273,7 +273,7 @@ export function ContextSelector({
           )}
           aria-label={`Context: ${label(workContext)}`}
         >
-          <span className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+          <span className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
             {chips.length === 0 ? (
               <span className="text-muted-foreground text-sm">No context</span>
             ) : (

@@ -10,14 +10,21 @@
 export type PickerSize = 'sm' | 'md' | 'lg';
 
 /**
- * The box a control sits in. `data-empty` takes the leading and the vertical inset
- * down one step, so an empty control is tighter than a filled one; `min-h` holds the
- * ladder and the trailing inset stays reserve for the clear and open controls.
+ * The box a control sits in. A filled control's leading inset matches the room above and
+ * below its chip, so the chip sits evenly inside the border; `data-empty` gives the
+ * reading inset of a plain input back, and takes the vertical inset down one step.
+ * `min-h` holds the ladder and the trailing inset stays reserve for the clear and open
+ * controls.
+ *
+ * The vertical inset is what the chip leaves under the ladder: 24 plus 8 fits under 36 at
+ * md, while 24 under 32 at sm and 32 under 40 at lg leave 2 each, so those two take the
+ * half step. Anything more and a filled control overruns the ladder, and the room beside
+ * the chip no longer matches the room above it.
  */
 export const PICKER_BOX: Record<PickerSize, string> = {
-	sm: 'min-h-8 pr-2 pl-[5px] py-1 data-empty:pl-1.5 data-empty:py-0.5',
+	sm: 'min-h-8 pr-2 pl-[3px] py-0.5 data-empty:pl-1.5 data-empty:py-0',
 	md: 'min-h-9 pr-3 pl-[5px] py-1 data-empty:pl-2 data-empty:py-0.5',
-	lg: 'min-h-10 pr-3 pl-1 py-1 data-empty:pl-2 data-empty:py-0.5'
+	lg: 'min-h-10 pr-3 pl-[3px] py-0.5 data-empty:pl-2 data-empty:py-0'
 };
 
 /**

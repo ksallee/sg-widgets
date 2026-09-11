@@ -5,6 +5,8 @@ import type { EntityRow } from '../src/client.js';
 import type { EntitySource, EntitySourceState } from '../src/collection.js';
 import {
   canLoadNext,
+  collectionBottom,
+  collectionView,
   groupRowsKeyed,
   hasFailedPage,
   loadsOnArrowDown,
@@ -175,5 +177,35 @@ describe('groups across a page boundary', () => {
       'sg_status_list',
     );
     expect(none[0]?.key).toBe('group:0:null');
+  });
+});
+
+describe('what a collection draws', () => {
+  it('reads the body as error, loading, empty or rows', () => {
+    expect(collectionView(state({ status: 'error', error: new Error('no') }), 0)).toBe('error');
+    expect(collectionView(state({ status: 'loading' }), 0)).toBe('loading');
+    expect(collectionView(state(), 0)).toBe('empty');
+    expect(collectionView(state({ rows: rows(2, 'ip') }), 2)).toBe('rows');
+  });
+
+  it('leaves the rows up when a later page fails', () => {
+    const failed = state({ status: 'error', error: new Error('no'), rows: rows(3, 'ip') });
+    expect(collectionView(failed, 3)).toBe('rows');
+  });
+
+  it('counts the lines the layout drew, not the rows', () => {
+    // A grouped table draws headers as well, so a set with rows is never empty.
+    expect(collectionView(state({ rows: rows(2, 'ip') }), 0)).toBe('empty');
+  });
+
+  it('puts one block under the last row', () => {
+    expect(collectionBottom(state({ status: 'error', error: new Error('no'), rows: rows(3, 'ip') }), 'scroll')).toBe(
+      'error',
+    );
+    expect(collectionBottom(state({ status: 'loadingMore' }), 'scroll')).toBe('loading');
+    expect(collectionBottom(state(), 'more')).toBe('more');
+    expect(collectionBottom(state(), 'scroll')).toBe('sentinel');
+    expect(collectionBottom(state(), 'pages')).toBe(null);
+    expect(collectionBottom(state({ hasMore: false }), 'scroll')).toBe(null);
   });
 });

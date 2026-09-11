@@ -87,21 +87,13 @@
 	} from '@sg-widgets/core';
 	import {
 		cellValue,
-		describePaging,
 		NO_ROWS_LABEL,
-		hasFailedPage,
 		editorPlacementFor,
 		errorText,
-		idsForRefs,
 		isEditableType,
-		loadsOnArrowDown,
 		nextEnabledIndex,
 		preferencesOf,
-		rowIdOf,
-		rowIsDisabled,
 		sameIds,
-		sameRefs,
-		shouldLoadNext,
 		stateLine
 	} from '@sg-widgets/core';
 	import {
@@ -114,10 +106,8 @@
 		createGroupedRowModel,
 		createTable,
 		rowExpandingFeature,
-		rowSelectionFeature,
 		tableFeatures
 	} from '@tanstack/svelte-table';
-	import { Virtualizer, elementScroll, observeElementOffset, observeElementRect } from '@tanstack/virtual-core';
 	import ArrowDown from '@lucide/svelte/icons/arrow-down';
 	import ArrowLeftToLine from '@lucide/svelte/icons/arrow-left-to-line';
 	import ArrowUp from '@lucide/svelte/icons/arrow-up';
@@ -135,7 +125,11 @@
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
 	import * as Table from '$lib/components/ui/table/index.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
-	import { bindSource } from '$lib/registry/components/collection-source.svelte.js';
+	import {
+		bindCollectionBody,
+		COLLECTION_ROOT,
+		createCollectionControl
+	} from '$lib/registry/components/collection-control.svelte.js';
 	import CollectionFooter from '$lib/registry/components/collection-footer.svelte';
 	import FieldEditor from '$lib/registry/components/field-editor.svelte';
 	import FieldValue from '$lib/registry/components/field-value.svelte';
@@ -264,9 +258,12 @@
 
 	/* state ---------------------------------------------------------------- */
 
-	const bound = bindSource({
+	const control = createCollectionControl({
 		source: () => source,
 		paging: () => paging,
+		getRowId: () => getRowId,
+		isRowDisabled: () => isRowDisabled,
+		loadingLabel: () => loadingLabel,
 		sort: {
 			get: () => sort,
 			set: (next) => {
@@ -280,9 +277,16 @@
 				filters = next;
 				onFiltersChange?.(next);
 			}
+		},
+		selection: {
+			get: () => selection,
+			set: (next) => {
+				selection = next;
+				onSelectionChange?.(next);
+			}
 		}
 	});
-	const snapshot = $derived(bound.snapshot);
+	const snapshot = $derived(control.snapshot);
 	$effect(() => {
 		// A group is only whole when the server put its rows together, so the group path
 		// leads the sort. Setting it reads the first page again.
@@ -294,21 +298,11 @@
 	// The site's preferences, so a duration, a date-time and a timecode are edited the
 	// way the site reads them.
 	const prefs = $derived(preferencesOf(context));
-	const rows = $derived(snapshot.rows);
+	const rows = $derived(control.rows);
 	const sortKeys = $derived(snapshot.sort);
-	const pager = $derived(describePaging(snapshot));
 	const rowHeight = $derived(ROW_HEIGHT[density]);
 	const cellClass = $derived(cn(CELL[density], TEXT[size]));
 	const byPath = $derived(new Map(columns.map((column) => [column.path, column])));
-
-	const rowId = (row: EntityRow): string => rowIdOf(row, getRowId);
-	const rowDisabled = (row: EntityRow): boolean => rowIsDisabled(row, isRowDisabled);
-	const disabledAt = (index: number): boolean => {
-		const row = rows[index];
-		return row === undefined || rowDisabled(row);
-	};
-	/** A page that failed under rows already loaded, which the bottom line reports. */
-	const pageError = $derived(hasFailedPage(snapshot));
 
 	let editing = $state<{ key: string; path: string; placement: EditorPlacement } | null>(null);
 	let draft = $state<unknown>(null);
@@ -318,8 +312,8 @@
 
 	/* the table ------------------------------------------------------------ */
 
-	// Sorting and paging are the server's, so neither feature is registered: this table
-	// owns sizing, resizing, ordering, pinning, grouping and selection.
+	// Sorting, paging and the selection are held elsewhere, so none of their features is
+	// registered: this table owns sizing, resizing, ordering, pinning and grouping.
 	const features = tableFeatures({
 		columnOrderingFeature,
 		columnSizingFeature,
@@ -328,8 +322,7 @@
 		columnGroupingFeature,
 		groupedRowModel: createGroupedRowModel(),
 		rowExpandingFeature,
-		expandedRowModel: createExpandedRowModel(),
-		rowSelectionFeature
+		expandedRowModel: createExpandedRowModel()
 	});
 
 	const columnDefs = $derived([
@@ -361,44 +354,20 @@
 		// the caller put it.
 		groupedColumnMode: false,
 		initialState: { expanded: true },
-		getRowId: (row: EntityRow) => rowIdOf(row, getRowId),
-		columnResizeMode: 'onChange',
-		get enableRowSelection() {
-			// A disabled row refuses its own box and is left out of the header's select-all.
-			return selectable && ((row: { original: EntityRow }) => !rowIsDisabled(row.original, isRowDisabled));
-		}
+		getRowId: (row: EntityRow) => control.rowId(row),
+		columnResizeMode: 'onChange'
 	});
 
-	const picked = $derived(table.atoms.rowSelection.get());
 	const order = $derived(table.atoms.columnOrder.get());
 	const pinning = $derived(table.atoms.columnPinning.get());
 	const sizing = $derived(table.atoms.columnSizing.get());
 	const expansion = $derived(table.atoms.expanded.get());
 
 	/*
-	 * Two-way state.
-	 *
-	 * Each pair is one effect out of the table and one into it, and each reads the other
-	 * side untracked, so a change travels once and the two never write to each other.
+	 * The shut group headers, two-way: one effect out of the table and one into it, each
+	 * reading the other side untracked, so a change travels once and the two never write
+	 * to each other.
 	 */
-	$effect(() => {
-		void picked;
-		const refs = table
-			.getSelectedRowModel()
-			.flatRows.filter((row) => !row.getIsGrouped())
-			.map((row) => ({ type: row.original.type, id: row.original.id }));
-		if (sameRefs(refs, untrack(() => selection ?? []))) return;
-		selection = refs;
-		onSelectionChange?.(refs);
-	});
-	$effect(() => {
-		const wanted = idsForRefs(rows, selection ?? [], getRowId);
-		untrack(() => {
-			if (sameIds(wanted, Object.keys(table.atoms.rowSelection.get()))) return;
-			table.setRowSelection(Object.fromEntries(wanted.map((id) => [id, true])));
-		});
-	});
-
 	/** The group headers, which the two-way `collapsed` names by id. */
 	const groupHeaders = $derived.by(() => {
 		void expansion;
@@ -457,10 +426,6 @@
 		void sizing;
 		return table.getTotalSize();
 	});
-	const allSelected = $derived.by(() => {
-		void picked;
-		return { all: table.getIsAllRowsSelected(), some: table.getIsSomeRowsSelected() };
-	});
 
 	/* rows, grouped or flat ------------------------------------------------ */
 
@@ -471,72 +436,36 @@
 		return row.subRows.reduce((n, child) => n + (child.subRows.length > 0 ? leafCount(child) : 1), 0);
 	}
 
-	/* virtual rows --------------------------------------------------------- */
+	/* the lines ------------------------------------------------------------ */
 
-	let scrollEl = $state<HTMLDivElement | null>(null);
-	let sentinel = $state<HTMLTableRowElement | null>(null);
-	// The virtualizer notifies from inside an effect, so the counter it bumps is written
-	// and never read there: `ticks += 1` would make the effect depend on its own write.
-	let tickCount = 0;
-	let ticks = $state(0);
-	const virtualized = $derived(modelRows.length > virtualizeAfter);
-
-	function bump(): void {
-		tickCount += 1;
-		ticks = tickCount;
-	}
-
-	const virtualizer = new Virtualizer<HTMLDivElement, HTMLTableRowElement>({
-		count: 0,
-		getScrollElement: () => scrollEl,
-		estimateSize: () => rowHeight,
+	const body = bindCollectionBody(control, {
+		lines: () => modelRows.length,
+		measured: () => modelRows.length,
+		lineHeight: () => rowHeight,
 		overscan: 12,
-		observeElementRect,
-		observeElementOffset,
-		scrollToFn: elementScroll,
-		onChange: bump
-	});
-
-	$effect(() => virtualizer._didMount());
-	$effect(() => {
-		// Read every dependency before the call, so the effect tracks the row count and
-		// the height and not the tick the virtualizer's own notification writes.
-		const count = virtualized ? modelRows.length : 0;
-		const size = rowHeight;
-		const element = scrollEl;
-		virtualizer.setOptions({
-			count,
-			getScrollElement: () => element,
-			estimateSize: () => size,
-			overscan: 12,
-			observeElementRect,
-			observeElementOffset,
-			scrollToFn: elementScroll,
-			onChange: bump
-		});
-		// The observers attach to whichever element `getScrollElement` now answers; without
-		// this the virtualizer keeps the one it had when it mounted, which was none.
-		virtualizer._willUpdate();
-		virtualizer.measure();
+		virtualizeAfter: () => virtualizeAfter,
+		lineOfRow: (_index, _row, id) => modelRows.findIndex((entry) => entry.id === id),
+		// Lines below the window count group headers as well, so a header only ever makes
+		// the scroller ask later.
+		lastRowOfLine: (line) => rows.length - 1 - (modelRows.length - 1 - line),
+		cursorTarget: (_index, _row, id, column) => {
+			const tr = ref?.querySelector<HTMLElement>('tr[data-row-key="' + CSS.escape(id) + '"]');
+			const cell = column
+				? tr?.querySelector<HTMLElement>('td[data-column="' + CSS.escape(column) + '"][tabindex]')
+				: null;
+			return cell ?? tr?.querySelector<HTMLElement>('td[tabindex],button,input');
+		}
 	});
 
 	const window_ = $derived.by(() => {
-		void ticks;
-		if (!virtualized) return { before: 0, after: 0, slice: modelRows };
-		const virtualItems = virtualizer.getVirtualItems();
-		const first = virtualItems[0];
-		const last = virtualItems[virtualItems.length - 1];
-		if (!first || !last) return { before: 0, after: 0, slice: modelRows.slice(0, 20) };
-		return {
-			before: first.start,
-			after: virtualizer.getTotalSize() - last.end,
-			slice: modelRows.slice(first.index, last.index + 1)
-		};
+		const at = body.window;
+		if (!at) return { before: 0, after: 0, slice: modelRows };
+		if (at.to < at.from) return { before: 0, after: 0, slice: modelRows.slice(0, 20) };
+		return { before: at.before, after: at.after, slice: modelRows.slice(at.from, at.to + 1) };
 	});
 
 	/** The rows on screen, read once, for the same reason the layout is. */
 	const items = $derived.by(() => {
-		void picked;
 		void expansion;
 		return window_.slice.map((row, index) => {
 			const grouped = row.getIsGrouped();
@@ -546,45 +475,14 @@
 				index,
 				grouped,
 				expanded: grouped && row.getIsExpanded(),
-				selected: !grouped && row.getIsSelected(),
-				disabled: !grouped && rowDisabled(row.original),
+				selected: !grouped && control.isSelected(row.original),
+				disabled: !grouped && control.rowDisabled(row.original),
 				count: grouped ? leafCount(row) : 0,
 				groupColumnId: row.groupingColumnId ?? '',
 				groupValue: row.groupingValue,
 				data: row.original
 			};
 		});
-	});
-
-	/* scroll paging -------------------------------------------------------- */
-
-	$effect(() => {
-		// The virtualiser's own range says which row the viewport ends on. Rows below it
-		// count group headers as well, so a header only ever makes the scroller ask later.
-		void ticks;
-		if (!virtualized || paging !== 'scroll') return;
-		const items_ = virtualizer.getVirtualItems();
-		const last = items_[items_.length - 1];
-		if (!last) return;
-		const below = modelRows.length - 1 - last.index;
-		if (shouldLoadNext(snapshot, { paging, lastVisible: rows.length - 1 - below })) void source.loadMore();
-	});
-
-	$effect(() => {
-		// A body short enough not to be virtualised has no range to read, so the last row
-		// carries a sentinel instead.
-		const root = scrollEl;
-		const target = sentinel;
-		if (!root || !target || paging !== 'scroll') return;
-		const observer = new IntersectionObserver(
-			(entries) => {
-				if (!entries.some((entry) => entry.isIntersecting)) return;
-				if (shouldLoadNext(snapshot, { paging, lastVisible: rows.length - 1 })) void source.loadMore();
-			},
-			{ root, rootMargin: '200px' }
-		);
-		observer.observe(target);
-		return () => observer.disconnect();
 	});
 
 	/* sorting -------------------------------------------------------------- */
@@ -628,7 +526,7 @@
 	/* inline edit ---------------------------------------------------------- */
 
 	function canEditColumn(column: CollectionColumn, row: EntityRow): boolean {
-		if (!editable || !column.editable || rowDisabled(row)) return false;
+		if (!editable || !column.editable || control.rowDisabled(row)) return false;
 		return Boolean(editorFor?.(column.dataType)) || isEditableType(column.dataType);
 	}
 
@@ -645,7 +543,7 @@
 	}
 
 	async function commit(row: EntityRow, column: CollectionColumn, value: unknown): Promise<void> {
-		const key = rowId(row);
+		const key = control.rowId(row);
 		const before = cellValue(row, column.path);
 		editing = null;
 		if (value === before) return;
@@ -664,7 +562,7 @@
 		// up, after the commit has already closed it, and must not open it again.
 		if (event.key !== 'Enter' || editing || (event.target as HTMLElement).dataset['slot'] !== 'table-cell') return;
 		event.preventDefault();
-		openEditor(rowId(row), column, row, cellValue(row, column.path));
+		openEditor(control.rowId(row), column, row, cellValue(row, column.path));
 	}
 
 	/**
@@ -712,7 +610,7 @@
 			);
 			if (target === null || cell?.contains(target) || target.closest(EDITOR_POPUP) !== null) return;
 			releaseEditor();
-			const row = rows.find((candidate) => rowId(candidate) === open.key);
+			const row = rows.find((candidate) => control.rowId(candidate) === open.key);
 			const column = byPath.get(open.path);
 			if (row && column) void commit(row, column, draft);
 			else editing = null;
@@ -720,32 +618,6 @@
 		document.addEventListener('pointerdown', onOutside, true);
 		return () => document.removeEventListener('pointerdown', onOutside, true);
 	});
-
-	/* the cursor ----------------------------------------------------------- */
-
-	/** The row and column a cursor is waiting on, until the page it asked for lands. */
-	let wanted = $state<{ index: number; column: string | null } | null>(null);
-
-	/** Put the cursor on one row, drawing it first where it is outside the window. */
-	function focusRow(index: number, column: string | null): void {
-		const at = Math.max(0, Math.min(index, rows.length - 1));
-		const row = rows[at];
-		if (!row) return;
-		const key = rowId(row);
-		const put = (): void => {
-			const tr = ref?.querySelector<HTMLElement>(`tr[data-row-key="${CSS.escape(key)}"]`);
-			const cell = column ? tr?.querySelector<HTMLElement>(`td[data-column="${CSS.escape(column)}"][tabindex]`) : null;
-			const target = cell ?? tr?.querySelector<HTMLElement>('td[tabindex],button,input');
-			if (!target) return;
-			target.focus({ preventScroll: true });
-			target.scrollIntoView({ block: 'nearest' });
-		};
-		if (virtualized) {
-			const model = modelRows.findIndex((entry) => entry.id === key);
-			if (model >= 0) virtualizer.scrollToIndex(model);
-			requestAnimationFrame(put);
-		} else put();
-	}
 
 	/**
 	 * The arrows walk one column of the body. On the last loaded row they ask for the
@@ -756,31 +628,16 @@
 		const target = event.target as HTMLElement | null;
 		const tr = target?.closest<HTMLElement>('tr[data-row-key]');
 		if (!tr) return;
-		const from = rows.findIndex((row) => rowId(row) === tr.dataset['rowKey']);
+		const from = rows.findIndex((row) => control.rowId(row) === tr.dataset['rowKey']);
 		if (from < 0) return;
 		const column = target?.closest<HTMLElement>('td[data-column]')?.dataset['column'] ?? null;
 		event.preventDefault();
-		if (event.key === 'ArrowDown' && loadsOnArrowDown(snapshot, paging, from + 1)) {
-			wanted = { index: from + 1, column };
-			void source.loadMore();
-			return;
-		}
-		focusRow(nextEnabledIndex(rows.length, from, event.key === 'ArrowDown' ? 1 : -1, disabledAt), column);
+		if (event.key === 'ArrowDown' && body.askForPage(from + 1, column)) return;
+		body.focusRow(nextEnabledIndex(rows.length, from, event.key === 'ArrowDown' ? 1 : -1, control.disabledAt), column);
 	}
 
-	$effect(() => {
-		const held = wanted;
-		if (!held) return;
-		if (snapshot.status === 'error') wanted = null;
-		else if (rows.length > held.index) {
-			wanted = null;
-			untrack(() => focusRow(held.index, held.column));
-		}
-	});
-
-	/* paging --------------------------------------------------------------- */
-
-	const loadingText = $derived(stateLine('loading', { loadingLabel }));
+	const view = $derived(control.view(modelRows.length));
+	const loadingText = $derived(control.loadingText);
 </script>
 
 <!--
@@ -806,7 +663,7 @@
 	(024_read_after_write). A refused write restores the value and shows the reason in
 	the cell.
 -->
-<div bind:this={ref} data-slot="entity-table" class={cn('flex w-full min-w-0 flex-col gap-2', className)} {...rest}>
+<div bind:this={ref} data-slot="entity-table" class={cn(COLLECTION_ROOT, className)} {...rest}>
 	{#if toolbarStart || toolbarEnd}
 		<div data-slot="entity-table-toolbar" class="flex w-full min-w-0 flex-wrap items-center justify-between gap-2">
 			<div data-slot="entity-table-toolbar-start" class="flex min-w-0 flex-wrap items-center gap-2">
@@ -819,7 +676,10 @@
 	{/if}
 
 	<div
-		bind:this={scrollEl}
+		{@attach (el: HTMLDivElement) => {
+			body.setScroller(el);
+			return () => body.setScroller(null);
+		}}
 		data-slot="entity-table-scroll"
 		style="max-height:{maxHeight}"
 		class="border-border relative w-full overflow-auto rounded-lg border [&>[data-slot=table-container]]:overflow-visible"
@@ -845,9 +705,9 @@
 								<span class={cn('flex items-center justify-center', HEAD[size])}>
 									<Checkbox
 										aria-label="Select all loaded rows"
-										checked={allSelected.all}
-										indeterminate={allSelected.some && !allSelected.all}
-										onCheckedChange={(value) => table.toggleAllRowsSelected(value === true)}
+										checked={control.allSelected.all}
+										indeterminate={control.allSelected.some && !control.allSelected.all}
+										onCheckedChange={(value) => control.toggleAll(value === true)}
 									/>
 								</span>
 							{:else if column}
@@ -966,7 +826,7 @@
 				aria-busy={snapshot.status === 'loading' ? 'true' : undefined}
 				aria-label={snapshot.status === 'loading' ? loadingText : undefined}
 			>
-				{#if snapshot.status === 'loading'}
+				{#if view === 'loading'}
 					{#each { length: 8 } as _, index (index)}
 						<Table.Row>
 							{#each layout as entry (entry.id)}
@@ -974,7 +834,7 @@
 							{/each}
 						</Table.Row>
 					{/each}
-				{:else if snapshot.status === 'error' && !pageError}
+				{:else if view === 'error'}
 					<Table.Row>
 						<Table.Cell colspan={layout.length}>
 							<StateLine
@@ -985,7 +845,7 @@
 							/>
 						</Table.Cell>
 					</Table.Row>
-				{:else if modelRows.length === 0}
+				{:else if view === 'empty'}
 					<Table.Row>
 						<Table.Cell colspan={layout.length}>
 							<StateLine state="empty" pad="table" icon={Inbox} label={emptyLabel} />
@@ -1001,7 +861,7 @@
 							<Table.Row
 								data-slot="entity-table-group"
 								class="bg-muted/50 hover:bg-muted/50"
-								style={virtualized ? `height:${rowHeight}px` : undefined}
+								style={body.virtualized ? `height:${rowHeight}px` : undefined}
 							>
 								<Table.Cell colspan={layout.length} class="p-0">
 									<button
@@ -1057,7 +917,7 @@
 									selected ? 'bg-accent text-accent-foreground' : 'bg-background',
 									disabled && 'pointer-events-none opacity-50'
 								)}
-								style={virtualized ? `height:${rowHeight}px` : undefined}
+								style={body.virtualized ? `height:${rowHeight}px` : undefined}
 							>
 								{#if rowSnippet}
 									{@render rowSnippet({ row, id: key, index: item.index, selected, disabled, columns })}
@@ -1074,7 +934,7 @@
 													aria-label="Select row"
 													checked={selected}
 													{disabled}
-													onCheckedChange={(value) => item.row.toggleSelected(value === true)}
+													onCheckedChange={() => control.toggle(row)}
 												/>
 											</Table.Cell>
 										{:else}
@@ -1176,7 +1036,7 @@
 					{#if window_.after > 0}
 						<tr aria-hidden="true" style="height:{window_.after}px"></tr>
 					{/if}
-					{#if pageError}
+					{#if control.bottom === 'error'}
 						<Table.Row data-slot="entity-table-page-error" class="hover:bg-transparent">
 							<Table.Cell colspan={layout.length} class="p-2">
 								<StateLine
@@ -1185,11 +1045,11 @@
 									icon={CircleAlert}
 									label={stateLine('error', { errorLabel }, snapshot.error?.message)}
 								>
-									<Button variant="outline" size="sm" onclick={() => bound.retry()}>Retry</Button>
+									<Button variant="outline" size="sm" onclick={() => control.retry()}>Retry</Button>
 								</StateLine>
 							</Table.Cell>
 						</Table.Row>
-					{:else if snapshot.status === 'loadingMore'}
+					{:else if control.bottom === 'loading'}
 						<Table.Row
 							data-slot="entity-table-loading"
 							class="hover:bg-transparent"
@@ -1200,14 +1060,21 @@
 								<Skeleton class="h-4 w-full" />
 							</Table.Cell>
 						</Table.Row>
-					{:else if paging === 'more' && snapshot.hasMore}
+					{:else if control.bottom === 'more'}
 						<Table.Row data-slot="entity-table-load-more" class="hover:bg-transparent">
 							<Table.Cell colspan={layout.length} class="p-2 text-center">
 								<Button variant="outline" size="sm" onclick={() => void source.loadMore()}>Load more</Button>
 							</Table.Cell>
 						</Table.Row>
-					{:else if paging === 'scroll' && snapshot.hasMore}
-						<tr bind:this={sentinel} data-slot="entity-table-sentinel" aria-hidden="true">
+					{:else if control.bottom === 'sentinel'}
+						<tr
+							{@attach (el: HTMLTableRowElement) => {
+								body.setSentinel(el);
+								return () => body.setSentinel(null);
+							}}
+							data-slot="entity-table-sentinel"
+							aria-hidden="true"
+						>
 							<td colspan={layout.length}></td>
 						</tr>
 					{/if}
@@ -1218,7 +1085,7 @@
 
 	<CollectionFooter
 		{source}
-		{pager}
+		pager={control.pager}
 		{pageSizes}
 		loading={snapshot.status === 'loading'}
 		slotName="entity-table"

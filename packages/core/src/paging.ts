@@ -91,3 +91,33 @@ export function groupRowsKeyed(rows: readonly EntityRow[], path: string): KeyedR
     key: `group:${at}:${JSON.stringify(bucket.value ?? null)}`,
   }));
 }
+
+/** Which of the four things a collection's body shows. */
+export type CollectionView = 'error' | 'loading' | 'empty' | 'rows';
+
+/**
+ * What a collection draws in place of its rows.
+ *
+ * A read that failed with rows already loaded is not this block: those rows stay and
+ * the error goes under them, which is what `hasFailedPage` answers.
+ */
+export function collectionView(state: EntitySourceState, lines: number): CollectionView {
+  if (state.status === 'error' && !hasFailedPage(state)) return 'error';
+  if (state.status === 'loading') return 'loading';
+  return lines === 0 ? 'empty' : 'rows';
+}
+
+/** What sits under the last loaded row, if anything. */
+export type CollectionBottom = 'error' | 'loading' | 'more' | 'sentinel' | null;
+
+/**
+ * The block under the rows: the failed page with its retry, the skeleton of a page on
+ * the way, the load-more row, or the sentinel a scroller watches. One at a time.
+ */
+export function collectionBottom(state: EntitySourceState, paging: PagingMode): CollectionBottom {
+  if (hasFailedPage(state)) return 'error';
+  if (state.status === 'loadingMore') return 'loading';
+  if (!state.hasMore) return null;
+  if (paging === 'more') return 'more';
+  return paging === 'scroll' ? 'sentinel' : null;
+}

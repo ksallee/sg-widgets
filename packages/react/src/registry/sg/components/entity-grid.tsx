@@ -13,25 +13,17 @@ import type {
   SourceFilters,
   StatusRecord,
 } from '@sg-widgets/core';
-import {
-  describePaging,
-  firstEnabledIndex,
-  NO_ROWS_LABEL,
-  hasFailedPage,
-  loadsOnArrowDown,
-  nextEnabledIndex,
-  rowIdOf,
-  rowIsDisabled,
-  rowKey,
-  shouldLoadNext,
-  stateLine,
-} from '@sg-widgets/core';
-import { useVirtualizer } from '@tanstack/react-virtual';
+import { firstEnabledIndex, NO_ROWS_LABEL, nextEnabledIndex, stateLine } from '@sg-widgets/core';
 import { CircleAlert, Inbox } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-import { useCollectionSource, useLatest } from '@/registry/sg/components/collection-source';
+import {
+  COLLECTION_REGION,
+  COLLECTION_ROOT,
+  useCollectionBody,
+  useCollectionControl,
+} from '@/registry/sg/components/collection-control';
 import { CollectionFooter } from '@/registry/sg/components/collection-footer';
 import { EntityCard } from '@/registry/sg/components/entity-card';
 import { StateLine } from '@/registry/sg/components/state-line';
@@ -182,58 +174,45 @@ export function EntityGrid({
   className,
   ...rest
 }: EntityGridProps) {
-  const bound = useCollectionSource({
+  const listRef = useRef<HTMLDivElement | null>(null);
+  /** Tiles across, so a virtualised grid walks rows of tiles and not tiles. */
+  const [cols, setCols] = useState(1);
+  const across = Math.max(1, cols);
+
+  const control = useCollectionControl({
     source,
     paging,
+    getRowId,
+    isRowDisabled,
+    loadingLabel,
     sort: sortProp,
     onSortChange,
     filters: filtersProp,
     onFiltersChange,
+    selection: selectionProp,
+    onSelectionChange,
   });
-  const snapshot = bound.snapshot;
 
-  const rows = snapshot.rows;
-  const pager = describePaging(snapshot);
-  const loadingText = stateLine('loading', { loadingLabel });
-  /** A page that failed under tiles already loaded, which the bottom line reports. */
-  const pageError = hasFailedPage(snapshot);
+  const snapshot = control.snapshot;
+  const rows = control.rows;
+  const view = control.view(rows.length);
+  const loadingText = control.loadingText;
   // `false` still draws the media block; a path no row carries is the placeholder.
   const imagePath = thumbnail === false ? '' : thumbnail;
 
-  const rowId = (row: EntityRow): string => rowIdOf(row, getRowId);
-  const disabledAt = (index: number): boolean => {
-    const row = rows[index];
-    return row === undefined || rowIsDisabled(row, isRowDisabled);
-  };
+  const body = useCollectionBody(control, {
+    // A line is one row of tiles, so the threshold is still measured in rows.
+    lines: Math.ceil(rows.length / across),
+    measured: rows.length,
+    lineHeight: TILE_HEIGHT[size] + GAP_PX[density],
+    overscan: 4,
+    virtualizeAfter,
+    lineOfRow: (index) => Math.floor(index / across),
+    lastRowOfLine: (line) => (line + 1) * across - 1,
+    cursorTarget: (index) => listRef.current?.querySelector<HTMLElement>(`[data-index="${index}"]`),
+  });
 
-  const [ownSelection, setOwnSelection] = useState<EntityRef[]>([]);
-  const selection = selectionProp ?? ownSelection;
-  /** The selection as keys, so a row asks whether it is in it in constant time. */
-  const chosenKeys = new Set(selection.map(rowKey));
-
-  function toggle(row: EntityRow): void {
-    if (rowIsDisabled(row, isRowDisabled)) return;
-    const key = rowKey(row);
-    const next = chosenKeys.has(key)
-      ? selection.filter((ref) => rowKey(ref) !== key)
-      : [...selection, { type: row.type, id: row.id }];
-    setOwnSelection(next);
-    onSelectionChange?.(next);
-  }
-
-  /*
-   * The source's sort and filter, mirrored out as props so a toolbar control drops in.
-   *
-   * Each pair is one effect into the source and one out of it, and the out one reads the
-   * prop off a ref, so a change travels once and the two never write to each other.
-   */
   /* keyboard ------------------------------------------------------------- */
-
-  const listRef = useRef<HTMLDivElement | null>(null);
-  const [cursor, setCursor] = useState(0);
-  /** The one tab stop, which never lands on a disabled row. */
-  const active =
-    rows.length === 0 ? -1 : firstEnabledIndex(rows.length, Math.min(cursor, rows.length - 1), 1, disabledAt);
 
   /** How many tiles a row holds, read off the track list `auto-fill` resolved to. */
   function columnCount(): number {
@@ -242,124 +221,6 @@ export function EntityGrid({
     const tracks = getComputedStyle(list).gridTemplateColumns.split(' ').filter((t) => t.length > 0);
     return Math.max(1, tracks.length);
   }
-
-  function focusTile(index: number): void {
-    const next = Math.max(0, Math.min(index, rows.length - 1));
-    setCursor(next);
-    const put = (): void => {
-      const el = listRef.current?.querySelector<HTMLElement>(`[data-index="${next}"]`);
-      if (!el) return;
-      el.focus({ preventScroll: true });
-      el.scrollIntoView({ block: 'nearest' });
-    };
-    // A tile outside the virtual window has to be drawn before it can take focus.
-    if (virtualized) {
-      virtualizer.scrollToIndex(Math.floor(next / Math.max(1, cols)));
-      requestAnimationFrame(put);
-    } else put();
-  }
-
-  /** The tile a cursor is waiting on, until the page it asked for lands. */
-  const [wanted, setWanted] = useState<number | null>(null);
-
-  /** Ask for the next page and hold the cursor where it is until those tiles arrive. */
-  function askForPage(to: number): boolean {
-    if (!loadsOnArrowDown(snapshot, paging, to)) return false;
-    setWanted(to);
-    void source.loadMore();
-    return true;
-  }
-
-  const focusLatest = useLatest(focusTile);
-  useEffect(() => {
-    if (wanted === null) return;
-    if (snapshot.status === 'error') setWanted(null);
-    else if (rows.length > wanted) {
-      setWanted(null);
-      focusLatest.current(wanted);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [wanted, rows, snapshot.status]);
-
-  function onKeyDown(event: React.KeyboardEvent<HTMLDivElement>): void {
-    const target = event.target as HTMLElement | null;
-    // Chrome inside a tile, the checkbox, keeps its own keys.
-    if (!target || target !== target.closest('[data-index]')) return;
-    const index = Number(target.dataset['index']);
-    if (!Number.isInteger(index)) return;
-    const row = rows[index];
-    const step = columnCount();
-    switch (event.key) {
-      case 'ArrowRight':
-        if (!askForPage(index + 1)) focusTile(nextEnabledIndex(rows.length, index, 1, disabledAt));
-        break;
-      case 'ArrowLeft':
-        focusTile(nextEnabledIndex(rows.length, index, -1, disabledAt));
-        break;
-      case 'ArrowDown':
-        if (!askForPage(index + step)) focusTile(nextEnabledIndex(rows.length, index, step, disabledAt));
-        break;
-      case 'ArrowUp':
-        focusTile(nextEnabledIndex(rows.length, index, -step, disabledAt));
-        break;
-      case 'Home':
-        focusTile(firstEnabledIndex(rows.length, 0, 1, disabledAt));
-        break;
-      case 'End':
-        focusTile(firstEnabledIndex(rows.length, rows.length - 1, -1, disabledAt));
-        break;
-      case ' ':
-        if (selectable && row) toggle(row);
-        break;
-      case 'Enter':
-        if (row && !disabledAt(index)) onSelect?.(row);
-        break;
-      default:
-        return;
-    }
-    event.preventDefault();
-  }
-
-  function onTileClick(event: React.MouseEvent<HTMLDivElement>, row: EntityRow): void {
-    const target = event.target as HTMLElement | null;
-    if (target?.closest('[data-slot="entity-card-selection"],[data-slot="entity-card-actions"]')) return;
-    onSelect?.(row);
-  }
-
-  /* scroll paging -------------------------------------------------------- */
-
-  const scrollRef = useRef<HTMLDivElement | null>(null);
-  // The element is held as state, not as a ref: a read that redraws the tiles replaces
-  // the sentinel, and the observer has to move to the one that is on the page now.
-  const [sentinel, setSentinel] = useState<HTMLDivElement | null>(null);
-  const showSentinel = paging === 'scroll' && snapshot.hasMore && !pageError && snapshot.status !== 'loadingMore';
-  const snapshotLatest = useLatest(snapshot);
-
-  // A grid short enough not to be virtualised has no range to read, so the last line
-  // carries a sentinel instead.
-  useEffect(() => {
-    const root = scrollRef.current;
-    const target = sentinel;
-    if (!root || !target) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (!entries.some((entry) => entry.isIntersecting)) return;
-        const state = snapshotLatest.current;
-        if (shouldLoadNext(state, { paging, lastVisible: state.rows.length - 1 })) void source.loadMore();
-      },
-      { root, rootMargin: '200px' },
-    );
-    observer.observe(target);
-    return () => observer.disconnect();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [source, paging, sentinel]);
-
-  /* virtual rows --------------------------------------------------------- */
-
-  /** Tiles across, so a virtualised grid walks rows of tiles and not tiles. */
-  const [cols, setCols] = useState(1);
-  const virtualized = rows.length > virtualizeAfter;
-  const lineHeight = TILE_HEIGHT[size] + GAP_PX[density];
 
   useEffect(() => {
     const list = listRef.current;
@@ -375,60 +236,89 @@ export function EntityGrid({
     return () => observer.disconnect();
   }, [rows.length, size, density]);
 
-  const virtualizer = useVirtualizer({
-    count: virtualized ? Math.ceil(rows.length / Math.max(1, cols)) : 0,
-    getScrollElement: () => scrollRef.current,
-    estimateSize: () => lineHeight,
-    overscan: 4,
-  });
+  function onKeyDown(event: React.KeyboardEvent<HTMLDivElement>): void {
+    const target = event.target as HTMLElement | null;
+    // Chrome inside a tile, the checkbox, keeps its own keys.
+    if (!target || target !== target.closest('[data-index]')) return;
+    const index = Number(target.dataset['index']);
+    if (!Number.isInteger(index)) return;
+    const row = rows[index];
+    const step = columnCount();
+    const disabledAt = control.disabledAt;
+    switch (event.key) {
+      case 'ArrowRight':
+        if (!body.askForPage(index + 1)) body.focusRow(nextEnabledIndex(rows.length, index, 1, disabledAt));
+        break;
+      case 'ArrowLeft':
+        body.focusRow(nextEnabledIndex(rows.length, index, -1, disabledAt));
+        break;
+      case 'ArrowDown':
+        if (!body.askForPage(index + step)) body.focusRow(nextEnabledIndex(rows.length, index, step, disabledAt));
+        break;
+      case 'ArrowUp':
+        body.focusRow(nextEnabledIndex(rows.length, index, -step, disabledAt));
+        break;
+      case 'Home':
+        body.focusRow(firstEnabledIndex(rows.length, 0, 1, disabledAt));
+        break;
+      case 'End':
+        body.focusRow(firstEnabledIndex(rows.length, rows.length - 1, -1, disabledAt));
+        break;
+      case ' ':
+        if (selectable && row) control.toggle(row);
+        break;
+      case 'Enter':
+        if (row && !control.disabledAt(index)) onSelect?.(row);
+        break;
+      default:
+        return;
+    }
+    event.preventDefault();
+  }
 
-  const lines = virtualizer.getVirtualItems();
-  const firstLine = lines[0];
-  const lastLine = lines[lines.length - 1];
-  const across = Math.max(1, cols);
-  const window_ = !virtualized
+  function onTileClick(event: React.MouseEvent<HTMLDivElement>, row: EntityRow): void {
+    const target = event.target as HTMLElement | null;
+    if (target?.closest('[data-slot="entity-card-selection"],[data-slot="entity-card-actions"]')) return;
+    onSelect?.(row);
+  }
+
+  /** The tiles on screen, with the space the ones above and below take. */
+  const at = body.window;
+  const window_ = !at
     ? { before: 0, after: 0, from: 0, slice: rows }
-    : !firstLine || !lastLine
+    : at.to < at.from
       ? { before: 0, after: 0, from: 0, slice: rows.slice(0, across * 4) }
       : {
-          before: firstLine.start,
-          after: virtualizer.getTotalSize() - lastLine.end,
-          from: firstLine.index * across,
-          slice: rows.slice(firstLine.index * across, (lastLine.index + 1) * across),
+          before: at.before,
+          after: at.after,
+          from: at.from * across,
+          slice: rows.slice(at.from * across, (at.to + 1) * across),
         };
-
-  // The virtualiser walks lines of tiles, so the row the viewport ends on is the last
-  // tile of the last line it drew.
-  const lastVisible = lastLine ? (lastLine.index + 1) * across - 1 : -1;
-  useEffect(() => {
-    if (!virtualized || lastVisible < 0) return;
-    if (shouldLoadNext(snapshot, { paging, lastVisible })) void source.loadMore();
-  }, [source, paging, virtualized, lastVisible, snapshot]);
 
   const columns = { gridTemplateColumns: `repeat(auto-fill,minmax(${TILE[size]}px,1fr))` };
 
   return (
-    <div data-slot="entity-grid" className={cn('flex w-full min-w-0 flex-col gap-2', className)} {...rest}>
+    <div data-slot="entity-grid" className={cn(COLLECTION_ROOT, className)} {...rest}>
       {header ? (
-        <div data-slot="entity-grid-header" className="flex w-full min-w-0 flex-wrap items-center gap-2">
+        <div data-slot="entity-grid-header" className={COLLECTION_REGION}>
           {header}
         </div>
       ) : null}
 
       <div
-        ref={scrollRef}
+        ref={body.scrollRef}
         data-slot="entity-grid-scroll"
         style={{ maxHeight }}
         className="border-border flex w-full flex-col gap-3 overflow-auto rounded-lg border p-3"
       >
-        {snapshot.status === 'error' && !pageError ? (
+        {view === 'error' ? (
           <StateLine
             state="error"
             pad="table"
             icon={CircleAlert}
             label={stateLine('error', { errorLabel }, snapshot.error?.message)}
           />
-        ) : snapshot.status === 'loading' ? (
+        ) : view === 'loading' ? (
           <div
             aria-busy="true"
             aria-label={loadingText}
@@ -443,7 +333,7 @@ export function EntityGrid({
               </div>
             ))}
           </div>
-        ) : rows.length === 0 ? (
+        ) : view === 'empty' ? (
           <StateLine state="empty" pad="table" icon={Inbox} label={emptyLabel} />
         ) : (
           <>
@@ -462,9 +352,9 @@ export function EntityGrid({
               ) : null}
               {window_.slice.map((row, offset) => {
                 const index = window_.from + offset;
-                const key = rowId(row);
-                const chosen = chosenKeys.has(rowKey(row));
-                const disabled = disabledAt(index);
+                const key = control.rowId(row);
+                const chosen = control.isSelected(row);
+                const disabled = control.disabledAt(index);
                 if (card) {
                   return (
                     <div
@@ -474,14 +364,14 @@ export function EntityGrid({
                       aria-selected={chosen}
                       aria-disabled={disabled ? 'true' : undefined}
                       data-disabled={disabled ? 'true' : undefined}
-                      tabIndex={index === active ? 0 : -1}
+                      tabIndex={index === body.active ? 0 : -1}
                       data-row-key={key}
                       data-index={index}
                       className={cn('min-w-0 outline-none', disabled && 'pointer-events-none opacity-50 [&_img]:grayscale')}
-                      onFocus={() => setCursor(index)}
+                      onFocus={() => body.setCursor(index)}
                       onClick={(event) => onTileClick(event, row)}
                     >
-                      {card({ row, id: key, index, selected: chosen, disabled, active: index === active })}
+                      {card({ row, id: key, index, selected: chosen, disabled, active: index === body.active })}
                     </div>
                   );
                 }
@@ -502,16 +392,16 @@ export function EntityGrid({
                     selectable={selectable}
                     size={size}
                     selected={chosen}
-                    onSelectedChange={() => toggle(row)}
+                    onSelectedChange={() => control.toggle(row)}
                     role="option"
                     aria-selected={chosen}
                     aria-disabled={disabled ? 'true' : undefined}
                     data-disabled={disabled ? 'true' : undefined}
-                    tabIndex={index === active ? 0 : -1}
+                    tabIndex={index === body.active ? 0 : -1}
                     data-row-key={key}
                     data-index={index}
                     className={disabled ? 'pointer-events-none opacity-50 [&_img]:grayscale' : undefined}
-                    onFocus={() => setCursor(index)}
+                    onFocus={() => body.setCursor(index)}
                     onClick={(event) => onTileClick(event, row)}
                   />
                 );
@@ -520,7 +410,7 @@ export function EntityGrid({
                 <div aria-hidden="true" style={{ gridColumn: '1/-1', height: `${window_.after}px` }} />
               ) : null}
             </div>
-            {pageError ? (
+            {control.bottom === 'error' ? (
               <StateLine
                 state="error"
                 slotName="entity-grid-page-error"
@@ -528,22 +418,22 @@ export function EntityGrid({
                 icon={CircleAlert}
                 label={stateLine('error', { errorLabel }, snapshot.error?.message)}
               >
-                <Button variant="outline" size="sm" onClick={() => bound.retry()}>
+                <Button variant="outline" size="sm" onClick={() => control.retry()}>
                   Retry
                 </Button>
               </StateLine>
-            ) : snapshot.status === 'loadingMore' ? (
+            ) : control.bottom === 'loading' ? (
               <div data-slot="entity-grid-loading" aria-busy="true" aria-label={loadingText}>
                 <Skeleton className="h-4 w-full" />
               </div>
-            ) : paging === 'more' && snapshot.hasMore ? (
+            ) : control.bottom === 'more' ? (
               <div data-slot="entity-grid-load-more" className="flex justify-center">
                 <Button variant="outline" size="sm" onClick={() => void source.loadMore()}>
                   Load more
                 </Button>
               </div>
-            ) : showSentinel ? (
-              <div ref={setSentinel} data-slot="entity-grid-sentinel" aria-hidden="true" className="h-4" />
+            ) : control.bottom === 'sentinel' ? (
+              <div ref={body.setSentinel} data-slot="entity-grid-sentinel" aria-hidden="true" className="h-4" />
             ) : null}
           </>
         )}
@@ -551,14 +441,14 @@ export function EntityGrid({
 
       <CollectionFooter
         source={source}
-        pager={pager}
+        pager={control.pager}
         pageSizes={pageSizes}
         loading={snapshot.status === 'loading'}
         slotName="entity-grid"
       />
 
       {footer ? (
-        <div data-slot="entity-grid-footer-region" className="flex w-full min-w-0 flex-wrap items-center gap-2">
+        <div data-slot="entity-grid-footer-region" className={COLLECTION_REGION}>
           {footer}
         </div>
       ) : null}

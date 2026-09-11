@@ -36,6 +36,7 @@ The goal is one system: a page mixing ten of our widgets must read as one hand.
   | between stacked form fields | `gap-4` |
   | popover / card / dialog padding | `p-3` (compact), `p-4` (default) |
   | list row padding | `px-2 py-1.5` |
+  | list row holding an icon button | `px-2 py-0.5`, so the button ladder sets the row at 28, 32 and 36 |
   | table cell padding | `px-3 py-2` |
 
 - Density is a prop on collections (`density: "compact" | "default"`), never a global. Compact halves the

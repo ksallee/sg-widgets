@@ -187,7 +187,7 @@
 				{#each value as key, i (key.field)}
 					<div
 						class={cn(
-							'bg-popover flex min-w-0 items-center gap-2 rounded-md',
+							'bg-popover flex min-w-0 items-center gap-2 rounded-md py-0.5',
 							'data-[dragging]:z-10 data-[dragging]:opacity-90 data-[dragging]:shadow-md',
 							'data-[drop-target]:bg-accent/40'
 						)}

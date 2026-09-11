@@ -571,7 +571,9 @@
 					data-index={index}
 					data-path={path}
 					class={cn(
-						'bg-background flex min-w-0 items-center gap-2 rounded-md px-2 py-1.5',
+						'bg-background flex min-w-0 items-center gap-2 rounded-md px-2',
+						// The buttons set the row's height; a text-only row keeps the list row inset.
+						readonly ? 'py-1.5' : 'py-0.5',
 						'data-[dragging]:z-10 data-[dragging]:opacity-90 data-[dragging]:shadow-md',
 						'data-[drop-target]:bg-accent/40',
 						TEXT[size]

@@ -54,6 +54,27 @@ export function pickerKeyIntent(key: string, state: PickerKeyState): PickerKeyIn
   return { kind: 'arm', index: state.count - 1 };
 }
 
+/** What a keydown asks a search box to do. */
+export type SearchKeyIntent =
+  /** The key is not the search box's business. */
+  | { kind: 'nothing' }
+  /** Clear the query and the rows it answered, and keep the caret where it is. */
+  | { kind: 'clear' };
+
+export interface SearchKeyState {
+  /** Text in the search box. */
+  query: string;
+}
+
+/**
+ * What a keydown means to a search box. Escape is the search box's business only while
+ * the query has text; an empty one leaves the key to the shell, as a closed picker does.
+ */
+export function searchKeyIntent(key: string, state: SearchKeyState): SearchKeyIntent {
+  if (key !== 'Escape') return { kind: 'nothing' };
+  return state.query.length > 0 ? { kind: 'clear' } : { kind: 'nothing' };
+}
+
 /** Another Backspace, and the modifiers a person holds to reach one. */
 const HOLDS_ARMED = new Set(['Backspace', 'Shift', 'Control', 'Alt', 'Meta', 'CapsLock']);
 

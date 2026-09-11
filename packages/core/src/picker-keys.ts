@@ -1,21 +1,25 @@
 /**
  * The keyboard model every picker shares.
  *
- * A picker is a token field: chips, a caret and a list. Backspace, Escape and the
- * arrows mean the same thing in all of them, and the rules live here so the two
- * frameworks cannot drift.
+ * A picker is a token field: chips, a caret and a list. The chips take the caret one at
+ * a time, and Backspace, the arrows and Escape mean the same thing in all of them, so
+ * the rules live here and the two frameworks cannot drift.
  */
 
 /** What a keydown asks the control to do. */
 export type PickerKeyIntent =
   /** The key is not the control's business. */
   | { kind: 'nothing' }
-  /** Close the popup, clear the query and drop the armed chip. */
+  /** Close the popup, clear the query and give the caret back to the input. */
   | { kind: 'dismiss' }
-  /** Highlight the chip at `index`. The next Backspace removes it. */
-  | { kind: 'arm'; index: number }
-  /** Remove the chip at `index`. */
-  | { kind: 'remove'; index: number }
+  /** Put the caret on the chip at `index`, or back in the input when `null`. */
+  | { kind: 'focus'; index: number | null }
+  /** Remove the chip at `index`, then take `then`: a chip, or the input when `null`. */
+  | { kind: 'remove'; index: number; then: number | null }
+  /** Give the caret back to the input and write `key` into the query. */
+  | { kind: 'type'; key: string }
+  /** Give the caret back to the input and show the list. */
+  | { kind: 'open' }
   /** Keep the list's highlighted row in view. */
   | { kind: 'follow' };
 
@@ -26,32 +30,51 @@ export interface PickerKeyState {
   query: string;
   /** Chips in the control. A single picker counts its value as one. */
   count: number;
-  /** Index of the armed chip, or `null` when none is. */
-  armed: number | null;
+  /** Index of the chip holding the caret, or `null` while the input holds it. */
+  focused: number | null;
   /** The control takes edits. A disabled or readonly one takes none. */
   editable: boolean;
   /** Several keys may be chosen at once. */
   multiple: boolean;
 }
 
+/** A key that writes one character, as against a named key like `Enter` or `Tab`. */
+const printable = (key: string): boolean => key.length === 1 && key !== ' ';
+
 /**
  * What a keydown means to a picker.
  *
- * Backspace in an empty query walks the chips of a multi picker the way token fields
- * do: the first arms the last chip, the second removes it, so a held key cannot empty
- * the field. A single picker holds one value and clears it in a press. Escape is the
- * control's business only while the popup shows; a closed picker leaves the key to
- * whatever encloses it.
+ * From the input, Backspace and `ArrowLeft` in an empty query reach the chips of a multi
+ * picker rather than the text, and a single picker clears its one value in a press. From
+ * a chip, the arrows walk the row, Backspace and Delete take the chip and leave the caret
+ * on its neighbour, `ArrowDown` shows the list, and anything a person would type gives
+ * the caret back to the input. Escape is the control's business only while the popup
+ * shows; a closed picker leaves the key to whatever encloses it.
  */
 export function pickerKeyIntent(key: string, state: PickerKeyState): PickerKeyIntent {
-  if (key === 'Escape') return state.open ? { kind: 'dismiss' } : { kind: 'nothing' };
-  if (key === 'ArrowUp' || key === 'ArrowDown') return state.open ? { kind: 'follow' } : { kind: 'nothing' };
-  if (key !== 'Backspace') return { kind: 'nothing' };
-  if (!state.editable || state.query !== '' || state.count === 0) return { kind: 'nothing' };
-  if (!state.multiple) return { kind: 'remove', index: state.count - 1 };
-  const { armed } = state;
-  if (armed !== null && armed >= 0 && armed < state.count) return { kind: 'remove', index: armed };
-  return { kind: 'arm', index: state.count - 1 };
+  const { open, query, count, editable, multiple } = state;
+  const focused = state.focused !== null && state.focused >= 0 && state.focused < count ? state.focused : null;
+
+  if (key === 'Escape') return open ? { kind: 'dismiss' } : { kind: 'nothing' };
+
+  if (focused !== null) {
+    if (!editable) return { kind: 'nothing' };
+    if (key === 'ArrowLeft') return { kind: 'focus', index: Math.max(0, focused - 1) };
+    if (key === 'ArrowRight') return { kind: 'focus', index: focused + 1 < count ? focused + 1 : null };
+    if (key === 'Backspace' || key === 'Delete') {
+      return { kind: 'remove', index: focused, then: count > 1 ? Math.min(focused, count - 2) : null };
+    }
+    if (key === 'ArrowDown') return { kind: 'open' };
+    if (printable(key)) return { kind: 'type', key };
+    if (key === 'Enter' || key === ' ') return { kind: 'focus', index: null };
+    return { kind: 'nothing' };
+  }
+
+  if (key === 'ArrowUp' || key === 'ArrowDown') return open ? { kind: 'follow' } : { kind: 'nothing' };
+  if (!editable || query !== '' || count === 0) return { kind: 'nothing' };
+  if (!multiple) return key === 'Backspace' ? { kind: 'remove', index: count - 1, then: null } : { kind: 'nothing' };
+  if (key === 'Backspace' || key === 'ArrowLeft') return { kind: 'focus', index: count - 1 };
+  return { kind: 'nothing' };
 }
 
 /** What a keydown asks a search box to do. */
@@ -75,12 +98,20 @@ export function searchKeyIntent(key: string, state: SearchKeyState): SearchKeyIn
   return state.query.length > 0 ? { kind: 'clear' } : { kind: 'nothing' };
 }
 
-/** Another Backspace, and the modifiers a person holds to reach one. */
-const HOLDS_ARMED = new Set(['Backspace', 'Shift', 'Control', 'Alt', 'Meta', 'CapsLock']);
-
-/** Whether a key leaves the armed chip armed. Every other key disarms it. */
-export function holdsArmed(key: string): boolean {
-  return HOLDS_ARMED.has(key);
+/**
+ * Put the caret on one chip of a row.
+ *
+ * Every chip is taken out of the tab order, so the row is walked with the arrows and Tab
+ * still leaves the control. A chip the measured row hides takes no caret, and the input
+ * keeps it; the model still counts the chip as the one a Backspace removes.
+ */
+export function focusChip(row: Element | null | undefined, index: number | null): boolean {
+  const chips = row ? [...row.querySelectorAll<HTMLElement>('[data-chip]')] : [];
+  for (const chip of chips) chip.tabIndex = -1;
+  const one = index === null ? null : chips[index];
+  if (!one || one.hidden || !one.focus) return false;
+  one.focus({ preventScroll: true });
+  return true;
 }
 
 /**

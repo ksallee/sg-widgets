@@ -106,7 +106,7 @@ async function run(framework) {
     cell('sg_status_list').querySelector('[data-slot="status-picker"]');
   const status = await until(statusPicker, 'a status picker');
   seen.status = status.querySelector('[data-slot="status-picker-value"]')?.textContent.trim() ?? '';
-  key(status.querySelector('[data-slot="select-trigger"], [data-slot="status-picker-trigger"]'), 'Escape');
+  key(status.querySelector('[data-slot="status-picker-control"]'), 'Escape');
   await until(
     () => statusPicker() === null || null,
     'the status cell to close',

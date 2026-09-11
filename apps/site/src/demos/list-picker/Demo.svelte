@@ -1,5 +1,5 @@
 <script lang="ts">
-	import ListMultiSelect from '$lib/registry/components/list-multi-select.svelte';
+	import ListPicker from '$lib/registry/components/list-picker.svelte';
 
 	const versionType = {
 		displayName: 'Version Type',
@@ -15,9 +15,10 @@
 		hiddenValues: ['Marketing', 'Trailer']
 	};
 
-	let type = $state<string[]>(['Type A']);
-	let shot = $state<string[]>(['VFX', '2D']);
-	let scoped = $state<string[]>(['Full CG']);
+	let type = $state<string | null>('Type A');
+	let shot = $state<string | null>('VFX');
+	let scoped = $state<string | null>('Full CG');
+	let searched = $state<string | null>(null);
 
 	const cell = 'px-3 py-2 align-top';
 	const typeCell = 'text-muted-foreground w-28 px-3 py-2 align-top font-mono text-xs';
@@ -29,8 +30,8 @@
 		<tr class="border-border border-b">
 			<th scope="row" class={typeCell}>valid values</th>
 			<td class={cell}>
-				<div class="flex w-full min-w-0 flex-col gap-2">
-					<ListMultiSelect bind:value={type} field={versionType} />
+				<div data-demo="values" class="flex w-full min-w-0 flex-col gap-2">
+					<ListPicker bind:value={type} field={versionType} />
 					<p class={valueCell}>{JSON.stringify(type)}</p>
 				</div>
 			</td>
@@ -38,8 +39,8 @@
 		<tr class="border-border border-b">
 			<th scope="row" class={typeCell}>display values</th>
 			<td class={cell}>
-				<div class="flex w-full min-w-0 flex-col gap-2">
-					<ListMultiSelect bind:value={shot} field={shotType} />
+				<div data-demo="labels" class="flex w-full min-w-0 flex-col gap-2">
+					<ListPicker bind:value={shot} field={shotType} showCode />
 					<p class={valueCell}>{JSON.stringify(shot)}</p>
 				</div>
 			</td>
@@ -47,18 +48,27 @@
 		<tr class="border-border border-b">
 			<th scope="row" class={typeCell}>project 63</th>
 			<td class={cell}>
-				<div class="flex w-full min-w-0 flex-col gap-2">
-					<ListMultiSelect bind:value={scoped} field={shotType} projectId={63} />
+				<div data-demo="project" class="flex w-full min-w-0 flex-col gap-2">
+					<ListPicker bind:value={scoped} field={shotType} projectId={63} />
 					<p class={valueCell}>{JSON.stringify(scoped)}</p>
+				</div>
+			</td>
+		</tr>
+		<tr class="border-border border-b">
+			<th scope="row" class={typeCell}>searchable</th>
+			<td class={cell}>
+				<div data-demo="searchable" class="flex w-full min-w-0 flex-col gap-2">
+					<ListPicker bind:value={searched} field={shotType} searchable />
+					<p class={valueCell}>{JSON.stringify(searched)}</p>
 				</div>
 			</td>
 		</tr>
 		<tr>
 			<th scope="row" class={typeCell}>disabled</th>
 			<td class={cell}>
-				<div class="flex w-full min-w-0 flex-col gap-2">
-					<ListMultiSelect value={['Type B']} field={versionType} disabled />
-					<p class={valueCell}>["Type B"]</p>
+				<div data-demo="disabled" class="flex w-full min-w-0 flex-col gap-2">
+					<ListPicker value="Type B" field={versionType} disabled />
+					<p class={valueCell}>"Type B"</p>
 				</div>
 			</td>
 		</tr>

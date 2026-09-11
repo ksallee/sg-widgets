@@ -36,7 +36,7 @@ import { EntityTypePicker } from '@/registry/sg/components/entity-type-picker';
 import { FieldPicker } from '@/registry/sg/components/field-picker';
 import { FilterBar } from '@/registry/sg/components/filter-bar';
 import { GlobalSearch } from '@/registry/sg/components/global-search';
-import { ListSelect } from '@/registry/sg/components/list-select';
+import { ListPicker } from '@/registry/sg/components/list-picker';
 import { NumberEditor } from '@/registry/sg/components/number-editor';
 import { ProjectPicker } from '@/registry/sg/components/project-picker';
 import { SortPicker } from '@/registry/sg/components/sort-picker';
@@ -175,7 +175,7 @@ export default function CompositionDemo() {
       ['user-picker', 'Artist', <UserPicker context={context} size={size} value={PERSON} />, null],
       ['user-multi-picker', 'Reviewers', <UserMultiPicker context={context} size={size} value={[PERSON]} />, null],
       ['project-picker', 'Project', <ProjectPicker context={context} size={size} value={project} />, null],
-      ['status-picker', 'Status', <StatusPicker context={context} entityType="Version" projectId={projectId} size={size} value="ip" />, 'select-trigger'],
+      ['status-picker', 'Status', <StatusPicker context={context} entityType="Version" projectId={projectId} size={size} value="ip" />, 'status-picker-control'],
       ['status-multi-picker', 'Statuses', <StatusMultiPicker context={context} entityType="Version" projectId={projectId} size={size} value={['ip', 'apr']} />, null],
       ['entity-type-picker', 'Type', <EntityTypePicker context={context} size={size} value="Shot" />, null],
       ['field-picker', 'Field', <FieldPicker context={context} entityType="Version" size={size} value="code" />, 'field-picker-trigger'],
@@ -280,9 +280,9 @@ export default function CompositionDemo() {
               <span className={fieldLabel}>Flagged</span>
               <CheckboxEditor value={flagged} onValueChange={setFlagged} field={{ displayName: 'Flagged', mandatory: false }} />
             </div>
-            <div className={field} data-qa-widget="list-select" data-qa-size="md">
+            <div className={field} data-qa-widget="list-picker" data-qa-size="md">
               <span className={fieldLabel}>Version type</span>
-              <ListSelect value={listValue} onValueChange={setListValue} field={VERSION_TYPE} />
+              <ListPicker value={listValue} onValueChange={setListValue} field={VERSION_TYPE} />
             </div>
             <div className={field} data-qa-widget="color-editor" data-qa-size="md">
               <span className={fieldLabel}>Colour</span>

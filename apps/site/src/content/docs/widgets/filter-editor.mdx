@@ -56,7 +56,7 @@ The operator picks the arity and the field's data type picks the control inside 
 | `number`, `float`, `percent`, `duration`, `timecode`, `currency` | NumberEditor |
 | `date` | DateEditor |
 | `date_time` | DateTimeEditor |
-| `list` | ListSelect on one value, ListMultiSelect on is any of and is none of |
+| `list` | ListPicker on one value, ListMultiPicker on is any of and is none of |
 | `status_list` | StatusPicker on one value, StatusMultiPicker on is any of and is none of |
 | `checkbox` | CheckboxEditor |
 | `color` | ColorEditor |
@@ -70,7 +70,7 @@ button here as anywhere else, with the calendar in its popover. Between draws bo
 
 Arity comes first. An operator that carries its own value — is empty, is not empty, today, this week,
 last month — draws no editor. In the last and in the next draw a count in a NumberEditor and a unit
-in a ListSelect. Between draws two of the data type's editor. Is any of and is none of on a date, a
+in a ListPicker. Between draws two of the data type's editor. Is any of and is none of on a date, a
 number or a text field draw one value to a line, each in the data type's own editor, with a control
 that removes it and one that adds another; a blank value is dropped on serialisation rather than
 sent.

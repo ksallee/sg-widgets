@@ -27,6 +27,7 @@ import {
   PICKER_ROW,
   PICKER_SEARCH,
   PICKER_SEARCH_ROW,
+  PICKER_TEXT_BOX,
   PICKER_TOKEN_INPUT,
   PICKER_TRAILING,
 } from '@/registry/sg/components/picker-classes';
@@ -137,6 +138,10 @@ export interface PickerControlProps {
   tokenInput?: boolean;
   /** What the caret shows. */
   inputPlaceholder?: string;
+  /** A summary control keeps a search row. A fixed set has nothing to search. */
+  searchable?: boolean;
+  /** The filled value is plain text, so the control keeps the reading inset in both states. */
+  textValue?: boolean;
   /** What the chips look like, so a change to any of it re-measures the row. */
   rowKey?: string;
   size?: PickerControlSize;
@@ -204,6 +209,8 @@ export function PickerControl({
   inline = true,
   tokenInput = true,
   inputPlaceholder,
+  searchable = true,
+  textValue = false,
   rowKey,
   size = 'md',
   disabled = false,
@@ -383,7 +390,7 @@ export function PickerControl({
       title={plan.title || placeholder}
       className={cn(
         PICKER_CONTROL,
-        PICKER_BOX[size],
+        (textValue ? PICKER_TEXT_BOX : PICKER_BOX)[size],
         plan.oneLine && 'flex-nowrap',
         readonly ? 'pr-3' : showClear ? 'pr-14' : 'pr-8',
       )}
@@ -497,7 +504,7 @@ export function PickerControl({
           data-slot={`${slot}-content`}
           className={anchored ? PICKER_ANCHORED_POPUP : PICKER_POPUP}
         >
-          {inline ? null : (
+          {inline ? null : searchable ? (
             <div data-slot={`${slot}-search`} className={PICKER_SEARCH_ROW}>
               <Search aria-hidden="true" className="size-4 shrink-0 opacity-50" />
               <ComboboxPrimitive.Input
@@ -509,6 +516,16 @@ export function PickerControl({
                 className={PICKER_SEARCH}
               />
             </div>
+          ) : (
+            /* Nothing to search, and still the one caret: it holds the focus and the keys. */
+            <ComboboxPrimitive.Input
+              ref={inputRef}
+              data-slot={`${slot}-input`}
+              aria-label={placeholder}
+              readOnly
+              onKeyDown={onKey}
+              className="sr-only"
+            />
           )}
           <ComboboxPrimitive.List ref={listRef} data-slot={`${slot}-list`} className={PICKER_LIST}>
             {note ?? ((key: string) => drawRow(key))}

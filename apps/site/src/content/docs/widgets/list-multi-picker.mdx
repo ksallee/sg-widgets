@@ -1,0 +1,102 @@
+---
+title: ListMultiPicker
+description: Several values of a list field, picked from the set its schema declares.
+---
+
+import Demo from '../../../components/Demo.astro';
+
+Chooses several values of a list field, offering the vocabulary its schema declares.
+
+It is the shared picker control with rows from the field's valid values. The set is fixed and read
+once, so there is no search row unless a caller asks for one, and a chosen value is a plain chip.
+
+## Install
+
+```sh
+pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/list-multi-picker.json
+pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/list-multi-picker.json
+```
+
+<Demo name="list-multi-picker" title="ListMultiPicker: valid values, labels, a project's hidden values removed, and a search box" />
+
+## Input
+
+| chosen | emitted |
+|---|---|
+| an unchecked row | the list with that value added at the end |
+| a checked row | the list with that value removed |
+| the clear control | an empty list |
+
+The offered set is the field's valid values, minus its hidden values when a project id is given. A
+value already held that is outside that set keeps a row of its own, labelled with the value.
+
+The control draws a chip per chosen value. What does not fit on the line becomes a `+n` pill, and a
+press on it opens the list.
+
+## Props
+
+| prop | type | default | meaning |
+|---|---|---|---|
+| `value` | `string[]` | `[]` | The chosen values. Two-way in Svelte. |
+| `onValueChange` | `(value: string[]) => void` | — | Called on every change, with the whole list. |
+| `field` | `FieldSchema \| null` | `null` | Supplies the valid values, the labels and the hidden values. |
+| `projectId` | `number` | — | Given, the field's hidden values are removed from the list. |
+| `options` | `{ code, label }[]` | — | The set on offer, of the caller's own making. Wins over the field. |
+| `slot` | `string` | `'list-multi-picker'` | The `data-slot` prefix every part of this picker carries. |
+| `picker` | `string` | `'list'` | The `data-picker` the popup carries. |
+| `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Heights 8, 9 and 10. |
+| `disabled` | `boolean` | `false` | Greys the control and takes it out of the tab order. |
+| `readonly` | `boolean` | `false` | Keeps full contrast and drops the chevron, the popup and the remove controls. |
+| `invalid` | `boolean` | `false` | Sets `aria-invalid` and the destructive ring. |
+| `error` | `string \| null` | `null` | A message from the caller, drawn under the control. |
+| `placeholder` | `string` | `'Select values'` | Shown while nothing is chosen. |
+| `emptyLabel` | `string` | `'No rows'` | Shown when the list offers nothing. |
+| `searchable` | `boolean` | `false` | Offers a search box, which narrows the set in the browser. |
+| `searchPlaceholder` | `string` | `'Search values…'` | Placeholder of the search box. |
+| `clearable` | `boolean` | `true` | Offers a control that clears the selection. A mandatory field is never clearable. |
+| `showCode` | `boolean` | `false` | Draws the stored string as a row's right-aligned secondary, where it says more than the label. |
+| `secondary` | `(option) => string` | the value | A row's right-aligned value, of the caller's own making. |
+| `subLabel` | `(option) => string` | — | The muted line under a row's label. |
+| `summary` | `'chips' \| 'ellipsis' \| 'count'` | `'ellipsis'` | What the control shows for the selection. |
+| `max` | `number` | `0` | Chips drawn before the rest becomes `+n`. `0` lets the row fit what it can. |
+| `open` | `boolean` | `false` | Whether the popup is showing. Two-way in Svelte. |
+| `class` / `className` | `string` | — | Merged after the widget's own classes. |
+
+Every other attribute is spread onto the root: `id`, `aria-*`, `data-*`, key handlers and a `ref`
+to the root element.
+
+A row is the row anatomy of the design rules, after its checkbox: the label as the main text and,
+with `showCode`, the stored string right-aligned.
+
+## Events
+
+`onValueChange` fires as soon as a row is checked or unchecked, and with an empty list when the
+selection is cleared. `onErrorChange` fires with `null` on that same change, so a message the caller
+set clears when the field is answered.
+
+`onOpenChange` fires when the popup opens or closes. Svelte also binds it with `bind:open`.
+
+## Slots
+
+`errorMessage` receives the message and renders the line under the control.
+
+## Keyboard
+
+| key | does |
+|---|---|
+| <kbd>Space</kbd>, <kbd>Enter</kbd>, <kbd>↓</kbd> | Opens the list |
+| <kbd>↑</kbd> <kbd>↓</kbd> | Move the highlight |
+| typing | Narrows the list, where the picker is searchable |
+| <kbd>Enter</kbd> | Checks or unchecks the highlighted row. The list stays open |
+| <kbd>Backspace</kbd> | Highlights the last chip; a second press removes it |
+| <kbd>Esc</kbd> | Closes the list and keeps the selection |
+
+## API behaviour
+
+A list field holds one bare string, so several values only appear in a filter, under `in` and
+`not_in`. A value outside `valid_values` is a 400 on write and the comparison is case-sensitive,
+down to a trailing space, so the schema's vocabulary is the whole set a picker may offer
+(field_types/list).
+
+Hidden values reach the schema only when it is read with a project id, and REST does not enforce
+them on write, so the subtraction is the client's (probe 009).

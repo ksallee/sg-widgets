@@ -21,7 +21,7 @@ for (const framework of ['svelte', 'react']) {
     failures.push(`${framework}: no pane`);
     continue;
   }
-  const trigger = $('[data-demo="p70"] [data-slot="select-trigger"]', pane);
+  const trigger = $('[data-demo="p70"] [data-slot="status-picker-control"]', pane);
   if (!trigger) {
     failures.push(`${framework}: no picker`);
     continue;

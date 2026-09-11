@@ -35,6 +35,40 @@ const cancelled: StatusRecord = {
   icon: { displayType: 'image_map', imageMapKey: 'icon_x_thin_white' },
 };
 
+/** A selection the cross can take from. */
+const REMOVABLE = ['ip', 'apr', 'hld'];
+
+function Removable({ statuses, field }: Loaded) {
+  const [removed, setRemoved] = useState<string[]>([]);
+  const shown = REMOVABLE.filter((code) => !removed.includes(code));
+
+  return (
+    <div className={row}>
+      {shown.map((code) => (
+        <StatusBadge
+          key={code}
+          code={code}
+          status={statuses[code]}
+          field={field}
+          color
+          removable
+          onRemove={(c) => setRemoved((was) => [...was, c])}
+        />
+      ))}
+      <StatusBadge code="rev" status={statuses['rev']} field={field} color variant="icon" removable />
+      {shown.length === 0 ? (
+        <button
+          type="button"
+          className="text-muted-foreground hover:text-foreground focus-visible:ring-ring focus-visible:ring-offset-background text-sm underline underline-offset-2 outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+          onClick={() => setRemoved([])}
+        >
+          Put them back
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
 interface Loaded {
   statuses: Record<string, StatusRecord>;
   field: FieldSchema;
@@ -98,6 +132,11 @@ function StatusBadges() {
           <StatusBadge code="hld" status={statuses['hld']} field={field} color />
           <StatusBadge code="omt" status={statuses['omt']} field={field} color />
         </div>
+      </section>
+
+      <section className={group} data-demo="removable">
+        <h4 className={label}>Removable, with the cross inside the pill</h4>
+        <Removable statuses={statuses} field={field} />
       </section>
 
       <section className={group} data-demo="label">

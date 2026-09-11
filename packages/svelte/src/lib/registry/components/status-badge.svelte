@@ -39,6 +39,7 @@
 		statusLabel,
 		stockIconSource
 	} from '@sg-widgets/core';
+	import X from '@lucide/svelte/icons/x';
 	import { cn, type WithElementRef } from '$lib/utils.js';
 
 	// `color` is a deprecated HTML attribute Svelte types as `never`, so it is dropped
@@ -57,6 +58,11 @@
 		label?: StatusBadgeLabel;
 		/** The site the stock sprite is served from, for icons the package does not bundle. */
 		siteUrl?: string;
+		/** Draw a remove control inside the pill. The icon-only variant has no room for it and ignores this. */
+		removable?: boolean;
+		onRemove?: (code: string) => void;
+		/** Accessible label for the remove control. */
+		removeLabel?: string;
 	};
 
 	let {
@@ -68,6 +74,9 @@
 		color = false,
 		label = 'name',
 		siteUrl = undefined,
+		removable = false,
+		onRemove,
+		removeLabel,
 		class: className,
 		ref = $bindable(null),
 		...rest
@@ -93,6 +102,8 @@
 	const stock = $derived(
 		icon?.displayType === 'image_map' ? stockIconSource(icon.imageMapKey, siteUrl) : null
 	);
+	// A bare icon is the glyph and nothing else, so there is no room for a cross.
+	const showRemove = $derived(removable && variant !== 'icon');
 </script>
 
 <!--
@@ -113,7 +124,51 @@
 	shipped statuses are bundled in core and draw with no site access; any other stock
 	icon draws from the site's own copy of the sprite, so it needs `siteUrl`. The key
 	stays on the element as `data-status-icon`.
+
+	`removable` draws a cross inside the pill, after the label, in the badge's own
+	foreground: under `color` that is the readable black or white the status colour
+	gives, so the cross keeps its contrast on every colour. Its hover is a translucent
+	wash of that foreground rather than the destructive tint the entity chip uses, since
+	the pill already carries a colour of its own.
 -->
+{#snippet content()}
+	{#if showGlyph && icon}
+		{#if icon.displayType === 'image'}
+			<img
+				src={icon.dataUrl}
+				alt=""
+				aria-hidden="true"
+				class={cn('shrink-0 [image-rendering:crisp-edges]', GLYPH[size])}
+			/>
+		{:else if icon.displayType === 'image_map' && stock}
+			{#if stock.kind === 'data'}
+				<img
+					src={stock.src}
+					alt=""
+					aria-hidden="true"
+					data-status-icon={icon.imageMapKey}
+					style="width:{stock.cell.w}px;height:{stock.cell.h}px"
+					class="shrink-0 [image-rendering:crisp-edges]"
+				/>
+			{:else if stock.kind === 'sprite'}
+				<span
+					aria-hidden="true"
+					data-status-icon={icon.imageMapKey}
+					style={inlineStyle(spriteStyle(stock))}
+					class="shrink-0"
+				></span>
+			{:else}
+				<span
+					aria-hidden="true"
+					data-status-icon={icon.imageMapKey}
+					class="bg-muted-foreground/40 size-2 shrink-0 rounded-full"
+				></span>
+			{/if}
+		{/if}
+	{/if}
+	<span class={cn('truncate', !showText && 'sr-only')}>{textIcon ?? text}</span>
+{/snippet}
+
 {#if code}
 	<span
 		bind:this={ref}
@@ -123,7 +178,8 @@
 		title={other}
 		{style}
 		class={cn(
-			'border-border bg-background inline-flex max-w-full min-w-0 items-center gap-1.5 rounded-md border px-1.5 align-middle text-xs font-medium',
+			'border-border bg-background inline-flex max-w-full min-w-0 items-center rounded-md border px-1.5 align-middle text-xs font-medium',
+			showRemove ? 'gap-1' : 'gap-1.5',
 			BOX[size],
 			variant === 'icon' && 'justify-center',
 			rgb && 'border-transparent ring-1 ring-current/10 ring-inset',
@@ -132,40 +188,19 @@
 		)}
 		{...rest}
 	>
-		{#if showGlyph && icon}
-			{#if icon.displayType === 'image'}
-				<img
-					src={icon.dataUrl}
-					alt=""
-					aria-hidden="true"
-					class={cn('shrink-0 [image-rendering:crisp-edges]', GLYPH[size])}
-				/>
-			{:else if icon.displayType === 'image_map' && stock}
-				{#if stock.kind === 'data'}
-					<img
-						src={stock.src}
-						alt=""
-						aria-hidden="true"
-						data-status-icon={icon.imageMapKey}
-						style="width:{stock.cell.w}px;height:{stock.cell.h}px"
-						class="shrink-0 [image-rendering:crisp-edges]"
-					/>
-				{:else if stock.kind === 'sprite'}
-					<span
-						aria-hidden="true"
-						data-status-icon={icon.imageMapKey}
-						style={inlineStyle(spriteStyle(stock))}
-						class="shrink-0"
-					></span>
-				{:else}
-					<span
-						aria-hidden="true"
-						data-status-icon={icon.imageMapKey}
-						class="bg-muted-foreground/40 size-2 shrink-0 rounded-full"
-					></span>
-				{/if}
-			{/if}
+		{#if showRemove}
+			<span class="flex min-w-0 items-center gap-1.5">{@render content()}</span>
+			<button
+				type="button"
+				data-slot="status-badge-remove"
+				aria-label={removeLabel ?? `Remove ${text}`}
+				onclick={() => onRemove?.(code)}
+				class="hover:bg-current/15 focus-visible:ring-ring focus-visible:ring-offset-background pointer-events-auto shrink-0 rounded-sm p-0.5 opacity-70 outline-none transition-colors duration-150 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-2 motion-safe:active:scale-[0.98]"
+			>
+				<X aria-hidden="true" class="size-3" />
+			</button>
+		{:else}
+			{@render content()}
 		{/if}
-		<span class={cn('truncate', !showText && 'sr-only')}>{textIcon ?? text}</span>
 	</span>
 {/if}

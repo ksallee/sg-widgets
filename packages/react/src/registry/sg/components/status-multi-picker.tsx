@@ -294,8 +294,14 @@ export function StatusMultiPicker({
    * control is a trigger, and keeps its search box at the top of the popup instead.
    */
   const inline = summary === 'chips';
+
+  // Read-only wins over disabled and over the loading window.
+  const inert = !readonly && (disabled || query.loading);
+  const interactive = !readonly && !inert;
+  const showClear = clearable && value.length > 0 && !readonly && !disabled;
+
   /** What the badges look like, so a change to any of it re-measures the row. */
-  const rowKey = `${size}|${summary}|${badge}|${showCode}|${value.map((code) => byCode.get(code)?.label ?? code).join(', ')}`;
+  const rowKey = `${size}|${summary}|${badge}|${showCode}|${interactive}|${value.map((code) => byCode.get(code)?.label ?? code).join(', ')}`;
   const row = useChipRow(summary === 'ellipsis', rowKey, controlRef, badgesRef);
   const plan = summariseSelection(value, (code) => byCode.get(code)?.label ?? code, {
     summary,
@@ -304,10 +310,9 @@ export function StatusMultiPicker({
     fit: row.fit,
   });
 
-  // Read-only wins over disabled and over the loading window.
-  const inert = !readonly && (disabled || query.loading);
-  const interactive = !readonly && !inert;
-  const showClear = clearable && value.length > 0 && !readonly && !disabled;
+  function remove(code: string): void {
+    onValueChange?.(value.filter((c) => c !== code));
+  }
 
   /** A press anywhere in the field opens the list and puts the caret in the input. */
   function openFromControl(event: ReactPointerEvent<HTMLDivElement>): void {
@@ -363,7 +368,7 @@ export function StatusMultiPicker({
       case 'remove': {
         event.preventDefault();
         const code = value[intent.index];
-        if (code !== undefined) onValueChange?.(value.filter((c) => c !== code));
+        if (code !== undefined) remove(code);
         return;
       }
       case 'follow':
@@ -378,7 +383,7 @@ export function StatusMultiPicker({
     }
   }
 
-  const statusBadge = (code: string, variant: StatusBadgeVariant) => (
+  const statusBadge = (code: string, variant: StatusBadgeVariant, removable: boolean) => (
     <StatusBadge
       code={code}
       status={query.statuses.get(code) ?? null}
@@ -387,6 +392,9 @@ export function StatusMultiPicker({
       size={BADGE[size]}
       label={showCode ? 'code' : 'name'}
       siteUrl={site}
+      removable={removable}
+      onRemove={remove}
+      removeLabel={`Remove ${byCode.get(code)?.label ?? code}`}
       className="min-w-0"
     />
   );
@@ -398,20 +406,9 @@ export function StatusMultiPicker({
       data-chip=""
       data-armed={armed === index ? 'true' : undefined}
       hidden={row.ready && index >= plan.shown.length}
-      className={cn('flex min-w-0 shrink-0 items-center gap-1', armed === index && cn(PICKER_ARMED, 'rounded-sm'))}
+      className={cn('flex min-w-0 shrink-0 items-center', armed === index && cn(PICKER_ARMED, 'rounded-sm'))}
     >
-      {statusBadge(code, badge)}
-      {interactive && badge !== 'icon' ? (
-        <button
-          type="button"
-          data-slot="status-multi-picker-remove"
-          aria-label={`Remove ${byCode.get(code)?.label ?? code}`}
-          onClick={() => onValueChange?.(value.filter((c) => c !== code))}
-          className="hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring focus-visible:ring-offset-background pointer-events-auto shrink-0 rounded-sm opacity-60 outline-none transition-colors duration-150 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-2 motion-safe:active:scale-[0.98]"
-        >
-          <X aria-hidden="true" className="size-3" />
-        </button>
-      ) : null}
+      {statusBadge(code, badge, interactive)}
     </span>
   );
 
@@ -465,7 +462,7 @@ export function StatusMultiPicker({
         <span data-slot="status-multi-picker-check" className="flex h-5 shrink-0 items-center">
           <Checkbox checked={chosen} tabIndex={-1} aria-hidden="true" className="pointer-events-none" />
         </span>
-        {statusBadge(code, 'both')}
+        {statusBadge(code, 'both', false)}
       </ComboboxPrimitive.Item>
     );
   }

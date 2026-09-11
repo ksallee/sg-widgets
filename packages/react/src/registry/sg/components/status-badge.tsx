@@ -8,6 +8,7 @@ import {
   statusLabel,
   stockIconSource,
 } from '@sg-widgets/core';
+import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 /** How much of the status to show. */
@@ -45,6 +46,11 @@ export interface StatusBadgeProps extends Omit<React.HTMLAttributes<HTMLSpanElem
   label?: StatusBadgeLabel;
   /** The site the stock sprite is served from, for icons the package does not bundle. */
   siteUrl?: string;
+  /** Draw a remove control inside the pill. The icon-only variant has no room for it and ignores this. */
+  removable?: boolean;
+  onRemove?: (code: string) => void;
+  /** Accessible label for the remove control. */
+  removeLabel?: string;
 }
 
 /**
@@ -58,6 +64,12 @@ export interface StatusBadgeProps extends Omit<React.HTMLAttributes<HTMLSpanElem
  * its name. The badge is neutral by default; `color` paints it in `bg_color`,
  * comma-separated decimal RGB and never hex (probe 010), the one raw colour the design
  * rules allow.
+ *
+ * `removable` draws a cross inside the pill, after the label, in the badge's own
+ * foreground: under `color` that is the readable black or white the status colour gives,
+ * so the cross keeps its contrast on every colour. Its hover is a translucent wash of
+ * that foreground rather than the destructive tint the entity chip uses, since the pill
+ * already carries a colour of its own.
  */
 export function StatusBadge({
   code,
@@ -68,6 +80,9 @@ export function StatusBadge({
   color = false,
   label = 'name',
   siteUrl,
+  removable = false,
+  onRemove,
+  removeLabel,
   className,
   ...rest
 }: StatusBadgeProps) {
@@ -88,6 +103,15 @@ export function StatusBadge({
   const textIcon = icon?.displayType === 'html' ? icon.html || text : null;
   const showGlyph = variant !== 'text' && icon !== null && textIcon === null;
   const showText = variant !== 'icon' || textIcon !== null;
+  // A bare icon is the glyph and nothing else, so there is no room for a cross.
+  const showRemove = removable && variant !== 'icon';
+
+  const content = (
+    <>
+      {showGlyph ? <StatusGlyph icon={icon} size={size} siteUrl={siteUrl} /> : null}
+      <span className={cn('truncate', !showText && 'sr-only')}>{textIcon ?? text}</span>
+    </>
+  );
 
   return (
     <span
@@ -97,7 +121,8 @@ export function StatusBadge({
       title={other}
       style={style}
       className={cn(
-        'border-border bg-background inline-flex max-w-full min-w-0 items-center gap-1.5 rounded-md border px-1.5 align-middle text-xs font-medium',
+        'border-border bg-background inline-flex max-w-full min-w-0 items-center rounded-md border px-1.5 align-middle text-xs font-medium',
+        showRemove ? 'gap-1' : 'gap-1.5',
         BOX[size],
         variant === 'icon' && 'justify-center',
         rgb && 'border-transparent ring-1 ring-current/10 ring-inset',
@@ -106,8 +131,22 @@ export function StatusBadge({
       )}
       {...rest}
     >
-      {showGlyph ? <StatusGlyph icon={icon} size={size} siteUrl={siteUrl} /> : null}
-      <span className={cn('truncate', !showText && 'sr-only')}>{textIcon ?? text}</span>
+      {showRemove ? (
+        <>
+          <span className="flex min-w-0 items-center gap-1.5">{content}</span>
+          <button
+            type="button"
+            data-slot="status-badge-remove"
+            aria-label={removeLabel ?? `Remove ${text}`}
+            onClick={() => onRemove?.(code)}
+            className="hover:bg-current/15 focus-visible:ring-ring focus-visible:ring-offset-background pointer-events-auto shrink-0 rounded-sm p-0.5 opacity-70 outline-none transition-colors duration-150 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-2 motion-safe:active:scale-[0.98]"
+          >
+            <X aria-hidden="true" className="size-3" />
+          </button>
+        </>
+      ) : (
+        content
+      )}
     </span>
   );
 }

@@ -260,6 +260,11 @@ export function PickerControl({
   const counted = summary === 'count' && chipRow && multiple;
   // A chip removed from under the highlight takes it with it.
   const armed = armedChip !== null && armedChip < labels.length ? armedChip : null;
+  // A chip removed from under the highlight takes it with it; a chip added later must
+  // not inherit an index that outlived its chip.
+  useEffect(() => {
+    if (armedChip !== null && armedChip >= labels.length) setArmedChip(null);
+  }, [armedChip, labels.length]);
 
   function setOpen(next: boolean): void {
     const wanted = interactive ? next : false;

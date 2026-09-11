@@ -1,11 +1,10 @@
-import * as React from 'react';
+import type * as React from 'react';
 import type { FieldSchema } from '@sg-widgets/core';
 import { parseTextInput } from '@sg-widgets/core';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { cn } from '@/lib/utils';
 import { CONTROL_BOX, type ControlSize } from '@/registry/sg/components/control-classes';
-import { FieldError } from '@/registry/sg/components/field-error';
+import { ValueEditor, useValueSession } from '@/registry/sg/components/value-editor';
 
 export type TextEditorSize = ControlSize;
 
@@ -55,93 +54,59 @@ export function TextEditor({
   className,
   ...rest
 }: TextEditorProps) {
-  const [draft, setDraft] = React.useState(value ?? '');
-  const [parseError, setParseError] = React.useState<string | null>(null);
-  // The input is uncontrolled while it has focus, so typing is never fought by an
-  // incoming value; an outside change lands as soon as the field is left.
-  const editing = React.useRef(false);
-
-  React.useEffect(() => {
-    if (!editing.current) setDraft(value ?? '');
-  }, [value]);
-
-  const message = error ?? parseError;
-  const isInvalid = invalid || message !== null;
-
-  const commit = (): void => {
-    const result = parseTextInput(draft);
-    if ('error' in result) {
-      setParseError(result.error);
-      onErrorChange?.(result.error);
-      return;
-    }
-    setParseError(null);
-    onErrorChange?.(null);
-    setDraft(result.value ?? '');
-    if (result.value === value) return;
-    onValueChange?.(result.value);
-  };
-
-  const onKeyDown = (event: React.KeyboardEvent): void => {
-    if (event.key === 'Enter' && !multiline) commit();
-    if (event.key === 'Escape') {
-      setDraft(value ?? '');
-      setParseError(null);
-      onErrorChange?.(null);
-    }
-  };
-
-  const onFocus = (): void => {
-    editing.current = true;
-  };
-
-  // Losing focus because the control was removed from the page is not a commit.
-  const onBlur = (event: React.FocusEvent<HTMLElement>): void => {
-    if (!event.currentTarget.isConnected) return;
-    editing.current = false;
-    commit();
-  };
+  const session = useValueSession<string | null, string>({
+    value,
+    format: (stored) => stored ?? '',
+    parse: parseTextInput,
+    onValueChange,
+    onErrorChange,
+    error,
+    invalid,
+    // A newline is what Enter means in a textarea.
+    commitOnEnter: !multiline,
+  });
 
   return (
-    <div
-      data-slot="text-editor"
-      data-size={size}
-      className={cn('flex w-full min-w-0 flex-col gap-2', className)}
+    <ValueEditor
+      slotName="text-editor"
+      size={size}
+      message={session.message}
+      errorMessage={errorMessage}
+      className={className}
       {...rest}
     >
       {multiline ? (
         <Textarea
-          value={draft}
+          value={session.draft}
           rows={rows}
           disabled={disabled}
           readOnly={readonly}
           placeholder={placeholder}
-          aria-invalid={isInvalid}
+          aria-invalid={session.invalid}
           aria-label={field?.displayName}
           aria-required={field?.mandatory}
-          onChange={(event) => setDraft(event.target.value)}
-          onFocus={onFocus}
-          onBlur={onBlur}
-          onKeyDown={onKeyDown}
+          onChange={(event) => session.setDraft(event.target.value)}
+          onFocus={session.onFocus}
+          onBlur={session.onBlur}
+          onKeyDown={session.onKeyDown}
         />
       ) : (
         <Input
-          value={draft}
+          value={session.draft}
           type="text"
           disabled={disabled}
           readOnly={readonly}
           placeholder={placeholder}
           className={CONTROL_BOX[size]}
-          aria-invalid={isInvalid}
+          aria-invalid={session.invalid}
           aria-label={field?.displayName}
           aria-required={field?.mandatory}
-          onChange={(event) => setDraft(event.target.value)}
-          onFocus={onFocus}
-          onBlur={onBlur}
-          onKeyDown={onKeyDown}
+          onChange={(event) => session.setDraft(event.target.value)}
+          onFocus={session.onFocus}
+          onBlur={session.onBlur}
+          onKeyDown={session.onKeyDown}
         />
       )}
-      <FieldError message={message} errorMessage={errorMessage} />
-    </div>
+    </ValueEditor>
   );
 }

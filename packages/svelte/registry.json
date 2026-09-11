@@ -331,6 +331,29 @@
       ]
     },
     {
+      "name": "value-editor",
+      "type": "registry:component",
+      "title": "Value Editor",
+      "description": "The draft, the commit, the Escape and the error line every leaf value editor runs on.",
+      "dependencies": [
+        "@sg-widgets/core"
+      ],
+      "registryDependencies": [
+        "local:field-error",
+        "local:control-classes"
+      ],
+      "files": [
+        {
+          "path": "src/lib/registry/components/value-editor.svelte",
+          "type": "registry:component"
+        },
+        {
+          "path": "src/lib/registry/components/value-editor.svelte.ts",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
       "name": "entity-type-picker",
       "type": "registry:component",
       "title": "Entity Type Picker",
@@ -425,7 +448,7 @@
         "@lucide/svelte"
       ],
       "registryDependencies": [
-        "local:field-error",
+        "local:value-editor",
         "local:control-classes",
         "input",
         "textarea"
@@ -447,7 +470,7 @@
         "@lucide/svelte"
       ],
       "registryDependencies": [
-        "local:field-error",
+        "local:value-editor",
         "local:control-classes",
         "button",
         "input"
@@ -491,8 +514,8 @@
         "@internationalized/date"
       ],
       "registryDependencies": [
+        "local:value-editor",
         "local:editor-calendar",
-        "local:field-error",
         "local:control-classes",
         "input",
         "button",
@@ -517,8 +540,8 @@
         "@internationalized/date"
       ],
       "registryDependencies": [
+        "local:value-editor",
         "local:editor-calendar",
-        "local:field-error",
         "local:control-classes",
         "input",
         "button",
@@ -623,7 +646,7 @@
         "@lucide/svelte"
       ],
       "registryDependencies": [
-        "local:field-error",
+        "local:value-editor",
         "local:control-classes",
         "input"
       ],
@@ -644,7 +667,7 @@
         "@lucide/svelte"
       ],
       "registryDependencies": [
-        "local:field-error",
+        "local:value-editor",
         "local:control-classes",
         "input"
       ],

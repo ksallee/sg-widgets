@@ -9,7 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { cn } from '@/lib/utils';
 import { CONTROL_BOX, CONTROL_GLYPH, type ControlSize } from '@/registry/sg/components/control-classes';
 import { fromCalendarDate, toCalendarDate } from '@/registry/sg/components/editor-calendar';
-import { FieldError } from '@/registry/sg/components/field-error';
+import { ValueEditor, useValueSession } from '@/registry/sg/components/value-editor';
 
 export type DateEditorSize = ControlSize;
 
@@ -61,88 +61,59 @@ export function DateEditor({
   className,
   ...rest
 }: DateEditorProps) {
-  const [draft, setDraft] = React.useState(value ?? '');
-  const [parseError, setParseError] = React.useState<string | null>(null);
   const [uncontrolledOpen, setUncontrolledOpen] = React.useState(false);
   const open = openProp ?? uncontrolledOpen;
-  const setOpen = (next: boolean): void => {
-    setUncontrolledOpen(next);
-    onOpenChange?.(next);
-  };
-  const editing = React.useRef(false);
   const dayInput = React.useRef<HTMLInputElement>(null);
 
-  React.useEffect(() => {
-    if (!editing.current) setDraft(value ?? '');
-  }, [value]);
+  const setOpen = (next: boolean): void => {
+    const wanted = readonly || disabled ? false : next;
+    if (wanted === open) return;
+    setUncontrolledOpen(wanted);
+    onOpenChange?.(wanted);
+  };
 
-  const message = error ?? parseError;
-  const isInvalid = invalid || message !== null;
+  const session = useValueSession<string | null, string>({
+    value,
+    format: (stored) => stored ?? '',
+    parse: toApiDate,
+    onValueChange,
+    onErrorChange,
+    error,
+    invalid,
+    stopKeys: true,
+    onEnter: (committed) => {
+      if (!committed) return;
+      session.editing.current = false;
+      setOpen(false);
+    },
+    onEscape: () => {
+      session.editing.current = false;
+    },
+  });
+
   const day = toCalendarDate(value);
 
-  const emit = (next: string | null): void => {
-    setParseError(null);
-    onErrorChange?.(null);
-    setDraft(next ?? '');
-    if (next === value) return;
-    onValueChange?.(next);
-  };
-
-  /** Commits the typed day. Answers whether it parsed, so Enter knows to close. */
-  const commit = (): boolean => {
-    const result = toApiDate(draft);
-    if ('error' in result) {
-      setParseError(result.error);
-      onErrorChange?.(result.error);
-      return false;
-    }
-    emit(result.value);
-    return true;
-  };
-
   const pick = (picked: Date | undefined): void => {
-    editing.current = false;
+    session.editing.current = false;
     setOpen(false);
-    emit(fromCalendarDate(picked) || null);
-  };
-
-  // Losing focus because the control was removed from the page is not a commit.
-  const onBlur = (event: React.FocusEvent<HTMLInputElement>): void => {
-    if (!event.currentTarget.isConnected) return;
-    editing.current = false;
-    commit();
-  };
-
-  const onKeyDown = (event: React.KeyboardEvent): void => {
-    if (event.key !== 'Enter' && event.key !== 'Escape') return;
-    // The popover is portalled out of the widget, but React replays a synthetic event
-    // up its own tree, so a key the editor answers is stopped here in both frameworks.
-    event.stopPropagation();
-    if (event.key === 'Enter') {
-      if (!commit()) return;
-      editing.current = false;
-      setOpen(false);
-      return;
-    }
-    setDraft(value ?? '');
-    setParseError(null);
-    onErrorChange?.(null);
-    editing.current = false;
+    session.apply(fromCalendarDate(picked) || null);
   };
 
   return (
-    <div
-      data-slot="date-editor"
-      data-size={size}
-      data-inline={inline ? 'true' : undefined}
-      className={cn('flex w-full min-w-0 flex-col gap-2', inline && 'w-fit', className)}
+    <ValueEditor
+      slotName="date-editor"
+      size={size}
+      inline={inline}
+      message={session.message}
+      errorMessage={errorMessage}
+      className={className}
       {...rest}
     >
-      <Popover open={open} onOpenChange={(next) => setOpen(readonly || disabled ? false : next)}>
+      <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger
           data-slot="date-editor-trigger"
           aria-label={field?.displayName ?? 'Pick a date'}
-          aria-invalid={isInvalid}
+          aria-invalid={session.invalid}
           aria-disabled={disabled ? 'true' : undefined}
           data-readonly={readonly ? 'true' : undefined}
           disabled={disabled}
@@ -160,27 +131,24 @@ export function DateEditor({
         <PopoverContent align="start" className="flex w-auto flex-col gap-3 p-3" initialFocus={dayInput}>
           <Input
             ref={dayInput}
-            value={draft}
+            value={session.draft}
             type="text"
             data-slot="date-editor-day"
             disabled={disabled}
             readOnly={readonly}
             placeholder={placeholder}
             className={cn('tabular-nums', CONTROL_BOX[size])}
-            aria-invalid={isInvalid}
+            aria-invalid={session.invalid}
             aria-label={field?.displayName ?? 'Date'}
             aria-required={field?.mandatory}
-            onChange={(event) => setDraft(event.target.value)}
-            onFocus={() => {
-              editing.current = true;
-            }}
-            onBlur={onBlur}
-            onKeyDown={onKeyDown}
+            onChange={(event) => session.setDraft(event.target.value)}
+            onFocus={session.onFocus}
+            onBlur={session.onBlur}
+            onKeyDown={session.onKeyDown}
           />
           <Calendar mode="single" className="p-0" selected={day} onSelect={pick} />
         </PopoverContent>
       </Popover>
-      <FieldError message={message} errorMessage={errorMessage} />
-    </div>
+    </ValueEditor>
   );
 }

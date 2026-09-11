@@ -1,20 +1,4 @@
 <script lang="ts" module>
-	import {
-		formatDuration,
-		formatNumberInput,
-		formatTimecode,
-		formatTimecodeFrames,
-		numberSteps,
-		parseDurationInput,
-		parseFloatInput,
-		parseInteger,
-		parseTimecodeInput,
-		stepNumber,
-		toApiFloat,
-		unformatNumberInput,
-		type ParseResult
-	} from '@sg-widgets/core';
-
 	import type { ControlSize } from '$lib/registry/components/control-classes.js';
 
 	export type NumberEditorSize = ControlSize;
@@ -37,18 +21,6 @@
 	const SHIFT_STEPS = 10;
 	const PAGE_STEPS = 100;
 
-	interface Shape {
-		hoursPerDay?: number;
-		frameRate?: number;
-		precision?: number;
-		min?: number;
-		max?: number;
-		locale?: string;
-	}
-
-	/** The types whose input is a plain number, and so is written in the locale's marks. */
-	const LOCALE_TYPES = ['number', 'float', 'percent', 'currency'];
-
 	/**
 	 * The comfortable width of each numeric type, in `inline` form: eight characters of
 	 * number, eleven of timecode.
@@ -61,87 +33,21 @@
 		duration: 'w-24',
 		timecode: 'w-28'
 	};
-
-	/** The stored value as the string the input shows. Each type round-trips through its own parse. */
-	function toDraft(value: unknown, dataType: string, shape: Shape): string {
-		if (value === null || value === undefined || value === '') return '';
-		const n = Number(value);
-		switch (dataType) {
-			case 'float':
-			case 'currency':
-				return Number.isFinite(n)
-					? formatNumberInput(n, {
-							...(shape.locale === undefined ? {} : { locale: shape.locale }),
-							...(shape.precision === undefined ? {} : { decimals: shape.precision })
-						})
-					: String(value);
-			case 'duration':
-				// Hours and minutes, never days: a day rendering rounds and would not survive a
-				// round trip through the parse. The working day is a parse unit only.
-				return formatDuration(n);
-			case 'timecode':
-				return shape.frameRate === undefined ? formatTimecode(n) : formatTimecodeFrames(n, shape.frameRate);
-			default:
-				return Number.isFinite(n)
-					? formatNumberInput(n, shape.locale === undefined ? {} : { locale: shape.locale })
-					: String(value);
-		}
-	}
-
-	/** What the parsers read: the locale's group and decimal marks are undone first. */
-	function toDigits(raw: string, dataType: string, shape: Shape): string {
-		if (!LOCALE_TYPES.includes(dataType)) return raw;
-		return unformatNumberInput(raw, shape.locale);
-	}
-
-	function parseFor(raw: string, dataType: string, shape: Shape): ParseResult<number | null> {
-		const text = toDigits(raw, dataType, shape);
-		switch (dataType) {
-			case 'float':
-			case 'currency':
-				return parseFloatInput(text, shape.precision === undefined ? {} : { precision: shape.precision });
-			case 'duration':
-				return parseDurationInput(text, shape.hoursPerDay === undefined ? {} : { hoursPerDay: shape.hoursPerDay });
-			case 'timecode':
-				return parseTimecodeInput(text, shape.frameRate === undefined ? {} : { frameRate: shape.frameRate });
-			default: {
-				const bounds: { min?: number; max?: number } = {};
-				if (shape.min !== undefined) bounds.min = shape.min;
-				if (shape.max !== undefined) bounds.max = shape.max;
-				return parseInteger(text, bounds);
-			}
-		}
-	}
-
-	/**
-	 * The wire value. A `float` goes as a decimal string because an Integer is refused
-	 * on write and JSON cannot spell `2.0`; every other type is a bare number
-	 * (field_types/float, number, percent, duration, timecode).
-	 */
-	function toWire(parsed: number | null, dataType: string): number | string | null {
-		if (parsed === null) return null;
-		return dataType === 'float' ? toApiFloat(parsed) : parsed;
-	}
-
-	/** The stored value as the number the steppers and the spinbutton role work on. */
-	function toNumber(value: number | string | null | undefined): number | null {
-		if (value === null || value === undefined || value === '') return null;
-		const n = Number(value);
-		return Number.isFinite(n) ? n : null;
-	}
 </script>
 
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import type { HTMLAttributes } from 'svelte/elements';
-	import type { FieldSchema } from '@sg-widgets/core';
+	import type { FieldSchema, NumberShape } from '@sg-widgets/core';
+	import { numberDraft, numberSteps, numberWire, parseNumberInput, stepNumber, storedNumber } from '@sg-widgets/core';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { buttonVariants } from '$lib/components/ui/button/index.js';
 	import Minus from '@lucide/svelte/icons/minus';
 	import Plus from '@lucide/svelte/icons/plus';
 	import { cn, type WithElementRef } from '$lib/utils.js';
 	import { CONTROL_BOX, CONTROL_GLYPH } from '$lib/registry/components/control-classes.js';
-	import FieldError from '$lib/registry/components/field-error.svelte';
+	import ValueEditor from '$lib/registry/components/value-editor.svelte';
+	import { createValueSession } from '$lib/registry/components/value-editor.svelte.js';
 
 	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>, HTMLDivElement> & {
 		/** The stored value. A float arrives quoted, the rest as bare numbers (field_types/float). */
@@ -216,7 +122,7 @@
 
 	// A plain function, not a derived: the blur that follows this control being removed
 	// would otherwise read a derived belonging to an effect that is already gone.
-	function shape(): Shape {
+	function shape(): NumberShape {
 		return { hoursPerDay, frameRate, precision, ...bounds(), locale };
 	}
 
@@ -231,21 +137,26 @@
 		return resolved;
 	}
 
-	let draft = $state('');
-	let parseError = $state<string | null>(null);
-	let editing = $state(false);
-
-	$effect(() => {
-		const incoming = toDraft(value, dataType, shape());
-		if (!editing) draft = incoming;
+	const session = createValueSession<number | string | null, string>({
+		value: () => value,
+		format: (stored) => numberDraft(stored, dataType, shape()),
+		parse: (draft) => {
+			const result = parseNumberInput(draft, dataType, shape());
+			return 'error' in result ? result : { value: numberWire(result.value, dataType) };
+		},
+		onValueChange: (next) => {
+			value = next;
+			onValueChange?.(next);
+		},
+		onErrorChange: (next) => onErrorChange?.(next),
+		error: () => error,
+		invalid: () => invalid
 	});
 
-	const message = $derived(error ?? parseError);
-	const isInvalid = $derived(invalid || message !== null);
 	const prefix = $derived(dataType === 'currency' ? symbol : null);
 	const suffix = $derived(dataType === 'percent' ? '%' : null);
 	const limits = $derived(bounds());
-	const stored = $derived(toNumber(value));
+	const stored = $derived(storedNumber(value));
 	const atMin = $derived(stored !== null && limits.min !== undefined && stored <= limits.min);
 	const atMax = $derived(stored !== null && limits.max !== undefined && stored >= limits.max);
 	const name = $derived(label ?? field?.displayName ?? null);
@@ -266,39 +177,19 @@
 	);
 	// A duration is stored as a whole number of minutes and the field names no unit, so
 	// the number that will be written is shown outright (field_types/duration).
-	const live = $derived(parseFor(draft, dataType, shape()));
+	const live = $derived(parseNumberInput(session.draft, dataType, shape()));
 	const hint = $derived(
 		dataType === 'duration' && !('error' in live) && live.value !== null
 			? `${live.value} ${Math.abs(live.value) === 1 ? 'minute' : 'minutes'}`
 			: null
 	);
 
-	function apply(parsed: number | null): void {
-		parseError = null;
-		onErrorChange?.(null);
-		const wire = toWire(parsed, dataType);
-		draft = toDraft(wire, dataType, shape());
-		if (wire === value) return;
-		value = wire;
-		onValueChange?.(wire);
-	}
-
-	function commit(): void {
-		const result = parseFor(draft, dataType, shape());
-		if ('error' in result) {
-			parseError = result.error;
-			onErrorChange?.(result.error);
-			return;
-		}
-		apply(result.value);
-	}
-
 	/** A step reads what is in the input, so a typed `1h 30m` steps from ninety. */
 	function stepBy(direction: 1 | -1, multiplier: number): void {
 		if (disabled || readonly) return;
-		const result = parseFor(draft, dataType, shape());
+		const result = parseNumberInput(session.draft, dataType, shape());
 		if ('error' in result) return;
-		apply(stepNumber(result.value, direction, { ...limits, multiplier }));
+		session.apply(numberWire(stepNumber(result.value, direction, { ...limits, multiplier }), dataType));
 	}
 
 	let holdTimer: ReturnType<typeof setTimeout> | null = null;
@@ -372,20 +263,8 @@
 
 	$effect(() => () => endHold());
 
-	// Losing focus because the control was removed from the page is not a commit.
-	function onblur(event: FocusEvent): void {
-		if (!(event.currentTarget as HTMLElement | null)?.isConnected) return;
-		editing = false;
-		commit();
-	}
-
 	function onkeydown(event: KeyboardEvent): void {
-		if (event.key === 'Enter') commit();
-		if (event.key === 'Escape') {
-			draft = toDraft(value, dataType, shape());
-			parseError = null;
-			onErrorChange?.(null);
-		}
+		session.onkeydown(event);
 		if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
 			event.preventDefault();
 			stepBy(event.key === 'ArrowUp' ? 1 : -1, event.shiftKey ? SHIFT_STEPS : 1);
@@ -412,13 +291,15 @@
 	`inline` is the form a row of a table or a filter takes: the width the type needs, the
 	steppers inside the input rather than beside it, and nothing under the control.
 -->
-<div
-	bind:this={ref}
-	data-slot="number-editor"
-	data-size={size}
+<ValueEditor
+	bind:ref
+	slotName="number-editor"
+	{size}
+	{inline}
 	data-data-type={dataType}
-	data-inline={inline ? 'true' : undefined}
-	class={cn('flex w-full min-w-0 flex-col gap-2', inline && 'w-fit', className)}
+	message={session.message}
+	{errorMessage}
+	class={className}
 	{...rest}
 >
 	{#if scrub && name}
@@ -468,7 +349,7 @@
 				</span>
 			{/if}
 			<Input
-				bind:value={draft}
+				bind:value={session.draft}
 				id={inputId}
 				type="text"
 				role="spinbutton"
@@ -484,15 +365,15 @@
 					inline && 'shrink-0',
 					inline && (INLINE_WIDTH[dataType] ?? 'w-24')
 				)}
-				aria-invalid={isInvalid}
+				aria-invalid={session.invalid}
 				aria-label={field?.displayName}
 				aria-required={field?.mandatory}
 				aria-valuenow={stored ?? undefined}
 				aria-valuemin={limits.min}
 				aria-valuemax={limits.max}
-				aria-valuetext={draft === '' ? undefined : draft}
-				onfocus={() => (editing = true)}
-				{onblur}
+				aria-valuetext={session.draft === '' ? undefined : session.draft}
+				onfocus={session.onfocus}
+				onblur={session.onblur}
 				{onkeydown}
 			/>
 			{#if suffix}
@@ -529,6 +410,4 @@
 	{#if showHint && hint && !inline}
 		<p data-slot="number-editor-hint" class="text-muted-foreground text-xs tabular-nums">{hint}</p>
 	{/if}
-	<FieldError {message} {errorMessage} />
-</div>
-
+</ValueEditor>

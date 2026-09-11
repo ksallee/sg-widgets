@@ -14,16 +14,21 @@ import {
   isoDayParts,
   isParseError,
   isValidListValue,
+  numberDigits,
+  numberDraft,
   numberSteps,
+  numberWire,
   parseColorInput,
   parseDurationInput,
   parseFloatInput,
   parseInteger,
   parseTextInput,
+  parseNumberInput,
   parseTimecodeInput,
   parseUrlInput,
   settleStep,
   stepNumber,
+  storedNumber,
   timeZoneName,
   toApiDate,
   toApiDateTime,
@@ -508,5 +513,63 @@ describe('formatNumberInput and unformatNumberInput', () => {
   it('drops a comma wherever the locale spells its decimal with a point', () => {
     expect(unformatNumberInput('1,001', 'en-GB')).toBe('1001');
     expect(ok(parseInteger(unformatNumberInput('1,001', 'en-US')))).toBe(1001);
+  });
+});
+
+describe('the numeric family', () => {
+  it('writes each type the way its own input shows it', () => {
+    expect(numberDraft(1500, 'number', { locale: 'en-US' })).toBe('1,500');
+    expect(numberDraft('2.5', 'float', { locale: 'en-US', precision: 2 })).toBe('2.50');
+    expect(numberDraft(90, 'duration')).toBe('1:30');
+    expect(numberDraft(3600000, 'timecode')).toBe('01:00:00');
+    expect(numberDraft(3600000, 'timecode', { frameRate: 24 })).toBe('01:00:00:00');
+    expect(numberDraft(null, 'number')).toBe('');
+    expect(numberDraft('', 'number')).toBe('');
+  });
+
+  it('reads each type back through the parse it calls for', () => {
+    expect(ok(parseNumberInput('1,500', 'number', { locale: 'en-US' }))).toBe(1500);
+    expect(ok(parseNumberInput('1h 30m', 'duration'))).toBe(90);
+    expect(ok(parseNumberInput('1d', 'duration', { hoursPerDay: 8 }))).toBe(480);
+    expect(ok(parseNumberInput('01:00:00:00', 'timecode', { frameRate: 24 }))).toBe(3600000);
+    expect(ok(parseNumberInput('', 'number'))).toBeNull();
+    expect(err(parseNumberInput('nope', 'number'))).toBeTruthy();
+  });
+
+  it('holds an integer to the bounds it was given', () => {
+    expect(err(parseNumberInput('120', 'percent', { min: 0, max: 100 }))).toBeTruthy();
+    expect(ok(parseNumberInput('100', 'percent', { min: 0, max: 100 }))).toBe(100);
+  });
+
+  it('undoes the locale marks only for the types written in them', () => {
+    expect(numberDigits('1,500', 'number', { locale: 'en-US' })).toBe('1500');
+    expect(numberDigits('1h 30m', 'duration', { locale: 'en-US' })).toBe('1h 30m');
+    expect(numberDigits('01:00:00:00', 'timecode', { locale: 'en-US' })).toBe('01:00:00:00');
+  });
+
+  it('sends a float as a decimal string and everything else as a number', () => {
+    expect(numberWire(2, 'float')).toBe('2.0');
+    expect(numberWire(2, 'number')).toBe(2);
+    expect(numberWire(null, 'float')).toBeNull();
+  });
+
+  it('reads a stored value as the number the steppers work on', () => {
+    expect(storedNumber('2.5')).toBe(2.5);
+    expect(storedNumber(0)).toBe(0);
+    expect(storedNumber('')).toBeNull();
+    expect(storedNumber(null)).toBeNull();
+    expect(storedNumber('nope')).toBeNull();
+  });
+
+  it('round-trips every type through its draft and its parse', () => {
+    const cases: [number, string, Record<string, number>][] = [
+      [1500, 'number', {}],
+      [90, 'duration', {}],
+      [3600000, 'timecode', { frameRate: 24 }],
+      [42, 'percent', {}],
+    ];
+    for (const [stored, dataType, shape] of cases) {
+      expect(ok(parseNumberInput(numberDraft(stored, dataType, shape), dataType, shape))).toBe(stored);
+    }
   });
 });

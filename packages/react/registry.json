@@ -376,6 +376,30 @@
       ]
     },
     {
+      "name": "value-editor",
+      "type": "registry:component",
+      "title": "Value Editor",
+      "description": "The draft, the commit, the Escape and the error line every leaf value editor runs on.",
+      "categories": [
+        "flow-production-tracking",
+        "editor"
+      ],
+      "dependencies": [
+        "@sg-widgets/core"
+      ],
+      "registryDependencies": [
+        "https://sg-widgets.dev/r/react/field-error.json",
+        "https://sg-widgets.dev/r/react/control-classes.json"
+      ],
+      "docs": "createValueSession / useValueSession owns the draft and the keys; ValueEditor draws the box and the error line. An editor supplies a parse and a format for its own type.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/value-editor.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
       "name": "picker-control",
       "type": "registry:component",
       "title": "Picker Control",
@@ -521,7 +545,7 @@
         "lucide-react"
       ],
       "registryDependencies": [
-        "https://sg-widgets.dev/r/react/field-error.json",
+        "https://sg-widgets.dev/r/react/value-editor.json",
         "https://sg-widgets.dev/r/react/control-classes.json",
         "input",
         "textarea"
@@ -548,7 +572,7 @@
         "lucide-react"
       ],
       "registryDependencies": [
-        "https://sg-widgets.dev/r/react/field-error.json",
+        "https://sg-widgets.dev/r/react/value-editor.json",
         "https://sg-widgets.dev/r/react/control-classes.json",
         "button",
         "input"
@@ -601,8 +625,8 @@
         "lucide-react"
       ],
       "registryDependencies": [
+        "https://sg-widgets.dev/r/react/value-editor.json",
         "https://sg-widgets.dev/r/react/editor-calendar.json",
-        "https://sg-widgets.dev/r/react/field-error.json",
         "https://sg-widgets.dev/r/react/control-classes.json",
         "input",
         "button",
@@ -631,8 +655,8 @@
         "lucide-react"
       ],
       "registryDependencies": [
+        "https://sg-widgets.dev/r/react/value-editor.json",
         "https://sg-widgets.dev/r/react/editor-calendar.json",
-        "https://sg-widgets.dev/r/react/field-error.json",
         "https://sg-widgets.dev/r/react/control-classes.json",
         "input",
         "button",
@@ -762,7 +786,7 @@
         "lucide-react"
       ],
       "registryDependencies": [
-        "https://sg-widgets.dev/r/react/field-error.json",
+        "https://sg-widgets.dev/r/react/value-editor.json",
         "https://sg-widgets.dev/r/react/control-classes.json",
         "input"
       ],
@@ -788,7 +812,7 @@
         "lucide-react"
       ],
       "registryDependencies": [
-        "https://sg-widgets.dev/r/react/field-error.json",
+        "https://sg-widgets.dev/r/react/value-editor.json",
         "https://sg-widgets.dev/r/react/control-classes.json",
         "input"
       ],

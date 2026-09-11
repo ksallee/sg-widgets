@@ -19,7 +19,8 @@
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
 	import { CONTROL_BOX } from '$lib/registry/components/control-classes.js';
-	import FieldError from '$lib/registry/components/field-error.svelte';
+	import ValueEditor from '$lib/registry/components/value-editor.svelte';
+	import { createValueSession } from '$lib/registry/components/value-editor.svelte.js';
 
 	type Props = WithElementRef<Omit<HTMLAttributes<HTMLDivElement>, 'color'>, HTMLDivElement> & {
 		/** The stored string: decimal `r,g,b`, or the pipeline-step token (field_types/color). */
@@ -56,60 +57,29 @@
 		...rest
 	}: Props = $props();
 
-	let draft = $state(value ?? '');
-	let parseError = $state<string | null>(null);
-	let editing = $state(false);
-
-	$effect(() => {
-		const incoming = value ?? '';
-		if (!editing) draft = incoming;
+	const session = createValueSession<string | null, string>({
+		value: () => value,
+		format: (stored) => stored ?? '',
+		parse: parseColorInput,
+		onValueChange: (next) => {
+			value = next;
+			onValueChange?.(next);
+		},
+		onErrorChange: (next) => onErrorChange?.(next),
+		error: () => error,
+		invalid: () => invalid
 	});
 
-	const message = $derived(error ?? parseError);
-	const isInvalid = $derived(invalid || message !== null);
 	// The swatch follows the draft, so a typed hex shows its colour before it is committed.
-	const preview = $derived(parseColorInput(draft));
+	const preview = $derived(parseColorInput(session.draft));
 	const rgb = $derived('error' in preview || preview.value === null ? null : parseBgColor(preview.value));
 	const sentinel = $derived(!('error' in preview) && preview.value === COLOR_SENTINEL);
 
-	function commit(): void {
-		const result = parseColorInput(draft);
-		if ('error' in result) {
-			parseError = result.error;
-			onErrorChange?.(result.error);
-			return;
-		}
-		parseError = null;
-		onErrorChange?.(null);
-		draft = result.value ?? '';
-		if (result.value === value) return;
-		value = result.value;
-		onValueChange?.(result.value);
-	}
-
-	// Losing focus because the control was removed from the page is not a commit.
-	function onblur(event: FocusEvent): void {
-		if (!(event.currentTarget as HTMLElement | null)?.isConnected) return;
-		editing = false;
-		commit();
-	}
-
 	// The native picker answers in hex; the store wants the decimal triple.
 	function pick(event: Event): void {
-		const hex = (event.currentTarget as HTMLInputElement).value;
-		const result = parseColorInput(hex);
+		const result = parseColorInput((event.currentTarget as HTMLInputElement).value);
 		if ('error' in result) return;
-		draft = result.value ?? '';
-		commit();
-	}
-
-	function onkeydown(event: KeyboardEvent): void {
-		if (event.key === 'Enter') commit();
-		if (event.key === 'Escape') {
-			draft = value ?? '';
-			parseError = null;
-			onErrorChange?.(null);
-		}
+		session.apply(result.value);
 	}
 </script>
 
@@ -121,11 +91,13 @@
 	emitted. `Task.color` also takes the token `pipeline_step`, which is the only way
 	to un-set it: a written null is a 400 (field_types/color).
 -->
-<div
-	bind:this={ref}
-	data-slot="color-editor"
-	data-size={size}
-	class={cn('flex w-full min-w-0 flex-col gap-2', className)}
+<ValueEditor
+	bind:ref
+	slotName="color-editor"
+	{size}
+	message={session.message}
+	{errorMessage}
+	class={className}
 	{...rest}
 >
 	<div class="flex w-full min-w-0 items-center gap-2">
@@ -150,18 +122,18 @@
 			/>
 		</label>
 		<Input
-			bind:value={draft}
+			bind:value={session.draft}
 			type="text"
 			{disabled}
 			{readonly}
 			{placeholder}
 			class={cn('font-mono tabular-nums', CONTROL_BOX[size])}
-			aria-invalid={isInvalid}
+			aria-invalid={session.invalid}
 			aria-label={field?.displayName}
 			aria-required={field?.mandatory}
-			onfocus={() => (editing = true)}
-			{onblur}
-			{onkeydown}
+			onfocus={session.onfocus}
+			onblur={session.onblur}
+			onkeydown={session.onkeydown}
 		/>
 	</div>
 	{#if hint && sentinel}
@@ -169,5 +141,4 @@
 			Takes the colour of the linked pipeline step.
 		</p>
 	{/if}
-	<FieldError {message} {errorMessage} />
-</div>
+</ValueEditor>

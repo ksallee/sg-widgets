@@ -11,9 +11,10 @@
 	import { parseTextInput } from '@sg-widgets/core';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Textarea } from '$lib/components/ui/textarea/index.js';
-	import { cn, type WithElementRef } from '$lib/utils.js';
+	import type { WithElementRef } from '$lib/utils.js';
 	import { CONTROL_BOX } from '$lib/registry/components/control-classes.js';
-	import FieldError from '$lib/registry/components/field-error.svelte';
+	import ValueEditor from '$lib/registry/components/value-editor.svelte';
+	import { createValueSession } from '$lib/registry/components/value-editor.svelte.js';
 
 	type Props = WithElementRef<Omit<HTMLAttributes<HTMLDivElement>, 'oninput'>, HTMLDivElement> & {
 		/** The stored string, or null. There is no empty string in the store (field_types/text). */
@@ -56,50 +57,20 @@
 		...rest
 	}: Props = $props();
 
-	let draft = $state(value ?? '');
-	let parseError = $state<string | null>(null);
-	// The input is uncontrolled while it has focus, so typing is never fought by an
-	// incoming value; an outside change lands as soon as the field is left.
-	let editing = $state(false);
-
-	$effect(() => {
-		const incoming = value ?? '';
-		if (!editing) draft = incoming;
+	const session = createValueSession<string | null, string>({
+		value: () => value,
+		format: (stored) => stored ?? '',
+		parse: parseTextInput,
+		onValueChange: (next) => {
+			value = next;
+			onValueChange?.(next);
+		},
+		onErrorChange: (next) => onErrorChange?.(next),
+		error: () => error,
+		invalid: () => invalid,
+		// A newline is what Enter means in a textarea.
+		commitOnEnter: () => !multiline
 	});
-
-	const message = $derived(error ?? parseError);
-	const isInvalid = $derived(invalid || message !== null);
-
-	function commit(): void {
-		const result = parseTextInput(draft);
-		if ('error' in result) {
-			parseError = result.error;
-			onErrorChange?.(result.error);
-			return;
-		}
-		parseError = null;
-		onErrorChange?.(null);
-		draft = result.value ?? '';
-		if (result.value === value) return;
-		value = result.value;
-		onValueChange?.(result.value);
-	}
-
-	// Losing focus because the control was removed from the page is not a commit.
-	function onblur(event: FocusEvent): void {
-		if (!(event.currentTarget as HTMLElement | null)?.isConnected) return;
-		editing = false;
-		commit();
-	}
-
-	function onkeydown(event: KeyboardEvent): void {
-		if (event.key === 'Enter' && !multiline) commit();
-		if (event.key === 'Escape') {
-			draft = value ?? '';
-			parseError = null;
-			onErrorChange?.(null);
-		}
-	}
 </script>
 
 <!--
@@ -109,42 +80,43 @@
 	so clearing the input and clearing the field are the same act; there is no "set but
 	blank" state to round-trip (field_types/text).
 -->
-<div
-	bind:this={ref}
-	data-slot="text-editor"
-	data-size={size}
-	class={cn('flex w-full min-w-0 flex-col gap-2', className)}
+<ValueEditor
+	bind:ref
+	slotName="text-editor"
+	{size}
+	message={session.message}
+	{errorMessage}
+	class={className}
 	{...rest}
 >
 	{#if multiline}
 		<Textarea
-			bind:value={draft}
+			bind:value={session.draft}
 			{rows}
 			{disabled}
 			{readonly}
 			{placeholder}
-			aria-invalid={isInvalid}
+			aria-invalid={session.invalid}
 			aria-label={field?.displayName}
 			aria-required={field?.mandatory}
-			onfocus={() => (editing = true)}
-			{onblur}
-			{onkeydown}
+			onfocus={session.onfocus}
+			onblur={session.onblur}
+			onkeydown={session.onkeydown}
 		/>
 	{:else}
 		<Input
-			bind:value={draft}
+			bind:value={session.draft}
 			type="text"
 			{disabled}
 			{readonly}
 			{placeholder}
 			class={CONTROL_BOX[size]}
-			aria-invalid={isInvalid}
+			aria-invalid={session.invalid}
 			aria-label={field?.displayName}
 			aria-required={field?.mandatory}
-			onfocus={() => (editing = true)}
-			{onblur}
-			{onkeydown}
+			onfocus={session.onfocus}
+			onblur={session.onblur}
+			onkeydown={session.onkeydown}
 		/>
 	{/if}
-	<FieldError {message} {errorMessage} />
-</div>
+</ValueEditor>

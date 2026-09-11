@@ -24,9 +24,9 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/list-multi-sel
 | a checked entry | the list with that value removed |
 
 The offered set is the field's valid values, minus its hidden values when a project id is given. A
-value already held that is outside that set keeps showing in the trigger.
+value already held that is outside that set keeps showing in the control.
 
-The trigger reads the chosen labels joined by commas, with the count in a badge at its end.
+The control draws a chip per chosen value. What does not fit on the line becomes a `+n` pill, and a press on it opens the list.
 
 ## Props
 
@@ -63,6 +63,7 @@ on that same change, so a message the caller set clears when the field is answer
 | key | does |
 |---|---|
 | `Space`, `Enter` | Opens the list, with the cursor in the search box. |
+| `Backspace` | On an empty search box, highlights the last chip; a second press removes it. |
 | typing | Narrows the list. |
 | arrows | Move the highlight. |
 | `Enter` | Checks or unchecks the highlighted entry. The list stays open. |

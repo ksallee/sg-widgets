@@ -8,6 +8,10 @@ import Demo from '../../../components/Demo.astro';
 Picks one field of an entity type and emits its dotted path, descending through linked types on the
 way.
 
+It sits on the Popover over a Command list rather than the shared picker control: its list is a
+stack of levels a row descends into, not one flat list of values, and its press, its keyboard
+and its dismissal already match the pickers.
+
 ## Install
 
 ```sh

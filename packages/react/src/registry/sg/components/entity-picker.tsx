@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
-import type { PointerEvent as ReactPointerEvent, ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import type {
   EntityRef,
   FieldSpec,
@@ -12,41 +12,20 @@ import type {
 import {
   createEntitySearch,
   entityKey,
-  holdsArmed,
   NO_MATCH_LABEL,
   pathOf,
-  pickerKeyIntent,
   placeholderName,
   rowThumbnail,
-  scrollHighlightedIntoView,
-  stateLine,
   withSelectedPinned,
 } from '@sg-widgets/core';
 import { Combobox as ComboboxPrimitive } from '@base-ui/react';
-import { Skeleton } from '@/components/ui/skeleton';
-import { ChevronDown, SearchX, TriangleAlert, X } from 'lucide-react';
 import { EntityChip } from '@/registry/sg/components/entity-chip';
-import {
-  PICKER_ARMED,
-  PICKER_BOX,
-  PICKER_CHIP,
-  PICKER_CONTROL,
-  PICKER_GLYPH,
-  PICKER_TRAILING,
-  PICKER_ICON_BUTTON,
-  PICKER_INPUT,
-  PICKER_LIST,
-  PICKER_POPUP,
-  PICKER_ROW,
-} from '@/registry/sg/components/picker-classes';
+import { PICKER_ARMED, PICKER_CHIP, PICKER_ROW } from '@/registry/sg/components/picker-classes';
+import { PickerControl } from '@/registry/sg/components/picker-control';
 import { PickerRow } from '@/registry/sg/components/picker-row';
-import { StateLine } from '@/registry/sg/components/state-line';
 import { cn } from '@/lib/utils';
 
 export type EntityPickerSize = 'sm' | 'md' | 'lg';
-
-/** The row a press on the last row of a page carries, rather than an entity key. */
-const LOAD_MORE = '__load-more';
 
 /** Everything both entity pickers take. They differ only in the shape of the value. */
 export interface EntityPickerBaseProps
@@ -204,18 +183,10 @@ export function EntityPicker({
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const open = openProp ?? uncontrolledOpen;
   const setOpen = (next: boolean): void => {
-    if (!next) setArmedChip(false);
     setUncontrolledOpen(next);
     onOpenChange?.(next);
   };
   const [query, setQuery] = useState('');
-  /** True once a Backspace has highlighted the chip. The next one clears it. */
-  const [armedChip, setArmedChip] = useState(false);
-  const controlRef = useRef<HTMLDivElement | null>(null);
-  const listRef = useRef<HTMLDivElement | null>(null);
-  const inputRef = useRef<HTMLInputElement | null>(null);
-  /** A press on the load-more row is not a selection, and must not close the popup. */
-  const pagingRef = useRef(false);
 
   // The serialised request, so a caller passing fresh array literals every render
   // does not restart the search.
@@ -277,24 +248,7 @@ export function EntityPicker({
   const options = withSelectedPinned(state.rows, value ? [value] : [], search.known);
   const polymorphic = entityTypes.length > 1;
   const hasSubLabel = Boolean(subLabelField || subLabel);
-  const interactive = !disabled && !readonly;
-  const showClear = clearable && Boolean(value) && interactive;
   const selectedKey = value ? entityKey(value) : '';
-
-  /** A press anywhere in the field opens the list and puts the caret in the input. */
-  function openFromControl(event: ReactPointerEvent<HTMLDivElement>): void {
-    if (!interactive) return;
-    const target = event.target as HTMLElement | null;
-    // The chip's remove control, the clear control and the chevron own their own press.
-    if (target?.closest('button')) return;
-    const onCaret = target === inputRef.current;
-    if (!onCaret) {
-      event.preventDefault();
-      inputRef.current?.focus({ preventScroll: true });
-    }
-    // A press on the control toggles the list; a press on the caret only ever opens it.
-    setOpen(onCaret ? true : !open);
-  }
 
   /** The caller's own sub-label. Absent, the row reads `subLabelField` itself. */
   function subLabelOf(row: PickerRowData): string | undefined {
@@ -307,117 +261,20 @@ export function EntityPicker({
     return !pathOf(secondaryField) && polymorphic ? row.type : undefined;
   }
 
-  // Nothing to arm once the value is gone.
-  const armed = armedChip && Boolean(value);
-
   function clear(): void {
     onValueChange?.(null, null);
-    inputRef.current?.focus({ preventScroll: true });
   }
 
-  /**
-   * Backspace, Escape and the arrows. The primitive's own handler runs after this
-   * one, so a key this picker owns is prevented rather than shared.
-   */
-  function onKey(event: React.KeyboardEvent<HTMLInputElement>): void {
-    const intent = pickerKeyIntent(event.key, {
-      open,
-      query,
-      count: value ? 1 : 0,
-      armed: armed ? 0 : null,
-      editable: interactive,
-    });
-    if (!holdsArmed(event.key)) setArmedChip(false);
-    switch (intent.kind) {
-      case 'dismiss':
-        setOpen(false);
-        setQuery('');
-        return;
-      case 'arm':
-        event.preventDefault();
-        setArmedChip(true);
-        return;
-      case 'remove':
-        event.preventDefault();
-        clear();
-        return;
-      case 'follow':
-        // The highlight moves after this handler, so the list follows it a frame later.
-        requestAnimationFrame(() => scrollHighlightedIntoView(listRef.current));
-        return;
-      default:
-        // A closed picker leaves Escape alone: the primitive would clear the value.
-        if (event.key === 'Escape') {
-          (event as { preventBaseUIHandler?: () => void }).preventBaseUIHandler?.();
-        }
-    }
-  }
-
-  function choose(key: string): void {
-    if (key === LOAD_MORE) {
-      pagingRef.current = true;
-      search.loadMore();
-      return;
-    }
-    const row = options.find((option) => entityKey(option) === key);
+  function choose(keys: string[]): void {
+    const row = options.find((option) => entityKey(option) === keys[0]);
     if (!row) return;
     search.remember([row]);
     onValueChange?.({ type: row.type, id: row.id, name: row.name }, row);
   }
 
-  const keys = [...options.map(entityKey), ...(state.hasMore ? [LOAD_MORE] : [])];
   const byKey = new Map(options.map((row) => [entityKey(row), row]));
 
-  // A load-more page appends rows under the highlighted one, and a new query
-  // replaces them all; either way the list follows the highlight.
-  useEffect(() => {
-    if (!open) return;
-    scrollHighlightedIntoView(listRef.current);
-  }, [open, state.rows.length]);
-
-  const loadingText = stateLine('loading', { loadingLabel });
-  let note: ReactNode = null;
-  if (state.error) {
-    note = (
-      <StateLine
-        state="error"
-        slotName="entity-picker-error"
-        icon={TriangleAlert}
-        label={stateLine('error', { errorLabel }, state.error.message)}
-      />
-    );
-  } else if (state.loading && options.length === 0) {
-    note = (
-      <div
-        data-slot="entity-picker-loading"
-        className="flex flex-col gap-2"
-        aria-busy="true"
-        aria-label={loadingText}
-      >
-        {[0, 1, 2].map((row) => (
-          <Skeleton key={row} className="h-8 w-full" />
-        ))}
-      </div>
-    );
-  } else if (options.length === 0) {
-    note = (
-      <StateLine state="empty" slotName="entity-picker-empty" icon={SearchX} label={emptyLabel} />
-    );
-  }
-
-  function renderRow(key: string): ReactNode {
-    if (key === LOAD_MORE) {
-      return (
-        <ComboboxPrimitive.Item
-          key={LOAD_MORE}
-          data-slot="entity-picker-more"
-          value={LOAD_MORE}
-          className={cn(PICKER_ROW, 'text-muted-foreground justify-center text-xs')}
-        >
-          {state.loading ? loadingText : 'Load more'}
-        </ComboboxPrimitive.Item>
-      );
-    }
+  function renderItem(key: string): ReactNode {
     const row = byKey.get(key);
     if (!row) return null;
     const chosen = selectedKey === key;
@@ -462,117 +319,52 @@ export function EntityPicker({
       )}
       {...rest}
     >
-      <ComboboxPrimitive.Root
-        items={keys}
-        filter={null}
-        openOnInputClick={false}
-        autoHighlight
-        // Down stops at the last row rather than wrapping, as it does on Bits UI.
-        loopFocus={false}
+      <PickerControl
+        slot="entity-picker"
+        picker="entity"
+        keys={value ? [selectedKey] : []}
+        onSelect={choose}
+        labels={chipEntity ? [chipEntity.name] : []}
+        items={options.map(entityKey)}
+        renderItem={renderItem}
+        renderChip={(_index, armed) => (
+          <EntityChip
+            entity={chipEntity!}
+            thumbnail={selectedRow ? rowThumbnail(selectedRow.values, { thumbnail }) : null}
+            size={PICKER_CHIP[size]}
+            context={context}
+            siteUrl={site}
+            data-armed={armed ? 'true' : undefined}
+            className={armed ? PICKER_ARMED : undefined}
+          />
+        )}
+        summary="chips"
+        tokenInput={false}
+        inputPlaceholder={chipEntity ? searchPlaceholder : placeholder}
+        size={size}
         disabled={disabled}
-        value={selectedKey || null}
-        onValueChange={(next) => choose(next ?? '')}
+        readonly={readonly}
+        invalid={invalid}
+        clearable={clearable}
+        placeholder={placeholder}
+        searchPlaceholder={searchPlaceholder}
+        open={open}
+        onOpenChange={setOpen}
+        query={query}
+        onQueryChange={setQuery}
+        onRemoveAt={clear}
+        onClear={clear}
+        loading={state.loading && options.length === 0}
+        error={state.error?.message ?? null}
+        empty={options.length === 0}
+        emptyLabel={emptyLabel}
+        loadingLabel={loadingLabel}
+        errorLabel={errorLabel}
+        hasMore={state.hasMore}
+        onLoadMore={() => search.loadMore()}
         // The chip shows the selection; the input never carries the item's key as text.
         itemToStringLabel={() => ''}
-        inputValue={query}
-        onInputValueChange={(next, details) => {
-          if (details.reason === 'item-press') return;
-          setQuery(next);
-        }}
-        open={open}
-        onOpenChange={(next, details) => {
-          // The load-more row is a press on an item, which the primitive reads as a
-          // selection and closes on. Paging is not a selection.
-          if (!next && pagingRef.current) {
-            pagingRef.current = false;
-            details.cancel();
-            return;
-          }
-          setOpen(interactive ? next : false);
-          if (!next) setQuery('');
-        }}
-      >
-        <div
-          ref={controlRef}
-          data-slot="entity-picker-control"
-      onPointerDown={openFromControl}
-      role="group"
-          aria-disabled={disabled ? 'true' : undefined}
-          data-readonly={readonly ? 'true' : undefined}
-          data-empty={chipEntity ? undefined : ''}
-          title={chipEntity?.name ?? placeholder}
-          className={cn(PICKER_CONTROL, PICKER_BOX[size], readonly ? 'pr-3' : showClear ? 'pr-14' : 'pr-8')}
-        >
-          {chipEntity ? (
-            <span data-slot="entity-picker-value" className="flex min-w-0 items-center gap-1.5">
-              <EntityChip
-                entity={chipEntity}
-                thumbnail={selectedRow ? rowThumbnail(selectedRow.values, { thumbnail }) : null}
-                size={PICKER_CHIP[size]}
-                context={context}
-                siteUrl={site}
-                data-armed={armed ? 'true' : undefined}
-                className={armed ? PICKER_ARMED : undefined}
-              />
-            </span>
-          ) : null}
-          <ComboboxPrimitive.Input
-            ref={inputRef}
-            data-slot="entity-picker-input"
-            aria-invalid={invalid ? 'true' : undefined}
-            aria-label={placeholder}
-            readOnly={readonly || undefined}
-            placeholder={chipEntity ? searchPlaceholder : placeholder}
-            onKeyDown={onKey}
-            className={PICKER_INPUT}
-          />
-        </div>
-
-        {/*
-          Fixed, and anchored to the whole control rather than to the input: the list
-          scrolls its highlighted row into view on mount, and an absolute wrapper still
-          at the page origin would drag the page there with it.
-        */}
-        <ComboboxPrimitive.Portal>
-          <ComboboxPrimitive.Positioner
-            positionMethod="fixed"
-            anchor={controlRef}
-            align="start"
-            sideOffset={4}
-            className="isolate z-50"
-          >
-            <ComboboxPrimitive.Popup data-picker="entity" data-slot="entity-picker-content" className={PICKER_POPUP}>
-              <ComboboxPrimitive.List ref={listRef} data-slot="entity-picker-list" className={PICKER_LIST}>
-                {note ?? ((key: string) => renderRow(key))}
-              </ComboboxPrimitive.List>
-            </ComboboxPrimitive.Popup>
-          </ComboboxPrimitive.Positioner>
-        </ComboboxPrimitive.Portal>
-
-        {readonly ? null : (
-          <div className={cn('pointer-events-none absolute top-0 right-2 flex items-center gap-1', PICKER_TRAILING[size])}>
-            {showClear ? (
-              <button
-                type="button"
-                data-slot="entity-picker-clear"
-                aria-label="Clear the selection"
-                onClick={clear}
-                className={PICKER_ICON_BUTTON}
-              >
-                <X aria-hidden="true" className={PICKER_GLYPH[size]} />
-              </button>
-            ) : null}
-            <ComboboxPrimitive.Trigger
-              data-slot="entity-picker-trigger"
-              aria-label="Show the options"
-              disabled={disabled}
-              className={PICKER_ICON_BUTTON}
-            >
-              <ChevronDown aria-hidden="true" className={PICKER_GLYPH[size]} />
-            </ComboboxPrimitive.Trigger>
-          </div>
-        )}
-      </ComboboxPrimitive.Root>
+      />
     </div>
   );
 }

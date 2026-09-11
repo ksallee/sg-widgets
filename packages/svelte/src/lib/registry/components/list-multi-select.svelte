@@ -1,29 +1,22 @@
 <script lang="ts" module>
 	export type ListMultiSelectSize = 'sm' | 'md' | 'lg';
-
-	/** The control ladder of `docs/design-rules.md`: 8 / 9 / 10. */
-	const BOX: Record<ListMultiSelectSize, string> = {
-		sm: 'h-8',
-		md: 'h-9',
-		lg: 'h-10'
-	};
-
-	/** The trigger, matching the select trigger of each registry. */
-	const TRIGGER =
-		'border-input bg-background hover:bg-muted focus-visible:ring-ring focus-visible:ring-offset-background aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 flex w-full min-w-0 items-center justify-between gap-1.5 rounded-lg border px-3 text-sm outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 aria-invalid:ring-2';
 </script>
 
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import type { HTMLAttributes } from 'svelte/elements';
 	import type { FieldSchema } from '@sg-widgets/core';
-	import { statusLabel, usableStatuses } from '@sg-widgets/core';
-	import ChevronDownIcon from '@lucide/svelte/icons/chevron-down';
-	import SearchX from '@lucide/svelte/icons/search-x';
-	import { Badge } from '$lib/components/ui/badge/index.js';
+	import { matchesTokens, statusLabel, usableStatuses } from '@sg-widgets/core';
+	import { Combobox } from 'bits-ui';
+	import X from '@lucide/svelte/icons/x';
 	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
-	import * as Command from '$lib/components/ui/command/index.js';
-	import * as Popover from '$lib/components/ui/popover/index.js';
+	import PickerControl from '$lib/registry/components/picker-control.svelte';
+	import {
+		PICKER_ARMED,
+		PICKER_ROW,
+		PICKER_TEXT_CHIP,
+		PICKER_TEXT_CHIP_BOX
+	} from '$lib/registry/components/picker-classes.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
 
 	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>, HTMLDivElement> & {
@@ -79,13 +72,16 @@
 		...rest
 	}: Props = $props();
 
-	let inputEl = $state<HTMLInputElement | null>(null);
+	let search = $state('');
 
 	const options = $derived(
 		projectId === undefined
 			? (field?.validValues ?? []).map((code) => ({ code, label: statusLabel(field ?? {}, code) }))
 			: usableStatuses(field ?? {})
 	);
+	// The vocabulary is one read, so the search box narrows it here.
+	const shown = $derived(options.filter((option) => matchesTokens(search, option.label, option.code)));
+	const interactive = $derived(!readonly && !disabled);
 
 	// A row may hold a value outside the offered set; that is a legal stored value, so
 	// it is shown as itself rather than dropped (probe 009).
@@ -93,20 +89,19 @@
 		return options.find((option) => option.code === code)?.label ?? code;
 	}
 
-	const label = $derived(value.length === 0 ? placeholder : value.map(labelOf).join(', '));
-
-	function toggle(code: string): void {
-		const next = value.includes(code) ? value.filter((c) => c !== code) : [...value, code];
+	function emit(next: string[]): void {
 		value = next;
 		onErrorChange?.(null);
 		onValueChange?.(next);
 	}
 
-	function setOpen(next: boolean): void {
-		const wanted = readonly || disabled ? false : next;
-		if (wanted === open) return;
-		open = wanted;
-		onOpenChange?.(open);
+	function remove(code: string): void {
+		emit(value.filter((c) => c !== code));
+	}
+
+	function removeAt(index: number): void {
+		const code = value[index];
+		if (code !== undefined) remove(code);
 	}
 </script>
 
@@ -124,62 +119,80 @@
 	class={cn('flex w-full min-w-0 flex-col gap-2', className)}
 	{...rest}
 >
-	<Popover.Root bind:open={() => open, setOpen}>
-		<Popover.Trigger
-			data-slot="list-multi-select-trigger"
-			role="combobox"
-			aria-expanded={open}
-			aria-invalid={invalid ? 'true' : undefined}
-			aria-label={field?.displayName}
-			aria-required={field?.mandatory}
-			data-empty={value.length === 0 ? '' : undefined}
-			disabled={disabled || readonly}
-			title={label}
-			class={cn(TRIGGER, BOX[size])}
+	<div class="relative flex w-full min-w-0 items-center">
+		<PickerControl
+			slot="list-multi-select"
+			picker="list"
+			multiple
+			anchored
+			keys={value}
+			onSelect={emit}
+			labels={value.map(labelOf)}
+			chipKeys={value}
+			chipRow
+			inline={false}
+			clearable={false}
+			rowCount={shown.length}
+			{size}
+			{disabled}
+			{readonly}
+			{invalid}
+			{placeholder}
+			{searchPlaceholder}
+			bind:open
+			{onOpenChange}
+			bind:query={search}
+			onRemoveAt={removeAt}
+			empty={shown.length === 0}
+			{emptyLabel}
+			triggerLabel="Show the values"
+			overflowLabel={`Show all ${value.length} values`}
+			controlProps={{ 'aria-label': field?.displayName, 'aria-required': field?.mandatory }}
 		>
-			<span class={cn('min-w-0 truncate', value.length === 0 && 'text-muted-foreground')}>{label}</span>
-			{#if value.length > 0}
-				<Badge variant="secondary" class="shrink-0">{value.length}</Badge>
-			{:else}
-				<ChevronDownIcon aria-hidden="true" class="text-muted-foreground size-4 shrink-0" />
-			{/if}
-		</Popover.Trigger>
-
-		<!-- Fixed: the Command list scrolls its highlighted row into view on mount, and an absolute
-		     wrapper still at the page origin would drag the page there with it. -->
-		<Popover.Content
-			strategy="fixed"
-			align="start"
-			onOpenAutoFocus={(e) => {
-				e.preventDefault();
-				inputEl?.focus({ preventScroll: true });
-			}}
-			class="w-64 gap-0 overflow-hidden p-0"
-		>
-			<Command.Root>
-				<Command.Input bind:ref={inputEl} placeholder={searchPlaceholder} />
-				<Command.List>
-					<Command.Empty>
-						<span class="text-muted-foreground inline-flex items-center gap-1.5">
-							<SearchX aria-hidden="true" class="size-4 shrink-0" />
-							{emptyLabel}
-						</span>
-					</Command.Empty>
-					{#each options as option (option.code)}
-						<Command.Item
-							value="{option.label} {option.code}"
-							data-option={option.code}
-							data-checked={value.includes(option.code) ? 'true' : undefined}
-							onSelect={() => toggle(option.code)}
+			{#snippet chip(index: number, armed: boolean, hidden: boolean)}
+				{@const code = value[index]!}
+				<span
+					data-slot="list-multi-select-chip"
+					data-chip=""
+					data-armed={armed ? 'true' : undefined}
+					{hidden}
+					class={cn(PICKER_TEXT_CHIP, PICKER_TEXT_CHIP_BOX[size], armed && PICKER_ARMED)}
+				>
+					<span class="truncate">{labelOf(code)}</span>
+					{#if interactive}
+						<button
+							type="button"
+							data-slot="list-multi-select-remove"
+							aria-label={`Remove ${labelOf(code)}`}
+							onclick={() => remove(code)}
+							class="hover:text-foreground focus-visible:ring-ring focus-visible:ring-offset-background shrink-0 rounded-sm opacity-60 outline-none transition-colors duration-150 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-2 motion-safe:active:scale-[0.98]"
 						>
-							<Checkbox checked={value.includes(option.code)} tabindex={-1} aria-hidden="true" />
-							<span class="min-w-0 flex-1 truncate">{option.label}</span>
-						</Command.Item>
-					{/each}
-				</Command.List>
-			</Command.Root>
-		</Popover.Content>
-	</Popover.Root>
+							<X aria-hidden="true" class="size-3" />
+						</button>
+					{/if}
+				</span>
+			{/snippet}
+
+			{#snippet rows()}
+				{#each shown as option (option.code)}
+					{@const chosen = value.includes(option.code)}
+					<Combobox.Item
+						data-slot="list-multi-select-option"
+						data-option={option.code}
+						data-checked={chosen ? 'true' : undefined}
+						value={option.code}
+						label={option.label}
+						class={PICKER_ROW}
+					>
+						<span data-slot="list-multi-select-check" class="flex h-5 shrink-0 items-center">
+							<Checkbox checked={chosen} tabindex={-1} aria-hidden="true" class="pointer-events-none" />
+						</span>
+						<span class="min-w-0 flex-1 truncate">{option.label}</span>
+					</Combobox.Item>
+				{/each}
+			{/snippet}
+		</PickerControl>
+	</div>
 	{#if error}
 		{#if errorMessage}
 			{@render errorMessage(error)}

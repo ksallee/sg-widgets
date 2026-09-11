@@ -5,46 +5,18 @@
 </script>
 
 <script lang="ts">
-	import { tick } from 'svelte';
 	import type { HTMLAttributes } from 'svelte/elements';
 	import type { PickerRow, SgContext, StatusOption, StatusRecord } from '@sg-widgets/core';
-	import {
-		holdsArmed,
-		matchesTokens,
-		NO_MATCH_LABEL,
-		pickerKeyIntent,
-		scrollHighlightedIntoView,
-		stateLine,
-		summariseSelection
-	} from '@sg-widgets/core';
+	import { matchesTokens, NO_MATCH_LABEL } from '@sg-widgets/core';
 	import { Combobox } from 'bits-ui';
-	import ChevronDown from '@lucide/svelte/icons/chevron-down';
-	import Search from '@lucide/svelte/icons/search';
-	import SearchX from '@lucide/svelte/icons/search-x';
-	import TriangleAlert from '@lucide/svelte/icons/triangle-alert';
-	import X from '@lucide/svelte/icons/x';
 	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
-	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
+	import PickerControl from '$lib/registry/components/picker-control.svelte';
 	import Row from '$lib/registry/components/picker-row.svelte';
-	import StateLine from '$lib/registry/components/state-line.svelte';
 	import {
-		CHIP_GAP,
-		OVERFLOW_RESERVE,
-		PICKER_ANCHORED_POPUP,
 		PICKER_ARMED,
-		PICKER_BOX,
 		PICKER_CHIP as BADGE,
-		PICKER_CONTROL,
-		PICKER_GLYPH,
-	PICKER_TRAILING,
-		PICKER_ICON_BUTTON,
-		PICKER_LIST,
-		PICKER_PILL,
-		PICKER_ROW,
-		PICKER_SEARCH,
-		PICKER_SEARCH_ROW,
-		PICKER_TOKEN_INPUT
+		PICKER_ROW
 	} from '$lib/registry/components/picker-classes.js';
 	import StatusBadge, { type StatusBadgeVariant } from '$lib/registry/components/status-badge.svelte';
 
@@ -173,12 +145,7 @@
 		load(entityType, projectKey === '' ? [] : projectKey.split(',').map(Number), field)
 	);
 
-	let controlEl = $state<HTMLElement | null>(null);
-	let listEl = $state<HTMLElement | null>(null);
-	let inputEl = $state<HTMLInputElement | null>(null);
 	let search = $state('');
-	/** The chip a Backspace has highlighted. The next one removes it. */
-	let armed = $state<number | null>(null);
 
 	// `display_values` is the only other source of a label, so the options carry it to the badge.
 	const badgeField = $derived({
@@ -205,105 +172,14 @@
 	// Read-only wins over disabled and over the loading window.
 	const inert = $derived(!readonly && (disabled || query.loading));
 	const interactive = $derived(!readonly && !inert);
-	const showClear = $derived(clearable && value.length > 0 && !readonly && !disabled);
+
+	/** A bare icon is half a badge wide, so a fixed cap fits twice as many. */
+	const badgeMax = $derived(badge === 'icon' ? max * 2 : max);
 
 	/** What the badges look like, so a change to any of it re-measures the row. */
 	const rowKey = $derived(
 		`${size}|${summary}|${badge}|${interactive}|${value.map((code) => byCode.get(code)?.label ?? code).join(', ')}`
 	);
-	let badgesEl = $state<HTMLElement | null>(null);
-	let available = $state(0);
-	let widths = $state<number[]>([]);
-	let measured = $state(false);
-	/** True once the row knows its own widths and its room, so it may be drawn. */
-	const ready = $derived(summary !== 'ellipsis' || (measured && available > 0));
-
-	/** Every badge laid out, so a hidden one still reports the width it would take. */
-	function measure(row: HTMLElement): number[] {
-		const badges = [...row.querySelectorAll<HTMLElement>('[data-chip]')];
-		const was = badges.map((badge) => badge.hidden);
-		for (const badge of badges) badge.hidden = false;
-		const out = badges.map((badge) => Math.ceil(badge.getBoundingClientRect().width) + CHIP_GAP);
-		badges.forEach((badge, i) => (badge.hidden = was[i] ?? false));
-		return out;
-	}
-
-	/** The room the badges have: the control's box, less the padding its affordances take. */
-	function roomIn(control: HTMLElement): number {
-		const style = getComputedStyle(control);
-		return control.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
-	}
-
-	$effect(() => {
-		const control = controlEl;
-		if (!control || summary !== 'ellipsis') return;
-		const observer = new ResizeObserver(() => (available = roomIn(control)));
-		observer.observe(control);
-		available = roomIn(control);
-		return () => observer.disconnect();
-	});
-
-	$effect(() => {
-		void rowKey;
-		const row = badgesEl;
-		if (!row || summary !== 'ellipsis') return;
-		widths = measure(row);
-		measured = true;
-		let live = true;
-		// A badge drawn in the fallback font is not the badge the row ends up with.
-		void document.fonts?.ready.then(() => {
-			if (live && badgesEl) widths = measure(badgesEl);
-		});
-		return () => {
-			live = false;
-		};
-	});
-
-	const plan = $derived(
-		summariseSelection(value, (code) => byCode.get(code)?.label ?? code, {
-			summary,
-			// A bare icon is half a badge wide, so a fixed cap fits twice as many.
-			max: badge === 'icon' ? max * 2 : max,
-			fit:
-				summary === 'ellipsis' && measured && available > 0
-					? { widths, available, reserve: OVERFLOW_RESERVE }
-					: undefined
-		})
-	);
-
-	/** A press anywhere in the field opens the list, and a token field takes the caret. */
-	function openFromControl(event: PointerEvent): void {
-		if (!interactive) return;
-		const target = event.target as HTMLElement | null;
-		// The chip's remove control, the clear control and the chevron own their own press.
-		if (target?.closest('button')) return;
-		// The press's own default would move focus to the body and off whichever caret
-		// takes it: the field's, or the popup's once the effect below focuses it.
-		const onCaret = target === inputEl;
-		if (!onCaret) event.preventDefault();
-		if (inline && !onCaret) inputEl?.focus({ preventScroll: true });
-		// A press on the control toggles the list; a press on the caret only ever opens it.
-		setOpen(onCaret ? true : !open);
-	}
-
-	// A summary trigger has no caret of its own, so the popup's search box takes it.
-	$effect(() => {
-		if (!open || inline) return;
-		const el = inputEl;
-		if (!el) return;
-		el.focus({ preventScroll: true });
-	});
-
-	function setOpen(next: boolean): void {
-		const wanted = interactive ? next : false;
-		if (!wanted) {
-			search = '';
-			armed = null;
-		}
-		if (wanted === open) return;
-		open = wanted;
-		onOpenChange?.(open);
-	}
 
 	function setSelected(next: string[]): void {
 		value = next;
@@ -314,57 +190,9 @@
 		setSelected(value.filter((c) => c !== code));
 	}
 
-	// A chip removed from under the highlight takes it with it.
-	$effect(() => {
-		if (armed !== null && armed >= value.length) armed = null;
-	});
-
-	/**
-	 * Backspace, Escape and the arrows. The primitive's own handler runs after this
-	 * one, so a key this picker owns is prevented rather than shared.
-	 */
-	function onKey(event: KeyboardEvent): void {
-		const intent = pickerKeyIntent(event.key, {
-			open,
-			query: search,
-			count: value.length,
-			armed,
-			editable: interactive
-		});
-		if (!holdsArmed(event.key)) armed = null;
-		switch (intent.kind) {
-			case 'dismiss':
-				setOpen(false);
-				return;
-			case 'arm':
-				event.preventDefault();
-				armed = intent.index;
-				return;
-			case 'remove': {
-				event.preventDefault();
-				const code = value[intent.index];
-				if (code !== undefined) remove(code);
-				return;
-			}
-			case 'follow':
-				void tick().then(() => scrollHighlightedIntoView(listEl));
-				return;
-			default:
-				return;
-		}
-	}
-
-	// The search box narrows the list here, so the rows change under the highlight;
-	// the list follows it.
-	$effect(() => {
-		void shown.length;
-		if (!open) return;
-		void tick().then(() => scrollHighlightedIntoView(listEl));
-	});
-
-	function clear(): void {
-		setSelected([]);
-		if (inline) inputEl?.focus({ preventScroll: true });
+	function removeAt(index: number): void {
+		const code = value[index];
+		if (code !== undefined) remove(code);
 	}
 
 	/** The shared row a status is drawn as. There is no entity behind a code, so it carries no values. */
@@ -378,33 +206,6 @@
 		return showCode && option.code !== option.label ? option.code : undefined;
 	}
 </script>
-
-{#snippet statusBadge(code: string, variant: StatusBadgeVariant, removable: boolean)}
-	<StatusBadge
-		{code}
-		status={query.statuses.get(code) ?? null}
-		field={badgeField}
-		{variant}
-		size={BADGE[size]}
-		siteUrl={site}
-		{removable}
-		onRemove={remove}
-		removeLabel={`Remove ${byCode.get(code)?.label ?? code}`}
-		class="min-w-0"
-	/>
-{/snippet}
-
-{#snippet chip(code: string, index: number)}
-	<span
-		data-slot="status-multi-picker-chip"
-		data-chip=""
-		data-armed={armed === index ? 'true' : undefined}
-		hidden={ready && index >= plan.shown.length}
-		class={cn('flex min-w-0 shrink-0 items-center', armed === index && cn(PICKER_ARMED, 'rounded-sm'))}
-	>
-		{@render statusBadge(code, badge, interactive)}
-	</span>
-{/snippet}
 
 <!--
 	Several statuses, picked from the codes a project offers.
@@ -434,200 +235,104 @@
 	class={cn('relative flex w-full min-w-0 items-center', className)}
 	{...rest}
 >
-	<Combobox.Root
-		type="multiple"
-		disabled={inert}
-		inputValue={search}
-		bind:open={() => open, setOpen}
-		bind:value={() => value, setSelected}
+	<PickerControl
+		slot="status-multi-picker"
+		picker="status"
+		multiple
+		anchored
+		keys={value}
+		onSelect={setSelected}
+		labels={value.map((code) => byCode.get(code)?.label ?? code)}
+		chipKeys={value}
+		chipsSlot="status-multi-picker-badges"
+		{summary}
+		max={badgeMax}
+		chipRow
+		{inline}
+		{rowKey}
+		rowCount={shown.length}
+		{size}
+		{disabled}
+		{inert}
+		{readonly}
+		{invalid}
+		{clearable}
+		{placeholder}
+		{searchPlaceholder}
+		bind:open
+		{onOpenChange}
+		bind:query={search}
+		onRemoveAt={removeAt}
+		onClear={() => setSelected([])}
+		loading={query.loading}
+		error={query.error}
+		empty={shown.length === 0}
+		{emptyLabel}
+		{loadingLabel}
+		{errorLabel}
+		clearLabel="Clear the statuses"
+		triggerLabel="Show the statuses"
+		overflowLabel={`Show all ${value.length} statuses`}
 	>
-		<div
-			bind:this={controlEl}
-			data-slot="status-multi-picker-control"
-		onpointerdown={openFromControl}
-		role="group"
-			aria-disabled={inert ? 'true' : undefined}
-			data-invalid={invalid && !inline ? 'true' : undefined}
-			data-readonly={readonly ? 'true' : undefined}
-			data-empty={value.length === 0 ? '' : undefined}
-			title={plan.title || placeholder}
-			class={cn(PICKER_CONTROL, PICKER_BOX[size], plan.oneLine && 'flex-nowrap', readonly ? 'pr-3' : showClear ? 'pr-14' : 'pr-8')}
-		>
-			{#if value.length > 0}
-				<span
-					data-slot="status-multi-picker-value"
-					class="flex min-w-0 items-center gap-1.5"
-				>
-					{#if summary === 'count'}
-						<span data-slot="status-multi-picker-count" class="truncate">{plan.countLabel}</span>
-					{:else}
-						<!--
-							Whole badges only: the row measures itself and hides the ones that do not
-							fit, so nothing is ever cut in half. `+n` follows the last one drawn.
-							No stylesheet here gives `[hidden]` a display rule, so the row does.
-						-->
-						<span
-							bind:this={badgesEl}
-							data-slot="status-multi-picker-badges"
-							class={cn(
-								'flex min-w-0 items-center gap-1.5 [&>[hidden]]:hidden',
-								plan.oneLine ? 'flex-nowrap overflow-hidden' : 'flex-wrap',
-								ready ? undefined : 'invisible'
-							)}
-						>
-							{#each value as code, index (code)}
-								{@render chip(code, index)}
-							{/each}
-							{#if plan.overflow > 0}
-								<button
-									type="button"
-									data-slot="status-multi-picker-overflow"
-									title={plan.title}
-									aria-label={`Show all ${value.length} statuses`}
-									onclick={() => setOpen(true)}
-									class={PICKER_PILL}>+{plan.overflow}</button
-								>
-							{/if}
-						</span>
-					{/if}
-				</span>
-			{:else if !inline}
-				<span data-slot="status-multi-picker-placeholder" class="text-muted-foreground truncate"
-					>{placeholder}</span
-				>
-			{/if}
-			{#if inline}
-				<Combobox.Input
-					bind:ref={inputEl}
-					data-slot="status-multi-picker-input"
-					aria-invalid={invalid ? 'true' : undefined}
-					aria-label={placeholder}
-					readonly={readonly || undefined}
-					placeholder={value.length > 0 ? '' : placeholder}
-					oninput={(e) => (search = e.currentTarget.value)}
-					onkeydown={onKey}
-					class={PICKER_TOKEN_INPUT}
-				/>
-			{/if}
-		</div>
-
-		<!--
-			Fixed, and anchored to the whole control rather than to the input: the list
-			scrolls its highlighted row into view on mount, and an absolute wrapper still
-			at the page origin would drag the page there with it.
-		-->
-		<Combobox.Portal>
-			<Combobox.Content
-				data-picker="status"
-				data-slot="status-multi-picker-content"
-				strategy="fixed"
-				customAnchor={controlEl}
-				align="start"
-				sideOffset={4}
-				class={PICKER_ANCHORED_POPUP}
+		{#snippet chip(index: number, armed: boolean, hidden: boolean)}
+			{@const code = value[index]!}
+			<span
+				data-slot="status-multi-picker-chip"
+				data-chip=""
+				data-armed={armed ? 'true' : undefined}
+				{hidden}
+				class={cn('flex min-w-0 shrink-0 items-center', armed && cn(PICKER_ARMED, 'rounded-sm'))}
 			>
-				{#if !inline}
-					<div data-slot="status-multi-picker-search" class={PICKER_SEARCH_ROW}>
-						<Search aria-hidden="true" class="size-4 shrink-0 opacity-50" />
-						<Combobox.Input
-							bind:ref={inputEl}
-							data-slot="status-multi-picker-input"
-							aria-label={searchPlaceholder}
-							placeholder={searchPlaceholder}
-							oninput={(e) => (search = e.currentTarget.value)}
-							onkeydown={onKey}
-							class={PICKER_SEARCH}
-						/>
-					</div>
-				{/if}
-				<div bind:this={listEl} data-slot="status-multi-picker-list" class={PICKER_LIST}>
-					{#if query.error !== null}
-						<StateLine
-							state="error"
-							slotName="status-multi-picker-error"
-							icon={TriangleAlert}
-							label={stateLine('error', { errorLabel }, query.error)}
-						/>
-					{:else if query.loading}
-						<div
-							data-slot="status-multi-picker-loading"
-							class="flex flex-col gap-2"
-							aria-busy="true"
-							aria-label={stateLine('loading', { loadingLabel })}
-						>
-							{#each [0, 1, 2] as row (row)}
-								<Skeleton class="h-8 w-full" />
-							{/each}
-						</div>
-					{:else if shown.length === 0}
-						<StateLine
-							state="empty"
-							slotName="status-multi-picker-empty"
-							icon={SearchX}
-							label={emptyLabel}
-						/>
-					{:else}
-						{#each shown as option (option.code)}
-							{@const chosen = value.includes(option.code)}
-							<Combobox.Item
-								data-slot="status-multi-picker-option"
-								data-status-code={option.code}
-								data-selected-status={chosen ? 'true' : undefined}
-								value={option.code}
-								label={option.label}
-								class={PICKER_ROW}
-							>
-								<span data-slot="status-multi-picker-check" class="flex h-5 shrink-0 items-center">
-									<Checkbox checked={chosen} tabindex={-1} aria-hidden="true" class="pointer-events-none" />
-								</span>
-								<Row
-									row={rowOf(option)}
-									query={search}
-									subLabel={subLabel?.(option)}
-									secondary={secondaryOf(option)}
-									{size}
-									{context}
-								>
-									{#snippet glyph()}
-										<StatusBadge
-											code={option.code}
-											status={query.statuses.get(option.code) ?? null}
-											field={badgeField}
-											variant="glyph"
-											{size}
-											siteUrl={site}
-										/>
-									{/snippet}
-								</Row>
-							</Combobox.Item>
-						{/each}
-					{/if}
-				</div>
-			</Combobox.Content>
-		</Combobox.Portal>
+				<StatusBadge
+					{code}
+					status={query.statuses.get(code) ?? null}
+					field={badgeField}
+					variant={badge}
+					size={BADGE[size]}
+					siteUrl={site}
+					removable={interactive}
+					onRemove={remove}
+					removeLabel={`Remove ${byCode.get(code)?.label ?? code}`}
+					class="min-w-0"
+				/>
+			</span>
+		{/snippet}
 
-		{#if !readonly}
-			<div class={cn('pointer-events-none absolute top-0 right-2 flex items-center gap-1', PICKER_TRAILING[size])}>
-				{#if showClear}
-					<button
-						type="button"
-						data-slot="status-multi-picker-clear"
-						aria-label="Clear the statuses"
-						onclick={clear}
-						class={PICKER_ICON_BUTTON}
-					>
-						<X aria-hidden="true" class={PICKER_GLYPH[size]} />
-					</button>
-				{/if}
-				<Combobox.Trigger
-					data-slot="status-multi-picker-trigger"
-					aria-label="Show the statuses"
-					disabled={inert}
-					class={PICKER_ICON_BUTTON}
+		{#snippet rows()}
+			{#each shown as option (option.code)}
+				{@const chosen = value.includes(option.code)}
+				<Combobox.Item
+					data-slot="status-multi-picker-option"
+					data-status-code={option.code}
+					data-selected-status={chosen ? 'true' : undefined}
+					value={option.code}
+					label={option.label}
+					class={PICKER_ROW}
 				>
-					<ChevronDown aria-hidden="true" class={PICKER_GLYPH[size]} />
-				</Combobox.Trigger>
-			</div>
-		{/if}
-	</Combobox.Root>
+					<span data-slot="status-multi-picker-check" class="flex h-5 shrink-0 items-center">
+						<Checkbox checked={chosen} tabindex={-1} aria-hidden="true" class="pointer-events-none" />
+					</span>
+					<Row
+						row={rowOf(option)}
+						query={search}
+						subLabel={subLabel?.(option)}
+						secondary={secondaryOf(option)}
+						{size}
+						{context}
+					>
+						{#snippet glyph()}
+							<StatusBadge
+								code={option.code}
+								status={query.statuses.get(option.code) ?? null}
+								field={badgeField}
+								variant="glyph"
+								{size}
+								siteUrl={site}
+							/>
+						{/snippet}
+					</Row>
+				</Combobox.Item>
+			{/each}
+		{/snippet}
+	</PickerControl>
 </div>

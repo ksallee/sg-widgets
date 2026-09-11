@@ -1,0 +1,551 @@
+<script lang="ts" module>
+	import type { PickerSummary } from '@sg-widgets/core';
+
+	export type PickerControlSize = 'sm' | 'md' | 'lg';
+
+	/** The row a press on the last row of a page carries, rather than an item key. */
+	export const LOAD_MORE = '__load-more';
+
+	/** Everything a picker built on this base takes. */
+	export interface PickerControlProps {
+		/** The `data-slot` prefix every part of this picker carries. */
+		slot: string;
+		/** The `data-picker` the popup carries. */
+		picker: string;
+		/** Several keys may be chosen at once. */
+		multiple?: boolean;
+		/** The chosen keys, in order. A single picker passes none or one. */
+		keys: string[];
+		/** The keys the primitive has settled on. `LOAD_MORE` never reaches it. */
+		onSelect: (keys: string[]) => void;
+		/** One label per chosen key: the summary, the title and the measured row read it. */
+		labels: string[];
+		/** A stable key per chip, so a removal does not redraw the row. Defaults to the label. */
+		chipKeys?: string[];
+		/** The `data-slot` of the chip row. Defaults to `<slot>-chips`. */
+		chipsSlot?: string;
+		/** What the control shows for the selection. */
+		summary?: PickerSummary;
+		/** Chips drawn before the rest becomes `+n`. `0` lets the row fit what it can. */
+		max?: number;
+		/** The value is a measured row of chips rather than the one chip of a single picker. */
+		chipRow?: boolean;
+		/** The control holds the caret. A summary control keeps it in the popup instead. */
+		inline?: boolean;
+		/** The caret gives its room to the chips. */
+		tokenInput?: boolean;
+		/** What the caret shows. */
+		inputPlaceholder?: string;
+		/** The row keys on show, so a changed list follows the highlight. */
+		rowCount?: number;
+		/** What the chips look like, so a change to any of it re-measures the row. */
+		rowKey?: string;
+		size?: PickerControlSize;
+		disabled?: boolean;
+		/** The primitive takes no input. Wider than `disabled`: a loading picker is inert too. */
+		inert?: boolean;
+		readonly?: boolean;
+		invalid?: boolean;
+		clearable?: boolean;
+		placeholder?: string;
+		searchPlaceholder?: string;
+		/** Whether the popup is showing, two-way. */
+		open?: boolean;
+		onOpenChange?: (open: boolean) => void;
+		/** What the caret holds, two-way. */
+		query?: string;
+		/** Remove the chip at `index`. Backspace walks the row through it. */
+		onRemoveAt?: (index: number) => void;
+		onClear?: () => void;
+		/** The popup is as wide as the control it hangs off. */
+		anchored?: boolean;
+		loading?: boolean;
+		error?: string | null;
+		empty?: boolean;
+		emptyLabel?: string;
+		loadingLabel?: string;
+		errorLabel?: string;
+		/** A further page is there to be read. */
+		hasMore?: boolean;
+		onLoadMore?: () => void;
+		clearLabel?: string;
+		triggerLabel?: string;
+		overflowLabel?: string;
+		/** Attributes the control carries on top of the shared ones. */
+		controlProps?: Record<string, unknown>;
+	}
+</script>
+
+<script lang="ts">
+	import { tick, type Snippet } from 'svelte';
+	import {
+		holdsArmed,
+		NO_MATCH_LABEL,
+		pickerKeyIntent,
+		scrollHighlightedIntoView,
+		stateLine,
+		summariseSelection
+	} from '@sg-widgets/core';
+	import { Combobox } from 'bits-ui';
+	import ChevronDown from '@lucide/svelte/icons/chevron-down';
+	import Search from '@lucide/svelte/icons/search';
+	import SearchX from '@lucide/svelte/icons/search-x';
+	import TriangleAlert from '@lucide/svelte/icons/triangle-alert';
+	import X from '@lucide/svelte/icons/x';
+	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
+	import StateLine from '$lib/registry/components/state-line.svelte';
+	import {
+		CHIP_GAP,
+		OVERFLOW_RESERVE,
+		PICKER_ANCHORED_POPUP,
+		PICKER_BOX,
+		PICKER_CONTROL,
+		PICKER_GLYPH,
+		PICKER_ICON_BUTTON,
+		PICKER_INPUT,
+		PICKER_LIST,
+		PICKER_PILL,
+		PICKER_POPUP,
+		PICKER_ROW,
+		PICKER_SEARCH,
+		PICKER_SEARCH_ROW,
+		PICKER_TOKEN_INPUT,
+		PICKER_TRAILING
+	} from '$lib/registry/components/picker-classes.js';
+	import { cn } from '$lib/utils.js';
+
+	type Props = PickerControlProps & {
+		/** One chip: its index, whether Backspace has armed it, whether the row hides it. */
+		chip?: Snippet<[number, boolean, boolean]>;
+		/** The rows of the list, as items of the primitive. */
+		rows?: Snippet;
+	};
+
+	let {
+		slot,
+		picker,
+		multiple = false,
+		keys,
+		onSelect,
+		labels,
+		chipKeys,
+		chipsSlot,
+		summary = 'chips',
+		max = 0,
+		chipRow = false,
+		inline = true,
+		tokenInput = true,
+		inputPlaceholder,
+		rowCount = 0,
+		rowKey,
+		size = 'md',
+		disabled = false,
+		inert = disabled,
+		readonly = false,
+		invalid = false,
+		clearable = true,
+		placeholder = '',
+		searchPlaceholder = 'Search…',
+		open = $bindable(false),
+		onOpenChange,
+		query = $bindable(''),
+		onRemoveAt,
+		onClear,
+		anchored = false,
+		loading = false,
+		error = null,
+		empty = false,
+		emptyLabel = NO_MATCH_LABEL,
+		loadingLabel,
+		errorLabel,
+		hasMore = false,
+		onLoadMore,
+		clearLabel = 'Clear the selection',
+		triggerLabel = 'Show the options',
+		overflowLabel,
+		controlProps,
+		chip,
+		rows
+	}: Props = $props();
+
+	let controlEl = $state<HTMLElement | null>(null);
+	let listEl = $state<HTMLElement | null>(null);
+	let inputEl = $state<HTMLInputElement | null>(null);
+	let chipsEl = $state<HTMLElement | null>(null);
+	/** The chip a Backspace has highlighted. The next one removes it. */
+	let armed = $state<number | null>(null);
+	/** A press on the load-more row is not a selection, and must not close the popup. */
+	let paging = false;
+
+	const loadingText = $derived(stateLine('loading', { loadingLabel }));
+	const interactive = $derived(!readonly && !inert);
+	const showClear = $derived(clearable && labels.length > 0 && !readonly && !disabled);
+	/** Only a multi control's row weighs itself; a single one draws its chip and stops. */
+	const fitted = $derived(chipRow && multiple && summary === 'ellipsis');
+	const measureKey = $derived(rowKey ?? `${size}|${summary}|${labels.join(', ')}`);
+
+	let available = $state(0);
+	let widths = $state<number[]>([]);
+	let measured = $state(false);
+	/** True once the row knows its own widths and its room, so it may be drawn. */
+	const ready = $derived(!fitted || (measured && available > 0));
+
+	/** Every chip laid out, so a hidden one still reports the width it would take. */
+	function measure(row: HTMLElement): number[] {
+		const drawn = [...row.querySelectorAll<HTMLElement>('[data-chip]')];
+		const was = drawn.map((one) => one.hidden);
+		for (const one of drawn) one.hidden = false;
+		const out = drawn.map((one) => Math.ceil(one.getBoundingClientRect().width) + CHIP_GAP);
+		drawn.forEach((one, i) => (one.hidden = was[i] ?? false));
+		return out;
+	}
+
+	/** The room the chips have: the control's box, less the padding its affordances take. */
+	function roomIn(control: HTMLElement): number {
+		const style = getComputedStyle(control);
+		return control.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+	}
+
+	$effect(() => {
+		const control = controlEl;
+		if (!control || !fitted) return;
+		const observer = new ResizeObserver(() => (available = roomIn(control)));
+		observer.observe(control);
+		available = roomIn(control);
+		return () => observer.disconnect();
+	});
+
+	$effect(() => {
+		void measureKey;
+		const row = chipsEl;
+		if (!row || !fitted) return;
+		widths = measure(row);
+		measured = true;
+		let live = true;
+		// A chip drawn in the fallback font is not the chip the row ends up with.
+		void document.fonts?.ready.then(() => {
+			if (live && chipsEl) widths = measure(chipsEl);
+		});
+		return () => {
+			live = false;
+		};
+	});
+
+	const plan = $derived(
+		summariseSelection(labels, (label) => label, {
+			summary,
+			max,
+			fit: fitted && measured && available > 0 ? { widths, available, reserve: OVERFLOW_RESERVE } : undefined
+		})
+	);
+	const counted = $derived(summary === 'count' && chipRow && multiple);
+
+	/** A press anywhere in the field opens the list, and a token field takes the caret. */
+	function openFromControl(event: PointerEvent): void {
+		if (!interactive) return;
+		const target = event.target as HTMLElement | null;
+		// The chip's remove control, the clear control and the chevron own their own press.
+		if (target?.closest('button')) return;
+		// The press's own default would move focus to the body and off whichever caret
+		// takes it: the field's, or the popup's once the effect below focuses it.
+		const onCaret = target === inputEl;
+		if (!onCaret) event.preventDefault();
+		if (inline && !onCaret) inputEl?.focus({ preventScroll: true });
+		// A press on the control toggles the list; a press on the caret only ever opens it.
+		setOpen(onCaret ? true : !open);
+	}
+
+	// A summary trigger has no caret of its own, so the popup's search box takes it.
+	$effect(() => {
+		if (!open || inline) return;
+		inputEl?.focus({ preventScroll: true });
+	});
+
+	function setOpen(next: boolean): void {
+		// The load-more row is a press on an item, which the primitive reads as a
+		// selection. Paging is not a selection, and must not close the popup.
+		if (!next && paging) {
+			paging = false;
+			return;
+		}
+		const wanted = interactive ? next : false;
+		if (!wanted) {
+			query = '';
+			armed = null;
+		}
+		if (wanted === open) return;
+		open = wanted;
+		onOpenChange?.(open);
+	}
+
+	// A chip removed from under the highlight takes it with it.
+	$effect(() => {
+		if (armed !== null && armed >= labels.length) armed = null;
+	});
+
+	/**
+	 * Backspace, Escape and the arrows. The primitive's own handler runs after this
+	 * one, so a key this picker owns is prevented rather than shared.
+	 */
+	function onKey(event: KeyboardEvent): void {
+		const intent = pickerKeyIntent(event.key, {
+			open,
+			query,
+			count: labels.length,
+			armed,
+			editable: interactive
+		});
+		if (!holdsArmed(event.key)) armed = null;
+		switch (intent.kind) {
+			case 'dismiss':
+				setOpen(false);
+				return;
+			case 'arm':
+				event.preventDefault();
+				armed = intent.index;
+				return;
+			case 'remove':
+				event.preventDefault();
+				onRemoveAt?.(intent.index);
+				return;
+			case 'follow':
+				void tick().then(() => scrollHighlightedIntoView(listEl));
+				return;
+			default:
+				return;
+		}
+	}
+
+	// A load-more page appends rows under the highlighted one, and a new query
+	// replaces them all; either way the list follows the highlight.
+	$effect(() => {
+		void rowCount;
+		if (!open) return;
+		void tick().then(() => scrollHighlightedIntoView(listEl));
+	});
+
+	function choose(next: string[]): void {
+		if (next.includes(LOAD_MORE)) {
+			paging = true;
+			onLoadMore?.();
+			return;
+		}
+		onSelect(next);
+	}
+
+	function clear(): void {
+		onClear?.();
+		if (inline) inputEl?.focus({ preventScroll: true });
+	}
+</script>
+
+{#snippet caret()}
+	<Combobox.Input
+		bind:ref={inputEl}
+		data-slot={`${slot}-input`}
+		aria-invalid={invalid ? 'true' : undefined}
+		aria-label={placeholder}
+		readonly={readonly || undefined}
+		placeholder={inputPlaceholder ?? (labels.length > 0 ? '' : placeholder)}
+		oninput={(e) => (query = e.currentTarget.value)}
+		onkeydown={onKey}
+		class={tokenInput ? PICKER_TOKEN_INPUT : PICKER_INPUT}
+	/>
+{/snippet}
+
+{#snippet control()}
+	<div
+		bind:this={controlEl}
+		data-slot={`${slot}-control`}
+		onpointerdown={openFromControl}
+		role="group"
+		aria-disabled={inert ? 'true' : undefined}
+		data-invalid={invalid && !inline ? 'true' : undefined}
+		data-readonly={readonly ? 'true' : undefined}
+		data-empty={labels.length === 0 ? '' : undefined}
+		title={plan.title || placeholder}
+		class={cn(
+			PICKER_CONTROL,
+			PICKER_BOX[size],
+			plan.oneLine && 'flex-nowrap',
+			readonly ? 'pr-3' : showClear ? 'pr-14' : 'pr-8'
+		)}
+		{...controlProps}
+	>
+		{#if labels.length > 0}
+			<span data-slot={`${slot}-value`} class="flex min-w-0 items-center gap-1.5">
+				{#if counted}
+					<span data-slot={`${slot}-count`} class="truncate">{plan.countLabel}</span>
+				{:else if chipRow}
+					<!--
+						Whole chips only: the row measures itself and hides the ones that do not
+						fit, so nothing is ever cut in half. `+n` follows the last one drawn.
+						No stylesheet here gives `[hidden]` a display rule, so the row does.
+					-->
+					<span
+						bind:this={chipsEl}
+						data-slot={chipsSlot ?? `${slot}-chips`}
+						class={cn(
+							'flex min-w-0 items-center gap-1.5 [&>[hidden]]:hidden',
+							plan.oneLine ? 'flex-nowrap overflow-hidden' : 'flex-wrap',
+							ready ? undefined : 'invisible'
+						)}
+					>
+						{#each labels as label, index (chipKeys?.[index] ?? `${index}:${label}`)}
+							{@render chip?.(index, armed === index, ready && index >= plan.shown.length)}
+						{/each}
+						{#if plan.overflow > 0}
+							<button
+								type="button"
+								data-slot={`${slot}-overflow`}
+								title={plan.title}
+								aria-label={overflowLabel ?? `Show all ${labels.length} selected`}
+								onclick={() => setOpen(true)}
+								class={PICKER_PILL}>+{plan.overflow}</button
+							>
+						{/if}
+					</span>
+				{:else}
+					{@render chip?.(0, armed === 0, false)}
+				{/if}
+			</span>
+		{:else if !inline}
+			<span data-slot={`${slot}-placeholder`} class="text-muted-foreground truncate">{placeholder}</span>
+		{/if}
+		{#if inline}
+			{@render caret()}
+		{/if}
+	</div>
+{/snippet}
+
+{#snippet popup()}
+	<!--
+		Fixed, and anchored to the whole control rather than to the input: the list
+		scrolls its highlighted row into view on mount, and an absolute wrapper still
+		at the page origin would drag the page there with it.
+	-->
+	<Combobox.Portal>
+		<Combobox.Content
+			data-picker={picker}
+			data-slot={`${slot}-content`}
+			strategy="fixed"
+			customAnchor={controlEl}
+			align="start"
+			sideOffset={4}
+			class={anchored ? PICKER_ANCHORED_POPUP : PICKER_POPUP}
+		>
+			{#if !inline}
+				<div data-slot={`${slot}-search`} class={PICKER_SEARCH_ROW}>
+					<Search aria-hidden="true" class="size-4 shrink-0 opacity-50" />
+					<Combobox.Input
+						bind:ref={inputEl}
+						data-slot={`${slot}-input`}
+						aria-label={searchPlaceholder}
+						placeholder={searchPlaceholder}
+						oninput={(e) => (query = e.currentTarget.value)}
+						onkeydown={onKey}
+						class={PICKER_SEARCH}
+					/>
+				</div>
+			{/if}
+			<div bind:this={listEl} data-slot={`${slot}-list`} class={PICKER_LIST}>
+				{#if error !== null && error !== ''}
+					<StateLine
+						state="error"
+						slotName={`${slot}-error`}
+						icon={TriangleAlert}
+						label={stateLine('error', { errorLabel }, error)}
+					/>
+				{:else if loading}
+					<div
+						data-slot={`${slot}-loading`}
+						class="flex flex-col gap-2"
+						aria-busy="true"
+						aria-label={loadingText}
+					>
+						{#each [0, 1, 2] as row (row)}
+							<Skeleton class="h-8 w-full" />
+						{/each}
+					</div>
+				{:else if empty}
+					<StateLine state="empty" slotName={`${slot}-empty`} icon={SearchX} label={emptyLabel} />
+				{:else}
+					{@render rows?.()}
+					{#if hasMore}
+						<Combobox.Item
+							data-slot={`${slot}-more`}
+							value={LOAD_MORE}
+							label={loading ? loadingText : 'Load more'}
+							class={cn(PICKER_ROW, 'text-muted-foreground justify-center text-xs')}
+						>
+							{loading ? loadingText : 'Load more'}
+						</Combobox.Item>
+					{/if}
+				{/if}
+			</div>
+		</Combobox.Content>
+	</Combobox.Portal>
+{/snippet}
+
+{#snippet actions()}
+	{#if !readonly}
+		<div class={cn('pointer-events-none absolute top-0 right-2 flex items-center gap-1', PICKER_TRAILING[size])}>
+			{#if showClear}
+				<button
+					type="button"
+					data-slot={`${slot}-clear`}
+					aria-label={clearLabel}
+					onclick={clear}
+					class={PICKER_ICON_BUTTON}
+				>
+					<X aria-hidden="true" class={PICKER_GLYPH[size]} />
+				</button>
+			{/if}
+			<Combobox.Trigger
+				data-slot={`${slot}-trigger`}
+				aria-label={triggerLabel}
+				disabled={inert}
+				class={PICKER_ICON_BUTTON}
+			>
+				<ChevronDown aria-hidden="true" class={PICKER_GLYPH[size]} />
+			</Combobox.Trigger>
+		</div>
+	{/if}
+{/snippet}
+
+<!--
+	The control and the popup every picker in this registry wears.
+
+	The box and its states, the press rule (a press on the control toggles the list, a
+	press on the caret only opens it), where the caret lands on open, the keyboard model
+	of core's `pickerKeyIntent`, the inline token field against the summary trigger with
+	its chip row, and the popup shell: the search row, the list, the empty, loading and
+	error block, and the load-more row. A picker supplies its rows, its row renderer and
+	its chip and nothing else.
+-->
+{#if multiple}
+	<Combobox.Root
+		type="multiple"
+		disabled={inert}
+		inputValue={query}
+		bind:open={() => open, setOpen}
+		bind:value={() => keys, choose}
+	>
+		{@render control()}
+		{@render popup()}
+		{@render actions()}
+	</Combobox.Root>
+{:else}
+	<Combobox.Root
+		type="single"
+		allowDeselect={false}
+		disabled={inert}
+		inputValue={query}
+		bind:open={() => open, setOpen}
+		bind:value={() => keys[0] ?? '', (key) => choose(key === '' ? [] : [key])}
+	>
+		{@render control()}
+		{@render popup()}
+		{@render actions()}
+	</Combobox.Root>
+{/if}

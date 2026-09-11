@@ -46,6 +46,7 @@ binding and its footer. The same names exist in both registries.
 | `field-error` | The line a field editor shows under its control when a parse fails. | the editors |
 | `editor-calendar` | The calendar day the date editors hand the Calendar primitive. | date editor, date-time editor |
 | `search-skeleton` | The rows a search widget draws while its read is in flight. | global search, hierarchical search, context selector |
-| `collection-source` | The binding between a collection and its source: the snapshot, the paging mode and the two-way sort and filter. | entity table, entity grid, grouped list |
+| `collection-control` | The state and behaviour every collection shares: the source, the selection and its tri-state, the keyboard cursor, the virtualiser and the paging triggers. The table, the grid and the grouped list are layouts over it. | entity table, entity grid, grouped list |
+| `collection-source` | The binding between a collection and its source: the snapshot, the paging mode and the two-way sort and filter. | collection-control, entity tree |
 | `collection-footer` | The pager under a collection: page size, range and arrows in pages, the loaded count otherwise. | entity table, entity grid, grouped list |
 | `entity-fields` | One entity type's fields, read through the context and kept. | filter bar, filter editor |

@@ -1,19 +1,18 @@
 <script lang="ts">
 	import type { HTMLAttributes } from 'svelte/elements';
-	import type { EntityRef, PickerRow } from '@sg-widgets/core';
+	import type { EntityRef, PickerRow, ProjectPickerOptions } from '@sg-widgets/core';
+	import { PROJECT_PICKER_FIELDS, projectPickerFilters } from '@sg-widgets/core';
 	import { type WithElementRef } from '$lib/utils.js';
 	import EntityMultiPicker, {
 		type EntityMultiPickerBaseProps
 	} from './entity-multi-picker.svelte';
-	import { PROJECT_FIELDS, projectFilters } from './project-picker.svelte';
 
 	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>, HTMLDivElement> &
-		Omit<EntityMultiPickerBaseProps, 'entityTypes'> & {
-		value?: EntityRef[];
-		onValueChange?: (value: EntityRef[], rows: PickerRow[]) => void;
-		/** Offer projects whose `archived` checkbox is set. */
-		includeArchived?: boolean;
-	};
+		Omit<EntityMultiPickerBaseProps, 'entityTypes'> &
+		ProjectPickerOptions & {
+			value?: EntityRef[];
+			onValueChange?: (value: EntityRef[], rows: PickerRow[]) => void;
+		};
 
 	let {
 		value = $bindable([]),
@@ -37,8 +36,8 @@
 	bind:open
 	bind:ref
 	entityTypes={['Project']}
-	fields={[...PROJECT_FIELDS, ...fields]}
-	filters={projectFilters(includeArchived, filters)}
+	fields={[...PROJECT_PICKER_FIELDS, ...fields]}
+	filters={projectPickerFilters(includeArchived, filters)}
 	subLabelField="sg_status"
 	{placeholder}
 	{...rest}

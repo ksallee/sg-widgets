@@ -1151,14 +1151,28 @@
         "@lucide/svelte"
       ],
       "registryDependencies": [
-        "local:entity-picker",
-        "local:entity-multi-picker"
+        "local:entity-picker"
       ],
       "files": [
         {
           "path": "src/lib/registry/components/user-picker.svelte",
           "type": "registry:component"
-        },
+        }
+      ]
+    },
+    {
+      "name": "user-multi-picker",
+      "type": "registry:component",
+      "title": "User Multi Picker",
+      "description": "Several people and script accounts, chosen by server-side search across name, login and email.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte"
+      ],
+      "registryDependencies": [
+        "local:entity-multi-picker"
+      ],
+      "files": [
         {
           "path": "src/lib/registry/components/user-multi-picker.svelte",
           "type": "registry:component"
@@ -1175,14 +1189,28 @@
         "@lucide/svelte"
       ],
       "registryDependencies": [
-        "local:entity-picker",
-        "local:entity-multi-picker"
+        "local:entity-picker"
       ],
       "files": [
         {
           "path": "src/lib/registry/components/project-picker.svelte",
           "type": "registry:component"
-        },
+        }
+      ]
+    },
+    {
+      "name": "project-multi-picker",
+      "type": "registry:component",
+      "title": "Project Multi Picker",
+      "description": "Several projects, chosen by server-side search, with the project thumbnail and its status.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte"
+      ],
+      "registryDependencies": [
+        "local:entity-multi-picker"
+      ],
+      "files": [
         {
           "path": "src/lib/registry/components/project-multi-picker.svelte",
           "type": "registry:component"

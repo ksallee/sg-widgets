@@ -152,7 +152,7 @@
 				</div>
 			{/snippet}
 			{#snippet toolbarEnd()}
-				<SortPicker entityType="Version" {context} size="sm" bind:value={sortKeys} />
+				<SortPicker entityType="Version" {context} size="sm" paths={columns.map((column) => column.path)} bind:value={sortKeys} />
 			{/snippet}
 		</EntityTable>
 	</div>

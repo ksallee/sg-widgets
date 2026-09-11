@@ -430,7 +430,32 @@
       "name": "entity-type-picker",
       "type": "registry:component",
       "title": "Entity Type Picker",
-      "description": "One entity type of a Flow Production Tracking site, or several, as a searchable combobox.",
+      "description": "One entity type of a Flow Production Tracking site, as a searchable combobox.",
+      "categories": [
+        "flow-production-tracking",
+        "picker"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "@base-ui/react"
+      ],
+      "registryDependencies": [
+        "https://sg-widgets.dev/r/react/picker-control.json",
+        "https://sg-widgets.dev/r/react/picker-classes.json"
+      ],
+      "docs": "Takes a SchemaService. `allow` and `deny` narrow the derived options, so changing them re-filters with no second call.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/entity-type-picker.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "entity-type-multi-picker",
+      "type": "registry:component",
+      "title": "Entity Type Multi Picker",
+      "description": "Several entity types of a Flow Production Tracking site, as a searchable combobox with checkbox rows.",
       "categories": [
         "flow-production-tracking",
         "picker"
@@ -445,10 +470,10 @@
         "https://sg-widgets.dev/r/react/picker-classes.json",
         "checkbox"
       ],
-      "docs": "Takes a SchemaService. `allow` and `deny` narrow the derived options, so changing them re-filters with no second call.",
+      "docs": "Takes a SchemaService. The value is an array of codes, and the control shows it as chips, as `+n` or as a count.",
       "files": [
         {
-          "path": "src/registry/sg/components/entity-type-picker.tsx",
+          "path": "src/registry/sg/components/entity-type-multi-picker.tsx",
           "type": "registry:component"
         }
       ]

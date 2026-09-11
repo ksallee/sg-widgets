@@ -1,5 +1,7 @@
 <script lang="ts" module>
-	export type EntityTypePickerSize = 'sm' | 'md' | 'lg';
+	import type { PickerSummary } from '@sg-widgets/core';
+
+	export type EntityTypeMultiPickerSize = 'sm' | 'md' | 'lg';
 </script>
 
 <script lang="ts">
@@ -7,6 +9,8 @@
 	import type { EntityTypeInfo, SgContext } from '@sg-widgets/core';
 	import { entityTypeOptions, NO_MATCH_LABEL } from '@sg-widgets/core';
 	import { Combobox } from 'bits-ui';
+	import X from '@lucide/svelte/icons/x';
+	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
 	import PickerControl from '$lib/registry/components/picker-control.svelte';
 	import {
@@ -19,9 +23,9 @@
 	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>, HTMLDivElement> & {
 		/** The widget context. The site's enabled types are read through it, once per page. */
 		context: SgContext;
-		/** The chosen type code. */
-		value?: string | null;
-		onValueChange?: (value: string | null) => void;
+		/** The chosen type codes, in the order they were ticked. */
+		value?: string[];
+		onValueChange?: (value: string[]) => void;
 		/** Codes on offer. Empty or absent means every enabled type. */
 		allow?: string[];
 		/** Codes withheld, applied after `allow`. */
@@ -40,7 +44,11 @@
 		invalid?: boolean;
 		/** Show the code under the display name where the two differ. */
 		showCode?: boolean;
-		size?: EntityTypePickerSize;
+		/** What the control shows for the selection. */
+		summary?: PickerSummary;
+		/** Chips drawn before the rest becomes `+n`. `0` draws every chip. */
+		max?: number;
+		size?: EntityTypeMultiPickerSize;
 		/** Whether the popup is showing, two-way. */
 		open?: boolean;
 		onOpenChange?: (open: boolean) => void;
@@ -49,11 +57,11 @@
 
 	let {
 		context,
-		value = $bindable(null),
+		value = $bindable([]),
 		onValueChange,
 		allow,
 		deny,
-		placeholder = 'Select an entity type',
+		placeholder = 'Select entity types',
 		searchPlaceholder = 'Search types…',
 		emptyLabel = NO_MATCH_LABEL,
 		loadingLabel,
@@ -63,6 +71,8 @@
 		disabled = false,
 		invalid = false,
 		showCode = true,
+		summary = 'ellipsis',
+		max = 0,
 		size = 'md',
 		open = $bindable(false),
 		onOpenChange,
@@ -98,40 +108,60 @@
 	});
 
 	const options = $derived(entityTypeOptions(loaded, { allow, deny, query: search }));
-	const selected = $derived(value ? [value] : []);
+	const selected = $derived(value ?? []);
+	/**
+	 * A chip control is a token field, with the caret beside the chips. A control
+	 * summarising its selection is a trigger, and keeps its search box at the top of
+	 * the popup instead.
+	 */
+	const inline = $derived(summary === 'chips');
+	const interactive = $derived(!readonly && !disabled);
 
-	function emit(next: string | null): void {
+	function emit(next: string[]): void {
 		value = next;
 		onValueChange?.(next);
+	}
+
+	function remove(code: string): void {
+		emit(selected.filter((c) => c !== code));
+	}
+
+	function removeAt(index: number): void {
+		const code = selected[index];
+		if (code !== undefined) remove(code);
 	}
 </script>
 
 <!--
-	One entity type, as a searchable combobox.
+	Several entity types, as a searchable combobox.
 
 	The list is every type the site has enabled, display name first with the code
-	beneath it when the two differ. `allow` and `deny` narrow the derived options
-	rather than the read, so a caller switching sets sees the list change without a
-	refetch. The vocabulary is one read, so the query input narrows it in the browser.
-	A pick closes the list.
+	beneath it when the two differ, and a checkbox on every row. `allow` and `deny`
+	narrow the derived options rather than the read, so a caller switching sets sees
+	the list change without a refetch. The vocabulary is one read, so the query input
+	narrows it in the browser. A pick keeps the list open.
 -->
 <div
 	bind:this={ref}
 	data-slot="entity-type-picker"
 	data-size={size}
-	data-multiple="false"
+	data-multiple="true"
+	data-summary={summary}
 	class={cn('relative flex w-full min-w-0 items-center', className)}
 	{...rest}
 >
 	<PickerControl
 		slot="entity-type-picker"
-		picker="entity-type"
+		picker="entity-type-multi"
+		multiple
 		keys={selected}
-		onSelect={(keys) => emit(keys[0] ?? null)}
+		onSelect={emit}
 		labels={selected.map(options.labelOf)}
 		chipKeys={selected}
-		summary="ellipsis"
+		{summary}
+		{max}
 		chipRow
+		{inline}
 		rowCount={options.shown.length}
 		{size}
 		{disabled}
@@ -143,8 +173,8 @@
 		bind:open
 		{onOpenChange}
 		bind:query={search}
-		onRemoveAt={() => emit(null)}
-		onClear={() => emit(null)}
+		onRemoveAt={removeAt}
+		onClear={() => emit([])}
 		loading={loaded === null}
 		error={failure}
 		empty={options.shown.length === 0}
@@ -152,6 +182,7 @@
 		{loadingLabel}
 		{errorLabel}
 		triggerLabel="Show the entity types"
+		overflowLabel={`Show all ${selected.length} types`}
 	>
 		{#snippet chip(index: number, armed: boolean, hidden: boolean)}
 			{@const code = selected[index]!}
@@ -163,20 +194,34 @@
 				class={cn(PICKER_TEXT_CHIP, PICKER_TEXT_CHIP_BOX[size], armed && PICKER_ARMED)}
 			>
 				<span class="truncate">{options.labelOf(code)}</span>
+				{#if interactive}
+					<button
+						type="button"
+						data-slot="entity-type-picker-remove"
+						aria-label={`Remove ${options.labelOf(code)}`}
+						onclick={() => remove(code)}
+						class="hover:text-foreground focus-visible:ring-ring focus-visible:ring-offset-background shrink-0 rounded-sm opacity-60 outline-none transition-colors duration-150 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-2 motion-safe:active:scale-[0.98]"
+					>
+						<X aria-hidden="true" class="size-3" />
+					</button>
+				{/if}
 			</span>
 		{/snippet}
 
 		{#snippet rows()}
 			{#each options.shown as type (type.name)}
+				{@const chosen = selected.includes(type.name)}
 				<Combobox.Item
 					data-slot="entity-type-picker-option"
 					data-entity-type={type.name}
-					data-checked={value === type.name ? 'true' : undefined}
-					data-selected-type={value === type.name ? 'true' : undefined}
+					data-selected-type={chosen ? 'true' : undefined}
 					value={type.name}
 					label={type.displayName}
 					class={cn(PICKER_ROW, 'items-start')}
 				>
+					<span data-slot="entity-type-picker-check" class="flex h-5 shrink-0 items-center">
+						<Checkbox checked={chosen} tabindex={-1} aria-hidden="true" class="pointer-events-none" />
+					</span>
 					<span class="flex min-w-0 flex-1 flex-col">
 						<span class="truncate">{type.displayName}</span>
 						{#if showCode && type.name !== type.displayName}

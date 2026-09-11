@@ -188,6 +188,24 @@
       ]
     },
     {
+      "name": "search-skeleton",
+      "type": "registry:component",
+      "title": "Search Skeleton",
+      "description": "The rows a search widget draws while its read is in flight.",
+      "dependencies": [
+        "@sg-widgets/core"
+      ],
+      "registryDependencies": [
+        "skeleton"
+      ],
+      "files": [
+        {
+          "path": "src/lib/registry/components/search-skeleton.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
       "name": "picker-classes",
       "type": "registry:component",
       "title": "Picker Classes",
@@ -1019,6 +1037,7 @@
         "@lucide/svelte"
       ],
       "registryDependencies": [
+        "local:search-skeleton",
         "local:control-classes",
         "local:state-line",
         "local:entity-chip",
@@ -1046,6 +1065,7 @@
         "@lucide/svelte"
       ],
       "registryDependencies": [
+        "local:search-skeleton",
         "local:entity-glyphs",
         "local:state-line",
         "local:picker-row",
@@ -1069,6 +1089,7 @@
         "@lucide/svelte"
       ],
       "registryDependencies": [
+        "local:search-skeleton",
         "local:control-classes",
         "local:state-line",
         "local:entity-chip",

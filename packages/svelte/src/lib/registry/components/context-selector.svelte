@@ -67,16 +67,16 @@
 <script lang="ts">
 	import type { HTMLAttributes } from 'svelte/elements';
 	import type { PickerRow, SgContext } from '@sg-widgets/core';
-	import { NO_ROWS_LABEL, pathOf, rowFields, stateLine } from '@sg-widgets/core';
+	import { errorText, NO_ROWS_LABEL, pathOf, prependRecent, rowFields, stateLine } from '@sg-widgets/core';
 	import ChevronDown from '@lucide/svelte/icons/chevron-down';
 	import ListChecks from '@lucide/svelte/icons/list-checks';
 	import TriangleAlert from '@lucide/svelte/icons/triangle-alert';
 	import * as Popover from '$lib/components/ui/popover/index.js';
-	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
 	import EntityChip from '$lib/registry/components/entity-chip.svelte';
 	import HierarchicalSearch from '$lib/registry/components/hierarchical-search.svelte';
 	import Row from '$lib/registry/components/picker-row.svelte';
+	import SearchSkeleton from '$lib/registry/components/search-skeleton.svelte';
 	import StateLine from '$lib/registry/components/state-line.svelte';
 
 	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>, HTMLDivElement> & {
@@ -205,7 +205,7 @@
 			})
 			.catch((error: unknown) => {
 				if (!live) return;
-				failure = error instanceof Error ? error.message : String(error);
+				failure = errorText(error);
 				tasks = [];
 			})
 			.finally(() => {
@@ -238,7 +238,7 @@
 	}
 
 	function apply(next: WorkContext): void {
-		onRecentsChange?.([next, ...recents.filter((r) => keyOf(r) !== keyOf(next))].slice(0, recentLimit));
+		onRecentsChange?.(prependRecent(recents, next, recentLimit, keyOf));
 		onWorkContextChange?.(next);
 		setOpen(false);
 	}
@@ -316,21 +316,11 @@
 						label={stateLine('error', { errorLabel }, failure)}
 					/>
 				{:else if loading && currentUser}
-					<div
-						class="flex flex-col gap-2 p-1"
-						aria-busy="true"
-						aria-label={stateLine('loading', { loadingLabel })}
-					>
-						{#each [0, 1] as line (line)}
-							<div class="flex items-center gap-2 px-2 py-1.5">
-								<Skeleton class="size-4 shrink-0" />
-								<div class="flex min-w-0 flex-1 flex-col gap-1">
-									<Skeleton class="h-3 w-1/2" />
-									<Skeleton class="h-2.5 w-1/4" />
-								</div>
-							</div>
-						{/each}
-					</div>
+					<SearchSkeleton
+						lines={2}
+						lead="size-4 shrink-0"
+						label={stateLine('loading', { loadingLabel })}
+					/>
 				{:else if byProject.length === 0}
 					<p data-slot="context-tasks-empty" class="text-muted-foreground px-2 py-1.5 text-sm">
 						{emptyLabel}

@@ -1,6 +1,5 @@
 <script lang="ts" module>
 	import type { EntityRef, FieldSpec, PickerRow, SearchHit, WireCondition } from '@sg-widgets/core';
-
 	import { CONTROL_GLYPH, CONTROL_HEIGHT, type ControlSize } from '$lib/registry/components/control-classes.js';
 
 	export type GlobalSearchSize = ControlSize;
@@ -21,8 +20,6 @@
 	/** Types a stock site searches over. A caller with custom entities passes its own. */
 	export const GLOBAL_SEARCH_TYPES = ['Asset', 'Shot', 'Sequence', 'Task', 'Version', 'HumanUser', 'Project'];
 
-	/** Long enough that a typist does not fire a request a letter, short enough to feel live. */
-	const DEBOUNCE_MS = 250;
 	/** The endpoint's cap and its default (probe 053). */
 	const PAGE_SIZE = 25;
 
@@ -32,12 +29,8 @@
 			? '⌘'
 			: 'Ctrl';
 
-	function typeMap(types: GlobalSearchTypes): Record<string, WireCondition[] | null> {
-		return Array.isArray(types) ? Object.fromEntries(types.map((t) => [t, null])) : types;
-	}
-
-	function same(a: EntityRef, b: EntityRef): boolean {
-		return a.type === b.type && a.id === b.id;
+	function keyOf(ref: EntityRef): string {
+		return `${ref.type}:${ref.id}`;
 	}
 </script>
 
@@ -45,12 +38,16 @@
 	import type { HTMLAttributes } from 'svelte/elements';
 	import type { SgContext } from '@sg-widgets/core';
 	import {
+		errorText,
 		hydrate,
 		NO_MATCH_LABEL,
 		pathOf,
 		placeholderName,
+		prependRecent,
 		rowFields,
 		scopeToProject,
+		SEARCH_DEBOUNCE_MS,
+		searchTypeMap,
 		stateLine
 	} from '@sg-widgets/core';
 	import type { Snippet } from 'svelte';
@@ -60,8 +57,8 @@
 	import * as Command from '$lib/components/ui/command/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Kbd } from '$lib/components/ui/kbd/index.js';
-	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
+	import SearchSkeleton from '$lib/registry/components/search-skeleton.svelte';
 	import StateLine from '$lib/registry/components/state-line.svelte';
 	import EntityChip from '$lib/registry/components/entity-chip.svelte';
 	import Row from '$lib/registry/components/picker-row.svelte';
@@ -177,7 +174,7 @@
 		};
 	});
 
-	const order = $derived(Object.keys(typeMap(entityTypes)));
+	const order = $derived(Object.keys(searchTypeMap(entityTypes)));
 
 	const groups = $derived.by((): GlobalSearchGroup[] => {
 		const byType = new Map<string, SearchHit[]>();
@@ -218,7 +215,7 @@
 		loading = true;
 		failure = null;
 		try {
-			let types = typeMap(entityTypes);
+			let types = searchTypeMap(entityTypes);
 			if (projectId !== null && projectId !== undefined) types = await scopeToProject(schema, types, projectId);
 			const rows = await context.client.textSearch(text, types, { size: PAGE_SIZE, number: nextPage });
 			const found = await hydrate(context.client, rows, {
@@ -244,7 +241,7 @@
 			hasMore = rows.length === PAGE_SIZE;
 		} catch (error) {
 			if (id !== requestId) return;
-			failure = error instanceof Error ? error.message : String(error);
+			failure = errorText(error);
 			hits = [];
 			hasMore = false;
 		} finally {
@@ -265,7 +262,7 @@
 			return;
 		}
 		loading = true;
-		timer = setTimeout(() => void run(text, 1), DEBOUNCE_MS);
+		timer = setTimeout(() => void run(text, 1), SEARCH_DEBOUNCE_MS);
 	}
 
 	function setOpen(next: boolean): void {
@@ -275,7 +272,7 @@
 	}
 
 	function choose(entity: EntityRef): void {
-		onRecentsChange?.([entity, ...recents.filter((r) => !same(r, entity))].slice(0, recentLimit));
+		onRecentsChange?.(prependRecent(recents, entity, recentLimit, keyOf));
 		onSelect?.(entity);
 		if (!inline) setOpen(false);
 		setQuery('');
@@ -349,22 +346,7 @@
 				label={stateLine('error', { errorLabel }, failure)}
 			/>
 		{:else if loading && hits.length === 0}
-			<div
-				data-slot="search-loading"
-				class="flex flex-col gap-2 p-1"
-				aria-busy="true"
-				aria-label={stateLine('loading', { loadingLabel })}
-			>
-				{#each [0, 1, 2] as line (line)}
-					<div class="flex items-center gap-2 px-2 py-1.5">
-						<Skeleton class="h-6 w-10 shrink-0" />
-						<div class="flex min-w-0 flex-1 flex-col gap-1">
-							<Skeleton class="h-3 w-1/2" />
-							<Skeleton class="h-2.5 w-1/4" />
-						</div>
-					</div>
-				{/each}
-			</div>
+			<SearchSkeleton slotName="search-loading" label={stateLine('loading', { loadingLabel })} />
 		{:else if empty}
 			<StateLine state="empty" slotName="search-empty" icon={Search} label={emptyLabel} />
 		{:else if showRecents}

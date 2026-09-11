@@ -1,0 +1,126 @@
+---
+title: SearchControl
+description: The query lifecycle and the list every search widget is built on.
+---
+
+import Demo from '../../../components/Demo.astro';
+
+The pause before a query is asked for, the answer that arrives too late to count, the page under the
+rows, and the list itself. A search built on it supplies the read and draws its own rows.
+
+## Install
+
+```sh
+pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/search-control.json
+pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/search-control.json
+```
+
+<Demo name="search-control" title="SearchControl: a query, a page, a list with no query, and a read that failed" />
+
+The demo reads a static crew list behind a 300ms pause, at four rows a page. The first case takes a
+query, debounces it, pages it and emits the row picked. The second takes no query at all: one read,
+drawn straight into the page with no command box around it. The third fails, so the list shows the
+error line instead.
+
+## The lifecycle
+
+`load` is the read. It is handed the query as it stands and the page wanted, and answers the rows it
+found plus whether a further page may be there. Everything around it belongs to the base.
+
+A query is asked for once the pause has elapsed, so a typist does not fire a request a letter. A
+query that arrives while a read is in flight takes the next ticket, which is what makes the earlier
+answer stale: it is dropped rather than landing over the query that replaced it. The same ticket is
+taken when the list is emptied, so a cancelled read never writes.
+
+An empty query empties the list and reads nothing. A search that browses rather than matching sets
+`readsEmpty`, and then an empty query reads too — at once, because no one is typing.
+
+`request` is what the read depends on besides the query: the level of a tree, the person whose rows
+are listed. A change to it empties the list and reads again at once. `enabled` holds every read back,
+for a list that has nothing to read yet.
+
+## The list
+
+The list draws one of four things. An error is the error line. A first page in flight is skeleton
+rows, shaped like the rows they stand in for; a page arriving under rows already on screen leaves
+those rows where they are. A read that answered nothing is the empty line, and otherwise it is the
+rows the wrapper drew. With `paging` on, a further page adds a load-more row under them.
+
+The blocks carry `search-error`, `search-loading` and `search-empty` as their `data-slot`, and the
+load-more row `search-load-more`. A wrapper renames any of them, or passes `null` to leave a block
+unnamed.
+
+## The shell
+
+`command` is a command box with a search row at the top of it, `dialog` the same box inside a
+dialog, and `bare` the list alone, for a section of a larger surface that draws its own heading and
+takes no query.
+
+The highlight is the base's: it lands on the first row whenever the list changes, or on `leadKey`
+where a wrapper draws a row of its own above the results. A load-more page moves it to the first row
+of that page, so the list stays where the reader was instead of returning to the top. Matching is
+the server's alone — the command box never filters what came back.
+
+## Props
+
+| prop | type | default | meaning |
+|---|---|---|---|
+| `load` | `(request) => Promise<answer>` | — | The read behind the list. Takes the query and the page, answers the rows and `hasMore`. |
+| `query` | `string` | `''` | What the caret holds. Two-way in Svelte. |
+| `onQueryChange` | `(query: string) => void` | — | React: called when the caret changes. |
+| `request` | `string` | `''` | What the read depends on besides the query. A change reads again at once. |
+| `enabled` | `boolean` | `true` | Nothing is read while this is off. |
+| `readsEmpty` | `boolean` | `false` | An empty query reads too, rather than emptying the list. |
+| `paging` | `boolean` | `false` | A further page is asked for on a load-more row under the rows. |
+| `debounceMs` | `number` | `250` | The pause before a typed query is asked for. |
+| `keyOf` | `(item) => string` | — | A row's key, which the list and the highlight are addressed by. |
+| `leadKey` | `string` | `''` | The row the highlight lands on ahead of the first result. |
+| `shell` | `'command' \| 'dialog' \| 'bare'` | `'command'` | What is drawn around the list. |
+| `commandClass` | `string` | — | Classes on the command box. |
+| `onKeyDown` | `(event, items) => void` | — | Keys the wrapper owns, on the command box, with the rows they act on. Spelled `onkeydown` in Svelte. |
+| `open` | `boolean` | `false` | Whether the dialog is showing. Two-way in Svelte. |
+| `onOpenChange` | `(open: boolean) => void` | — | |
+| `title` | `string` | `'Search'` | The dialog's accessible name. |
+| `description` | `string` | — | The line under it. |
+| `placeholder` | `string` | `'Search…'` | |
+| `emptyLabel` | `string` | `'No match'` | Shown when the read answered nothing. |
+| `loadingLabel` | `string` | `'Loading…'` | The accessible name of the skeletons. |
+| `errorLabel` | `string` | what the read said | Shown in place of the failed read's own message. |
+| `errorSlot` | `string \| null` | `'search-error'` | The `data-slot` of the error line. |
+| `loadingSlot` | `string \| null` | `'search-loading'` | The `data-slot` of the skeleton block. |
+| `emptySlot` | `string \| null` | `'search-empty'` | The `data-slot` of the empty line. |
+| `skeletonLines` | `number` | `3` | How many rows the skeletons stand in for. |
+| `skeletonLead` | `string` | `'h-6 w-10 shrink-0'` | The leading slot of a skeleton row. |
+
+## Slots
+
+| Svelte | React | receives | draws |
+|---|---|---|---|
+| `rows` | `rows` | the rows read, the query and whether a read is in flight | The rows of the list, as items of the command box or as plain rows under a bare shell. |
+| `empty` | `empty` | nothing | Drawn in place of the empty line. |
+
+## Keyboard
+
+| key | does |
+|---|---|
+| `ArrowDown` / `ArrowUp` | Moves the highlight, through a load-more page. |
+| `Enter` | Takes the highlighted row, or reads the next page on the load-more row. |
+| `Escape` | Closes the dialog shell. |
+
+Anything else a wrapper needs reaches it through `onKeyDown`, which is handed the rows on show:
+the hierarchical search walks the tree with Left and Right that way.
+
+## Composing a wrapper
+
+A wrapper owns its read and its rows. It writes one `load`, draws one row, and says which shell it
+wants. The three search widgets in this registry are that and little else: the global search adds
+the trigger, the hotkey and the recents above the results; the hierarchical search adds the level it
+is browsing and the keys that walk it; the context selector uses the bare shell for the tasks
+assigned to one person, beside its recents and its tree.
+
+## API behaviour
+
+Nothing here is API behaviour of its own. A search that pages a text search reads a full page as the
+only sign of another one, since a read carries no total and `links.next` is emitted forever
+(`006_pagination`); `hasMorePage` in core answers that, and the wrapper passes the result as
+`hasMore`.

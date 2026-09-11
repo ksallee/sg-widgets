@@ -8,7 +8,7 @@ const LOCKED = ['code', 'sg_cut_in'];
 function Pickers() {
   const context = useSgContext();
   const [columns, setColumns] = useState(['code', 'sg_status_list', 'entity.Shot.sg_turnover_date']);
-  const [dates, setDates] = useState(['entity.Shot.sg_turnover_date']);
+  const [dates, setDates] = useState(['entity.Shot.updated_at']);
   const [dual, setDual] = useState(['code', 'sg_cut_in']);
 
   return (
@@ -29,12 +29,12 @@ function Pickers() {
 
       <div className="flex flex-col gap-2" data-demo="dates">
         <span className={label}>
-          Dates only: links stay on the list, so a date behind one is reachable
+          Date-times only: links stay on the list, so a timestamp behind one is reachable
         </span>
         <ColumnPicker
           context={context}
           entityType="Version"
-          dataTypes="date"
+          dataTypes="date_time"
           value={dates}
           onValueChange={setDates}
         />

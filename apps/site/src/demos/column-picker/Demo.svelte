@@ -5,7 +5,7 @@
 	const context = getDemoContext();
 
 	let columns = $state(['code', 'sg_status_list', 'entity.Shot.sg_turnover_date']);
-	let dates = $state(['entity.Shot.sg_turnover_date']);
+	let dates = $state(['entity.Shot.updated_at']);
 	let dual = $state(['code', 'sg_cut_in']);
 
 	const label = 'text-muted-foreground text-xs';
@@ -25,11 +25,11 @@
 	</div>
 
 	<div class="flex flex-col gap-2" data-demo="dates">
-		<span class={label}>Dates only: links stay on the list, so a date behind one is reachable</span>
+		<span class={label}>Date-times only: links stay on the list, so a timestamp behind one is reachable</span>
 		<ColumnPicker
 			{context}
 			entityType="Version"
-			dataTypes="date"
+			dataTypes="date_time"
 			value={dates}
 			onValueChange={(next) => (dates = next)}
 		/>

@@ -1,6 +1,6 @@
-// Leave the token field with its last chip armed, so the shot shows the cursor.
-// Backspace on an empty caret arms a chip without opening the list. The page
-// releases the cursor when it loses focus, and a capture does exactly that, so
+// Leave the token field with the caret on its last chip, so the shot shows it.
+// Backspace on an empty caret reaches the chip without opening the list. The page
+// releases the chip when it loses focus, and a capture does exactly that, so
 // an interval keeps pressing Backspace until the shot is taken.
 //
 //   pnpm qa --start --path /widgets/entity-multi-picker/ --framework svelte \
@@ -43,7 +43,7 @@ const chips = $$('[data-chip]', box).length;
 return {
   verdict:
     armed === 1 && chips === 3
-      ? `PASS ${pane.dataset.pane}: the last chip is armed and still there`
+      ? `PASS ${pane.dataset.pane}: the caret is on the last chip and it is still there`
       : `FAIL ${pane.dataset.pane}: ${armed} armed, ${chips} chips`,
   pane: pane.dataset.pane,
   armed,

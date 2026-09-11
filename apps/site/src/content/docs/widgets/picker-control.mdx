@@ -128,11 +128,12 @@ same variables; it is read as a reference and not installed.
 
 | Svelte | React | receives | draws |
 |---|---|---|---|
-| `chip` | `renderChip` | the chip's index, whether Backspace has armed it, whether the row hides it | One chip of the value. An armed chip wears the focus ring; a hidden one keeps its width. |
+| `chip` | `renderChip` | the chip's index, whether the caret is on it, whether the row hides it | One chip of the value. The chip under the caret wears the focus ring; a hidden one keeps its width. |
 | `rows` | `renderItem` | nothing in Svelte, the item key in React | The rows of the list, as items of the primitive. |
 
-A chip carries `data-chip` so the measured row can weigh it, and `data-armed` while Backspace holds
-it, so every picker's chip says the same thing.
+A chip carries `data-chip` so the measured row can weigh it, and `data-armed` while it holds the
+caret, so every picker's chip says the same thing. The base takes every chip out of the tab order
+and moves the caret between them itself, so a chip needs nothing of the caller for that.
 
 ## The contract
 
@@ -150,13 +151,19 @@ One picker, walked from the keyboard:
    load-more page and back to the top.
 4. `Enter` takes the highlighted row. A multi picker stays open for the next one; a single picker
    closes.
-5. `Backspace` in an empty query belongs to the value: on a multi picker the first press arms the
-   last chip and the second removes it, and on a single picker it clears the value. Any other key
-   releases an armed chip.
-6. `Escape` closes the list and clears the query. The selection survives it, and on a closed picker
+5. `Backspace` and `ArrowLeft` in an empty query belong to the value: on a multi picker they take
+   the caret to the last chip, and on a single picker `Backspace` clears the value in one press.
+6. On a chip, `ArrowLeft` and `ArrowRight` walk the row and step off the last one back into the
+   input, `Backspace` and `Delete` remove the chip and leave the caret on its neighbour, `Enter`
+   and `Space` give the caret back, a printable key gives it back and writes that character into
+   the query, and `ArrowDown` opens the list.
+7. `Escape` closes the list and clears the query. The selection survives it, and on a closed picker
    the key belongs to whatever encloses the picker.
-7. A press outside the control and the popup closes the list.
-8. `Tab` leaves the control.
+8. A press outside the control and the popup closes the list.
+9. `Tab` leaves the control. The chips are walked with the arrows, not with `Tab`.
+
+The chip model is Base UI's, which coss.com/ui at e937bec takes wholesale; here it lives in core so
+both frameworks answer a key the same way, and it is read as a reference and not installed.
 
 A readonly control keeps full contrast and loses the clear control and the chevron. A disabled one
 takes no press and no key.
@@ -168,7 +175,9 @@ takes no press and no key.
 | `ArrowDown` / `ArrowUp` | Moves the highlight, and the list scrolls it into view. |
 | `Enter` | Takes the highlighted row. A multi picker keeps the popup open. |
 | `Escape` | Closes the popup and clears the query. On a closed picker it does nothing. |
-| `Backspace` | In an empty query: on a multi picker the first arms the last chip and the second removes it; on a single one it clears the value. |
+| `Backspace` | In an empty query: takes the caret to the last chip of a multi picker; clears a single one. |
+| `ArrowLeft` / `ArrowRight` | On a chip, walks the row. `ArrowRight` past the last chip returns to the input. |
+| `Delete` | On a chip, removes it and leaves the caret on its neighbour. |
 | `Tab` | Leaves the control. |
 
 ## Composing a wrapper

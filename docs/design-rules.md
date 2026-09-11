@@ -57,6 +57,9 @@ The goal is one system: a page mixing ten of our widgets must read as one hand.
   empty control reads as a plain input. A control whose filled value is plain text, `FieldPicker`
   among them, keeps the reading inset in both states. `min-h` never changes, so the height holds
   across the two states; the trailing inset is reserve for the clear and open controls and stays put.
+- An icon control — a clear, an open, a remove — is drawn at the glyph's own size and carries a
+  44px box on a coarse pointer, as a pseudo-element centred on it, so a finger has something to
+  hit and no layout moves. One class string per ladder holds it.
 - Width is the caller's business: widgets are `w-full` by default and never set a fixed width. A caller
   wraps in a sized container.
 
@@ -65,9 +68,9 @@ The goal is one system: a page mixing ten of our widgets must read as one hand.
 Motion explains a change; it never decorates. Every animated property must answer "what did this movement
 tell the user".
 
-- Durations: `duration-150` for hover/press/focus feedback, `duration-200` for popovers, menus and
-  chips entering or leaving, `duration-300` only for large surfaces (dialogs, sheets, expanding panels).
-  Nothing over 300ms.
+- Durations: `duration-100` for a popover, a menu, a picker popup or a dialog entering or leaving,
+  `duration-150` for hover/press/focus feedback, `duration-200` for chips and rows entering or
+  leaving, `duration-300` only for a large expanding panel. Nothing over 300ms.
 - Easing: enter with `ease-out`, exit with `ease-in`, hover with the default. Never linear.
 - Animate only `opacity`, `transform` (translate, scale) and `height` via CSS grid or the `tw-animate-css`
   helpers. Never animate `width`, `margin`, `padding` or `top/left`.
@@ -136,8 +139,10 @@ The picker contract. Every picker behaves the same, on the base or on a primitiv
 2. The caret lands in the control's own input on open, or in the popup's search box on a
    summary control. Every focus call passes `preventScroll`.
 3. Escape closes the list and clears the query. On a closed picker it does nothing.
-4. Backspace in an empty query arms the last chip and a second removes it on a multi picker,
-   and clears the value on a single one.
+4. Backspace and `ArrowLeft` in an empty query take the caret to the last chip of a multi
+   picker, and Backspace clears the value of a single one. On a chip, the arrows walk the
+   row, Backspace and Delete remove it and leave the caret on its neighbour, Enter, Space
+   and a printable key give the caret back to the input, and `ArrowDown` opens the list.
 5. `ArrowUp` and `ArrowDown` keep the highlighted row in view, across a load-more page.
 6. A pick keeps a multi picker open and closes a single one.
 7. An outside press closes the list.

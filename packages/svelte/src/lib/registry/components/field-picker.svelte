@@ -27,6 +27,7 @@
 		friendlyFieldPath,
 		iconNameFor,
 		NO_MATCH_LABEL,
+		pickerKeyIntent,
 		searchFieldOptions,
 		stateLine
 	} from '@sg-widgets/core';
@@ -186,6 +187,11 @@ const ICONS: Record<string, typeof Type> = {
 
 	function setOpen(next: boolean): void {
 		const wanted = readonly || disabled ? false : next;
+		// The query goes with the list, so the next open starts on the whole set.
+		if (!wanted) {
+			search = '';
+			highlighted = '';
+		}
 		if (wanted === open) return;
 		open = wanted;
 		onOpenChange?.(open);
@@ -333,6 +339,20 @@ const ICONS: Record<string, typeof Type> = {
 	}
 
 	function onKeys(event: KeyboardEvent): void {
+		// One value, so an empty query takes Backspace down to nothing in a press.
+		const intent = pickerKeyIntent(event.key, {
+			open,
+			query: search,
+			count: value === '' ? 0 : 1,
+			armed: null,
+			editable: !readonly && !disabled,
+			multiple: false
+		});
+		if (intent.kind === 'remove') {
+			event.preventDefault();
+			emit('');
+			return;
+		}
 		if (event.key === 'ArrowRight') {
 			if (choosing) {
 				const target = cursor;

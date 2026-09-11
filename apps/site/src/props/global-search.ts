@@ -14,7 +14,7 @@ export default {
     { name: 'secondary', type: '`(hit) => string`', default: '—', meaning: 'Right-aligned text of your own. Wins over `secondaryField`.' },
     { name: 'showCode', type: '`boolean`', default: '`false`', meaning: 'Shows the row\'s `code` beside the label when the two differ.' },
     { name: 'fields', type: '`string[]`', default: '`[]`', meaning: 'Extra fields to request, so your own sub-label or secondary can read them.' },
-    { name: 'hotkey', type: '`boolean`', default: '`false`', meaning: 'Opens the palette on Cmd/Ctrl+K.' },
+    { name: 'hotkey', type: '`boolean | string`', default: '`false`', meaning: 'Opens the palette on Cmd/Ctrl+K; a string names another key in place of K.' },
     { name: 'inline', type: '`boolean`', default: '`false`', meaning: 'Renders a combobox in the page instead of a dialog.' },
     { name: 'open', type: '`boolean`', default: '`false`', meaning: 'Whether the dialog is open.' },
     { name: 'recents', type: '`EntityRef[]`', default: '`[]`', meaning: 'Rows picked before, newest first, shown on an empty query.' },
@@ -36,7 +36,7 @@ export default {
     { name: 'trigger', receives: '`{ open }`, a function that opens the dialog. Replaces the default button.' },
   ],
   keyboard: [
-    { key: '`Cmd/Ctrl` `K`', does: 'Opens and closes the palette, when `hotkey` is on.' },
+    { key: '`Cmd/Ctrl` `K`', does: 'Opens and closes the palette, when `hotkey` is on; the key `hotkey` names, when it is a string.' },
     { key: '`Down` / `Up`', does: 'Moves through the results, across group headings.' },
     { key: '`Enter`', does: 'Picks the highlighted row, or loads the next page on the last row.' },
     { key: '`Escape`', does: 'Closes the palette.' },

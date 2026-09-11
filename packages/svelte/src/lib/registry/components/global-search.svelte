@@ -83,7 +83,8 @@
 		/** Extra fields to request, so a caller's own sub-label or secondary can read them. */
 		fields?: string[];
 		/** Opens the palette on Cmd/Ctrl+K. Ignored on the inline variant. */
-		hotkey?: boolean;
+		/** Opens the palette on Cmd or Ctrl and K; a string names another key. */
+		hotkey?: boolean | string;
 		/** Render as a combobox in the page instead of a dialog behind a trigger. */
 		inline?: boolean;
 		size?: GlobalSearchSize;
@@ -202,9 +203,11 @@
 		query = '';
 	}
 
+	const hotkeyKey = $derived(typeof hotkey === 'string' ? hotkey : 'k');
+
 	function onKeydown(event: KeyboardEvent): void {
 		if (!hotkey || inline) return;
-		if (event.key.toLowerCase() !== 'k' || !(event.metaKey || event.ctrlKey)) return;
+		if (event.key.toLowerCase() !== hotkeyKey.toLowerCase() || !(event.metaKey || event.ctrlKey)) return;
 		event.preventDefault();
 		setOpen(!open);
 	}
@@ -339,7 +342,7 @@
 					<Search aria-hidden="true" class={cn('opacity-70', CONTROL_GLYPH[size])} />
 					<span class="truncate">{label}</span>
 				</span>
-				{#if hotkey}<Kbd>{META}K</Kbd>{/if}
+				{#if hotkey}<Kbd>{META}{hotkeyKey.toUpperCase()}</Kbd>{/if}
 			</Button>
 		{/if}
 		{@render control()}

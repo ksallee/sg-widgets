@@ -85,7 +85,8 @@ export interface GlobalSearchProps extends Omit<React.HTMLAttributes<HTMLDivElem
   /** Extra fields to request, so a caller's own sub-label or secondary can read them. */
   fields?: string[];
   /** Opens the palette on Cmd/Ctrl+K. Ignored on the inline variant. */
-  hotkey?: boolean;
+  /** Opens the palette on Cmd or Ctrl and K; a string names another key. */
+  hotkey?: boolean | string;
   /** Render as a combobox in the page instead of a dialog behind a trigger. */
   inline?: boolean;
   size?: GlobalSearchSize;
@@ -221,16 +222,17 @@ export function GlobalSearch({
     [inline, onRecentsChange, onSelect, recentLimit, recents, setOpen],
   );
 
+  const hotkeyKey = typeof hotkey === 'string' ? hotkey : 'k';
   useEffect(() => {
     if (!hotkey || inline) return;
     const onKeydown = (event: KeyboardEvent): void => {
-      if (event.key.toLowerCase() !== 'k' || !(event.metaKey || event.ctrlKey)) return;
+      if (event.key.toLowerCase() !== hotkeyKey.toLowerCase() || !(event.metaKey || event.ctrlKey)) return;
       event.preventDefault();
       setOpen(!open);
     };
     window.addEventListener('keydown', onKeydown);
     return () => window.removeEventListener('keydown', onKeydown);
-  }, [hotkey, inline, open, setOpen]);
+  }, [hotkey, hotkeyKey, inline, open, setOpen]);
 
   /** The row a hit draws as: the reference, its label and the values the second read answered. */
   function rowOf(hit: SearchHit): PickerRowData {
@@ -348,7 +350,7 @@ export function GlobalSearch({
             <Search aria-hidden="true" className={cn('opacity-70', CONTROL_GLYPH[size])} />
             <span className="truncate">{label}</span>
           </span>
-          {hotkey ? <Kbd>{META}K</Kbd> : null}
+          {hotkey ? <Kbd>{META}{hotkeyKey.toUpperCase()}</Kbd> : null}
         </Button>
       )}
       {control}

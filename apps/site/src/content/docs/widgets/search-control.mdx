@@ -56,10 +56,16 @@ unnamed.
 dialog, and `bare` the list alone, for a section of a larger surface that draws its own heading and
 takes no query.
 
-The highlight is the base's: it lands on the first row whenever the list changes, or on `leadKey`
-where a wrapper draws a row of its own above the results. A load-more page moves it to the first row
-of that page, so the list stays where the reader was instead of returning to the top. Matching is
-the server's alone — the command box never filters what came back.
+The highlight is the base's: it lands on the first row whenever the list changes. Matching is the
+server's alone — the command box never filters what came back.
+
+Under the rows sits a live region, which says what the list is doing: the read in flight, the number
+of rows it answered, the empty line, or what a failed read said. It is what a reader hears; the
+state line above it is what a reader sees.
+
+The list fades at whichever edge has more content past it and holds a gutter for its scrollbar, so
+rows never shift as pages land. The pattern is coss.com/ui at e937bec, whose scroll area reads the
+same variables.
 
 ## Props
 
@@ -73,8 +79,6 @@ the server's alone — the command box never filters what came back.
 | `readsEmpty` | `boolean` | `false` | An empty query reads too, rather than emptying the list. |
 | `paging` | `boolean` | `false` | A further page is asked for on a load-more row under the rows. |
 | `debounceMs` | `number` | `250` | The pause before a typed query is asked for. |
-| `keyOf` | `(item) => string` | — | A row's key, which the list and the highlight are addressed by. |
-| `leadKey` | `string` | `''` | The row the highlight lands on ahead of the first result. |
 | `shell` | `'command' \| 'dialog' \| 'bare'` | `'command'` | What is drawn around the list. |
 | `commandClass` | `string` | — | Classes on the command box. |
 | `onKeyDown` | `(event, items) => void` | — | Keys the wrapper owns, on the command box, with the rows they act on. Spelled `onkeydown` in Svelte. |
@@ -105,7 +109,7 @@ the server's alone — the command box never filters what came back.
 |---|---|
 | `ArrowDown` / `ArrowUp` | Moves the highlight, through a load-more page. |
 | `Enter` | Takes the highlighted row, or reads the next page on the load-more row. |
-| `Escape` | Closes the dialog shell. |
+| `Escape` | With a query, clears it and the rows and keeps the caret in the box. With no query, the shell takes it: a dialog or a popover closes, and the inline box does nothing. |
 
 Anything else a wrapper needs reaches it through `onKeyDown`, which is handed the rows on show:
 the hierarchical search walks the tree with Left and Right that way.

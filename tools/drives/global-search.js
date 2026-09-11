@@ -81,6 +81,21 @@ for (const framework of ['svelte', 'react']) {
     return fail(`${framework}: first row has no project sub-label, got "${sub?.textContent}"`);
   }
 
+  /* A first Escape clears the query, a second closes the palette. */
+  press(input, 'Escape');
+  await wait(200);
+  if (dialogs().length !== 1) return fail(`${framework}: the first Escape closed the palette`);
+  if (input.value !== '') return fail(`${framework}: the first Escape left "${input.value}" in the box`);
+  if (inList('[data-slot="command-item"][data-entity-type]').length !== 0) {
+    return fail(`${framework}: the first Escape left results under the box`);
+  }
+  notes.push(`${framework}: Escape cleared the query and left the palette open`);
+
+  type(input, 'sh010 0010');
+  if (!(await until(() => inList('[data-slot="command-item"][data-entity-type]').length > 0))) {
+    return fail(`${framework}: the query did not come back after Escape`);
+  }
+
   press(input, 'ArrowDown');
   await wait(80);
   press(input, 'Enter');

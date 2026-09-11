@@ -130,3 +130,5 @@ Reordering follows ReUI's Sortable 2.5.2 for the grip and the lifted row, and Di
 its shadcn registry item, for the live-region copy and the keyboard model. Neither is installed. The
 pointer behaviour, a four-pixel activation distance with midpoint hit-testing and edge auto-scroll,
 follows dnd-kit 6.3.1.
+
+The list is one engine in both frameworks: it is always open, always in place and always holds a highlight. It fades at whichever edge has more content past it, holds a gutter for its scrollbar, and carries a live region saying what it is doing. The pattern is coss.com/ui at e937bec, read as a reference and not installed.

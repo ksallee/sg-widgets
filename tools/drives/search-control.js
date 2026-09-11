@@ -1,5 +1,5 @@
-// The three cases of the search-control page: a query that debounces, pages and picks,
-// a list with no query at all, and a read that failed.
+// The four cases of the search-control page: a query that debounces, pages and picks,
+// a list with no query at all, a read that failed, and the Escape rule the base owns.
 //
 //   pnpm qa --start --path /widgets/search-control/ --framework both --drive tools/drives/search-control.js
 
@@ -11,6 +11,11 @@ function type(input, text) {
   const setter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
   setter ? setter.call(input, text) : (input.value = text);
   input.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
+function press(el, key) {
+  el.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
+  el.dispatchEvent(new KeyboardEvent('keyup', { key, bubbles: true, cancelable: true }));
 }
 
 async function until(read, timeoutMs = 6000) {
@@ -84,9 +89,26 @@ async function drive(pane, framework) {
   const error = await until(() => broken && $('[data-slot="search-error"]', broken));
   if (!error) failures.push(`${framework}: the failed read drew no error line`);
 
+  /* 7. Escape with a query clears it and the rows and keeps the caret in the box; with
+        no query it is the shell's, and the inline box does nothing with it. */
+  type(input, 'a');
+  if (!(await until(() => options().length > 0))) failures.push(`${framework}: nothing to clear`);
+  input.focus({ preventScroll: true });
+  press(input, 'Escape');
+  await wait(200);
+  const cleared = input.value === '' && options().length === 0;
+  if (!cleared) failures.push(`${framework}: Escape left "${input.value}" and ${options().length} rows`);
+  if (document.activeElement !== input) failures.push(`${framework}: Escape took the caret out of the box`);
+  press(input, 'Escape');
+  await wait(200);
+  if (input.value !== '' || options().length !== 0) {
+    failures.push(`${framework}: a second Escape changed the box`);
+  }
+
   return {
     firstPage: first,
     afterLoadMore: paged,
+    escapeCleared: cleared,
     picked: picked ?? readout(),
     bareRows: listed ? listed.length : 0,
     error: error ? error.textContent.trim() : '',
@@ -107,7 +129,7 @@ await wait(200);
 return {
   verdict:
     failures.length === 0
-      ? 'PASS the base debounced, paged, picked, emptied, listed without a query and reported a failed read'
+      ? 'PASS the base debounced, paged, picked, emptied, cleared on Escape, listed without a query and reported a failed read'
       : `FAIL ${failures.join('; ')}`,
   seen,
 };

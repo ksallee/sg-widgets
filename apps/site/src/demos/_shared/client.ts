@@ -64,14 +64,22 @@ export interface DemoContext extends SgContext {
   live: boolean;
   /** The project to scope to: the Connect panel's pick in live mode, the mock's own otherwise. */
   projectId: number;
+  /** What that project is called, when the pick carried a name. */
+  projectName: string;
   /** The same, for a demo that names a second mock project of its own. */
   projectFor(mockId: number): number;
 }
 
 function scoped(context: SgContext, live: boolean): DemoContext {
-  const picked = demoProject()?.id;
-  const projectFor = (mockId: number): number => (live && picked !== undefined ? picked : mockId);
-  return { ...context, live, projectId: projectFor(MOCK_PROJECT_ID), projectFor };
+  const picked = live ? demoProject() : null;
+  const projectFor = (mockId: number): number => picked?.id ?? mockId;
+  return {
+    ...context,
+    live,
+    projectId: projectFor(MOCK_PROJECT_ID),
+    projectName: picked?.name ?? '',
+    projectFor,
+  };
 }
 
 let liveScoped: DemoContext | undefined;

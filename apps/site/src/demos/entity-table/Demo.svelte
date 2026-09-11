@@ -136,7 +136,7 @@
 			{source}
 			bind:columns
 			bind:selection={selected}
-			filters={filter}
+			filters={scope ? group('and', [scope, filter]) : filter}
 			sort={toSortSpecs(sortKeys)}
 			{statuses}
 			{context}

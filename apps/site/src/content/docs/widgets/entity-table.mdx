@@ -16,7 +16,7 @@ pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/entity-table.json
 pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/entity-table.json
 ```
 
-<Demo name="entity-table" title="Entity Table: 320 Versions in pages of 25, with a filter bar, a column picker and a sort picker in the toolbar. Pages, Load more and Scroll switch how the set is walked. An editable cell lights up under the pointer; a double-click or Enter opens its editor, in a popover on the description cell and in the cell itself on the status one." />
+<Demo name="entity-table" title="Entity Table: 320 Versions in pages of 25, with a filter bar, a column picker and a sort picker in the toolbar. Pages, Load more and Scroll switch how the set is walked. An editable cell lights up under the pointer; a double-click or Enter opens its editor in a popover; Popover editor and Inline editor switch where every editor opens." />
 
 Build the source and the columns once, then hand both to the table.
 
@@ -172,7 +172,7 @@ column list back through `columns`. Pinning sticks the column to the start of th
 | Enter, Space on a header | Sorts by that column, ascending, then descending, then unsorted. |
 | Enter, Space on a column menu | Opens it; arrows walk it, Escape closes it. |
 | Enter on an editable cell | Opens the editor. |
-| Enter in an editor | Commits the value. |
+| Enter in an editor | Commits the value. In a textarea it adds a line, and Cmd or Ctrl with Enter commits. |
 | Escape in an editor | Cancels and restores the value. |
 | a press outside an editor | Commits the value. |
 | Enter, Escape, Save, Cancel in a popover editor | The same: Enter and Save commit, Escape and Cancel restore. |

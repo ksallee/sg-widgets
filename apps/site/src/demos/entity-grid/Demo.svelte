@@ -35,7 +35,7 @@
 	let selected = $state<EntityRef[]>([]);
 	let opened = $state<EntityRow | null>(null);
 
-	/** The demo holds every third row back, to show what a disabled row does. */
+	/** The demo holds every third card back, to show what a disabled card does. */
 	const isRowDisabled = (row: EntityRow): boolean => row.id % 3 === 0;
 
 	async function load(): Promise<CollectionColumn> {
@@ -101,7 +101,7 @@
 		</section>
 
 		<section class={group} data-testid="grid-disabled">
-			<h4 class={label}>Every third row disabled</h4>
+			<h4 class={label}>Every third card disabled</h4>
 			<EntityGrid source={short} {context} secondaryField={artist} size="sm" selectable maxHeight="18rem" {isRowDisabled} />
 		</section>
 

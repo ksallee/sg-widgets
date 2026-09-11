@@ -15,7 +15,10 @@ await wait(600);
 
 const cell = rows()[0].querySelector('td[data-column="sg_status_list"]');
 cell.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
-if (!(await until(() => cell.querySelector('[data-slot="status-picker"]') !== null))) {
+// The status editor opens in a popover by default, so the picker is looked for there too.
+const statusPicker = () =>
+  document.querySelector('[data-field-editor-popover] [data-slot="status-picker"]') ?? cell.querySelector('[data-slot="status-picker"]');
+if (!(await until(() => statusPicker() !== null))) {
   return { verdict: 'FAIL the status cell opened no picker' };
 }
 

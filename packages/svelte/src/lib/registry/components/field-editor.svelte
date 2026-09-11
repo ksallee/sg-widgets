@@ -25,7 +25,7 @@
 	/** The popups an editor opens. Each is portalled out of the widget's own tree. */
 	/** The control the popover focused on open keeps its ring for the keyboard only. */
 	const QUIET_FOCUS =
-		'[&_[data-quiet-focus]:focus-visible]:border-input [&_[data-quiet-focus]:focus-visible]:ring-0';
+		'[&_[data-quiet-focus]:focus-visible]:border-input [&_[data-quiet-focus]:focus-visible]:ring-0 [&_:has([data-quiet-focus]:focus-visible)]:border-input [&_:has([data-quiet-focus]:focus-visible)]:ring-0 [&_:has([data-quiet-focus]:focus-visible)]:ring-offset-0 [&_[data-quiet-focus]:focus-visible]:ring-offset-0';
 	const POPUP = '[data-slot="popover-content"],[data-slot="select-content"],[data-picker]';
 
 	/**
@@ -152,7 +152,7 @@
 		projectId,
 		timeZone,
 		locale,
-		multiline = false,
+		multiline,
 		size = 'md',
 		disabled = false,
 		readonly = false,
@@ -184,6 +184,8 @@
 	const canEdit = $derived(hasEditor && !disabled && !readonly);
 	const editing = $derived(mode === 'edit' && hasEditor);
 	const popover = $derived(editorPlacement === 'popover');
+	/** A text field is a textarea where there is room for one: in a popover, unless the caller says. */
+	const textarea = $derived(kind === 'text' && (multiline ?? popover));
 	/** The field's own name, over the control. */
 	const label = $derived(field?.displayName ?? field?.name ?? '');
 	/** A multi-entity list needs the room; everything else reads in the narrow one. */
@@ -291,7 +293,9 @@
 		const inPopupControl = target?.closest('[data-slot$="-trigger"],[role="combobox"]') != null;
 		// The editor commits on the same Enter, and its handler runs first on the way up.
 		// The toggle waits a frame so that commit has settled before the control goes.
-		if (event.key === 'Enter' && !inPopupControl && liveError === null && !(multiline && kind === 'text')) {
+		// A textarea keeps Enter for a new line and commits on Cmd or Ctrl with it.
+		const commits = event.key === 'Enter' && (!textarea || event.metaKey || event.ctrlKey);
+		if (commits && !inPopupControl && liveError === null) {
 			requestAnimationFrame(() => {
 				if (alive) leave();
 			});
@@ -436,7 +440,7 @@
 				value={value as string | null}
 				onValueChange={emit}
 				field={field ?? null}
-				{multiline}
+				multiline={textarea}
 				{size}
 				{disabled}
 				{readonly}

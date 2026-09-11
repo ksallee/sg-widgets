@@ -52,6 +52,7 @@
 </script>
 
 <script lang="ts">
+	import type { Component } from 'svelte';
 	import type { HTMLAttributes } from 'svelte/elements';
 	import type { SgContext } from '@sg-widgets/core';
 	import {
@@ -66,20 +67,14 @@
 		scopeToProject,
 		stateLine
 	} from '@sg-widgets/core';
-	import Box from '@lucide/svelte/icons/box';
 	import ChevronRight from '@lucide/svelte/icons/chevron-right';
-	import Clapperboard from '@lucide/svelte/icons/clapperboard';
-	import Film from '@lucide/svelte/icons/film';
 	import Folder from '@lucide/svelte/icons/folder';
-	import ListChecks from '@lucide/svelte/icons/list-checks';
 	import Search from '@lucide/svelte/icons/search';
-	import Tag from '@lucide/svelte/icons/tag';
 	import TriangleAlert from '@lucide/svelte/icons/triangle-alert';
-	import User from '@lucide/svelte/icons/user';
-	import Video from '@lucide/svelte/icons/video';
 	import * as Command from '$lib/components/ui/command/index.js';
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
+	import { entityGlyph } from '$lib/registry/components/entity-glyphs.js';
 	import Row from '$lib/registry/components/picker-row.svelte';
 	import StateLine from '$lib/registry/components/state-line.svelte';
 
@@ -170,19 +165,9 @@
 	});
 	const empty = $derived(!loading && failure === null && rows.length === 0);
 
-	const GLYPHS: Record<string, typeof Tag> = {
-		Shot: Clapperboard,
-		Asset: Box,
-		Sequence: Film,
-		Version: Video,
-		Task: ListChecks,
-		HumanUser: User,
-		Project: Folder
-	};
-
-	function glyphFor(row: HierarchicalSearchRow): typeof Tag {
-		if (!row.ref) return Folder;
-		return GLYPHS[row.ref.type] ?? Tag;
+	/** A level is a folder; a row takes its type's own glyph. */
+	function glyphFor(row: HierarchicalSearchRow): Component {
+		return row.ref ? entityGlyph(row.ref.type) : Folder;
 	}
 
 	/** The row a list entry draws as: the reference it stands for and what a search read. */

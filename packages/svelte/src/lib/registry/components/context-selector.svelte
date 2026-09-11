@@ -1,7 +1,9 @@
 <script lang="ts" module>
 	import type { EntityRef, FieldSpec } from '@sg-widgets/core';
 
-	export type ContextSelectorSize = 'sm' | 'md' | 'lg';
+	import { CONTROL_GLYPH, type ControlSize } from '$lib/registry/components/control-classes.js';
+
+	export type ContextSelectorSize = ControlSize;
 
 	/**
 	 * Controls follow the input ladder of `docs/design-rules.md`. `data-empty` takes the
@@ -14,7 +16,6 @@
 		md: 'min-h-9 pr-3 pl-[5px] py-1 data-empty:pl-2 data-empty:py-0.5',
 		lg: 'min-h-10 pr-3 pl-1 py-0.5 data-empty:pl-2 data-empty:py-0'
 	};
-	const GLYPH: Record<ContextSelectorSize, string> = { sm: 'size-4', md: 'size-4', lg: 'size-5' };
 	/** A chip inside a control sits one step down the leaf ladder. */
 	const CHIP: Record<ContextSelectorSize, 'sm' | 'md'> = { sm: 'sm', md: 'sm', lg: 'md' };
 
@@ -278,7 +279,7 @@
 					{/each}
 				{/if}
 			</span>
-			<ChevronDown aria-hidden="true" class={cn('text-muted-foreground shrink-0', GLYPH[size])} />
+			<ChevronDown aria-hidden="true" class={cn('text-muted-foreground shrink-0', CONTROL_GLYPH[size])} />
 		</Popover.Trigger>
 
 		<!-- Fixed: the Command list inside scrolls its cursor into view on mount, and an absolute

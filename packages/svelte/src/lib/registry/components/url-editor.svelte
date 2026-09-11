@@ -1,12 +1,7 @@
 <script lang="ts" module>
-	export type UrlEditorSize = 'sm' | 'md' | 'lg';
+	import type { ControlSize } from '$lib/registry/components/control-classes.js';
 
-	/** The control ladder of `docs/design-rules.md`: 8 / 9 / 10. */
-	const BOX: Record<UrlEditorSize, string> = {
-		sm: 'h-8 px-2',
-		md: 'h-9 px-3',
-		lg: 'h-10 px-3'
-	};
+	export type UrlEditorSize = ControlSize;
 </script>
 
 <script lang="ts">
@@ -16,6 +11,8 @@
 	import { parseUrlInput } from '@sg-widgets/core';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
+	import { CONTROL_BOX } from '$lib/registry/components/control-classes.js';
+	import FieldError from '$lib/registry/components/field-error.svelte';
 
 	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>, HTMLDivElement> & {
 		/** The stored object. Only the web-link shape is edited here (field_types/url). */
@@ -128,7 +125,7 @@
 			disabled={disabled || localOnly}
 			{readonly}
 			{placeholder}
-			class={BOX[size]}
+			class={CONTROL_BOX[size]}
 			aria-invalid={isInvalid}
 			aria-label={field?.displayName}
 			aria-required={field?.mandatory}
@@ -143,7 +140,7 @@
 			disabled={disabled || localOnly}
 			{readonly}
 			placeholder={namePlaceholder}
-			class={BOX[size]}
+			class={CONTROL_BOX[size]}
 			aria-invalid={isInvalid}
 			aria-label="Link name"
 			onfocus={() => (editing = true)}
@@ -156,11 +153,5 @@
 			This value is a local path. Only web links are edited here.
 		</p>
 	{/if}
-	{#if message}
-		{#if errorMessage}
-			{@render errorMessage(message)}
-		{:else}
-			<p data-slot="field-editor-error" class="text-destructive text-xs">{message}</p>
-		{/if}
-	{/if}
+	<FieldError {message} {errorMessage} />
 </div>

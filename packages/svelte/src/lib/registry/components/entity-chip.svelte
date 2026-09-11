@@ -1,23 +1,14 @@
 <script lang="ts" module>
-	export type EntityChipSize = 'sm' | 'md' | 'lg';
+	import type { LeafSize } from '$lib/registry/components/leaf-classes.js';
+
+	export type EntityChipSize = LeafSize;
 	export type EntityChipVariant = 'chip' | 'link' | 'text';
 
-	/** Leaf atoms follow the thumbnail/avatar ladder of `docs/design-rules.md`. */
-	const BOX: Record<EntityChipSize, string> = {
-		sm: 'h-6 text-xs',
-		md: 'h-8 text-sm',
-		lg: 'h-10 text-sm'
-	};
 	/** A link or a bare label has no box, so only the type scale applies. */
 	const TEXT: Record<EntityChipSize, string> = {
 		sm: 'text-xs',
 		md: 'text-sm',
 		lg: 'text-sm'
-	};
-	const GLYPH: Record<EntityChipSize, string> = {
-		sm: 'size-4',
-		md: 'size-4',
-		lg: 'size-5'
 	};
 </script>
 
@@ -25,19 +16,11 @@
 	import type { HTMLAttributes, MouseEventHandler } from 'svelte/elements';
 	import type { EntityRef, SgClient, SgContext } from '@sg-widgets/core';
 	import { contextFromClient, entityDetailUrl } from '@sg-widgets/core';
-	import Box from '@lucide/svelte/icons/box';
-	import Clapperboard from '@lucide/svelte/icons/clapperboard';
-	import FileBox from '@lucide/svelte/icons/file-box';
-	import Film from '@lucide/svelte/icons/film';
-	import Folder from '@lucide/svelte/icons/folder';
-	import ListChecks from '@lucide/svelte/icons/list-checks';
-	import MessageSquare from '@lucide/svelte/icons/message-square';
-	import Tag from '@lucide/svelte/icons/tag';
-	import User from '@lucide/svelte/icons/user';
-	import Video from '@lucide/svelte/icons/video';
 	import X from '@lucide/svelte/icons/x';
 	import * as HoverCard from '$lib/components/ui/hover-card/index.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
+	import { entityGlyph } from '$lib/registry/components/entity-glyphs.js';
+	import { LEAF_BOX, LEAF_GLYPH, REMOVE_CONTROL } from '$lib/registry/components/leaf-classes.js';
 	import EntityCard from '$lib/registry/components/entity-card.svelte';
 
 	type Props = WithElementRef<HTMLAttributes<HTMLSpanElement>, HTMLSpanElement> & {
@@ -84,25 +67,9 @@
 		...rest
 	}: Props = $props();
 
-	/**
-	 * A glyph per entity type. A stock site has 114 types plus any number of custom
-	 * ones, so this covers the types a widget meets constantly and falls back to a tag.
-	 */
-	const GLYPHS: Record<string, typeof Tag> = {
-		Shot: Clapperboard,
-		Asset: Box,
-		Sequence: Film,
-		Version: Video,
-		Task: ListChecks,
-		HumanUser: User,
-		Project: Folder,
-		Note: MessageSquare,
-		PublishedFile: FileBox
-	};
-
 	const named = $derived(Boolean(entity.name && entity.name.length > 0));
 	const label = $derived(named ? (entity.name as string) : `${entity.type} #${entity.id}`);
-	const Glyph = $derived(GLYPHS[entity.type] ?? Tag);
+	const Glyph = $derived(entityGlyph(entity.type));
 
 	// One context per client, so a chip handed a bare client shares the page's caches.
 	const ctx = $derived(context ?? (client ? contextFromClient(client) : undefined));
@@ -129,7 +96,7 @@
 			variant === 'chip'
 				? cn(
 						'bg-secondary text-secondary-foreground rounded-md border px-2',
-						BOX[size],
+						LEAF_BOX[size],
 						interactive &&
 							'hover:bg-accent hover:text-accent-foreground transition-colors duration-150'
 					)
@@ -157,10 +124,10 @@
 				aria-hidden="true"
 				loading="lazy"
 				decoding="async"
-				class={cn('shrink-0 rounded-sm object-cover', GLYPH[size])}
+				class={cn('shrink-0 rounded-sm object-cover', LEAF_GLYPH[size])}
 			/>
 		{:else}
-			<Glyph aria-hidden="true" class={cn('shrink-0 opacity-70', GLYPH[size])} />
+			<Glyph aria-hidden="true" class={cn('shrink-0 opacity-70', LEAF_GLYPH[size])} />
 		{/if}
 	{/if}
 	<span class={cn('truncate', !named && 'font-mono tabular-nums')}>{label}</span>
@@ -194,7 +161,7 @@
 				type="button"
 				aria-label={removeLabel ?? `Remove ${label}`}
 				onclick={() => onRemove?.(entity)}
-				class="hover:bg-current/15 focus-visible:ring-ring focus-visible:ring-offset-background shrink-0 rounded-sm p-0.5 opacity-70 outline-none transition-colors duration-150 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-2 motion-safe:active:scale-[0.98]"
+				class={REMOVE_CONTROL}
 			>
 				<X aria-hidden="true" class="size-3" />
 			</button>

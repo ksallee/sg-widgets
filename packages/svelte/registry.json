@@ -36,6 +36,7 @@
         "@lucide/svelte"
       ],
       "registryDependencies": [
+        "local:leaf-classes",
         "local:status-glyph"
       ],
       "files": [
@@ -55,6 +56,8 @@
         "@lucide/svelte"
       ],
       "registryDependencies": [
+        "local:entity-glyphs",
+        "local:leaf-classes",
         "local:entity-card",
         "hover-card"
       ],
@@ -75,6 +78,7 @@
         "@lucide/svelte"
       ],
       "registryDependencies": [
+        "local:entity-glyphs",
         "local:state-line",
         "local:status-badge",
         "local:thumbnail",
@@ -114,7 +118,9 @@
         "@sg-widgets/core",
         "@lucide/svelte"
       ],
-      "registryDependencies": [],
+      "registryDependencies": [
+        "local:leaf-classes"
+      ],
       "files": [
         {
           "path": "src/lib/registry/components/user-avatar.svelte",
@@ -225,6 +231,88 @@
       ]
     },
     {
+      "name": "leaf-classes",
+      "type": "registry:component",
+      "title": "Leaf Classes",
+      "description": "The ladder and the remove control every badge, chip and avatar in this registry wears.",
+      "dependencies": [
+        "@sg-widgets/core"
+      ],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "src/lib/registry/components/leaf-classes.ts",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "entity-glyphs",
+      "type": "registry:component",
+      "title": "Entity Glyphs",
+      "description": "A glyph per entity type, with the tag every unlisted type takes.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte"
+      ],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "src/lib/registry/components/entity-glyphs.ts",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "control-classes",
+      "type": "registry:component",
+      "title": "Control Classes",
+      "description": "The height, inset and glyph ladder every non-picker control in this registry wears.",
+      "dependencies": [
+        "@sg-widgets/core"
+      ],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "src/lib/registry/components/control-classes.ts",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "field-error",
+      "type": "registry:component",
+      "title": "Field Error",
+      "description": "The line a field editor shows under its control when a parse fails.",
+      "dependencies": [
+        "@sg-widgets/core"
+      ],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "src/lib/registry/components/field-error.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "editor-calendar",
+      "type": "registry:component",
+      "title": "Editor Calendar",
+      "description": "The calendar day the date editors hand the Calendar primitive.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@internationalized/date"
+      ],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "src/lib/registry/components/editor-calendar.ts",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
       "name": "entity-type-picker",
       "type": "registry:component",
       "title": "Entity Type Picker",
@@ -319,6 +407,8 @@
         "@lucide/svelte"
       ],
       "registryDependencies": [
+        "local:field-error",
+        "local:control-classes",
         "input",
         "textarea"
       ],
@@ -339,6 +429,8 @@
         "@lucide/svelte"
       ],
       "registryDependencies": [
+        "local:field-error",
+        "local:control-classes",
         "button",
         "input"
       ],
@@ -359,6 +451,7 @@
         "@lucide/svelte"
       ],
       "registryDependencies": [
+        "local:field-error",
         "switch"
       ],
       "files": [
@@ -379,6 +472,9 @@
         "@internationalized/date"
       ],
       "registryDependencies": [
+        "local:editor-calendar",
+        "local:field-error",
+        "local:control-classes",
         "input",
         "button",
         "calendar",
@@ -402,6 +498,9 @@
         "@internationalized/date"
       ],
       "registryDependencies": [
+        "local:editor-calendar",
+        "local:field-error",
+        "local:control-classes",
         "input",
         "button",
         "calendar",
@@ -465,6 +564,8 @@
         "@lucide/svelte"
       ],
       "registryDependencies": [
+        "local:field-error",
+        "local:control-classes",
         "input"
       ],
       "files": [
@@ -484,6 +585,8 @@
         "@lucide/svelte"
       ],
       "registryDependencies": [
+        "local:field-error",
+        "local:control-classes",
         "input"
       ],
       "files": [
@@ -572,6 +675,7 @@
         "@lucide/svelte"
       ],
       "registryDependencies": [
+        "local:control-classes",
         "badge",
         "button",
         "dialog",
@@ -594,6 +698,7 @@
         "@lucide/svelte"
       ],
       "registryDependencies": [
+        "local:control-classes",
         "badge",
         "button",
         "checkbox",
@@ -914,6 +1019,7 @@
         "@lucide/svelte"
       ],
       "registryDependencies": [
+        "local:control-classes",
         "local:state-line",
         "local:entity-chip",
         "local:picker-row",
@@ -940,6 +1046,7 @@
         "@lucide/svelte"
       ],
       "registryDependencies": [
+        "local:entity-glyphs",
         "local:state-line",
         "local:picker-row",
         "command",
@@ -962,6 +1069,7 @@
         "@lucide/svelte"
       ],
       "registryDependencies": [
+        "local:control-classes",
         "local:state-line",
         "local:entity-chip",
         "local:picker-row",

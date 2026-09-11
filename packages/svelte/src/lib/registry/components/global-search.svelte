@@ -1,11 +1,10 @@
 <script lang="ts" module>
 	import type { EntityRef, FieldSpec, PickerRow, SearchHit, WireCondition } from '@sg-widgets/core';
 
-	export type GlobalSearchSize = 'sm' | 'md' | 'lg';
+	import { CONTROL_GLYPH, CONTROL_HEIGHT, type ControlSize } from '$lib/registry/components/control-classes.js';
 
-	/** The trigger follows the input ladder of `docs/design-rules.md`. */
-	const BOX: Record<GlobalSearchSize, string> = { sm: 'h-8', md: 'h-9', lg: 'h-10' };
-	const GLYPH: Record<GlobalSearchSize, string> = { sm: 'size-4', md: 'size-4', lg: 'size-5' };
+	export type GlobalSearchSize = ControlSize;
+
 	/** A chip inside a row sits one step down the leaf ladder. */
 	const CHIP: Record<GlobalSearchSize, 'sm' | 'md'> = { sm: 'sm', md: 'sm', lg: 'md' };
 
@@ -440,11 +439,11 @@
 				variant="outline"
 				data-slot="global-search-trigger"
 				data-size={size}
-				class={cn('w-full justify-between', BOX[size])}
+				class={cn('w-full justify-between', CONTROL_HEIGHT[size])}
 				onclick={() => setOpen(true)}
 			>
 				<span class="flex min-w-0 items-center gap-1.5">
-					<Search aria-hidden="true" class={cn('opacity-70', GLYPH[size])} />
+					<Search aria-hidden="true" class={cn('opacity-70', CONTROL_GLYPH[size])} />
 					<span class="truncate">{label}</span>
 				</span>
 				{#if hotkey}<Kbd>{META}K</Kbd>{/if}

@@ -1,9 +1,8 @@
 <script lang="ts" module>
-	export type FilterDialogSize = 'sm' | 'md' | 'lg';
+	import type { ControlSize } from '$lib/registry/components/control-classes.js';
 
-	/** Controls follow the input ladder of `docs/design-rules.md`. */
-	const BOX: Record<FilterDialogSize, string> = { sm: 'h-8 px-2', md: 'h-9 px-3', lg: 'h-10 px-3' };
-	const GLYPH: Record<FilterDialogSize, string> = { sm: 'size-4', md: 'size-4', lg: 'size-5' };
+	export type FilterDialogSize = ControlSize;
+
 	/** The icon-button step beside a control of each height. */
 	const ICON: Record<FilterDialogSize, 'icon-sm' | 'icon' | 'icon-lg'> = {
 		sm: 'icon-sm',
@@ -24,6 +23,7 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
+	import { CONTROL_BOX, CONTROL_GLYPH } from '$lib/registry/components/control-classes.js';
 	import FilterEditor, {
 		type FieldChooserArgs,
 		type ValueEditorArgs
@@ -120,15 +120,15 @@
 			data-size={size}
 			class={cn(
 				'border-border bg-background hover:bg-muted focus-visible:border-ring focus-visible:ring-ring/50 inline-flex shrink-0 items-center gap-1.5 rounded-lg border text-sm font-medium outline-none focus-visible:ring-3 disabled:pointer-events-none disabled:opacity-50',
-				BOX[size]
+				CONTROL_BOX[size]
 			)}
 		>
 			{#if active > 0}
-				<PencilIcon class={GLYPH[size]} />
+				<PencilIcon class={CONTROL_GLYPH[size]} />
 				{label ?? 'Edit filters'}
 				<Badge variant="secondary" data-slot="filter-count">{active}</Badge>
 			{:else}
-				<FilterIcon class={GLYPH[size]} />
+				<FilterIcon class={CONTROL_GLYPH[size]} />
 				{label ?? 'Add filters'}
 			{/if}
 		</Dialog.Trigger>

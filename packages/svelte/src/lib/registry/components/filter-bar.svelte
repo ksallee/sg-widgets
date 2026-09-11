@@ -1,12 +1,15 @@
 <script lang="ts" module>
-	export type FilterBarSize = 'sm' | 'md' | 'lg';
+	import {
+		CONTROL_GLYPH,
+		CONTROL_HEIGHT,
+		CONTROL_PAD,
+		type ControlSize
+	} from '$lib/registry/components/control-classes.js';
 
-	/** Pills follow the input ladder of `docs/design-rules.md`. */
-	const PILL: Record<FilterBarSize, string> = { sm: 'h-8', md: 'h-9', lg: 'h-10' };
-	const PAD: Record<FilterBarSize, string> = { sm: 'px-2', md: 'px-3', lg: 'px-3' };
+	export type FilterBarSize = ControlSize;
+
 	/** The remove control sits inside the pill, so it takes the tighter padding. */
 	const REMOVE_PAD: Record<FilterBarSize, string> = { sm: 'px-1.5', md: 'px-2', lg: 'px-2' };
-	const GLYPH: Record<FilterBarSize, string> = { sm: 'size-4', md: 'size-4', lg: 'size-5' };
 	/** The button step beside a pill of each height. */
 	const BTN: Record<FilterBarSize, 'sm' | 'default' | 'lg'> = { sm: 'sm', md: 'default', lg: 'lg' };
 </script>
@@ -172,12 +175,12 @@
 		aria-label="Remove {label} filter"
 		class={cn(
 			'border-border text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring/50 inline-flex shrink-0 items-center border-l outline-none focus-visible:ring-3 disabled:pointer-events-none disabled:opacity-50',
-			PILL[size],
+			CONTROL_HEIGHT[size],
 			REMOVE_PAD[size]
 		)}
 		onclick={() => commit(withoutPaths(value, [name]))}
 	>
-		<XIcon class={GLYPH[size]} />
+		<XIcon class={CONTROL_GLYPH[size]} />
 	</button>
 {/snippet}
 
@@ -265,7 +268,7 @@
 					aria-label={found ? describeCondition(found, field) : undefined}
 					class={cn(
 						'border-border inline-flex max-w-full min-w-0 items-center overflow-hidden rounded-lg border text-sm',
-						PILL[size],
+						CONTROL_HEIGHT[size],
 						found ? 'bg-background' : 'text-muted-foreground max-w-72 border-dashed'
 					)}
 				>
@@ -274,12 +277,12 @@
 						data-slot="filter-pill-trigger"
 						class={cn(
 							'hover:bg-muted hover:text-foreground focus-visible:ring-ring/50 inline-flex min-w-0 items-center gap-1.5 outline-none focus-visible:ring-3 focus-visible:ring-inset disabled:pointer-events-none disabled:opacity-50',
-							PILL[size],
-							PAD[size]
+							CONTROL_HEIGHT[size],
+							CONTROL_PAD[size]
 						)}
 					>
 						{#if !found || !parts}
-							<PlusIcon class={cn('shrink-0', GLYPH[size])} />
+							<PlusIcon class={cn('shrink-0', CONTROL_GLYPH[size])} />
 							<span class="min-w-0 truncate">{field?.displayName ?? name}</span>
 						{:else}
 							<span data-slot="filter-pill-field" class="shrink-0 font-medium">{parts.field}</span>
@@ -309,12 +312,12 @@
 				aria-label={describeCondition(found, field)}
 				class={cn(
 					'border-border bg-background inline-flex max-w-full min-w-0 items-center overflow-hidden rounded-lg border text-sm',
-					PILL[size]
+					CONTROL_HEIGHT[size]
 				)}
 			>
 				<span
 					data-slot="filter-pill-values"
-					class={cn('inline-flex min-w-0 items-center gap-1.5', PILL[size], PAD[size])}
+					class={cn('inline-flex min-w-0 items-center gap-1.5', CONTROL_HEIGHT[size], CONTROL_PAD[size])}
 					title={parts.value}
 				>
 					<span data-slot="filter-pill-field" class="shrink-0 font-medium">{parts.field}</span>

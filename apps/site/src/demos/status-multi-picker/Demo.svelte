@@ -12,6 +12,10 @@
 	let shared = $state<string[]>([]);
 	let project = $state<string[]>(['Active', 'Bidding']);
 	let unknown = $state<string[]>(['zz_retired', 'rev']);
+	/** One value per summary demo, so every control on the page takes an edit. */
+	let shown = $state<Record<string, string[]>>({});
+	const shownAt = (at: string) => shown[at] ?? FIVE;
+	const showAt = (at: string, next: string[]) => (shown = { ...shown, [at]: next });
 
 	const MODES = ['chips', 'ellipsis', 'count'] as const;
 	const BADGES = ['both', 'icon', 'text'] as const;
@@ -120,7 +124,8 @@
 						{context}
 						entityType="Version"
 						{projectId}
-						value={FIVE}
+						value={shownAt(`${mode}-5`)}
+						onValueChange={(next) => showAt(`${mode}-5`, next)}
 						summary={mode}
 						clearable={false}
 					/>
@@ -132,7 +137,8 @@
 							{context}
 							entityType="Version"
 							{projectId}
-							value={FIVE}
+							value={shownAt(`${mode}-narrow`)}
+							onValueChange={(next) => showAt(`${mode}-narrow`, next)}
 							summary={mode}
 							clearable={false}
 						/>

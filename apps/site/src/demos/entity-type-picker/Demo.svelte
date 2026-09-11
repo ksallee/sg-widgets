@@ -10,6 +10,11 @@
 	const PRODUCTION = ['Project', 'Sequence', 'Shot', 'Asset', 'Version', 'Task'];
 	const SUMMARIES = ['chips', 'ellipsis', 'count'] as const;
 
+	/** One value per summary demo, so every control on the page takes an edit. */
+	let shown = $state<Record<string, string[]>>({});
+	const shownAt = (at: string) => shown[at] ?? PRODUCTION;
+	const showAt = (at: string, next: string[]) => (shown = { ...shown, [at]: next });
+
 	const group = 'flex flex-col gap-3';
 	/** One control per row, at the pane's full width, with its caption above it. */
 	const stack = 'flex flex-col gap-4';
@@ -54,7 +59,8 @@
 					<EntityTypePicker
 						{context}
 						multiple
-						value={PRODUCTION}
+						value={shownAt(summary)}
+						onValueChange={(next) => showAt(summary, (next as string[] | null) ?? [])}
 						{summary}
 						allow={PRODUCTION}
 						clearable={false}
@@ -66,7 +72,8 @@
 						<EntityTypePicker
 							{context}
 							multiple
-							value={PRODUCTION}
+							value={shownAt(`${summary}-narrow`)}
+							onValueChange={(next) => showAt(`${summary}-narrow`, (next as string[] | null) ?? [])}
 							{summary}
 							allow={PRODUCTION}
 							clearable={false}

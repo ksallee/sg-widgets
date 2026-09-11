@@ -16,28 +16,25 @@ import type {
 } from '@sg-widgets/core';
 import {
   cellValue,
-  describePaging,
   displayNameOf,
   groupRowsKeyed,
-  hasFailedPage,
-  loadsOnArrowDown,
   nextEnabledIndex,
   NO_ROWS_LABEL,
-  rowIdOf,
-  rowIsDisabled,
-  rowKey,
-  shouldLoadNext,
   stateLine,
   toColumn,
   toggleId,
 } from '@sg-widgets/core';
-import { useVirtualizer } from '@tanstack/react-virtual';
 import { ChevronRight, CircleAlert, Inbox } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-import { useCollectionSource, useLatest } from '@/registry/sg/components/collection-source';
+import {
+  COLLECTION_REGION,
+  COLLECTION_ROOT,
+  useCollectionBody,
+  useCollectionControl,
+} from '@/registry/sg/components/collection-control';
 import { CollectionFooter } from '@/registry/sg/components/collection-footer';
 import { FieldValue } from '@/registry/sg/components/field-value';
 import { StateLine } from '@/registry/sg/components/state-line';
@@ -213,15 +210,22 @@ export function GroupedList({
   className,
   ...rest
 }: GroupedListProps) {
-  const bound = useCollectionSource({
+  const root = useRef<HTMLDivElement>(null);
+
+  const control = useCollectionControl({
     source,
     paging,
+    getRowId,
+    isRowDisabled,
+    loadingLabel,
     sort: sortProp,
     onSortChange,
     filters: filtersProp,
     onFiltersChange,
+    selection: selectionProp,
+    onSelectionChange,
   });
-  const snapshot = bound.snapshot;
+  const snapshot = control.snapshot;
   useEffect(() => {
     // A group is only whole when the server put its rows together, so the group path
     // leads the sort. Setting it reads the first page again.
@@ -233,42 +237,19 @@ export function GroupedList({
     }
   }, [source, groupBy.path, snapshot.sort]);
 
-  const rows = snapshot.rows;
-  const pager = describePaging(snapshot);
-  const loadingText = stateLine('loading', { loadingLabel });
-  /** A page that failed under rows already loaded, which the bottom line reports. */
-  const pageError = hasFailedPage(snapshot);
+  const rows = control.rows;
+  const view = control.view(rows.length);
+  const loadingText = control.loadingText;
   const rowClass = ROW[density];
   const subColumn = subLabelField ? toColumn(subLabelField) : null;
   const secondaryColumn = secondaryField ? toColumn(secondaryField) : null;
-  const rowId = (row: EntityRow): string => rowIdOf(row, getRowId);
-  const rowDisabled = (row: EntityRow): boolean => rowIsDisabled(row, isRowDisabled);
-  const disabledAt = (index: number): boolean => {
-    const row = rows[index];
-    return row === undefined || rowDisabled(row);
-  };
 
   // A page whose first rows carry the value the last group carries grows that group
   // rather than opening a second one, and the key it is collapsed under stands.
   const groups = useMemo(() => groupRowsKeyed(rows, groupBy.path), [rows, groupBy.path]);
 
-  const [ownSelection, setOwnSelection] = useState<EntityRef[]>([]);
-  const selection = selectionProp ?? ownSelection;
-  /** The selection as keys, so a row asks whether it is in it in constant time. */
-  const chosenKeys = new Set(selection.map(rowKey));
-
   const [ownCollapsed, setOwnCollapsed] = useState<string[]>([]);
   const collapsed = collapsedProp ?? ownCollapsed;
-
-  function toggle(row: EntityRow): void {
-    if (rowDisabled(row)) return;
-    const key = rowKey(row);
-    const next = chosenKeys.has(key)
-      ? selection.filter((ref) => rowKey(ref) !== key)
-      : [...selection, { type: row.type, id: row.id }];
-    setOwnSelection(next);
-    onSelectionChange?.(next);
-  }
 
   function toggleGroup(key: string): void {
     const next = toggleId(collapsed, key);
@@ -276,12 +257,6 @@ export function GroupedList({
     onCollapsedChange?.(next);
   }
 
-  /*
-   * The source's sort and filter, mirrored out as props so a toolbar control drops in.
-   *
-   * Each pair is one effect into the source and one out of it, and the out one reads the
-   * prop off a ref, so a change travels once and the two never write to each other.
-   */
   function labelOf(row: EntityRow): string {
     if (labelField) return String(cellValue(row, labelField) ?? '');
     return displayNameOf(row.attributes, `${row.type} #${row.id}`);
@@ -294,7 +269,7 @@ export function GroupedList({
     return typeof raw === 'string' && raw.length > 0 && raw !== labelOf(row) ? raw : '';
   }
 
-  /* virtual rows --------------------------------------------------------- */
+  /* the lines ------------------------------------------------------------ */
 
   /** Headers and rows as one stream, which is what a virtualised list walks. */
   const flat = useMemo(() => {
@@ -307,55 +282,32 @@ export function GroupedList({
     return out;
   }, [groups, collapsed]);
 
-  const scrollRef = useRef<HTMLDivElement | null>(null);
-  const virtualized = flat.length > virtualizeAfter;
-  const virtualizer = useVirtualizer({
-    count: virtualized ? flat.length : 0,
-    getScrollElement: () => scrollRef.current,
-    estimateSize: () => ROW_HEIGHT[density],
+  /** The one control a row's cursor lands on. */
+  function rowLabel(id: string): HTMLElement | null | undefined {
+    return root.current?.querySelector<HTMLElement>(
+      `li[data-row-key="${CSS.escape(id)}"] [data-slot="grouped-list-row-label"]`,
+    );
+  }
+
+  const body = useCollectionBody(control, {
+    lines: flat.length,
+    measured: flat.length,
+    lineHeight: ROW_HEIGHT[density],
     overscan: 12,
+    virtualizeAfter,
+    lineOfRow: (_index, _row, id) => flat.findIndex((item) => item.row !== null && control.rowId(item.row) === id),
+    // Lines below the window count headers as well, so a header only ever makes the
+    // scroller ask later.
+    lastRowOfLine: (line) => rows.length - 1 - (flat.length - 1 - line),
+    cursorTarget: (_index, _row, id) => rowLabel(id),
   });
 
-  const items = virtualizer.getVirtualItems();
-  const firstItem = items[0];
-  const lastItem = items[items.length - 1];
-  const window_ = !virtualized
+  const at = body.window;
+  const window_ = !at
     ? { before: 0, after: 0, from: 0, slice: flat }
-    : !firstItem || !lastItem
+    : at.to < at.from
       ? { before: 0, after: 0, from: 0, slice: flat.slice(0, 30) }
-      : {
-          before: firstItem.start,
-          after: virtualizer.getTotalSize() - lastItem.end,
-          from: firstItem.index,
-          slice: flat.slice(firstItem.index, lastItem.index + 1),
-        };
-
-  /* the cursor ----------------------------------------------------------- */
-
-  /** The row a cursor is waiting on, until the page it asked for lands. */
-  const [wantedRow, setWantedRow] = useState<number | null>(null);
-  const root = useRef<HTMLDivElement>(null);
-
-  /** Put the cursor on one row, drawing it first where it is outside the window. */
-  function focusRow(index: number): void {
-    const at = Math.max(0, Math.min(index, rows.length - 1));
-    const row = rows[at];
-    if (!row) return;
-    const key = rowId(row);
-    const put = (): void => {
-      const label = root.current?.querySelector<HTMLElement>(
-        `li[data-row-key="${CSS.escape(key)}"] [data-slot="grouped-list-row-label"]`,
-      );
-      if (!label) return;
-      label.focus({ preventScroll: true });
-      label.scrollIntoView({ block: 'nearest' });
-    };
-    if (virtualized) {
-      const line = flat.findIndex((item) => item.row !== null && rowId(item.row) === key);
-      if (line >= 0) virtualizer.scrollToIndex(line);
-      requestAnimationFrame(put);
-    } else put();
-  }
+      : { before: at.before, after: at.after, from: at.from, slice: flat.slice(at.from, at.to + 1) };
 
   /**
    * The arrows walk the rows. On the last loaded row ArrowDown asks for the next page
@@ -363,62 +315,13 @@ export function GroupedList({
    */
   function onRowKeyDown(event: React.KeyboardEvent, row: EntityRow): void {
     if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
-    const key = rowId(row);
-    const from = rows.findIndex((entry) => rowId(entry) === key);
+    const key = control.rowId(row);
+    const from = rows.findIndex((entry) => control.rowId(entry) === key);
     if (from < 0) return;
     event.preventDefault();
-    if (event.key === 'ArrowDown' && loadsOnArrowDown(snapshot, paging, from + 1)) {
-      setWantedRow(from + 1);
-      void source.loadMore();
-      return;
-    }
-    focusRow(nextEnabledIndex(rows.length, from, event.key === 'ArrowDown' ? 1 : -1, disabledAt));
+    if (event.key === 'ArrowDown' && body.askForPage(from + 1)) return;
+    body.focusRow(nextEnabledIndex(rows.length, from, event.key === 'ArrowDown' ? 1 : -1, control.disabledAt));
   }
-
-  const focusLatest = useLatest(focusRow);
-  useEffect(() => {
-    if (wantedRow === null) return;
-    if (snapshot.status === 'error') setWantedRow(null);
-    else if (rows.length > wantedRow) {
-      setWantedRow(null);
-      focusLatest.current(wantedRow);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [wantedRow, rows, snapshot.status]);
-
-  /* scroll paging -------------------------------------------------------- */
-
-  // The virtualiser walks headers and rows as one stream, so the lines below the window
-  // count headers as well and a header only makes the scroller ask later.
-  const below = lastItem ? flat.length - 1 - lastItem.index : -1;
-  useEffect(() => {
-    if (!virtualized || below < 0) return;
-    if (shouldLoadNext(snapshot, { paging, lastVisible: rows.length - 1 - below })) void source.loadMore();
-  }, [source, paging, virtualized, below, snapshot, rows.length]);
-
-  // A list short enough not to be virtualised has no range to read, so the last row
-  // carries a sentinel instead.
-  // The element is held as state, not as a ref: a read that redraws the rows replaces the
-  // sentinel, and the observer has to move to the one that is on the page now.
-  const [sentinel, setSentinel] = useState<HTMLDivElement | null>(null);
-  const showSentinel = paging === 'scroll' && snapshot.hasMore && !pageError && snapshot.status !== 'loadingMore';
-  const snapshotLatest = useLatest(snapshot);
-  useEffect(() => {
-    const scroller = scrollRef.current;
-    const target = sentinel;
-    if (!scroller || !target) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (!entries.some((entry) => entry.isIntersecting)) return;
-        const state = snapshotLatest.current;
-        if (shouldLoadNext(state, { paging, lastVisible: state.rows.length - 1 })) void source.loadMore();
-      },
-      { root: scroller, rootMargin: '200px' },
-    );
-    observer.observe(target);
-    return () => observer.disconnect();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [source, paging, sentinel]);
 
   /** The window as runs of one group, so a group still draws one box around its rows. */
   const blocks: Array<{ group: (typeof groups)[number]; header: boolean; rows: EntityRow[]; from: number }> = [];
@@ -433,33 +336,33 @@ export function GroupedList({
   });
 
   return (
-    <div ref={root} data-slot="grouped-list" className={cn('flex w-full min-w-0 flex-col gap-2', className)} {...rest}>
+    <div ref={root} data-slot="grouped-list" className={cn(COLLECTION_ROOT, className)} {...rest}>
       {header ? (
-        <div data-slot="grouped-list-header" className="flex w-full min-w-0 flex-wrap items-center gap-2">
+        <div data-slot="grouped-list-header" className={COLLECTION_REGION}>
           {header}
         </div>
       ) : null}
 
       <div
-        ref={scrollRef}
+        ref={body.scrollRef}
         data-slot="grouped-list-scroll"
         style={{ maxHeight }}
         className="border-border w-full overflow-auto rounded-lg border"
       >
-        {snapshot.status === 'error' && !pageError ? (
+        {view === 'error' ? (
           <StateLine
             state="error"
             pad="table"
             icon={CircleAlert}
             label={stateLine('error', { errorLabel }, snapshot.error?.message)}
           />
-        ) : snapshot.status === 'loading' ? (
+        ) : view === 'loading' ? (
           <div className="flex flex-col gap-2 p-2" aria-busy="true" aria-label={loadingText}>
             {Array.from({ length: 8 }, (_, index) => (
               <Skeleton key={index} className="h-6 w-full" />
             ))}
           </div>
-        ) : rows.length === 0 ? (
+        ) : view === 'empty' ? (
           <StateLine state="empty" pad="table" icon={Inbox} label={emptyLabel} />
         ) : (
           <>
@@ -516,10 +419,10 @@ export function GroupedList({
                   {block.rows.length > 0 ? (
                     <ul className="flex flex-col">
                       {block.rows.map((row, offset) => {
-                        const key = rowId(row);
+                        const key = control.rowId(row);
                         const index = block.from + offset;
-                        const disabled = rowDisabled(row);
-                        const chosen = chosenKeys.has(rowKey(row));
+                        const disabled = control.rowDisabled(row);
+                        const chosen = control.isSelected(row);
                         const label = labelOf(row);
                         const code = codeOf(row);
                         const sub = subLabel ? subLabel(row) : '';
@@ -547,7 +450,7 @@ export function GroupedList({
                                 aria-label={`Select ${label}`}
                                 checked={chosen}
                                 disabled={disabled}
-                                onCheckedChange={() => toggle(row)}
+                                onCheckedChange={() => control.toggle(row)}
                                 className="shrink-0"
                               />
                             ) : null}
@@ -565,7 +468,7 @@ export function GroupedList({
                               type="button"
                               data-slot="grouped-list-row-label"
                               disabled={disabled}
-                              onClick={() => (selectable ? toggle(row) : onSelect?.(row))}
+                              onClick={() => (selectable ? control.toggle(row) : onSelect?.(row))}
                               onKeyDown={(event) => onRowKeyDown(event, row)}
                               className="focus-visible:ring-ring focus-visible:ring-offset-background flex min-w-0 flex-1 flex-col items-start rounded-sm text-left outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
                             >
@@ -632,7 +535,7 @@ export function GroupedList({
               );
             })}
             {window_.after > 0 ? <div aria-hidden="true" style={{ height: `${window_.after}px` }} /> : null}
-            {pageError ? (
+            {control.bottom === 'error' ? (
               <StateLine
                 state="error"
                 slotName="grouped-list-page-error"
@@ -641,11 +544,11 @@ export function GroupedList({
                 icon={CircleAlert}
                 label={stateLine('error', { errorLabel }, snapshot.error?.message)}
               >
-                <Button variant="outline" size="sm" onClick={() => bound.retry()}>
+                <Button variant="outline" size="sm" onClick={() => control.retry()}>
                   Retry
                 </Button>
               </StateLine>
-            ) : snapshot.status === 'loadingMore' ? (
+            ) : control.bottom === 'loading' ? (
               <div
                 data-slot="grouped-list-loading"
                 className="p-2"
@@ -654,14 +557,14 @@ export function GroupedList({
               >
                 <Skeleton className="h-4 w-full" />
               </div>
-            ) : paging === 'more' && snapshot.hasMore ? (
+            ) : control.bottom === 'more' ? (
               <div data-slot="grouped-list-load-more" className="flex justify-center p-2">
                 <Button variant="outline" size="sm" onClick={() => void source.loadMore()}>
                   Load more
                 </Button>
               </div>
-            ) : showSentinel ? (
-              <div ref={setSentinel} data-slot="grouped-list-sentinel" aria-hidden="true" className="h-4" />
+            ) : control.bottom === 'sentinel' ? (
+              <div ref={body.setSentinel} data-slot="grouped-list-sentinel" aria-hidden="true" className="h-4" />
             ) : null}
           </>
         )}
@@ -669,14 +572,14 @@ export function GroupedList({
 
       <CollectionFooter
         source={source}
-        pager={pager}
+        pager={control.pager}
         pageSizes={pageSizes}
         loading={snapshot.status === 'loading'}
         slotName="grouped-list"
       />
 
       {footer ? (
-        <div data-slot="grouped-list-footer-region" className="flex w-full min-w-0 flex-wrap items-center gap-2">
+        <div data-slot="grouped-list-footer-region" className={COLLECTION_REGION}>
           {footer}
         </div>
       ) : null}

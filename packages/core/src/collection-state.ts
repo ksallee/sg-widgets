@@ -130,3 +130,40 @@ export function toSortSpecs(keys: readonly SortKey[]): SortSpec[] {
 export function toSortKeys(sort: readonly SortSpec[]): SortKey[] {
   return sort.filter((key) => key.path).map((key) => ({ field: key.path, direction: key.descending ? 'desc' : 'asc' }));
 }
+
+/** A selection with `ref` added or removed. */
+export function toggleRef(selection: readonly EntityRef[], ref: EntityRef): EntityRef[] {
+  const key = rowKey(ref);
+  return selection.some((entry) => rowKey(entry) === key)
+    ? selection.filter((entry) => rowKey(entry) !== key)
+    : [...selection, { type: ref.type, id: ref.id }];
+}
+
+/** What a header checkbox reads: every selectable row, or some of them. */
+export interface SelectionState {
+  all: boolean;
+  some: boolean;
+}
+
+/**
+ * The tri-state of a select-all control over the rows that are loaded.
+ *
+ * A disabled row refuses its own box, so it is left out of both readings and a page
+ * of nothing but disabled rows is neither all nor some.
+ */
+export function selectionState(
+  rows: readonly EntityRow[],
+  selection: readonly EntityRef[],
+  isRowDisabled?: RowDisabledFn | null,
+): SelectionState {
+  const chosen = new Set(selection.map(rowKey));
+  const open = rows.filter((row) => !rowIsDisabled(row, isRowDisabled));
+  if (open.length === 0) return { all: false, some: false };
+  const picked = open.filter((row) => chosen.has(rowKey(row))).length;
+  return { all: picked === open.length, some: picked > 0 };
+}
+
+/** Every selectable loaded row, as a selection. */
+export function selectableRefs(rows: readonly EntityRow[], isRowDisabled?: RowDisabledFn | null): EntityRef[] {
+  return rows.filter((row) => !rowIsDisabled(row, isRowDisabled)).map((row) => ({ type: row.type, id: row.id }));
+}

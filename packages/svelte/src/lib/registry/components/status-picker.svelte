@@ -302,7 +302,7 @@
 			>
 				{@render selection()}
 			</Select.Trigger>
-			<Select.Content align="start" class="p-0">
+			<Select.Content align="start" class="p-1">
 				{@render list()}
 			</Select.Content>
 		</Select.Root>

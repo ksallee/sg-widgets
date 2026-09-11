@@ -313,7 +313,7 @@ export function StatusPicker({
             >
               {selection}
             </SelectTrigger>
-            <SelectContent align="start" alignItemWithTrigger={false} className="p-0">
+            <SelectContent align="start" alignItemWithTrigger={false} className="p-1">
               {list}
             </SelectContent>
           </Select>

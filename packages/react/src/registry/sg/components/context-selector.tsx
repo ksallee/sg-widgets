@@ -268,12 +268,12 @@ export function ContextSelector({
           data-size={size}
           data-empty={chips.length === 0 ? '' : undefined}
           className={cn(
-            'border-border bg-background hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring focus-visible:ring-offset-background flex w-full min-w-0 items-center gap-2 rounded-md border text-left outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2',
+            'border-border bg-background hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring focus-visible:ring-offset-background flex w-full min-w-0 items-center gap-1.5 rounded-md border text-left outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2',
             BOX[size],
           )}
           aria-label={`Context: ${label(workContext)}`}
         >
-          <span className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
+          <span className="flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden">
             {chips.length === 0 ? (
               <span className="text-muted-foreground text-sm">No context</span>
             ) : (

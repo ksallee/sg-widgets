@@ -97,4 +97,4 @@ export const PICKER_ARMED = 'ring-ring ring-offset-background ring-2 ring-offset
 
 /** A chosen code in the control. A code is not a row, so it has no thumbnail. */
 export const PICKER_TEXT_CHIP =
-	'bg-muted text-foreground flex h-6 min-w-0 shrink-0 items-center gap-1 rounded-sm px-1.5 text-xs';
+	'bg-muted text-foreground flex h-6 min-w-0 shrink-0 items-center gap-1.5 rounded-sm px-1.5 text-xs';

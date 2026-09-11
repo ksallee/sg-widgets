@@ -526,7 +526,7 @@ export function EntityTree({
                     tabIndex={row.focused && !row.disabled ? 0 : -1}
                     onClick={() => activate(row)}
                     className={cn(
-                      'focus-visible:ring-ring focus-visible:ring-offset-background flex min-w-0 cursor-default gap-1.5 rounded-md outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2',
+                      'focus-visible:ring-ring focus-visible:ring-offset-background flex min-w-0 cursor-default gap-2 rounded-md outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2',
                       ROW[density],
                       TEXT[size],
                       hasSubLabel ? 'items-start' : 'items-center',

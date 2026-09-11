@@ -11,7 +11,7 @@
 	const STACK: Record<EntityCardSize, string> = { sm: 'gap-2', md: 'gap-3', lg: 'gap-4' };
 	const NAME: Record<EntityCardSize, string> = { sm: 'text-sm', md: 'text-sm', lg: 'text-base' };
 	const ROWS: Record<EntityCardSize, string> = { sm: 'gap-y-1.5', md: 'gap-y-2', lg: 'gap-y-2' };
-	const BODY: Record<EntityCardSize, string> = { sm: 'p-2', md: 'p-2', lg: 'p-3' };
+	const BODY: Record<EntityCardSize, string> = { sm: 'p-3', md: 'p-3', lg: 'p-4' };
 </script>
 
 <script lang="ts">

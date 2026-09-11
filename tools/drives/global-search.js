@@ -1,5 +1,5 @@
-// Open the palette with the hotkey (the demo's is Cmd+/, since the docs site's own search holds Cmd+K),
-// type two words, read the groups, pick with the keyboard.
+// Open each palette with its hotkey (Cmd+/ for Svelte, Cmd+. for React, since the docs site's own
+// search holds Cmd+K), type two words, read the groups, pick with the keyboard.
 const notes = [];
 const fail = (m) => { notes.push('FAIL ' + m); return { verdict: 'FAIL ' + m, notes }; };
 
@@ -30,11 +30,14 @@ const dialogs = () => $$('[data-slot="dialog-content"]');
 const list = () => $('[data-slot="dialog-content"] [data-slot="command-list"]');
 const inList = (sel) => (list() ? $$(sel, list()) : []);
 
-/* 1. The hotkey reaches both islands on the page. */
+/* 1. Each island answers its own hotkey: Cmd+/ for Svelte, Cmd+. for React, since the docs
+      site's own search holds Cmd+K and two islands on one key would open together. */
 if (dialogs().length !== 0) return fail('a dialog was open before anything was pressed');
 document.body.dispatchEvent(new KeyboardEvent('keydown', { key: '/', metaKey: true, bubbles: true, cancelable: true }));
-if (!(await until(() => dialogs().length === 2))) return fail(`Cmd+K opened ${dialogs().length} palettes, wanted 2`);
-notes.push('Cmd+K opened both palettes');
+if (!(await until(() => dialogs().length === 1))) return fail(`Cmd+/ opened ${dialogs().length} palettes, wanted 1`);
+document.body.dispatchEvent(new KeyboardEvent('keydown', { key: '.', metaKey: true, bubbles: true, cancelable: true }));
+if (!(await until(() => dialogs().length === 2))) return fail(`Cmd+. opened ${dialogs().length} palettes in all, wanted 2`);
+notes.push('each hotkey opened its own palette');
 for (let i = 0; i < 4 && dialogs().length > 0; i++) {
   press(document.activeElement ?? document.body, 'Escape');
   await wait(150);

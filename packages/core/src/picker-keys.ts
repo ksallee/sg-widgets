@@ -30,21 +30,25 @@ export interface PickerKeyState {
   armed: number | null;
   /** The control takes edits. A disabled or readonly one takes none. */
   editable: boolean;
+  /** Several keys may be chosen at once. */
+  multiple: boolean;
 }
 
 /**
  * What a keydown means to a picker.
  *
- * Backspace in an empty query walks the chips the way token fields do: the first
- * arms the last chip, the second removes it, so a held key cannot empty the field.
- * Escape is the control's business only while the popup shows; a closed picker
- * leaves the key to whatever encloses it.
+ * Backspace in an empty query walks the chips of a multi picker the way token fields
+ * do: the first arms the last chip, the second removes it, so a held key cannot empty
+ * the field. A single picker holds one value and clears it in a press. Escape is the
+ * control's business only while the popup shows; a closed picker leaves the key to
+ * whatever encloses it.
  */
 export function pickerKeyIntent(key: string, state: PickerKeyState): PickerKeyIntent {
   if (key === 'Escape') return state.open ? { kind: 'dismiss' } : { kind: 'nothing' };
   if (key === 'ArrowUp' || key === 'ArrowDown') return state.open ? { kind: 'follow' } : { kind: 'nothing' };
   if (key !== 'Backspace') return { kind: 'nothing' };
   if (!state.editable || state.query !== '' || state.count === 0) return { kind: 'nothing' };
+  if (!state.multiple) return { kind: 'remove', index: state.count - 1 };
   const { armed } = state;
   if (armed !== null && armed >= 0 && armed < state.count) return { kind: 'remove', index: armed };
   return { kind: 'arm', index: state.count - 1 };

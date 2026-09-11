@@ -2,6 +2,12 @@
 	import type { ControlSize } from '$lib/registry/components/control-classes.js';
 
 	export type UrlEditorSize = ControlSize;
+
+	/** The two halves of a web link, as the control holds them. */
+	interface LinkDraft {
+		url: string;
+		name: string;
+	}
 </script>
 
 <script lang="ts">
@@ -10,9 +16,10 @@
 	import type { FieldSchema, UrlValue, UrlWriteValue } from '@sg-widgets/core';
 	import { parseUrlInput } from '@sg-widgets/core';
 	import { Input } from '$lib/components/ui/input/index.js';
-	import { cn, type WithElementRef } from '$lib/utils.js';
+	import type { WithElementRef } from '$lib/utils.js';
 	import { CONTROL_BOX } from '$lib/registry/components/control-classes.js';
-	import FieldError from '$lib/registry/components/field-error.svelte';
+	import ValueEditor from '$lib/registry/components/value-editor.svelte';
+	import { createValueSession } from '$lib/registry/components/value-editor.svelte.js';
 
 	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>, HTMLDivElement> & {
 		/** The stored object. Only the web-link shape is edited here (field_types/url). */
@@ -49,57 +56,26 @@
 		...rest
 	}: Props = $props();
 
-	let urlDraft = $state('');
-	let nameDraft = $state('');
-	let parseError = $state<string | null>(null);
-	let editing = $state(false);
-
-	$effect(() => {
-		if (editing) return;
-		urlDraft = value?.url ?? '';
-		nameDraft = value?.name ?? '';
+	const session = createValueSession<UrlWriteValue | null, LinkDraft>({
+		// The stored object carries more than a link; the two edited halves are all this reads.
+		value: () => value as UrlWriteValue | null,
+		format: (stored) => ({ url: stored?.url ?? '', name: stored?.name ?? '' }),
+		parse: (draft) => parseUrlInput(draft.url, draft.name),
+		onValueChange: (next) => {
+			value = next;
+			onValueChange?.(next);
+		},
+		onErrorChange: (next) => onErrorChange?.(next),
+		error: () => error,
+		invalid: () => invalid,
+		// A committed link is a fresh object, so every commit is a write.
+		same: () => false
 	});
 
-	const message = $derived(error ?? parseError);
-	const isInvalid = $derived(invalid || message !== null);
 	// A local value carries paths and no url at all; uploads and local paths are not
 	// edited here, so the control says so rather than showing an empty box
 	// (field_types/url).
 	const localOnly = $derived(value?.link_type === 'local');
-
-	function commit(): void {
-		const result = parseUrlInput(urlDraft, nameDraft);
-		if ('error' in result) {
-			parseError = result.error;
-			onErrorChange?.(result.error);
-			return;
-		}
-		parseError = null;
-		onErrorChange?.(null);
-		urlDraft = result.value?.url ?? '';
-		nameDraft = result.value?.name ?? '';
-		value = result.value;
-		onValueChange?.(result.value);
-	}
-
-	function reset(): void {
-		urlDraft = value?.url ?? '';
-		nameDraft = value?.name ?? '';
-		parseError = null;
-		onErrorChange?.(null);
-	}
-
-	// Losing focus because the control was removed from the page is not a commit.
-	function onblur(event: FocusEvent): void {
-		if (!(event.currentTarget as HTMLElement | null)?.isConnected) return;
-		editing = false;
-		commit();
-	}
-
-	function onkeydown(event: KeyboardEvent): void {
-		if (event.key === 'Enter') commit();
-		if (event.key === 'Escape') reset();
-	}
 </script>
 
 <!--
@@ -110,42 +86,44 @@
 	name the field reads back the whole url as its name. Uploads mint an Attachment
 	through a separate flow and are out of scope here (field_types/url).
 -->
-<div
-	bind:this={ref}
-	data-slot="url-editor"
-	data-size={size}
-	class={cn('flex w-full min-w-0 flex-col gap-2', className)}
+<ValueEditor
+	bind:ref
+	slotName="url-editor"
+	{size}
+	message={session.message}
+	{errorMessage}
+	class={className}
 	{...rest}
 >
 	<div class="flex w-full min-w-0 flex-col gap-2">
 		<Input
-			bind:value={urlDraft}
+			bind:value={session.draft.url}
 			type="text"
 			data-slot="url-editor-url"
 			disabled={disabled || localOnly}
 			{readonly}
 			{placeholder}
 			class={CONTROL_BOX[size]}
-			aria-invalid={isInvalid}
+			aria-invalid={session.invalid}
 			aria-label={field?.displayName}
 			aria-required={field?.mandatory}
-			onfocus={() => (editing = true)}
-			{onblur}
-			{onkeydown}
+			onfocus={session.onfocus}
+			onblur={session.onblur}
+			onkeydown={session.onkeydown}
 		/>
 		<Input
-			bind:value={nameDraft}
+			bind:value={session.draft.name}
 			type="text"
 			data-slot="url-editor-name"
 			disabled={disabled || localOnly}
 			{readonly}
 			placeholder={namePlaceholder}
 			class={CONTROL_BOX[size]}
-			aria-invalid={isInvalid}
+			aria-invalid={session.invalid}
 			aria-label="Link name"
-			onfocus={() => (editing = true)}
-			{onblur}
-			{onkeydown}
+			onfocus={session.onfocus}
+			onblur={session.onblur}
+			onkeydown={session.onkeydown}
 		/>
 	</div>
 	{#if localOnly}
@@ -153,5 +131,4 @@
 			This value is a local path. Only web links are edited here.
 		</p>
 	{/if}
-	<FieldError {message} {errorMessage} />
-</div>
+</ValueEditor>

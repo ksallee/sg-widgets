@@ -170,7 +170,7 @@ export function SortPicker({
             </Badge>
           ) : null}
         </PopoverTrigger>
-        <PopoverContent className="flex w-96 flex-col gap-3 p-3" align="start">
+        <PopoverContent data-picker="sort" className="flex w-96 flex-col gap-3 p-3" align="start">
           <div className="flex min-w-0 flex-col gap-2" data-slot="sort-keys" ref={sortableRef}>
             {value.map((key, i) => (
               <div

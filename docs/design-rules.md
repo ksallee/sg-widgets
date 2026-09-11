@@ -114,13 +114,33 @@ tell the user".
   docs page in one short table.
 
 A picker is not built from the primitive. `picker-control`, one item per package, is the control
-box with its states, the press rule (a press on the control toggles the list, a press on the caret
-only opens it), the dismissal guard, where the caret lands on open, the keyboard model of core's
+box with its states, the press rule (a press anywhere on the control toggles the list, the caret
+included), the dismissal guard, where the caret lands on open, the keyboard model of core's
 `pickerKeyIntent`, the inline token field against the summary trigger with its chip row, and the
 popup shell: the search row, the list, the empty, loading and error block, and the load-more row.
 A picker supplies its query and rows, its row renderer and its chip, and declares the base as a
 registry dependency. A widget that reaches for the Select or the Popover instead says on its docs
 page why.
+
+The picker contract. Every picker behaves the same, on the base or on a primitive:
+
+1. A press on the control toggles the list, the caret included, and typing opens it.
+2. The caret lands in the control's own input on open, or in the popup's search box on a
+   summary control. Every focus call passes `preventScroll`.
+3. Escape closes the list and clears the query. On a closed picker it does nothing.
+4. Backspace in an empty query arms the last chip and a second removes it on a multi picker,
+   and clears the value on a single one.
+5. `ArrowUp` and `ArrowDown` keep the highlighted row in view, across a load-more page.
+6. A pick keeps a multi picker open and closes a single one.
+7. An outside press closes the list.
+8. The clear control follows `clearable` and is off on a mandatory field.
+9. Readonly keeps full contrast and drops the affordances.
+10. Disabled is inert.
+
+`tools/drives/picker-contract.js` checks every clause that applies to a picker's shape, on
+every picker page, in both frameworks. A picker that keeps a primitive meets the contract all
+the same; its docs page says in one line why it keeps the primitive, and the drive is the proof
+it behaves alike.
 
 ## 8. Checklist for a PR
 

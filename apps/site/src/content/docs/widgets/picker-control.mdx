@@ -15,11 +15,12 @@ pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/picker-control.json
 pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/picker-control.json
 ```
 
-<Demo name="picker-control" title="PickerControl: an inline single picker and a summary multi picker, over one static list" />
+<Demo name="picker-control" title="PickerControl: every shape a picker comes in, over one static list of departments" />
 
-Both demos draw their two controls from a static list of departments at `md`: 136 lines of Svelte,
-130 of React, chip renderer and row renderer included. The chip here is a plain text chip; a picker
-that draws an entity chip or a status badge passes that instead.
+The demo draws every shape a picker comes in from one static list of departments: single and several,
+inline and summary, a measured row that ends in `+n`, a fixed set with no search row, the three
+heights, disabled, read-only and invalid, and a row and a chip of the caller's own. The chip is a
+plain text chip; a picker that draws an entity chip or a status badge passes that instead.
 
 ## The control
 
@@ -30,7 +31,8 @@ height holds across both states, and the trailing inset is reserve for the clear
 chevron.
 
 The states are attributes on the box: `aria-disabled` for a disabled or inert control, `data-readonly`,
-`data-invalid`, and the ring the field takes from whatever inside it has focus. A readonly control
+`data-invalid`, `data-empty` while nothing is chosen, `data-multiple` on a control that takes several
+keys, and the ring the field takes from whatever inside it has focus. A readonly control
 keeps full contrast and loses the clear control and the chevron. The clear control appears once
 something is chosen, and stays through a load.
 
@@ -121,7 +123,35 @@ stays open and the value is untouched.
 | `chip` | `renderChip` | the chip's index, whether Backspace has armed it, whether the row hides it | One chip of the value. An armed chip wears the focus ring; a hidden one keeps its width. |
 | `rows` | `renderItem` | nothing in Svelte, the item key in React | The rows of the list, as items of the primitive. |
 
-A chip carries `data-chip` so the measured row can weigh it.
+A chip carries `data-chip` so the measured row can weigh it, and `data-armed` while Backspace holds
+it, so every picker's chip says the same thing.
+
+## The contract
+
+Every picker behaves the same, whether it is built on this base or keeps a primitive of its own.
+The clauses are design rule 7; `tools/drives/picker-contract.js` checks the ones that apply to a
+picker's shape, on every picker page, in both frameworks.
+
+One picker, walked from the keyboard:
+
+1. A press on the control toggles the list, its own caret included. Typing opens it again.
+2. On open the caret takes focus: the control's input when the control is inline, the popup's
+   search box when it is a summary trigger. A fixed set has no search row and holds one caret out
+   of sight, so the keys still land somewhere. Every focus call passes `preventScroll`.
+3. `ArrowDown` and `ArrowUp` move the highlight and the list scrolls it into view, through a
+   load-more page and back to the top.
+4. `Enter` takes the highlighted row. A multi picker stays open for the next one; a single picker
+   closes.
+5. `Backspace` in an empty query belongs to the value: on a multi picker the first press arms the
+   last chip and the second removes it, and on a single picker it clears the value. Any other key
+   releases an armed chip.
+6. `Escape` closes the list and clears the query. The selection survives it, and on a closed picker
+   the key belongs to whatever encloses the picker.
+7. A press outside the control and the popup closes the list.
+8. `Tab` leaves the control.
+
+A readonly control keeps full contrast and loses the clear control and the chevron. A disabled one
+takes no press and no key.
 
 ## Keyboard
 
@@ -130,7 +160,7 @@ A chip carries `data-chip` so the measured row can weigh it.
 | `ArrowDown` / `ArrowUp` | Moves the highlight, and the list scrolls it into view. |
 | `Enter` | Takes the highlighted row. A multi picker keeps the popup open. |
 | `Escape` | Closes the popup and clears the query. On a closed picker it does nothing. |
-| `Backspace` | In an empty query: the first arms the last chip, the second removes it. |
+| `Backspace` | In an empty query: on a multi picker the first arms the last chip and the second removes it; on a single one it clears the value. |
 | `Tab` | Leaves the control. |
 
 ## Composing a wrapper

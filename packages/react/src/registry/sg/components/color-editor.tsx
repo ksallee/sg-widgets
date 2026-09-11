@@ -1,10 +1,10 @@
-import * as React from 'react';
+import type * as React from 'react';
 import type { FieldSchema } from '@sg-widgets/core';
 import { COLOR_SENTINEL, colorToHex, parseBgColor, parseColorInput, rgbToCss } from '@sg-widgets/core';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { CONTROL_BOX, type ControlSize } from '@/registry/sg/components/control-classes';
-import { FieldError } from '@/registry/sg/components/field-error';
+import { ValueEditor, useValueSession } from '@/registry/sg/components/value-editor';
 
 export type ColorEditorSize = ControlSize;
 
@@ -56,66 +56,35 @@ export function ColorEditor({
   className,
   ...rest
 }: ColorEditorProps) {
-  const [draft, setDraft] = React.useState(value ?? '');
-  const [parseError, setParseError] = React.useState<string | null>(null);
-  const editing = React.useRef(false);
+  const session = useValueSession<string | null, string>({
+    value,
+    format: (stored) => stored ?? '',
+    parse: parseColorInput,
+    onValueChange,
+    onErrorChange,
+    error,
+    invalid,
+  });
 
-  React.useEffect(() => {
-    if (!editing.current) setDraft(value ?? '');
-  }, [value]);
-
-  const message = error ?? parseError;
-  const isInvalid = invalid || message !== null;
   // The swatch follows the draft, so a typed hex shows its colour before it is committed.
-  const preview = parseColorInput(draft);
+  const preview = parseColorInput(session.draft);
   const rgb = 'error' in preview || preview.value === null ? null : parseBgColor(preview.value);
   const sentinel = !('error' in preview) && preview.value === COLOR_SENTINEL;
-
-  const commit = (): void => {
-    const result = parseColorInput(draft);
-    if ('error' in result) {
-      setParseError(result.error);
-      onErrorChange?.(result.error);
-      return;
-    }
-    setParseError(null);
-    onErrorChange?.(null);
-    setDraft(result.value ?? '');
-    if (result.value === value) return;
-    onValueChange?.(result.value);
-  };
 
   // The native picker answers in hex; the store wants the decimal triple.
   const pick = (event: React.ChangeEvent<HTMLInputElement>): void => {
     const result = parseColorInput(event.target.value);
     if ('error' in result) return;
-    setParseError(null);
-    onErrorChange?.(null);
-    setDraft(result.value ?? '');
-    if (result.value !== value) onValueChange?.(result.value);
-  };
-
-  // Losing focus because the control was removed from the page is not a commit.
-  const onBlur = (event: React.FocusEvent<HTMLInputElement>): void => {
-    if (!event.currentTarget.isConnected) return;
-    editing.current = false;
-    commit();
-  };
-
-  const onKeyDown = (event: React.KeyboardEvent): void => {
-    if (event.key === 'Enter') commit();
-    if (event.key === 'Escape') {
-      setDraft(value ?? '');
-      setParseError(null);
-      onErrorChange?.(null);
-    }
+    session.apply(result.value);
   };
 
   return (
-    <div
-      data-slot="color-editor"
-      data-size={size}
-      className={cn('flex w-full min-w-0 flex-col gap-2', className)}
+    <ValueEditor
+      slotName="color-editor"
+      size={size}
+      message={session.message}
+      errorMessage={errorMessage}
+      className={className}
       {...rest}
     >
       <div className="flex w-full min-w-0 items-center gap-2">
@@ -140,21 +109,19 @@ export function ColorEditor({
           />
         </label>
         <Input
-          value={draft}
+          value={session.draft}
           type="text"
           disabled={disabled}
           readOnly={readonly}
           placeholder={placeholder}
           className={cn('font-mono tabular-nums', CONTROL_BOX[size])}
-          aria-invalid={isInvalid}
+          aria-invalid={session.invalid}
           aria-label={field?.displayName}
           aria-required={field?.mandatory}
-          onChange={(event) => setDraft(event.target.value)}
-          onFocus={() => {
-            editing.current = true;
-          }}
-          onBlur={onBlur}
-          onKeyDown={onKeyDown}
+          onChange={(event) => session.setDraft(event.target.value)}
+          onFocus={session.onFocus}
+          onBlur={session.onBlur}
+          onKeyDown={session.onKeyDown}
         />
       </div>
       {hint && sentinel ? (
@@ -162,7 +129,6 @@ export function ColorEditor({
           Takes the colour of the linked pipeline step.
         </p>
       ) : null}
-      <FieldError message={message} errorMessage={errorMessage} />
-    </div>
+    </ValueEditor>
   );
 }

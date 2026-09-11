@@ -9,9 +9,15 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { cn } from '@/lib/utils';
 import { CONTROL_BOX, CONTROL_GLYPH, type ControlSize } from '@/registry/sg/components/control-classes';
 import { fromCalendarDate, toCalendarDate } from '@/registry/sg/components/editor-calendar';
-import { FieldError } from '@/registry/sg/components/field-error';
+import { ValueEditor, useValueSession } from '@/registry/sg/components/value-editor';
 
 export type DateTimeEditorSize = ControlSize;
+
+/** The two halves of an instant, as the popover holds them. */
+interface InstantDraft {
+  date: string;
+  time: string;
+}
 
 export interface DateTimeEditorProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'defaultValue'> {
   /** The stored instant, UTC `YYYY-MM-DDTHH:MM:SSZ` at second resolution (field_types/date_time). */
@@ -75,102 +81,67 @@ export function DateTimeEditor({
   const zoneOptions = timeZone === undefined ? {} : { timeZone };
   const zone = timeZoneName(timeZone);
   const local = fromApiDateTime(value, zoneOptions);
-  const incomingDate = local?.date ?? '';
-  const incomingTime = local === null ? '' : showSeconds ? local.timeWithSeconds : local.time;
   // The button reads the stored instant, so it answers a commit and never a draft.
-  const label = local === null ? null : `${incomingDate} ${incomingTime}`;
+  const label = local === null ? null : `${local.date} ${showSeconds ? local.timeWithSeconds : local.time}`;
 
-  const [dateDraft, setDateDraft] = React.useState(incomingDate);
-  const [timeDraft, setTimeDraft] = React.useState(incomingTime);
-  const [parseError, setParseError] = React.useState<string | null>(null);
   const [uncontrolledOpen, setUncontrolledOpen] = React.useState(false);
   const open = openProp ?? uncontrolledOpen;
-  const setOpen = (next: boolean): void => {
-    setUncontrolledOpen(next);
-    onOpenChange?.(next);
-  };
-  const editing = React.useRef(false);
   const dateInput = React.useRef<HTMLInputElement>(null);
 
-  React.useEffect(() => {
-    if (editing.current) return;
-    setDateDraft(incomingDate);
-    setTimeDraft(incomingTime);
-  }, [incomingDate, incomingTime]);
-
-  const message = error ?? parseError;
-  const isInvalid = invalid || message !== null;
-  const day = toCalendarDate(dateDraft);
-
-  /** Commits both drafts. Answers whether they parsed, so Enter knows to close. */
-  const commitWith = (date: string, time: string): boolean => {
-    const result = toApiDateTime(date, time, zoneOptions);
-    if ('error' in result) {
-      setParseError(result.error);
-      onErrorChange?.(result.error);
-      return false;
-    }
-    setParseError(null);
-    onErrorChange?.(null);
-    const next = fromApiDateTime(result.value, zoneOptions);
-    setDateDraft(next?.date ?? '');
-    setTimeDraft(next === null ? '' : showSeconds ? next.timeWithSeconds : next.time);
-    if (result.value === value) return true;
-    onValueChange?.(result.value);
-    return true;
+  const setOpen = (next: boolean): void => {
+    const wanted = readonly || disabled ? false : next;
+    if (wanted === open) return;
+    setUncontrolledOpen(wanted);
+    onOpenChange?.(wanted);
   };
 
-  const commit = (): boolean => commitWith(dateDraft, timeDraft);
+  const session = useValueSession<string | null, InstantDraft>({
+    value,
+    format: (stored) => {
+      const next = fromApiDateTime(stored, zoneOptions);
+      return {
+        date: next?.date ?? '',
+        time: next === null ? '' : showSeconds ? next.timeWithSeconds : next.time,
+      };
+    },
+    parse: (draft) => toApiDateTime(draft.date, draft.time, zoneOptions),
+    onValueChange,
+    onErrorChange,
+    error,
+    invalid,
+    stopKeys: true,
+    onEnter: (committed) => {
+      if (!committed) return;
+      session.editing.current = false;
+      setOpen(false);
+    },
+    onEscape: () => {
+      session.editing.current = false;
+    },
+  });
+
+  const day = toCalendarDate(session.draft.date);
 
   // A picked day leaves the popover open: the time is the other half of the value.
   const pick = (picked: Date | undefined): void => {
-    const next = fromCalendarDate(picked);
-    setDateDraft(next);
-    commitWith(next, timeDraft);
-  };
-
-  const reset = (): void => {
-    setDateDraft(incomingDate);
-    setTimeDraft(incomingTime);
-    setParseError(null);
-    onErrorChange?.(null);
-  };
-
-  // Losing focus because the control was removed from the page is not a commit.
-  const onBlur = (event: React.FocusEvent<HTMLInputElement>): void => {
-    if (!event.currentTarget.isConnected) return;
-    editing.current = false;
-    commit();
-  };
-
-  const onKeyDown = (event: React.KeyboardEvent): void => {
-    if (event.key !== 'Enter' && event.key !== 'Escape') return;
-    // The popover is portalled out of the widget, but React replays a synthetic event
-    // up its own tree, so a key the editor answers is stopped here in both frameworks.
-    event.stopPropagation();
-    if (event.key === 'Enter') {
-      if (!commit()) return;
-      editing.current = false;
-      setOpen(false);
-      return;
-    }
-    reset();
-    editing.current = false;
+    session.commit({ ...session.draft, date: fromCalendarDate(picked) });
   };
 
   return (
-    <div
-      data-slot="date-time-editor"
-      data-size={size}
-      data-inline={inline ? 'true' : undefined}
-      className={cn('flex w-full min-w-0 flex-col gap-2', inline && 'w-fit', className)}
+    <ValueEditor
+      slotName="date-time-editor"
+      size={size}
+      inline={inline}
+      message={session.message}
+      errorMessage={errorMessage}
+      className={className}
       {...rest}
     >
-      <Popover open={open} onOpenChange={(next) => setOpen(readonly || disabled ? false : next)}>
+      <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger
           data-slot="date-time-editor-trigger"
           aria-label={field?.displayName ?? 'Pick a date and time'}
-          aria-invalid={isInvalid}
+          aria-invalid={session.invalid}
           aria-disabled={disabled ? 'true' : undefined}
           data-readonly={readonly ? 'true' : undefined}
           disabled={disabled}
@@ -188,40 +159,36 @@ export function DateTimeEditor({
         <PopoverContent align="start" className="flex w-auto flex-col gap-3 p-3" initialFocus={dateInput}>
           <Input
             ref={dateInput}
-            value={dateDraft}
+            value={session.draft.date}
             type="text"
             data-slot="date-time-editor-date"
             disabled={disabled}
             readOnly={readonly}
             placeholder={placeholder}
             className={cn('tabular-nums', CONTROL_BOX[size])}
-            aria-invalid={isInvalid}
+            aria-invalid={session.invalid}
             aria-label={field?.displayName ?? 'Date'}
             aria-required={field?.mandatory}
-            onChange={(event) => setDateDraft(event.target.value)}
-            onFocus={() => {
-              editing.current = true;
-            }}
-            onBlur={onBlur}
-            onKeyDown={onKeyDown}
+            onChange={(event) => session.setDraft({ ...session.draft, date: event.target.value })}
+            onFocus={session.onFocus}
+            onBlur={session.onBlur}
+            onKeyDown={session.onKeyDown}
           />
           <Calendar mode="single" className="p-0" selected={day} onSelect={pick} />
           <Input
-            value={timeDraft}
+            value={session.draft.time}
             type="time"
             data-slot="date-time-editor-time"
             step={showSeconds ? 1 : undefined}
             disabled={disabled}
             readOnly={readonly}
             className={cn('tabular-nums', CONTROL_BOX[size])}
-            aria-invalid={isInvalid}
+            aria-invalid={session.invalid}
             aria-label="Time"
-            onChange={(event) => setTimeDraft(event.target.value)}
-            onFocus={() => {
-              editing.current = true;
-            }}
-            onBlur={onBlur}
-            onKeyDown={onKeyDown}
+            onChange={(event) => session.setDraft({ ...session.draft, time: event.target.value })}
+            onFocus={session.onFocus}
+            onBlur={session.onBlur}
+            onKeyDown={session.onKeyDown}
           />
         </PopoverContent>
       </Popover>
@@ -230,7 +197,6 @@ export function DateTimeEditor({
           Local time in {zone}, stored as UTC.
         </p>
       ) : null}
-      <FieldError message={message} errorMessage={errorMessage} />
-    </div>
+    </ValueEditor>
   );
 }

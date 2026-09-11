@@ -9,7 +9,7 @@
  * A parse either yields a value or an error. It never throws and never guesses:
  * an editor that gets an error emits nothing and shows the message.
  */
-import { COLOR_SENTINEL, formatTimecode } from './render.js';
+import { COLOR_SENTINEL, formatDuration, formatTimecode } from './render.js';
 import type { TimecodeOptions } from './render.js';
 
 
@@ -312,6 +312,98 @@ export function unformatNumberInput(raw: string, locale?: string): string {
   if (decimal !== ',') text = text.split(',').join('');
   if (decimal !== '.') text = text.split(decimal).join('.');
   return text;
+}
+
+// --- the numeric family ------------------------------------------------------
+
+/**
+ * What the six numeric data types need beyond the type's own name: the site
+ * preferences a duration and a timecode read in, the decimals a float keeps, the
+ * bounds an integer is held to, and the locale a plain number is written in.
+ */
+export interface NumberShape {
+  /** The site's `hours_per_day` from `GET /preferences`, for the `d` unit (field_types/duration). */
+  hoursPerDay?: number;
+  /** Frames per second, for the `HH:MM:SS:FF` form and the one-frame step (field_types/timecode). */
+  frameRate?: number;
+  /** Decimals kept on a float. The store itself keeps six (field_types/float). */
+  precision?: number;
+  min?: number;
+  max?: number;
+  /** Locale the value is written in. Defaults to the runtime's. */
+  locale?: string;
+}
+
+/** The types whose input is a plain number, and so is written in the locale's marks. */
+const LOCALE_TYPES = ['number', 'float', 'percent', 'currency'];
+
+/** The stored value as the string an input shows. Each type round-trips through its own parse. */
+export function numberDraft(value: unknown, dataType: string, shape: NumberShape = {}): string {
+  if (value === null || value === undefined || value === '') return '';
+  const n = Number(value);
+  switch (dataType) {
+    case 'float':
+    case 'currency':
+      return Number.isFinite(n)
+        ? formatNumberInput(n, {
+            ...(shape.locale === undefined ? {} : { locale: shape.locale }),
+            ...(shape.precision === undefined ? {} : { decimals: shape.precision }),
+          })
+        : String(value);
+    case 'duration':
+      // Hours and minutes, never days: a day rendering rounds and would not survive a
+      // round trip through the parse. The working day is a parse unit only.
+      return formatDuration(n);
+    case 'timecode':
+      return shape.frameRate === undefined ? formatTimecode(n) : formatTimecodeFrames(n, shape.frameRate);
+    default:
+      return Number.isFinite(n)
+        ? formatNumberInput(n, shape.locale === undefined ? {} : { locale: shape.locale })
+        : String(value);
+  }
+}
+
+/** What the numeric parses read: the locale's group and decimal marks are undone first. */
+export function numberDigits(raw: string, dataType: string, shape: NumberShape = {}): string {
+  if (!LOCALE_TYPES.includes(dataType)) return raw;
+  return unformatNumberInput(raw, shape.locale);
+}
+
+/** One numeric input, through the parse its data type calls for. */
+export function parseNumberInput(raw: string, dataType: string, shape: NumberShape = {}): ParseResult<number | null> {
+  const text = numberDigits(raw, dataType, shape);
+  switch (dataType) {
+    case 'float':
+    case 'currency':
+      return parseFloatInput(text, shape.precision === undefined ? {} : { precision: shape.precision });
+    case 'duration':
+      return parseDurationInput(text, shape.hoursPerDay === undefined ? {} : { hoursPerDay: shape.hoursPerDay });
+    case 'timecode':
+      return parseTimecodeInput(text, shape.frameRate === undefined ? {} : { frameRate: shape.frameRate });
+    default: {
+      const bounds: IntegerOptions = {};
+      if (shape.min !== undefined) bounds.min = shape.min;
+      if (shape.max !== undefined) bounds.max = shape.max;
+      return parseInteger(text, bounds);
+    }
+  }
+}
+
+/**
+ * The wire value. A `float` goes as a decimal string because an Integer is
+ * refused on write and JSON cannot spell `2.0`; every other type is a bare
+ * number (field_types/float, number, percent, duration, timecode).
+ */
+export function numberWire(parsed: number | null, dataType: string): number | string | null {
+  if (parsed === null) return null;
+  return dataType === 'float' ? toApiFloat(parsed) : parsed;
+}
+
+/** The stored value as the number the steppers and the spinbutton role work on. */
+export function storedNumber(value: number | string | null | undefined): number | null {
+  if (value === null || value === undefined || value === '') return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
 }
 
 // --- dates -------------------------------------------------------------------

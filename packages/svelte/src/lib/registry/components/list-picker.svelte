@@ -210,6 +210,7 @@
 			bind:open
 			{onOpenChange}
 			bind:query={search}
+			onRemoveAt={clear}
 			onClear={clear}
 			{loading}
 			error={loadError}

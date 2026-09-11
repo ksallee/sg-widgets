@@ -18,7 +18,8 @@
 	import * as Popover from '$lib/components/ui/popover/index.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
 	import { CONTROL_BOX, CONTROL_GLYPH } from '$lib/registry/components/control-classes.js';
-	import FieldError from '$lib/registry/components/field-error.svelte';
+	import ValueEditor from '$lib/registry/components/value-editor.svelte';
+	import { createValueSession } from '$lib/registry/components/value-editor.svelte.js';
 
 	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>, HTMLDivElement> & {
 		/** The stored day, exactly `YYYY-MM-DD`, with no time and no zone (field_types/date). */
@@ -60,40 +61,7 @@
 		...rest
 	}: Props = $props();
 
-	let draft = $state(value ?? '');
-	let parseError = $state<string | null>(null);
-	let editing = $state(false);
 	let dayInput = $state<HTMLInputElement | null>(null);
-
-	$effect(() => {
-		const incoming = value ?? '';
-		if (!editing) draft = incoming;
-	});
-
-	const message = $derived(error ?? parseError);
-	const isInvalid = $derived(invalid || message !== null);
-	const day = $derived(toCalendarDate(value));
-
-	function emit(next: string | null): void {
-		parseError = null;
-		onErrorChange?.(null);
-		draft = next ?? '';
-		if (next === value) return;
-		value = next;
-		onValueChange?.(next);
-	}
-
-	/** Commits the typed day. Answers whether it parsed, so Enter knows to close. */
-	function commit(): boolean {
-		const result = toApiDate(draft);
-		if ('error' in result) {
-			parseError = result.error;
-			onErrorChange?.(result.error);
-			return false;
-		}
-		emit(result.value);
-		return true;
-	}
 
 	function setOpen(next: boolean): void {
 		const wanted = readonly || disabled ? false : next;
@@ -102,34 +70,34 @@
 		onOpenChange?.(open);
 	}
 
-	function pick(picked: DateValue | undefined): void {
-		editing = false;
-		setOpen(false);
-		emit(fromCalendarDate(picked) || null);
-	}
-
-	// Losing focus because the control was removed from the page is not a commit.
-	function onblur(event: FocusEvent): void {
-		if (!(event.currentTarget as HTMLElement | null)?.isConnected) return;
-		editing = false;
-		commit();
-	}
-
-	function onkeydown(event: KeyboardEvent): void {
-		if (event.key !== 'Enter' && event.key !== 'Escape') return;
-		// The popover is portalled out of the widget, but React replays a synthetic event
-		// up its own tree, so a key the editor answers is stopped here in both frameworks.
-		event.stopPropagation();
-		if (event.key === 'Enter') {
-			if (!commit()) return;
-			editing = false;
+	const session = createValueSession<string | null, string>({
+		value: () => value,
+		format: (stored) => stored ?? '',
+		parse: toApiDate,
+		onValueChange: (next) => {
+			value = next;
+			onValueChange?.(next);
+		},
+		onErrorChange: (next) => onErrorChange?.(next),
+		error: () => error,
+		invalid: () => invalid,
+		stopKeys: true,
+		onEnter: (committed) => {
+			if (!committed) return;
+			session.editing = false;
 			setOpen(false);
-			return;
+		},
+		onEscape: () => {
+			session.editing = false;
 		}
-		draft = value ?? '';
-		parseError = null;
-		onErrorChange?.(null);
-		editing = false;
+	});
+
+	const day = $derived(toCalendarDate(value));
+
+	function pick(picked: DateValue | undefined): void {
+		session.editing = false;
+		setOpen(false);
+		session.apply(fromCalendarDate(picked) || null);
 	}
 </script>
 
@@ -143,19 +111,21 @@
 	One anatomy everywhere: a button carrying the stored day, over a popover holding the
 	typed day and the calendar. `inline` only sizes the button to its value.
 -->
-<div
-	bind:this={ref}
-	data-slot="date-editor"
-	data-size={size}
-	data-inline={inline ? 'true' : undefined}
-	class={cn('flex w-full min-w-0 flex-col gap-2', inline && 'w-fit', className)}
+<ValueEditor
+	bind:ref
+	slotName="date-editor"
+	{size}
+	{inline}
+	message={session.message}
+	{errorMessage}
+	class={className}
 	{...rest}
 >
 	<Popover.Root bind:open={() => open, setOpen}>
 		<Popover.Trigger
 			data-slot="date-editor-trigger"
 			aria-label={field?.displayName ?? 'Pick a date'}
-			aria-invalid={isInvalid}
+			aria-invalid={session.invalid}
 			aria-disabled={disabled ? 'true' : undefined}
 			data-readonly={readonly ? 'true' : undefined}
 			{disabled}
@@ -181,22 +151,21 @@
 		>
 			<Input
 				bind:ref={dayInput}
-				bind:value={draft}
+				bind:value={session.draft}
 				type="text"
 				data-slot="date-editor-day"
 				{disabled}
 				{readonly}
 				{placeholder}
 				class={cn('tabular-nums', CONTROL_BOX[size])}
-				aria-invalid={isInvalid}
+				aria-invalid={session.invalid}
 				aria-label={field?.displayName ?? 'Date'}
 				aria-required={field?.mandatory}
-				onfocus={() => (editing = true)}
-				{onblur}
-				{onkeydown}
+				onfocus={session.onfocus}
+				onblur={session.onblur}
+				onkeydown={session.onkeydown}
 			/>
 			<Calendar type="single" class="p-0" value={day} onValueChange={pick} />
 		</Popover.Content>
 	</Popover.Root>
-	<FieldError {message} {errorMessage} />
-</div>
+</ValueEditor>

@@ -47,6 +47,7 @@ const CONTROL = {
   'status-picker': '[data-slot="status-picker-control"]',
   'status-multi-picker': '[data-slot="status-multi-picker-control"]',
   'entity-type-picker': '[data-slot="entity-type-picker-control"]',
+  'entity-type-multi-picker': '[data-slot="entity-type-picker-control"]',
   'field-picker': '[data-slot="field-picker-trigger"]',
   'context-selector': '[data-slot="context-selector-trigger"]',
   'filter-bar': '[data-slot="filter-pill"]',

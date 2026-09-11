@@ -4,8 +4,8 @@
 //
 //   [data-slot$="-control"]            every picker on the base: entity, entity multi, user,
 //                                      user multi, project, project multi, status, status multi,
-//                                      entity type, list, list multi, and the department demos
-//                                      of the picker-control page
+//                                      entity type, entity type multi, list, list multi, and the
+//                                      department demos of the picker-control page
 //   [data-slot="field-picker-trigger"] the field picker, on the Popover and the Command list
 //   [data-slot="sort-trigger"]         the sort picker, on the Popover over an ordered panel
 //
@@ -14,19 +14,20 @@
 //
 // One line per picker page:
 //
-//   pnpm qa --start --path /widgets/entity-picker/       --framework both --drive tools/drives/picker-contract.js
-//   pnpm qa --start --path /widgets/entity-multi-picker/ --framework both --drive tools/drives/picker-contract.js
-//   pnpm qa --start --path /widgets/user-picker/         --framework both --drive tools/drives/picker-contract.js
-//   pnpm qa --start --path /widgets/project-picker/      --framework both --drive tools/drives/picker-contract.js
-//   pnpm qa --start --path /widgets/status-picker/       --framework both --drive tools/drives/picker-contract.js
-//   pnpm qa --start --path /widgets/status-multi-picker/ --framework both --drive tools/drives/picker-contract.js
-//   pnpm qa --start --path /widgets/entity-type-picker/  --framework both --drive tools/drives/picker-contract.js
-//   pnpm qa --start --path /widgets/list-picker/         --framework both --drive tools/drives/picker-contract.js
-//   pnpm qa --start --path /widgets/list-multi-picker/   --framework both --drive tools/drives/picker-contract.js
-//   pnpm qa --start --path /widgets/field-picker/        --framework both --drive tools/drives/picker-contract.js
-//   pnpm qa --start --path /widgets/sort-picker/         --framework both --drive tools/drives/picker-contract.js
-//   pnpm qa --start --path /widgets/column-picker/       --framework both --drive tools/drives/picker-contract.js
-//   pnpm qa --start --path /widgets/picker-control/      --framework both --drive tools/drives/picker-contract.js
+//   pnpm qa --start --path /widgets/entity-picker/            --framework both --drive tools/drives/picker-contract.js
+//   pnpm qa --start --path /widgets/entity-multi-picker/      --framework both --drive tools/drives/picker-contract.js
+//   pnpm qa --start --path /widgets/user-picker/              --framework both --drive tools/drives/picker-contract.js
+//   pnpm qa --start --path /widgets/project-picker/           --framework both --drive tools/drives/picker-contract.js
+//   pnpm qa --start --path /widgets/status-picker/            --framework both --drive tools/drives/picker-contract.js
+//   pnpm qa --start --path /widgets/status-multi-picker/      --framework both --drive tools/drives/picker-contract.js
+//   pnpm qa --start --path /widgets/entity-type-picker/       --framework both --drive tools/drives/picker-contract.js
+//   pnpm qa --start --path /widgets/entity-type-multi-picker/ --framework both --drive tools/drives/picker-contract.js
+//   pnpm qa --start --path /widgets/list-picker/              --framework both --drive tools/drives/picker-contract.js
+//   pnpm qa --start --path /widgets/list-multi-picker/        --framework both --drive tools/drives/picker-contract.js
+//   pnpm qa --start --path /widgets/field-picker/             --framework both --drive tools/drives/picker-contract.js
+//   pnpm qa --start --path /widgets/sort-picker/              --framework both --drive tools/drives/picker-contract.js
+//   pnpm qa --start --path /widgets/column-picker/            --framework both --drive tools/drives/picker-contract.js
+//   pnpm qa --start --path /widgets/picker-control/           --framework both --drive tools/drives/picker-contract.js
 //
 // The user multi and project multi pickers are demos of the user and project pages.
 //

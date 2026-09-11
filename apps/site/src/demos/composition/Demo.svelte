@@ -33,6 +33,7 @@
 	import EntityPicker from '$lib/registry/components/entity-picker.svelte';
 	import EntityTable from '$lib/registry/components/entity-table.svelte';
 	import EntityTree from '$lib/registry/components/entity-tree.svelte';
+	import EntityTypeMultiPicker from '$lib/registry/components/entity-type-multi-picker.svelte';
 	import EntityTypePicker from '$lib/registry/components/entity-type-picker.svelte';
 	import FieldPicker from '$lib/registry/components/field-picker.svelte';
 	import FilterBar from '$lib/registry/components/filter-bar.svelte';
@@ -192,6 +193,10 @@
 		<div class={cell} data-qa-widget="entity-type-picker" data-qa-size={size}>
 			<span class={cellLabel}>Type</span>
 			<EntityTypePicker {context} {size} value="Shot" />
+		</div>
+		<div class={cell} data-qa-widget="entity-type-multi-picker" data-qa-size={size}>
+			<span class={cellLabel}>Types</span>
+			<EntityTypeMultiPicker {context} {size} value={['Shot', 'Asset']} />
 		</div>
 		<div
 			class={cell}

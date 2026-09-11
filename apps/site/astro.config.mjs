@@ -79,7 +79,7 @@ export default defineConfig({
             },
             {
               label: 'Pickers',
-              items: ['entity-picker', 'entity-multi-picker', 'user-picker', 'project-picker', 'status-picker', 'status-multi-picker', 'list-picker', 'list-multi-picker', 'entity-type-picker', 'field-picker', 'column-picker', 'field-editor', 'global-search', 'hierarchical-search', 'context-selector'].map((n) => ({ slug: `widgets/${n}` })),
+              items: ['entity-picker', 'entity-multi-picker', 'user-picker', 'project-picker', 'status-picker', 'status-multi-picker', 'list-picker', 'list-multi-picker', 'entity-type-picker', 'entity-type-multi-picker', 'field-picker', 'column-picker', 'field-editor', 'global-search', 'hierarchical-search', 'context-selector'].map((n) => ({ slug: `widgets/${n}` })),
             },
             {
               label: 'Queries and collections',

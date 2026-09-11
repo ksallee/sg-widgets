@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
-import type { EntityTypeInfo, SgContext } from '@sg-widgets/core';
+import type { EntityTypeInfo, PickerSummary, SgContext } from '@sg-widgets/core';
 import { entityTypeOptions, NO_MATCH_LABEL } from '@sg-widgets/core';
 import { Combobox as ComboboxPrimitive } from '@base-ui/react';
+import { X } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import {
   PICKER_ARMED,
@@ -12,17 +14,17 @@ import {
 } from '@/registry/sg/components/picker-classes';
 import { PickerControl } from '@/registry/sg/components/picker-control';
 
-export type EntityTypePickerSize = 'sm' | 'md' | 'lg';
+export type EntityTypeMultiPickerSize = 'sm' | 'md' | 'lg';
 
-export interface EntityTypePickerProps extends React.HTMLAttributes<HTMLDivElement> {
+export interface EntityTypeMultiPickerProps extends React.HTMLAttributes<HTMLDivElement> {
   /** The root element. */
   ref?: React.Ref<HTMLDivElement>;
 
   /** The widget context. The site's enabled types are read through it, once per page. */
   context: SgContext;
-  /** The chosen type code. */
-  value?: string | null;
-  onValueChange?: (value: string | null) => void;
+  /** The chosen type codes, in the order they were ticked. */
+  value?: string[];
+  onValueChange?: (value: string[]) => void;
   /** Codes on offer. Empty or absent means every enabled type. */
   allow?: string[];
   /** Codes withheld, applied after `allow`. */
@@ -41,7 +43,11 @@ export interface EntityTypePickerProps extends React.HTMLAttributes<HTMLDivEleme
   invalid?: boolean;
   /** Show the code under the display name where the two differ. */
   showCode?: boolean;
-  size?: EntityTypePickerSize;
+  /** What the control shows for the selection. */
+  summary?: PickerSummary;
+  /** Chips drawn before the rest becomes `+n`. `0` draws every chip. */
+  max?: number;
+  size?: EntityTypeMultiPickerSize;
   /** Whether the popup is showing. */
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -49,21 +55,21 @@ export interface EntityTypePickerProps extends React.HTMLAttributes<HTMLDivEleme
 }
 
 /**
- * One entity type, as a searchable combobox.
+ * Several entity types, as a searchable combobox.
  *
  * The list is every type the site has enabled, display name first with the code
- * beneath it when the two differ. `allow` and `deny` narrow the derived options
- * rather than the read, so a caller switching sets sees the list change without a
- * refetch. The vocabulary is one read, so the query input narrows it in the browser.
- * A pick closes the list.
+ * beneath it when the two differ, and a checkbox on every row. `allow` and `deny`
+ * narrow the derived options rather than the read, so a caller switching sets sees
+ * the list change without a refetch. The vocabulary is one read, so the query input
+ * narrows it in the browser. A pick keeps the list open.
  */
-export function EntityTypePicker({
+export function EntityTypeMultiPicker({
   context,
-  value = null,
+  value = [],
   onValueChange,
   allow,
   deny,
-  placeholder = 'Select an entity type',
+  placeholder = 'Select entity types',
   searchPlaceholder = 'Search types…',
   emptyLabel = NO_MATCH_LABEL,
   loadingLabel,
@@ -73,13 +79,15 @@ export function EntityTypePicker({
   disabled = false,
   invalid = false,
   showCode = true,
+  summary = 'ellipsis',
+  max = 0,
   size = 'md',
   open: openProp,
   onOpenChange,
   className,
   ref,
   ...rest
-}: EntityTypePickerProps) {
+}: EntityTypeMultiPickerProps) {
   // The context's own service, so every widget on the page shares one schema read.
   const schema = context.schema;
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
@@ -111,27 +119,45 @@ export function EntityTypePicker({
   }, [schema]);
 
   const options = entityTypeOptions(loaded, { allow, deny, query: search });
-  const selected = value ? [value] : [];
+  const selected = value;
   const byName = new Map(options.types.map((type) => [type.name, type]));
+  /**
+   * A chip control is a token field, with the caret beside the chips. A control
+   * summarising its selection is a trigger, and keeps its search box at the top of
+   * the popup instead.
+   */
+  const inline = summary === 'chips';
+  const interactive = !readonly && !disabled;
 
-  function emit(next: string | null): void {
+  function emit(next: string[]): void {
     onValueChange?.(next);
+  }
+
+  function remove(code: string): void {
+    emit(selected.filter((c) => c !== code));
+  }
+
+  function removeAt(index: number): void {
+    const code = selected[index];
+    if (code !== undefined) remove(code);
   }
 
   function renderItem(code: string): ReactNode {
     const type = byName.get(code);
     if (!type) return null;
-    const chosen = value === code;
+    const chosen = selected.includes(code);
     return (
       <ComboboxPrimitive.Item
         key={code}
         data-slot="entity-type-picker-option"
         data-entity-type={code}
-        data-checked={chosen ? 'true' : undefined}
         data-selected-type={chosen ? 'true' : undefined}
         value={code}
         className={cn(PICKER_ROW, 'items-start')}
       >
+        <span data-slot="entity-type-picker-check" className="flex h-5 shrink-0 items-center">
+          <Checkbox checked={chosen} tabIndex={-1} aria-hidden="true" className="pointer-events-none" />
+        </span>
         <span className="flex min-w-0 flex-1 flex-col">
           <span className="truncate">{type.displayName}</span>
           {showCode && type.name !== type.displayName ? (
@@ -149,15 +175,17 @@ export function EntityTypePicker({
       ref={ref}
       data-slot="entity-type-picker"
       data-size={size}
-      data-multiple="false"
+      data-multiple="true"
+      data-summary={summary}
       className={cn('relative flex w-full min-w-0 items-center', className)}
       {...rest}
     >
       <PickerControl
         slot="entity-type-picker"
-        picker="entity-type"
+        picker="entity-type-multi"
+        multiple
         keys={selected}
-        onSelect={(keys) => emit(keys[0] ?? null)}
+        onSelect={emit}
         labels={selected.map(options.labelOf)}
         items={options.shown.map((type) => type.name)}
         renderItem={renderItem}
@@ -174,11 +202,24 @@ export function EntityTypePicker({
               className={cn(PICKER_TEXT_CHIP, PICKER_TEXT_CHIP_BOX[size], armed && PICKER_ARMED)}
             >
               <span className="truncate">{options.labelOf(code)}</span>
+              {interactive ? (
+                <button
+                  type="button"
+                  data-slot="entity-type-picker-remove"
+                  aria-label={`Remove ${options.labelOf(code)}`}
+                  onClick={() => remove(code)}
+                  className="hover:text-foreground focus-visible:ring-ring focus-visible:ring-offset-background shrink-0 rounded-sm opacity-60 outline-none transition-colors duration-150 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-2 motion-safe:active:scale-[0.98]"
+                >
+                  <X aria-hidden="true" className="size-3" />
+                </button>
+              ) : null}
             </span>
           );
         }}
-        summary="ellipsis"
+        summary={summary}
+        max={max}
         chipRow
+        inline={inline}
         size={size}
         disabled={disabled}
         readonly={readonly}
@@ -190,8 +231,8 @@ export function EntityTypePicker({
         onOpenChange={setOpen}
         query={search}
         onQueryChange={setSearch}
-        onRemoveAt={() => emit(null)}
-        onClear={() => emit(null)}
+        onRemoveAt={removeAt}
+        onClear={() => emit([])}
         loading={loaded === null}
         error={failure}
         empty={options.shown.length === 0}
@@ -199,6 +240,7 @@ export function EntityTypePicker({
         loadingLabel={loadingLabel}
         errorLabel={errorLabel}
         triggerLabel="Show the entity types"
+        overflowLabel={`Show all ${selected.length} types`}
       />
     </div>
   );

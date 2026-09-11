@@ -148,11 +148,10 @@ status cell opens StatusPicker, an entity cell EntityPicker and a multi-entity c
 EntityMultiPicker, each reading through `context`. The cell editor takes `projectId`, `precision`,
 `symbol` and the context's site preferences.
 
-The editor opens where the data type reads best. A checkbox, a status, a list and a single entity
-open in the cell; everything typed into — text, the numbers, a date, a date-time, a colour, a web
-link — and a multi-entity field open in a popover anchored to the cell, carrying the field's name,
-the control and Cancel and Save. `editorPlacement` on the table forces one or the other everywhere,
-and `editorPlacement` on a column spec forces it for that column.
+The editor opens in a popover anchored to the cell, carrying the field's name, the control and
+Cancel and Save, so a cell's width never squeezes it. A checkbox is one press and stays in the cell.
+`editorPlacement` on the table forces one or the other everywhere, and `editorPlacement` on a column
+spec forces it for that column.
 
 | data type | opens |
 |---|---|

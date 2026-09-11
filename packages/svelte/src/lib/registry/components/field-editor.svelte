@@ -23,6 +23,9 @@
 	const ANCHOR = 'flex w-full min-w-0 items-center text-left outline-none';
 
 	/** The popups an editor opens. Each is portalled out of the widget's own tree. */
+	/** The control the popover focused on open keeps its ring for the keyboard only. */
+	const QUIET_FOCUS =
+		'[&_[data-quiet-focus]:focus-visible]:border-input [&_[data-quiet-focus]:focus-visible]:ring-0';
 	const POPUP = '[data-slot="popover-content"],[data-slot="select-content"],[data-picker]';
 
 	/**
@@ -367,16 +370,20 @@
 				align="start"
 				onOpenAutoFocus={(event) => {
 					event.preventDefault();
-					content
-						?.querySelector<HTMLElement>('input, textarea, [data-slot$="-trigger"]')
-						?.focus({ preventScroll: true });
+					const control = content?.querySelector<HTMLElement>('input, textarea, [data-slot$="-trigger"]');
+					control?.focus({ preventScroll: true });
+					// Focus the popover placed itself draws no ring; the first key gives it back.
+					if (control) control.dataset.quietFocus = '';
 				}}
 				onEscapeKeydown={(event) => {
 					event.preventDefault();
 					cancel();
 				}}
-				onkeydown={onEditKeydown}
-				class={cn('gap-3 p-3', width)}
+				onkeydown={(event) => {
+					delete (event.target as HTMLElement | null)?.dataset.quietFocus;
+					onEditKeydown(event);
+				}}
+				class={cn(QUIET_FOCUS, 'gap-3 p-3', width)}
 			>
 				{#if label}
 					<span data-slot="field-editor-label" class="text-muted-foreground text-xs">{label}</span>

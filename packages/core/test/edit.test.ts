@@ -384,11 +384,12 @@ describe('editorKindFor', () => {
     expect(isEditableType('text')).toBe(true);
   });
 
-  it('keeps the one-press editors in the cell and gives the rest a popover', () => {
-    for (const type of ['checkbox', 'status_list', 'entity', 'list']) {
-      expect(editorPlacementFor(type)).toBe('inline');
-    }
+  it('keeps the checkbox in the cell and gives every other editor a popover', () => {
+    expect(editorPlacementFor('checkbox')).toBe('inline');
     for (const type of [
+      'status_list',
+      'entity',
+      'list',
       'text',
       'number',
       'float',

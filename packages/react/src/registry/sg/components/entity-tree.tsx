@@ -405,7 +405,9 @@ export function EntityTree({
     const root = rootRef.current;
     if (!cursor || !root || !document.activeElement?.closest('[data-path]')) return;
     if (!root.contains(document.activeElement)) return;
-    root.querySelector<HTMLElement>(`[data-path="${CSS.escape(cursor)}"]`)?.focus({ preventScroll: true });
+    const row = root.querySelector<HTMLElement>(`[data-path="${CSS.escape(cursor)}"]`);
+    row?.focus({ preventScroll: true });
+    row?.scrollIntoView({ block: 'nearest' });
   }, [cursor]);
 
   useEffect(moveFocus, [moveFocus, snap.rows]);

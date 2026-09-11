@@ -55,6 +55,7 @@
 		stateLine
 	} from '@sg-widgets/core';
 	import type { Snippet } from 'svelte';
+	import { tick } from 'svelte';
 	import Search from '@lucide/svelte/icons/search';
 	import TriangleAlert from '@lucide/svelte/icons/triangle-alert';
 	import * as Command from '$lib/components/ui/command/index.js';
@@ -198,6 +199,7 @@
 	 * frameworks answer Down and Enter the same way.
 	 */
 	let cursor = $state('');
+	let listEl = $state<HTMLElement | null>(null);
 	const firstRow = $derived(
 		showRecents
 			? recents[0]
@@ -227,6 +229,18 @@
 			if (id !== requestId) return;
 			hits = nextPage === 1 ? found : [...hits, ...found];
 			page = nextPage;
+			// A page lands under the row that asked for it: the highlight moves to its first
+			// row, so the list stays where the reader was instead of returning to the top.
+			if (nextPage > 1 && found[0]) {
+				// The rows must be in the list, and registered with the primitive, before it
+				// takes one of them as its value; registration runs after the flush.
+				await tick();
+				await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+				cursor = `${found[0].ref.type}:${found[0].ref.id}`;
+				// The primitive scrolls for the keys, not for a value written to it.
+				await tick();
+				listEl?.querySelector('[data-selected]')?.scrollIntoView({ block: 'nearest' });
+			}
 			// The answer carries no `links`, so a full page is the only sign of another one (probe 006).
 			hasMore = rows.length === PAGE_SIZE;
 		} catch (error) {
@@ -327,7 +341,7 @@
 
 {#snippet body()}
 	<Command.Input value={query} {placeholder} oninput={(e) => setQuery(e.currentTarget.value)} />
-	<Command.List data-sg-search-list>
+	<Command.List bind:ref={listEl} data-sg-search-list>
 		{#if failure !== null}
 			<StateLine
 				state="error"

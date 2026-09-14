@@ -1,0 +1,155 @@
+---
+/**
+ * A QA page, not a docs page: the root theme's tokens, editable in oklch, beside real
+ * widgets that read them, for tuning src/styles/global.css. It sits outside Starlight and
+ * outside the sidebar, and nothing links to it.
+ */
+import '../../styles/global.css';
+import Demo from '../../components/Demo.astro';
+import Specimen from './_theme-lab/Specimen.tsx';
+import ThemeLab from './_theme-lab/ThemeLab.tsx';
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>Theme lab</title>
+    <script is:inline>
+      // The lab keeps its own copy of two toolbar picks, so docs pages keep theirs. Framework
+      // opens on Svelte, since half a screen is too narrow for both. Radius opens on "theme",
+      // since a fixed pick pins every stage and the Radius slider could not reach the demos.
+      // The toolbar still switches both on this page.
+      (() => {
+        const OWN = {
+          'sg-demo:framework': ['theme-lab:framework', 'svelte'],
+          'sg-demo:radius': ['theme-lab:radius', 'default'],
+        };
+        let store;
+        try {
+          store = window.localStorage;
+        } catch {
+          return;
+        }
+        const { getItem, setItem, removeItem } = Storage.prototype;
+        const own = (target, key) => (target === store && Object.hasOwn(OWN, key) ? OWN[key] : null);
+        Storage.prototype.getItem = function (key) {
+          const pick = own(this, key);
+          return pick ? (getItem.call(this, pick[0]) ?? pick[1]) : getItem.call(this, key);
+        };
+        Storage.prototype.setItem = function (key, value) {
+          const pick = own(this, key);
+          return setItem.call(this, pick ? pick[0] : key, value);
+        };
+        Storage.prototype.removeItem = function (key) {
+          const pick = own(this, key);
+          return removeItem.call(this, pick ? pick[0] : key);
+        };
+      })();
+    </script>
+  </head>
+  <body class="sg-demo bg-background text-foreground">
+    <div class="tl-page">
+      <aside class="tl-editor">
+        <ThemeLab client:only="react" />
+      </aside>
+      <main class="tl-preview">
+        <section>
+          <h2>Primitives</h2>
+          <Specimen client:only="react" />
+        </section>
+        <section>
+          <h2>Pickers</h2>
+          <Demo name="picker-padding" title="Every picker, empty beside filled, at every size" />
+        </section>
+        <section>
+          <h2>Table</h2>
+          <Demo name="entity-table" title="Entity table" />
+        </section>
+        <section>
+          <h2>Status badges</h2>
+          <Demo name="status-badge" title="Status badges" />
+        </section>
+      </main>
+    </div>
+
+    <style is:global>
+      /* The lab's own chrome, in plain CSS on the tokens. */
+      .tl-page { display: grid; grid-template-columns: minmax(0, 40rem) minmax(0, 1fr); align-items: start; }
+      .tl-editor { position: sticky; top: 0; max-height: 100vh; overflow-y: auto; border-right: 1px solid var(--border); background: var(--background); }
+      .tl-preview { display: flex; flex-direction: column; gap: 2rem; min-width: 0; padding: 1.5rem; }
+      .tl-preview > section { display: flex; flex-direction: column; gap: 0.75rem; min-width: 0; }
+      .tl-preview h2 { font-size: 1rem; font-weight: 600; }
+      @media (max-width: 1100px) {
+        .tl-page { grid-template-columns: minmax(0, 1fr); }
+        .tl-editor { position: static; max-height: none; border-right: 0; border-bottom: 1px solid var(--border); }
+      }
+
+      .tl-lab { display: flex; flex-direction: column; font-size: 0.875rem; }
+      .tl-bar { position: sticky; top: 0; z-index: 2; display: flex; flex-direction: column; gap: 0.75rem; padding: 1rem; border-bottom: 1px solid var(--border); background: var(--background); }
+      .tl-title { display: flex; flex-direction: column; gap: 0.25rem; }
+      .tl-title span, .tl-hint, .tl-count, .tl-label { color: var(--muted-foreground); font-size: 0.75rem; }
+      .tl-line { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem; }
+      .tl-seg, .tl-actions { display: flex; gap: 0.375rem; }
+      .tl-check, .tl-inline { display: inline-flex; align-items: center; gap: 0.5rem; }
+      .tl-control { display: grid; grid-template-columns: 7rem minmax(0, 1fr) 5rem; align-items: center; gap: 0.75rem; }
+
+      .tl-range { -webkit-appearance: none; appearance: none; width: 100%; height: 0.5rem; border-radius: 999px; background: var(--muted); outline: none; }
+      .tl-range::-webkit-slider-thumb { -webkit-appearance: none; width: 1rem; height: 1rem; border: 2px solid var(--foreground); border-radius: 50%; background: var(--background); cursor: pointer; }
+      .tl-range::-moz-range-thumb { width: 1rem; height: 1rem; border: 2px solid var(--foreground); border-radius: 50%; background: var(--background); cursor: pointer; }
+      .tl-range:focus-visible, .tl-in:focus-visible, .tl-revert:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--background), 0 0 0 4px var(--ring); }
+
+      .tl-in { width: 100%; min-width: 0; height: 1.75rem; padding: 0 0.375rem; border: 1px solid var(--input); border-radius: calc(var(--radius) * 0.8); background: var(--background); color: var(--foreground); font: inherit; font-size: 0.75rem; font-variant-numeric: tabular-nums; }
+      .tl-in:disabled { opacity: 0.5; cursor: not-allowed; }
+      .tl-in[data-bad] { border-color: var(--destructive); }
+      .tl-mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+      .tl-group { display: flex; flex-direction: column; gap: 0.25rem; padding: 1rem; }
+      .tl-h { color: var(--muted-foreground); font-size: 0.75rem; font-weight: 500; letter-spacing: 0.04em; text-transform: uppercase; }
+      .tl-head, .tl-row { display: grid; grid-template-columns: 1.75rem minmax(0, 1fr) 1.75rem 3.75rem 3.75rem 3.75rem 3.75rem 1.75rem; align-items: center; column-gap: 0.5rem; }
+      .tl-head { padding-top: 0.5rem; color: var(--muted-foreground); font-size: 0.6875rem; }
+      .tl-row { row-gap: 0.375rem; padding: 0.5rem 0; border-top: 1px solid var(--border); }
+      .tl-row > .tl-in.tl-mono { grid-column: 2 / -1; }
+      .tl-row > .tl-slider { grid-column: 2 / -1; margin-block: 0.25rem; }
+      .tl-row input[type='checkbox'] { justify-self: center; }
+      .tl-name { display: flex; min-width: 0; flex-direction: column; gap: 0.125rem; }
+      .tl-name code { overflow: hidden; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.75rem; text-overflow: ellipsis; white-space: nowrap; }
+      .tl-row[data-changed] .tl-name code::after { content: ' \2022'; color: var(--primary); }
+      .tl-meta { display: flex; flex-wrap: wrap; gap: 0.5rem; color: var(--muted-foreground); font-size: 0.6875rem; font-variant-numeric: tabular-nums; }
+      .tl-meta [data-fail] { color: var(--destructive); }
+      .tl-swatch { display: block; width: 1.75rem; height: 1.75rem; overflow: hidden; border: 1px solid var(--border); border-radius: calc(var(--radius) * 0.8); background: repeating-conic-gradient(#d4d4d4 0 25%, #fff 0 50%) 0 0 / 0.5rem 0.5rem; }
+      .tl-swatch > span { display: block; width: 100%; height: 100%; }
+      .tl-revert { height: 1.75rem; border-radius: calc(var(--radius) * 0.8); color: var(--muted-foreground); }
+      .tl-revert:not(:disabled):hover { background: var(--accent); color: var(--accent-foreground); }
+      .tl-revert:disabled { opacity: 0.3; }
+      .tl-out { width: 100%; min-height: 20rem; padding: 0.75rem; overflow: auto; border: 1px solid var(--input); border-radius: var(--radius); background: var(--muted); color: var(--foreground); font-size: 0.75rem; line-height: 1.5; white-space: pre; resize: vertical; }
+
+      .tl-spec { display: flex; flex-direction: column; gap: 1.5rem; }
+      .tl-panel { display: flex; flex-direction: column; gap: 0.75rem; }
+      .tl-wrap { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+      .tl-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr)); gap: 0.75rem; }
+      .tl-tile { display: flex; flex-direction: column; align-items: flex-start; gap: 0.375rem; padding: 0.875rem; border: 1px solid var(--border); border-radius: var(--radius); font-size: 0.875rem; }
+      .tl-tile span { font-size: 0.75rem; }
+      .tl-chip { display: inline-flex; align-items: center; height: 1.5rem; padding: 0 0.5rem; border: 1px solid var(--border); border-radius: calc(var(--radius) * 0.8); }
+      .tl-form { display: grid; grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr)); align-items: end; gap: 1rem; }
+      .tl-field { display: flex; flex-direction: column; gap: 0.5rem; }
+      .tl-span { grid-column: 1 / -1; }
+      .tl-list { display: flex; max-width: 22rem; flex-direction: column; gap: 0.25rem; padding: 0.5rem; border: 1px solid var(--border); border-radius: var(--radius); }
+      .tl-item { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; padding: 0.375rem 0.5rem; border-radius: calc(var(--radius) * 0.6); font-size: 0.875rem; }
+      .tl-focus { box-shadow: 0 0 0 2px var(--background), 0 0 0 4px var(--ring); }
+      .tl-role { display: inline-flex; align-items: center; height: 1.75rem; padding: 0 0.625rem; border-radius: calc(var(--radius) * 0.8); font-size: 0.75rem; font-weight: 500; }
+      .tl-soft { border: 1px solid; background: transparent; }
+      .tl-bars { display: flex; max-width: 22rem; height: 6rem; align-items: flex-end; gap: 0.5rem; padding: 0.5rem; border: 1px solid var(--border); border-radius: var(--radius); }
+      .tl-sizes { display: flex; flex-direction: column; gap: 0.75rem; }
+      .tl-size-row { display: grid; grid-template-columns: 7rem minmax(0, 1fr); align-items: center; gap: 0.75rem; }
+      .tl-size-label { color: var(--muted-foreground); font-size: 0.75rem; }
+      .tl-trio { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: center; gap: 0.75rem; }
+      .tl-bars span { flex: 1; border-radius: calc(var(--radius) * 0.6) calc(var(--radius) * 0.6) 0 0; }
+
+      /* Outlines: red on every icon and image, blue dashed on every chip and badge, so a chip's padding reads as the gap between the two. */
+      body.tl-outlines :is(svg, img) { outline: 1px solid rgb(255 0 0); outline-offset: 0; }
+      body.tl-outlines :is([data-slot='entity-chip'], [data-slot='status-badge'], [data-slot='badge'], [data-chip]) { outline: 1px dashed rgb(0 110 255); outline-offset: 0; }
+    </style>
+  </body>
+</html>

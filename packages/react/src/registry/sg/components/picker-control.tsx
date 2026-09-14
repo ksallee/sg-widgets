@@ -393,8 +393,10 @@ export function PickerControl({
     }
     onSelect(next);
     // A press on a row leaves the caret in the list; the next key belongs to the
-    // control, so the input takes it back.
-    inputRef.current?.focus({ preventScroll: true });
+    // control, so the input takes it back and the chip row is released. A pick made
+    // with a chip armed would otherwise keep that chip, and the next Backspace would
+    // take it rather than the one just added.
+    toInput();
   }
 
   function closing(next: boolean, details: { reason?: string; event?: unknown; cancel: () => void }): void {

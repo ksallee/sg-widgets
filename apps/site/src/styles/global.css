@@ -239,8 +239,8 @@
   --secondary: oklch(1 0.0283 241.9 / 0.04); /* surface.level200 #3b4453 */
   --secondary-foreground: oklch(0.9702 0.0137 241.9);
   --muted: oklch(1 0.0211 241.9 / 0.02); /* surface.level300 #222933 */
-  --muted-foreground: oklch(0.7812 0.0048 241.9); /* text.dim over surface.level300 */
-  --accent: oklch(1 0.0327 241.9 / 0.06); /* surface.level100 #454f61 */
+  --muted-foreground: oklch(0.6062 0.0048 241.9); /* text.dim over surface.level300 */
+  --accent: oklch(1 0.0327 241.9 / 0.04); /* surface.level100 #454f61 */
   --accent-foreground: oklch(0.9702 0.0137 241.9);
   --destructive: oklch(0.6507 0.1858 23.8376); /* status.error #eb5555 */
   --destructive-foreground: oklch(0.2369 0.0137 253.0936);

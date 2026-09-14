@@ -234,7 +234,7 @@
   --card-foreground: var(--foreground);
   --popover: oklch(0.244 0.0229 241.9); /* surface.level250 */
   --popover-foreground: var(--foreground);
-  --primary: oklch(0.624 0.4 241.9); /* reference.accent #38abdf */
+  --primary: oklch(0.564 0.4 241.9); /* reference.accent #38abdf */
   --primary-foreground: oklch(1 0.0137 241.9); /* surface.level350 */
   --secondary: oklch(1 0.0283 241.9 / 0.04); /* surface.level200 #3b4453 */
   --secondary-foreground: oklch(0.9702 0.0137 241.9);

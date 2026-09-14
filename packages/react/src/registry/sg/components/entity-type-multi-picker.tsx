@@ -11,7 +11,9 @@ import {
   PICKER_ROW,
   PICKER_TEXT_CHIP,
   PICKER_TEXT_CHIP_BOX,
+  PICKER_TEXT_CHIP_CROSS,
 } from '@/registry/sg/components/picker-classes';
+import { REMOVE_CONTROL } from '@/registry/sg/components/leaf-classes';
 import { PickerControl } from '@/registry/sg/components/picker-control';
 
 export type EntityTypeMultiPickerSize = 'sm' | 'md' | 'lg';
@@ -208,9 +210,9 @@ export function EntityTypeMultiPicker({
                   data-slot="entity-type-picker-remove"
                   aria-label={`Remove ${options.labelOf(code)}`}
                   onClick={() => remove(code)}
-                  className="hover:text-foreground focus-visible:ring-ring focus-visible:ring-offset-background shrink-0 rounded-sm opacity-60 outline-none transition-colors duration-150 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-2 motion-safe:active:scale-[0.98]"
+                  className={REMOVE_CONTROL}
                 >
-                  <X aria-hidden="true" className="size-3" />
+                  <X aria-hidden="true" className={PICKER_TEXT_CHIP_CROSS[size]} />
                 </button>
               ) : null}
             </span>

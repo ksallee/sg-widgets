@@ -248,7 +248,6 @@ export function EntityPicker({
     : null;
   const options = withSelectedPinned(state.rows, value ? [value] : [], search.known);
   const polymorphic = entityTypes.length > 1;
-  const hasSubLabel = Boolean(subLabelField || subLabel);
   const selectedKey = value ? entityKey(value) : '';
 
   /** The caller's own sub-label. Absent, the row reads `subLabelField` itself. */
@@ -287,10 +286,11 @@ export function EntityPicker({
         data-entity-id={row.id}
         data-checked={chosen ? 'true' : undefined}
         value={key}
-        className={cn(PICKER_ROW, hasSubLabel && 'items-start')}
+        className={PICKER_ROW}
       >
         <PickerRow
           indicator={chosen ? <Check aria-hidden="true" className="size-4" /> : null}
+          indicatorAt="end"
           row={row}
           query={state.query}
           thumbnail={thumbnail}

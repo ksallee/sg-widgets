@@ -268,7 +268,6 @@ export function EntityMultiPicker({
   // whatever the query, and even when a search returns nothing at all.
   const options = withSelectedPinned(state.rows, value, search.known);
   const polymorphic = entityTypes.length > 1;
-  const hasSubLabel = Boolean(subLabelField || subLabel);
   const interactive = !disabled && !readonly;
 
   /** The caller's own sub-label. Absent, the row reads `subLabelField` itself. */
@@ -330,7 +329,7 @@ export function EntityMultiPicker({
         data-entity-id={row.id}
         data-selected-entity={chosen ? 'true' : undefined}
         value={key}
-        className={cn(PICKER_ROW, hasSubLabel && 'items-start')}
+        className={PICKER_ROW}
       >
         <PickerRow
           indicatorSlot="entity-picker-check"

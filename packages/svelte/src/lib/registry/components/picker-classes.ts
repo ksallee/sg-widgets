@@ -6,6 +6,8 @@
  * `docs/design-rules.md`; nothing here is a colour of its own.
  */
 
+import { CHIP_BOX, CHIP_CROSS, CHIP_PAD, CHIP_SPACING, type ChipSize } from '$lib/registry/components/leaf-classes.js';
+
 /** The control ladder: the three heights of the design rules. */
 export type PickerSize = 'sm' | 'md' | 'lg';
 
@@ -53,7 +55,7 @@ export const PICKER_TRAILING: Record<PickerSize, string> = {
 export const PICKER_GLYPH: Record<PickerSize, string> = { sm: 'size-4', md: 'size-4', lg: 'size-5' };
 
 /** A chip or a badge sits inside the control, so it takes the step below it. */
-export const PICKER_CHIP: Record<PickerSize, 'sm' | 'md'> = { sm: 'sm', md: 'sm', lg: 'md' };
+export const PICKER_CHIP: Record<PickerSize, ChipSize> = { sm: 'xs', md: 'sm', lg: 'md' };
 
 /** The bordered field the chips and the query input sit in. */
 export const PICKER_CONTROL =
@@ -113,13 +115,17 @@ export const LIST_STATUS = 'sr-only';
 
 /**
  * The row's indicator column, drawn whether or not the row is ticked, so a label sits
- * at one x down the whole list.
+ * at one x down the whole list. Beside a picture it takes the picture's height, so a
+ * checkbox centres on it.
  */
 export const PICKER_ROW_INDICATOR = 'flex h-5 w-4 shrink-0 items-center justify-center';
 
-/** One row. Highlight and selection share one colour, per `docs/design-rules.md`. */
+/**
+ * One row. Highlight and selection share one colour, per `docs/design-rules.md`. A row with a
+ * sub-label stays centred and takes `py-1`, so its two lines stand as tall as a picture.
+ */
 export const PICKER_ROW =
-	'data-highlighted:bg-accent data-highlighted:text-accent-foreground relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0';
+	'data-highlighted:bg-accent data-highlighted:text-accent-foreground relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 has-[[data-slot=picker-row-sub-label]]:py-1 text-sm outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0';
 
 /**
  * The clear control and the chevron, shared by every picker in this registry.
@@ -138,13 +144,22 @@ export const PICKER_ICON_BUTTON =
 export const PICKER_ARMED =
   "relative outline-none after:pointer-events-none after:absolute after:inset-0 after:rounded-[inherit] after:ring-2 after:ring-ring after:ring-inset after:content-['']";
 
-/** A chosen code in the control. A code is not a row, so it has no thumbnail. */
+/**
+ * A chosen code in the control. It wears the entity chip's surface, border and text, so
+ * the two read as one chip; a code is not a row, so it has no thumbnail.
+ */
 export const PICKER_TEXT_CHIP =
-	'bg-muted text-foreground flex min-w-0 shrink-0 items-center gap-1.5 rounded-md px-1.5';
+	'bg-secondary text-secondary-foreground flex min-w-0 shrink-0 items-center rounded-md border';
 
-/** A code wears the leaf ladder an entity chip wears, so a control insets either alike. */
+/**
+ * A code wears the chip step and the padding an entity chip wears in the same control, and a
+ * cross takes the same trailing edge. The `has-` classes are spelled out for Tailwind.
+ */
 export const PICKER_TEXT_CHIP_BOX: Record<PickerSize, string> = {
-	sm: 'h-6 text-xs',
-	md: 'h-6 text-xs',
-	lg: 'h-8 text-sm'
+	sm: `${CHIP_BOX.xs} ${CHIP_PAD.xs.text} ${CHIP_SPACING.xs.cross} has-[>button]:pr-px`,
+	md: `${CHIP_BOX.sm} ${CHIP_PAD.sm.text} ${CHIP_SPACING.sm.cross} has-[>button]:pr-0.5`,
+	lg: `${CHIP_BOX.md} ${CHIP_PAD.md.text} ${CHIP_SPACING.md.cross} has-[>button]:pr-[5px]`
 };
+
+/** The cross inside a code's chip, on the chip step the control gives it. */
+export const PICKER_TEXT_CHIP_CROSS: Record<PickerSize, string> = { sm: CHIP_CROSS.xs, md: CHIP_CROSS.sm, lg: CHIP_CROSS.md };

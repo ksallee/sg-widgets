@@ -1,11 +1,12 @@
 <script lang="ts" module>
-	import type { LeafSize } from '$lib/registry/components/leaf-classes.js';
+	import type { ChipSize } from '$lib/registry/components/leaf-classes.js';
 
-	export type EntityChipSize = LeafSize;
+	export type EntityChipSize = ChipSize;
 	export type EntityChipVariant = 'chip' | 'link' | 'text';
 
 	/** A link or a bare label has no box, so only the type scale applies. */
 	const TEXT: Record<EntityChipSize, string> = {
+		xs: 'text-xs',
 		sm: 'text-xs',
 		md: 'text-sm',
 		lg: 'text-sm'
@@ -20,7 +21,7 @@
 	import * as HoverCard from '$lib/components/ui/hover-card/index.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
 	import { entityGlyph } from '$lib/registry/components/entity-glyphs.js';
-	import { LEAF_BOX, LEAF_GLYPH, REMOVE_CONTROL } from '$lib/registry/components/leaf-classes.js';
+	import { CHIP_BOX, CHIP_CROSS, CHIP_GLYPH, CHIP_PAD, CHIP_SPACING, REMOVE_CONTROL } from '$lib/registry/components/leaf-classes.js';
 	import EntityCard from '$lib/registry/components/entity-card.svelte';
 
 	type Props = WithElementRef<HTMLAttributes<HTMLSpanElement>, HTMLSpanElement> & {
@@ -84,7 +85,8 @@
 	const showGlyph = $derived(variant !== 'text');
 	const innerClass = $derived(
 		cn(
-			'inline-flex min-w-0 items-center gap-1.5 rounded-[inherit] outline-none',
+			'inline-flex min-w-0 items-center rounded-[inherit] outline-none',
+			CHIP_SPACING[size].glyph,
 			interactive &&
 				'focus-visible:ring-ring focus-visible:ring-offset-background transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2 motion-safe:active:scale-[0.98]',
 			variant === 'link' && url && 'underline-offset-2 hover:underline'
@@ -92,11 +94,15 @@
 	);
 	const rootClass = $derived(
 		cn(
-			'inline-flex max-w-full min-w-0 items-center gap-1.5 align-middle whitespace-nowrap',
+			'inline-flex max-w-full min-w-0 items-center align-middle whitespace-nowrap',
+			CHIP_SPACING[size].cross,
 			variant === 'chip'
 				? cn(
-						'bg-secondary text-secondary-foreground rounded-md border px-2',
-						LEAF_BOX[size],
+						'bg-secondary text-secondary-foreground rounded-md border',
+						CHIP_BOX[size],
+						CHIP_PAD[size].text,
+						showGlyph && CHIP_PAD[size].lead,
+						removable && CHIP_PAD[size].trail,
 						interactive &&
 							'hover:bg-accent hover:text-accent-foreground transition-colors duration-150'
 					)
@@ -124,10 +130,10 @@
 				aria-hidden="true"
 				loading="lazy"
 				decoding="async"
-				class={cn('shrink-0 rounded-sm object-cover', LEAF_GLYPH[size])}
+				class={cn('shrink-0 rounded-sm object-cover', CHIP_GLYPH[size])}
 			/>
 		{:else}
-			<Glyph aria-hidden="true" class={cn('shrink-0 opacity-70', LEAF_GLYPH[size])} />
+			<Glyph aria-hidden="true" class={cn('shrink-0 opacity-70', CHIP_GLYPH[size])} />
 		{/if}
 	{/if}
 	<span class={cn('truncate', !named && 'font-mono tabular-nums')}>{label}</span>
@@ -163,7 +169,7 @@
 				onclick={() => onRemove?.(entity)}
 				class={REMOVE_CONTROL}
 			>
-				<X aria-hidden="true" class="size-3" />
+				<X aria-hidden="true" class={CHIP_CROSS[size]} />
 			</button>
 		{/if}
 	</span>

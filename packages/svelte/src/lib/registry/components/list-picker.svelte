@@ -249,6 +249,7 @@
 							subLabel={subLabel?.(option)}
 							secondary={secondaryOf(option)}
 							{size}
+							indicatorAt="end"
 						>
 							{#snippet indicator()}
 								{#if option.code === value}<Check aria-hidden="true" class="size-4" />{/if}

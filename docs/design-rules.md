@@ -111,7 +111,7 @@ tell the user".
 - Selected rows: `bg-accent text-accent-foreground`. Highlighted (keyboard cursor) uses the same, never a
   second colour.
 - A remove control inside a chip or a badge hovers with a wash of its own foreground
-  (`hover:bg-current/15`), never the destructive tint: the chip and the status badge read the same.
+  (`hover:bg-current/8`), never the destructive tint: the chip and the status badge read the same.
 - Empty, loading and error states are part of every data widget and are visually consistent: a centred
   `text-sm text-muted-foreground` line with a `size-4` icon, `py-6` inside popovers, `py-10` in tables.
 

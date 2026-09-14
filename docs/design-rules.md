@@ -41,8 +41,11 @@ The goal is one system: a page mixing ten of our widgets must read as one hand.
 
 - Density is a prop on collections (`density: "compact" | "default"`), never a global. Compact halves the
   vertical padding only.
-- Alignment: every row is `flex items-center`; multi-line rows are `flex items-start` with a fixed-size
-  leading slot (thumbnail, avatar, checkbox) so text always starts at the same x.
+- Alignment: every row is `flex items-center` with a fixed-size leading slot (thumbnail, avatar,
+  checkbox) so text always starts at the same x. A picker option with a sub-label stays centred and
+  takes `py-1`, so its two lines stand as tall as a one-line option with a picture; a tree row with a
+  sub-label is `flex items-start`. A multi picker's checkbox centres on the picture beside it; a single
+  picker's tick trails the row instead, so an unticked row leaves no gap before its label.
 - Truncation: single-line text gets `truncate min-w-0` and a `title` attribute with the full value.
   Never let a widget grow past its container horizontally.
 
@@ -52,6 +55,13 @@ The goal is one system: a page mixing ten of our widgets must read as one hand.
   `h-10`). Icons inside controls are `size-4` for sm/md and `size-5` for lg. Thumbnails in list rows are
   `size-6` (sm), `size-8` (md), `size-10` (lg); cards and detail panes use `xl` (h-16) and `2xl` (h-24).
   Avatars follow the first three sizes.
+- A chip or a badge sits one step under the control it is in: `xs` (h-5) in sm, `sm` (h-6) in md and `md`
+  (h-8) in lg, at medium weight, with a `size-3`, `size-3.5` or `size-4` glyph. Its inline padding is
+  optically aligned: the edge beside a glyph takes a step less than a bare text edge (`xs`: `px-1.5`
+  bare, `pl-1` beside a glyph), and the edge beside a cross matches the room above the cross, so its
+  box sits as far from the right as from the top. The glyph sits `gap-1` from the label at `xs` and `sm` and
+  `gap-1.5` above, and the cross a step closer, since its own padding already reads as space. The
+  cross grows with the chip, `size-3` at `xs` to `size-4.5` at `lg`.
 - A picker control insets its leading edge to match the room above and below the chip or badge it
   holds, so a value sits evenly inside the border. It carries `data-empty`, which
   gives that reading inset back and takes the vertical inset down one step (md: `pl-2 py-0.5`), so an

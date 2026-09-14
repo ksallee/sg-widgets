@@ -3,12 +3,12 @@ import type { FieldSchema, StatusRecord } from '@sg-widgets/core';
 import { statusGlyph, statusLabel, statusPaint } from '@sg-widgets/core';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { LEAF_BOX, LEAF_GLYPH, REMOVE_CONTROL, type LeafSize } from '@/registry/sg/components/leaf-classes';
+import { CHIP_BOX, CHIP_CROSS, CHIP_GLYPH, CHIP_PAD, CHIP_SPACING, LEAF_GLYPH, REMOVE_CONTROL, type ChipSize } from '@/registry/sg/components/leaf-classes';
 import { StatusGlyph } from '@/registry/sg/components/status-glyph';
 
 /** How much of the status to show. `glyph` is the bare icon, with no pill around it. */
 export type StatusBadgeVariant = 'both' | 'icon' | 'text' | 'glyph';
-export type StatusBadgeSize = LeafSize;
+export type StatusBadgeSize = ChipSize;
 /** Which of the two names the badge puts on show; the other one goes in the tooltip. */
 export type StatusBadgeLabel = 'name' | 'code';
 
@@ -95,7 +95,7 @@ export function StatusBadge({
 
   const content = (
     <>
-      {showGlyph ? <StatusGlyph status={status} siteUrl={siteUrl} className={LEAF_GLYPH[size]} /> : null}
+      {showGlyph ? <StatusGlyph status={status} siteUrl={siteUrl} className={CHIP_GLYPH[size]} /> : null}
       <span className={cn('truncate', !showText && 'sr-only')}>{textIcon ?? text}</span>
     </>
   );
@@ -110,12 +110,14 @@ export function StatusBadge({
       style={bare ? undefined : style}
       className={cn(
         bare
-          ? cn('inline-flex shrink-0 items-center justify-center align-middle', LEAF_GLYPH[size])
+          ? cn('inline-flex shrink-0 items-center justify-center align-middle', LEAF_GLYPH[size === 'xs' ? 'sm' : size])
           : cn(
-              'border-border bg-background inline-flex max-w-full min-w-0 items-center rounded-md border px-1.5 align-middle text-xs font-medium',
-              'gap-1.5',
-              LEAF_BOX[size],
-              variant === 'icon' && 'justify-center',
+              'border-border bg-background inline-flex max-w-full min-w-0 items-center rounded-md border align-middle',
+              showRemove ? CHIP_SPACING[size].cross : CHIP_SPACING[size].glyph,
+              CHIP_BOX[size],
+              variant === 'icon'
+                ? cn('justify-center', CHIP_PAD[size].icon)
+                : cn(CHIP_PAD[size].text, showGlyph && CHIP_PAD[size].lead, showRemove && CHIP_PAD[size].trail),
               paint && 'border-transparent ring-1 ring-current/10 ring-inset',
               color && !paint && 'bg-muted text-muted-foreground border-transparent',
             ),
@@ -125,12 +127,12 @@ export function StatusBadge({
     >
       {bare ? (
         <>
-          <StatusGlyph status={status} siteUrl={siteUrl} fallback className={LEAF_GLYPH[size]} />
+          <StatusGlyph status={status} siteUrl={siteUrl} fallback className={LEAF_GLYPH[size === 'xs' ? 'sm' : size]} />
           <span className="sr-only">{text}</span>
         </>
       ) : showRemove ? (
         <>
-          <span className="flex min-w-0 items-center gap-1.5">{content}</span>
+          <span className={cn('flex min-w-0 items-center', CHIP_SPACING[size].glyph)}>{content}</span>
           <button
             type="button"
             data-slot="status-badge-remove"
@@ -138,7 +140,7 @@ export function StatusBadge({
             onClick={() => onRemove?.(code)}
             className={cn(REMOVE_CONTROL, 'pointer-events-auto')}
           >
-            <X aria-hidden="true" className="size-3" />
+            <X aria-hidden="true" className={CHIP_CROSS[size]} />
           </button>
         </>
       ) : (

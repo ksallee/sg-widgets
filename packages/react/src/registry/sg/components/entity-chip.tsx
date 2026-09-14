@@ -6,13 +6,14 @@ import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/h
 import { cn } from '@/lib/utils';
 import { EntityCard } from '@/registry/sg/components/entity-card';
 import { entityGlyph } from '@/registry/sg/components/entity-glyphs';
-import { LEAF_BOX, LEAF_GLYPH, REMOVE_CONTROL, type LeafSize } from '@/registry/sg/components/leaf-classes';
+import { CHIP_BOX, CHIP_CROSS, CHIP_GLYPH, CHIP_PAD, CHIP_SPACING, REMOVE_CONTROL, type ChipSize } from '@/registry/sg/components/leaf-classes';
 
-export type EntityChipSize = LeafSize;
+export type EntityChipSize = ChipSize;
 export type EntityChipVariant = 'chip' | 'link' | 'text';
 
 /** A link or a bare label has no box, so only the type scale applies. */
 const TEXT: Record<EntityChipSize, string> = {
+  xs: 'text-xs',
   sm: 'text-xs',
   md: 'text-sm',
   lg: 'text-sm',
@@ -83,17 +84,22 @@ export function EntityChip({
   const interactive = Boolean(url || onClick);
   const showGlyph = variant !== 'text';
   const innerClass = cn(
-    'inline-flex min-w-0 items-center gap-1.5 rounded-[inherit] outline-none',
+    'inline-flex min-w-0 items-center rounded-[inherit] outline-none',
+    CHIP_SPACING[size].glyph,
     interactive &&
       'focus-visible:ring-ring focus-visible:ring-offset-background transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2 motion-safe:active:scale-[0.98]',
     variant === 'link' && url && 'underline-offset-2 hover:underline',
   );
   const rootClass = cn(
-    'inline-flex max-w-full min-w-0 items-center gap-1.5 align-middle whitespace-nowrap',
+    'inline-flex max-w-full min-w-0 items-center align-middle whitespace-nowrap',
+    CHIP_SPACING[size].cross,
     variant === 'chip'
       ? cn(
-          'bg-secondary text-secondary-foreground rounded-md border px-2',
-          LEAF_BOX[size],
+          'bg-secondary text-secondary-foreground rounded-md border',
+          CHIP_BOX[size],
+          CHIP_PAD[size].text,
+          showGlyph && CHIP_PAD[size].lead,
+          removable && CHIP_PAD[size].trail,
           interactive && 'hover:bg-accent hover:text-accent-foreground transition-colors duration-150',
         )
       : TEXT[size],
@@ -110,10 +116,10 @@ export function EntityChip({
             aria-hidden="true"
             loading="lazy"
             decoding="async"
-            className={cn('shrink-0 rounded-sm object-cover', LEAF_GLYPH[size])}
+            className={cn('shrink-0 rounded-sm object-cover', CHIP_GLYPH[size])}
           />
         ) : (
-          <Glyph aria-hidden="true" className={cn('shrink-0 opacity-70', LEAF_GLYPH[size])} />
+          <Glyph aria-hidden="true" className={cn('shrink-0 opacity-70', CHIP_GLYPH[size])} />
         )
       ) : null}
       <span className={cn('truncate', !named && 'font-mono tabular-nums')}>{label}</span>
@@ -153,7 +159,7 @@ export function EntityChip({
           onClick={() => onRemove?.(entity)}
           className={REMOVE_CONTROL}
         >
-          <X aria-hidden="true" className="size-3" />
+          <X aria-hidden="true" className={CHIP_CROSS[size]} />
         </button>
       ) : null}
     </span>

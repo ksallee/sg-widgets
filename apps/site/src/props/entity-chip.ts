@@ -10,7 +10,7 @@ export default {
     { name: 'preview', type: '`string[]`', default: '—', meaning: 'Field paths shown in a hover card. Needs a context.' },
     { name: 'context', type: '`SgContext`', default: '—', meaning: 'The widget context, for the site url and for the hover card\'s read.' },
     { name: 'client', type: '`SgClient`', default: '—', meaning: 'A client, for an app with no context. One context is built per client and shared.' },
-    { name: 'size', type: '`\'sm\' | \'md\' | \'lg\'`', default: '`\'md\'`', meaning: 'Heights 6, 8 and 10 for the chip; the type scale for the others.' },
+    { name: 'size', type: '`\'xs\' | \'sm\' | \'md\' | \'lg\'`', default: '`\'md\'`', meaning: 'Heights 5, 6, 8 and 10 for the chip; the type scale for the others.' },
     { name: 'removable', type: '`boolean`', default: '`false`', meaning: 'Shows the remove control.' },
     { name: 'removeLabel', type: '`string`', default: 'derived from the name', meaning: 'Accessible name for the remove control.' },
     { name: 'class / className', type: '`string`', default: '—', meaning: 'Merged after the widget\'s own classes.' },

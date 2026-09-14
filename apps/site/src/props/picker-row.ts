@@ -17,9 +17,10 @@ export default {
     { name: 'context', type: '`SgContext`', default: '—', meaning: 'The secondary\'s schema and the status table are read through it.' },
     { name: 'siteUrl', type: '`string`', default: 'the context\'s', meaning: 'The site the status sprite is served from.' },
     { name: 'indicatorSlot', type: '`string`', default: '`\'picker-row-indicator\'`', meaning: 'The `data-slot` the indicator column carries.' },
+    { name: 'indicatorAt', type: '`\'start\' | \'end\'`', default: '`\'start\'`', meaning: 'Where the indicator column sits: a checkbox leads, a single picker\'s tick trails.' },
   ],
   slots: [
     { name: 'glyph', receives: 'nothing', draws: 'The leading slot when the row carries no picture. A row whose type is a person draws an avatar there instead.' },
-    { name: 'indicator', receives: 'nothing', draws: 'The tick or the checkbox in the indicator column. The column is drawn only where a widget passes one.' },
+    { name: 'indicator', receives: 'nothing', draws: 'The tick or the checkbox in the indicator column. The column is drawn only where a widget passes one, and as tall as the picture beside it.' },
   ],
 } satisfies PropsFile;

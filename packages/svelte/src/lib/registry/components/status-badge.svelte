@@ -1,9 +1,9 @@
 <script lang="ts" module>
-	import type { LeafSize } from '$lib/registry/components/leaf-classes.js';
+	import type { ChipSize } from '$lib/registry/components/leaf-classes.js';
 
 	/** How much of the status to show. `glyph` is the bare icon, with no pill around it. */
 	export type StatusBadgeVariant = 'both' | 'icon' | 'text' | 'glyph';
-	export type StatusBadgeSize = LeafSize;
+	export type StatusBadgeSize = ChipSize;
 	/** Which of the two names the badge puts on show; the other one goes in the tooltip. */
 	export type StatusBadgeLabel = 'name' | 'code';
 </script>
@@ -14,7 +14,7 @@
 	import { statusGlyph, statusLabel, statusPaint } from '@sg-widgets/core';
 	import X from '@lucide/svelte/icons/x';
 	import { cn, type WithElementRef } from '$lib/utils.js';
-	import { LEAF_BOX, LEAF_GLYPH, REMOVE_CONTROL } from '$lib/registry/components/leaf-classes.js';
+	import { CHIP_BOX, CHIP_CROSS, CHIP_GLYPH, CHIP_PAD, CHIP_SPACING, LEAF_GLYPH, REMOVE_CONTROL } from '$lib/registry/components/leaf-classes.js';
 	import StatusGlyph from '$lib/registry/components/status-glyph.svelte';
 
 	// `color` is a deprecated HTML attribute Svelte types as `never`, so it is dropped
@@ -112,7 +112,7 @@
 -->
 {#snippet content()}
 	{#if showGlyph}
-		<StatusGlyph {status} {siteUrl} class={LEAF_GLYPH[size]} />
+		<StatusGlyph {status} {siteUrl} class={CHIP_GLYPH[size]} />
 	{/if}
 	<span class={cn('truncate', !showText && 'sr-only')}>{textIcon ?? text}</span>
 {/snippet}
@@ -128,12 +128,14 @@
 		style={bare ? undefined : style}
 		class={cn(
 			bare
-				? cn('inline-flex shrink-0 items-center justify-center align-middle', LEAF_GLYPH[size])
+				? cn('inline-flex shrink-0 items-center justify-center align-middle', LEAF_GLYPH[size === 'xs' ? 'sm' : size])
 				: cn(
-						'border-border bg-background inline-flex max-w-full min-w-0 items-center rounded-md border px-1.5 align-middle text-xs font-medium',
-						'gap-1.5',
-						LEAF_BOX[size],
-						variant === 'icon' && 'justify-center',
+						'border-border bg-background inline-flex max-w-full min-w-0 items-center rounded-md border align-middle',
+						showRemove ? CHIP_SPACING[size].cross : CHIP_SPACING[size].glyph,
+						CHIP_BOX[size],
+						variant === 'icon'
+							? cn('justify-center', CHIP_PAD[size].icon)
+							: cn(CHIP_PAD[size].text, showGlyph && CHIP_PAD[size].lead, showRemove && CHIP_PAD[size].trail),
 						paint && 'border-transparent ring-1 ring-current/10 ring-inset',
 						color && !paint && 'bg-muted text-muted-foreground border-transparent'
 					),
@@ -142,10 +144,10 @@
 		{...rest}
 	>
 		{#if bare}
-			<StatusGlyph {status} {siteUrl} fallback class={LEAF_GLYPH[size]} />
+			<StatusGlyph {status} {siteUrl} fallback class={LEAF_GLYPH[size === 'xs' ? 'sm' : size]} />
 			<span class="sr-only">{text}</span>
 		{:else if showRemove}
-			<span class="flex min-w-0 items-center gap-1.5">{@render content()}</span>
+			<span class={cn('flex min-w-0 items-center', CHIP_SPACING[size].glyph)}>{@render content()}</span>
 			<button
 				type="button"
 				data-slot="status-badge-remove"
@@ -153,7 +155,7 @@
 				onclick={() => onRemove?.(code)}
 				class={cn(REMOVE_CONTROL, 'pointer-events-auto')}
 			>
-				<X aria-hidden="true" class="size-3" />
+				<X aria-hidden="true" class={CHIP_CROSS[size]} />
 			</button>
 		{:else}
 			{@render content()}

@@ -21,8 +21,8 @@
 //   and md, off the 4/6 scale, so a chip reads level with the trailing controls.
 //
 //   A row's gap is 8: its leading slot is a thumbnail or an avatar, an item beside the
-//   label rather than a glyph inside it. A glyph inside a chip, a badge or a control
-//   keeps 6.
+//   label rather than a glyph inside it. A glyph inside a control, and inside a chip or a
+//   badge from 32px up, keeps 6; the two small chip steps keep 4.
 //
 //   A list of rows has no gap and its rows no minimum height, rule 2's own wording. A
 //   list is read off the DOM: a box whose visible children carry one `data-slot`, stack
@@ -33,10 +33,11 @@
 const LADDER = { sm: 32, md: 36, lg: 40 };
 const INSET = { sm: 8, md: 12, lg: 12 };
 const GLYPH_GAP = 6;
+const SMALL_CHIP_GLYPH_GAP = 4;
 const ITEM_GAP = 8;
 const SECTION_GAP = 12;
 const FIELD_GAP = 16;
-const ROW_PAD = { x: 8, y: 6 };
+const ROW_PAD = { x: 8, y: 6, twoLineY: 4 };
 const CELL_PAD = { x: 12, y: 8 };
 const POPUP_PAD = [12, 16];
 const STATE_PAD = { popover: 24, table: 40 };
@@ -161,7 +162,9 @@ function measureParts(widget, framework, root, R, scope) {
   if (rows[0]) {
     const s = getComputedStyle(rows[0]);
     check(widget, framework, `${scope}row`, 'padding-x', ROW_PAD.x, px(s.paddingLeft));
-    check(widget, framework, `${scope}row`, 'padding-y', ROW_PAD.y, px(s.paddingTop));
+    // A row with a sub-label takes a step less, so its two lines stand as tall as a picture.
+    const padY = rows[0].querySelector('[data-slot="picker-row-sub-label"]') ? ROW_PAD.twoLineY : ROW_PAD.y;
+    check(widget, framework, `${scope}row`, 'padding-y', padY, px(s.paddingTop));
     check(widget, framework, `${scope}row`, 'gap', ITEM_GAP, inlineGap(rows[0]) ?? ITEM_GAP);
     check(widget, framework, `${scope}row`, 'radius', R.row, px(s.borderTopLeftRadius));
     check(widget, framework, `${scope}row`, 'font-size', BODY.size, px(s.fontSize));
@@ -171,7 +174,12 @@ function measureParts(widget, framework, root, R, scope) {
   const chip = drawn(CHIP) ?? drawn(TEXT_CHIP);
   if (chip) {
     const s = getComputedStyle(chip);
-    check(widget, framework, `${scope}chip`, 'gap', GLYPH_GAP, inlineGap(chip) ?? GLYPH_GAP);
+    // The gap sits on the box holding the glyph, not on the chip, which spaces its cross instead.
+    const glyph = [...chip.querySelectorAll('svg, img')].find((g) => !g.closest('[aria-label^="Remove"]'));
+    if (glyph?.parentElement) {
+      const want = chip.getBoundingClientRect().height <= 24.5 ? SMALL_CHIP_GLYPH_GAP : GLYPH_GAP;
+      check(widget, framework, `${scope}chip`, 'gap', want, inlineGap(glyph.parentElement) ?? want);
+    }
     check(widget, framework, `${scope}chip`, 'radius', R.chip, px(s.borderTopLeftRadius));
   }
 

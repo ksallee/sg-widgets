@@ -235,7 +235,6 @@
 	// whatever the query, and even when a search returns nothing at all.
 	const options = $derived(withSelectedPinned(snap.rows, value, search.known));
 	const polymorphic = $derived(entityTypes.length > 1);
-	const hasSubLabel = $derived(Boolean(subLabelField || subLabel));
 	const interactive = $derived(!disabled && !readonly);
 
 	/** The caller's own sub-label. Absent, the row reads `subLabelField` itself. */
@@ -375,7 +374,7 @@
 					data-selected-entity={chosen ? 'true' : undefined}
 					value={entityKey(row)}
 					label={row.name}
-					class={cn(PICKER_ROW, hasSubLabel && 'items-start')}
+					class={PICKER_ROW}
 				>
 					<Row
 						{row}

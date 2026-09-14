@@ -28,6 +28,8 @@ export type PickerRowSize = 'sm' | 'md' | 'lg';
 
 /** The leading slot follows the thumbnail ladder of `docs/design-rules.md`. */
 const LEAD: Record<PickerRowSize, string> = { sm: 'size-6', md: 'size-8', lg: 'size-10' };
+/** The indicator column is as tall as the leading slot, so a checkbox centres on the picture. */
+const LEAD_HEIGHT: Record<PickerRowSize, string> = { sm: 'h-6', md: 'h-8', lg: 'h-10' };
 const GLYPH: Record<PickerRowSize, string> = { sm: 'size-3.5', md: 'size-4', lg: 'size-5' };
 /** A row's text, on the leaf ladder of `docs/design-rules.md`. */
 const TEXT: Record<PickerRowSize, string> = { sm: 'text-xs', md: 'text-sm', lg: 'text-base' };
@@ -66,6 +68,11 @@ export interface PickerRowProps {
   indicator?: React.ReactNode;
   /** The `data-slot` the indicator column carries. Defaults to `picker-row-indicator`. */
   indicatorSlot?: string;
+  /**
+   * Where the indicator column sits. A checkbox leads; a single picker's tick trails, where an
+   * unticked row leaves no gap before its label.
+   */
+  indicatorAt?: 'start' | 'end';
 }
 
 interface SecondaryPlan {
@@ -137,6 +144,7 @@ export function PickerRow({
   glyph,
   indicator,
   indicatorSlot,
+  indicatorAt = 'start',
 }: PickerRowProps) {
   const anatomy = { thumbnail, subLabelField, secondaryField, showCode };
   const site = siteUrl ?? context?.siteUrl;
@@ -151,15 +159,21 @@ export function PickerRow({
   const title = [...crumbs, row.name].join(' › ');
   const plan = useSecondaryPlan(row.type, secondaryField, context);
   const dataType = secondaryType(anatomy, plan.field?.dataType);
+  // Fixed whether or not the row is ticked, so the labels, or the secondaries before a trailing
+  // tick, sit at one x down the list.
+  const indicatorCell =
+    indicator !== undefined ? (
+      <span
+        data-slot={indicatorSlot ?? 'picker-row-indicator'}
+        className={cn(PICKER_ROW_INDICATOR, thumbnail !== false && LEAD_HEIGHT[size])}
+      >
+        {indicator}
+      </span>
+    ) : null;
 
   return (
     <>
-      {indicator !== undefined ? (
-        /* Fixed whether or not the row is ticked, so every label down the list sits at one x. */
-        <span data-slot={indicatorSlot ?? 'picker-row-indicator'} className={PICKER_ROW_INDICATOR}>
-          {indicator}
-        </span>
-      ) : null}
+      {indicatorAt === 'start' ? indicatorCell : null}
 
       {thumbnail !== false ? (
         <span
@@ -257,6 +271,8 @@ export function PickerRow({
           />
         </span>
       ) : null}
+
+      {indicatorAt === 'end' ? indicatorCell : null}
     </>
   );
 }

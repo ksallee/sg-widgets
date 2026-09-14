@@ -216,7 +216,6 @@
 	);
 	const options = $derived(withSelectedPinned(snap.rows, value ? [value] : [], search.known));
 	const polymorphic = $derived(entityTypes.length > 1);
-	const hasSubLabel = $derived(Boolean(subLabelField || subLabel));
 	const selectedKey = $derived(value ? entityKey(value) : '');
 
 	/** The caller's own sub-label. Absent, the row reads `subLabelField` itself. */
@@ -324,7 +323,7 @@
 					data-checked={chosen ? 'true' : undefined}
 					value={entityKey(row)}
 					label={row.name}
-					class={cn(PICKER_ROW, hasSubLabel && 'items-start')}
+					class={PICKER_ROW}
 				>
 					<Row
 						{row}
@@ -339,6 +338,7 @@
 						{size}
 						{context}
 						siteUrl={site}
+						indicatorAt="end"
 					>
 						{#snippet indicator()}
 							{#if chosen}<Check aria-hidden="true" class="size-4" />{/if}

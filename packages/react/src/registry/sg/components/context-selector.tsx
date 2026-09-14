@@ -79,7 +79,7 @@ const BOX: Record<ContextSelectorSize, string> = {
   lg: 'min-h-10 pr-3 pl-1 py-0.5 data-empty:pl-2 data-empty:py-0',
 };
 /** A chip inside a control sits one step down the leaf ladder. */
-const CHIP: Record<ContextSelectorSize, 'sm' | 'md'> = { sm: 'sm', md: 'sm', lg: 'md' };
+const CHIP: Record<ContextSelectorSize, 'xs' | 'sm' | 'md'> = { sm: 'xs', md: 'sm', lg: 'md' };
 
 export interface ContextSelectorProps extends React.HTMLAttributes<HTMLDivElement> {
   /** The root element. */

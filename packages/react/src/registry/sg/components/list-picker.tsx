@@ -181,6 +181,7 @@ export function ListPicker({
       >
         <PickerRow
           indicator={code === value ? <Check aria-hidden="true" className="size-4" /> : null}
+          indicatorAt="end"
           row={{ type: LIST_ROW_TYPE, id: 0, name: option.label, values: {} }}
           query={searchable ? search : ''}
           thumbnail={mark ? 'image' : false}

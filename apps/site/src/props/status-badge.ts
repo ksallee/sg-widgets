@@ -6,7 +6,7 @@ export default {
     { name: 'status', type: '`StatusRecord | null`', default: '`null`', meaning: 'The resolved Status row. Supplies the name, colour and icon.' },
     { name: 'field', type: '`FieldSchema | null`', default: '`null`', meaning: 'Fallback label source, through its display values.' },
     { name: 'variant', type: '`\'both\' | \'icon\' | \'text\' | \'glyph\'`', default: '`\'both\'`', meaning: 'Icon-only and glyph keep the label as screen-reader text and a tooltip.' },
-    { name: 'size', type: '`\'sm\' | \'md\' | \'lg\'`', default: '`\'md\'`', meaning: 'Heights 6, 8 and 10.' },
+    { name: 'size', type: '`\'xs\' | \'sm\' | \'md\' | \'lg\'`', default: '`\'md\'`', meaning: 'Heights 5, 6, 8 and 10.' },
     { name: 'color', type: '`boolean`', default: '`false`', meaning: 'Paints the badge in the status colour instead of the neutral surface.' },
     { name: 'label', type: '`\'name\' | \'code\'`', default: '`\'name\'`', meaning: 'Which of the two the badge shows. The other one is the tooltip.' },
     { name: 'siteUrl', type: '`string`', default: '—', meaning: 'The site the stock sprite is served from. Needed only for a sprite cell outside the status icon set.' },

@@ -58,6 +58,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { StateLine } from '@/registry/sg/components/state-line';
 import { FieldPicker } from '@/registry/sg/components/field-picker';
+import { PICKER_ICON_BUTTON } from '@/registry/sg/components/picker-classes';
 import { useSortable } from '@/registry/sg/components/sortable';
 
 export type ColumnPickerSize = 'sm' | 'md' | 'lg';
@@ -427,7 +428,7 @@ export function ColumnPicker({
             aria-label="Go back one level"
             title="Back (Left arrow)"
             onClick={back}
-            className="hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring focus-visible:ring-offset-background shrink-0 rounded-sm p-0.5 opacity-70 outline-none transition-colors duration-150 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-2 motion-safe:active:scale-[0.98]"
+            className={PICKER_ICON_BUTTON}
           >
             <ChevronLeft aria-hidden="true" className="size-4" />
           </button>
@@ -455,7 +456,7 @@ export function ColumnPicker({
             aria-label="Back to the root type"
             title="Reset"
             onClick={reset}
-            className="hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring focus-visible:ring-offset-background shrink-0 rounded-sm p-0.5 opacity-70 outline-none transition-colors duration-150 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-2 motion-safe:active:scale-[0.98]"
+            className={PICKER_ICON_BUTTON}
           >
             <RotateCcw aria-hidden="true" className="size-4" />
           </button>
@@ -558,7 +559,7 @@ export function ColumnPicker({
                           event.stopPropagation();
                           descendInto(row);
                         }}
-                        className="hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring focus-visible:ring-offset-background shrink-0 rounded-sm p-0.5 opacity-70 outline-none transition-colors duration-150 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-2 motion-safe:active:scale-[0.98]"
+                        className={PICKER_ICON_BUTTON}
                       >
                         <ChevronRight aria-hidden="true" className={GLYPH[size]} />
                       </button>

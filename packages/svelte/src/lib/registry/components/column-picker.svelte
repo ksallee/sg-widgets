@@ -72,6 +72,7 @@
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
 	import FieldPicker from '$lib/registry/components/field-picker.svelte';
+	import { PICKER_ICON_BUTTON } from '$lib/registry/components/picker-classes.js';
 	import StateLine from '$lib/registry/components/state-line.svelte';
 	import { createSortable } from '$lib/registry/components/sortable.svelte.js';
 
@@ -425,7 +426,7 @@
 				aria-label="Go back one level"
 				title="Back (Left arrow)"
 				onclick={back}
-				class="hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring focus-visible:ring-offset-background shrink-0 rounded-sm p-0.5 opacity-70 outline-none transition-colors duration-150 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-2 motion-safe:active:scale-[0.98]"
+				class={PICKER_ICON_BUTTON}
 			>
 				<ChevronLeft aria-hidden="true" class="size-4" />
 			</button>
@@ -449,7 +450,7 @@
 				aria-label="Back to the root type"
 				title="Reset"
 				onclick={reset}
-				class="hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring focus-visible:ring-offset-background shrink-0 rounded-sm p-0.5 opacity-70 outline-none transition-colors duration-150 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-2 motion-safe:active:scale-[0.98]"
+				class={PICKER_ICON_BUTTON}
 			>
 				<RotateCcw aria-hidden="true" class="size-4" />
 			</button>
@@ -543,7 +544,7 @@
 									event.stopPropagation();
 									descendInto(row);
 								}}
-								class="hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring focus-visible:ring-offset-background shrink-0 rounded-sm p-0.5 opacity-70 outline-none transition-colors duration-150 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-2 motion-safe:active:scale-[0.98]"
+								class={PICKER_ICON_BUTTON}
 							>
 								<ChevronRight aria-hidden="true" class={GLYPH[size]} />
 							</button>

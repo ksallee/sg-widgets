@@ -211,6 +211,7 @@
       ],
       "registryDependencies": [
         "local:entity-chip",
+        "local:leaf-classes",
         "local:status-badge",
         "local:thumbnail",
         "switch"

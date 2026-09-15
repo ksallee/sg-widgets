@@ -269,6 +269,7 @@
       ],
       "registryDependencies": [
         "https://sg-widgets.dev/r/react/entity-chip.json",
+        "https://sg-widgets.dev/r/react/leaf-classes.json",
         "https://sg-widgets.dev/r/react/status-badge.json",
         "https://sg-widgets.dev/r/react/thumbnail.json",
         "switch"

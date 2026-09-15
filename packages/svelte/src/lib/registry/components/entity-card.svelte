@@ -1,4 +1,5 @@
 <script lang="ts" module>
+	import type { StatusBadgeSize } from '$lib/registry/components/status-badge.svelte';
 	import type { ThumbnailSize } from '$lib/registry/components/thumbnail.svelte';
 
 	export type EntityCardSize = 'sm' | 'md' | 'lg';
@@ -7,6 +8,8 @@
 
 	/** Cards and detail panes take the top of the thumbnail ladder (`docs/design-rules.md`). */
 	const THUMB: Record<EntityCardSize, ThumbnailSize> = { sm: 'xl', md: 'xl', lg: '2xl' };
+	/** A badge sits one step under the card it is in (`docs/design-rules.md` rule 3). */
+	const BADGE: Record<EntityCardSize, StatusBadgeSize> = { sm: 'xs', md: 'sm', lg: 'md' };
 	const HEADER: Record<EntityCardSize, string> = { sm: 'gap-2', md: 'gap-3', lg: 'gap-3' };
 	const STACK: Record<EntityCardSize, string> = { sm: 'gap-2', md: 'gap-3', lg: 'gap-4' };
 	const NAME: Record<EntityCardSize, string> = { sm: 'text-sm', md: 'text-sm', lg: 'text-base' };
@@ -249,7 +252,7 @@
 			code={String(column.value)}
 			status={table[String(column.value)] ?? null}
 			field={column.field}
-			size="sm"
+			size={BADGE[size]}
 			siteUrl={site}
 		/>
 	{:else if kind === 'image'}
@@ -355,7 +358,7 @@
 								status={table[card.status.code] ?? null}
 								field={card.status.field}
 								variant="icon"
-								size="sm"
+								size={BADGE[size]}
 								siteUrl={site}
 								class="bg-background/80 border-transparent shadow-sm"
 							/>
@@ -450,7 +453,7 @@
 								code={card.status.code}
 								status={table[card.status.code] ?? null}
 								field={card.status.field}
-								size="sm"
+								size={BADGE[size]}
 								siteUrl={site}
 							/>
 						{/if}

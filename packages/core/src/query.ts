@@ -29,6 +29,8 @@ import type {
   SummarizeResult,
   TextSearchRow,
   ThreadRow,
+  UploadFile,
+  UploadResult,
 } from './client.js';
 import type { EntityRef, TextSearchFilter } from './filter.js';
 import type { FieldSchema } from './schema.js';
@@ -163,6 +165,18 @@ export function createQueryCache(client: SgClient, options: QueryCacheOptions = 
     },
     following(userId: number, followingOptions?: FollowingOptions): Promise<EntityRef[]> {
       return run('following', [userId, followingOptions ?? null], () => client.following(userId, followingOptions));
+    },
+    async create(entityType: string, body: Record<string, unknown>): Promise<EntityRow> {
+      const row = await client.create(entityType, body);
+      invalidateSearches(entityType);
+      return row;
+    },
+    async upload(entityType: string, id: number, file: UploadFile): Promise<UploadResult> {
+      const result = await client.upload(entityType, id, file);
+      // The row gained a field value or an Attachment, and the Attachment is a new row.
+      invalidateSearches(entityType);
+      invalidateSearches('Attachment');
+      return result;
     },
     async update(entityType: string, id: number, patch: Record<string, unknown>): Promise<EntityRow> {
       const row = await client.update(entityType, id, patch);

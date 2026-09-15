@@ -28,12 +28,12 @@
  * };
  * ```
  */
-import type { EventLogOptions, FollowingOptions, SearchOptions, SgClient, SummarizeOptions } from './client.js';
+import type { EventLogOptions, FollowingOptions, SearchOptions, SgClient, SummarizeOptions, UploadFile } from './client.js';
 import { SgApiError } from './client.js';
 import type { EntityRef, TextSearchFilter } from './filter.js';
 
 /** The methods the protocol carries, one POST each. */
-export const PROXY_METHODS = ['entityTypes', 'fields', 'fieldWithProject', 'search', 'textSearch', 'statuses', 'update', 'hierarchyExpand', 'hierarchySearch', 'summarize', 'threadContents', 'eventLog', 'following'] as const;
+export const PROXY_METHODS = ['entityTypes', 'fields', 'fieldWithProject', 'search', 'textSearch', 'statuses', 'create', 'update', 'upload', 'hierarchyExpand', 'hierarchySearch', 'summarize', 'threadContents', 'eventLog', 'following'] as const;
 
 export type ProxyMethod = (typeof PROXY_METHODS)[number];
 
@@ -71,12 +71,43 @@ interface Params {
   path?: unknown;
   rootPath?: unknown;
   entity?: unknown;
+  body?: unknown;
+  file?: unknown;
   noteId?: unknown;
   entityFields?: unknown;
   userId?: unknown;
 }
 
 class BadRequest extends Error {}
+
+/**
+ * Bytes as base64. The protocol is one JSON object per call, so an upload's bytes
+ * cross it encoded and are decoded here.
+ */
+export function bytesToBase64(bytes: Uint8Array): string {
+  let binary = '';
+  // In chunks: one spread of a large array overflows the argument stack.
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+  return btoa(binary);
+}
+
+export function base64ToBytes(value: string): Uint8Array {
+  const binary = atob(value);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+}
+
+/** `{filename, data, field}` with the bytes still base64. */
+function uploadFile(value: unknown, name: string): UploadFile {
+  const raw = obj(value, name);
+  const field = raw['field'];
+  if (field !== undefined && field !== null && typeof field !== 'string') throw new BadRequest(`'${name}.field' must be a string`);
+  const file: UploadFile = { filename: str(raw['filename'], `${name}.filename`), data: base64ToBytes(str(raw['data'], `${name}.data`)) };
+  if (typeof field === 'string') file.field = field;
+  return file;
+}
 
 function entityRef(value: unknown, name: string): EntityRef {
   const ref = value as EntityRef | null;
@@ -142,8 +173,12 @@ function call(client: SgClient, method: ProxyMethod, p: Params): Promise<unknown
       );
     case 'statuses':
       return client.statuses();
+    case 'create':
+      return client.create(str(p.entityType, 'entityType'), obj(p.body, 'body'));
     case 'update':
       return client.update(str(p.entityType, 'entityType'), num(p.id, 'id'), obj(p.patch, 'patch'));
+    case 'upload':
+      return client.upload(str(p.entityType, 'entityType'), num(p.id, 'id'), uploadFile(p.file, 'file'));
     case 'hierarchySearch':
       return client.hierarchySearch(str(p.rootPath, 'rootPath'), entityRef(p.entity, 'entity'));
     case 'hierarchyExpand':

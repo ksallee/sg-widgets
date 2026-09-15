@@ -268,3 +268,93 @@ describe('following on the wire', () => {
     ]);
   });
 });
+
+describe('a create on the wire', () => {
+  it('posts plain JSON to the type and answers the row', async () => {
+    const { client, sent } = rest({ data: { type: 'Reply', id: 610, attributes: { content: 'on it' }, relationships: {} } });
+    const row = await client.create('Reply', { entity: { type: 'Note', id: 11030 }, content: 'on it' });
+    expect(sent[0]?.url).toBe('https://studio.example.com/api/v1/entity/replies');
+    // A write takes plain JSON; the vendor types are a `_search` requirement (probe 004).
+    expect(sent[0]?.contentType).toBe('application/json');
+    expect(sent[0]?.body).toEqual({ entity: { type: 'Note', id: 11030 }, content: 'on it' });
+    expect(row.id).toBe(610);
+  });
+});
+
+describe('an upload on the wire', () => {
+  interface Call {
+    url: string;
+    method: string;
+    headers: Record<string, string> | undefined;
+    body: unknown;
+  }
+
+  /** A fetch that answers the three calls of the handshake in order. */
+  function uploading(): { client: RestClient; calls: Call[] } {
+    const calls: Call[] = [];
+    const info = {
+      timestamp: '2026-09-04T03:53:31Z',
+      upload_type: 'Thumbnail',
+      upload_id: null,
+      storage_service: 's3',
+      original_filename: 'frame.png',
+      multipart_upload: false,
+    };
+    const fetchFn = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      calls.push({ url, method: init?.method ?? 'GET', headers: init?.headers as Record<string, string> | undefined, body: init?.body });
+      if (url.includes('/_upload') && (init?.method ?? 'GET') === 'GET') {
+        return new Response(
+          JSON.stringify({ data: info, links: { upload: 'https://storage.example.com/signed?sig=abc', complete_upload: '/api/v1/entity/shots/862/image/_upload' } }),
+          { status: 200, headers: { 'content-type': 'application/json' } },
+        );
+      }
+      if (init?.method === 'PUT') {
+        return new Response(null, { status: 200, headers: { ETag: '"9ef430cc6d563983f362487a051169cd"' } });
+      }
+      // 201 with a body of one space, which is not JSON (post_links_complete_upload).
+      return new Response(' ', { status: 201 });
+    }) as typeof fetch;
+    return { client: new RestClient({ siteUrl: 'https://studio.example.com', token: () => 't', fetch: fetchFn }), calls };
+  }
+
+  it('takes a ticket, puts the bytes with no auth header, and completes without parsing the reply', async () => {
+    const { client, calls } = uploading();
+    const data = new Uint8Array([137, 80, 78, 71]);
+    const result = await client.upload('Shot', 862, { filename: 'frame.png', data, field: 'image' });
+
+    expect(calls[0]?.url).toBe('https://studio.example.com/api/v1/entity/shots/862/image/_upload?filename=frame.png');
+    expect(calls[0]?.headers?.['Authorization']).toBe('Bearer t');
+
+    expect(calls[1]).toMatchObject({ url: 'https://storage.example.com/signed?sig=abc', method: 'PUT' });
+    // The signature covers the request: a bearer token is not part of it (put_links_upload).
+    expect(calls[1]?.headers).toBeUndefined();
+    expect(calls[1]?.body).toBe(data);
+
+    // `complete_upload` already carries `/api/v1`; prefixing it again is a 404.
+    expect(calls[2]?.url).toBe('https://studio.example.com/api/v1/entity/shots/862/image/_upload');
+    expect(calls[2]?.method).toBe('POST');
+    expect(calls[2]?.headers?.['Content-Type']).toBe('application/json');
+    expect(JSON.parse(String(calls[2]?.body))).toEqual({
+      upload_info: {
+        timestamp: '2026-09-04T03:53:31Z',
+        upload_type: 'Thumbnail',
+        upload_id: null,
+        storage_service: 's3',
+        original_filename: 'frame.png',
+        multipart_upload: false,
+      },
+      // Required even though it is empty (probe 013).
+      upload_data: {},
+    });
+
+    expect(result.uploadType).toBe('Thumbnail');
+    expect(result.etag).toBe('9ef430cc6d563983f362487a051169cd');
+  });
+
+  it('leaves the field out of the path for a generic attachment', async () => {
+    const { client, calls } = uploading();
+    await client.upload('Version', 17055, { filename: 'workflow.json', data: new Uint8Array([123, 125]) });
+    expect(calls[0]?.url).toBe('https://studio.example.com/api/v1/entity/versions/17055/_upload?filename=workflow.json');
+  });
+});

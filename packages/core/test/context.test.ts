@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { MockClient } from '../src/mock.js';
 import { contextFromClient, createSgContext, preferencesOf } from '../src/context.js';
-import type { EntityRow, EntityTypeInfo, EventLogOptions, EventLogResult, FollowingOptions, HierarchyNode, HierarchyPath, SummarizeOptions, SummarizeResult, SearchOptions, SearchResult, SgClient, TextSearchRow, ThreadRow } from '../src/client.js';
+import type { EntityRow, EntityTypeInfo, EventLogOptions, EventLogResult, FollowingOptions, HierarchyNode, HierarchyPath, SummarizeOptions, SummarizeResult, SearchOptions, SearchResult, SgClient, TextSearchRow, ThreadRow, UploadFile, UploadResult } from '../src/client.js';
 import type { EntityRef, TextSearchFilter } from '../src/filter.js';
 import type { FieldSchema } from '../src/schema.js';
 import type { StatusRecord } from '../src/status.js';
@@ -32,6 +32,14 @@ function counting(inner: SgClient): { client: SgClient; calls: string[] } {
     statuses(): Promise<StatusRecord[]> {
       calls.push('statuses');
       return inner.statuses();
+    },
+    create(entityType: string, body: Record<string, unknown>): Promise<EntityRow> {
+      calls.push(`create ${entityType}`);
+      return inner.create(entityType, body);
+    },
+    upload(entityType: string, id: number, file: UploadFile): Promise<UploadResult> {
+      calls.push(`upload ${entityType} ${id}`);
+      return inner.upload(entityType, id, file);
     },
     update(entityType: string, id: number, patch: Record<string, unknown>): Promise<EntityRow> {
       calls.push(`update ${entityType} ${id}`);

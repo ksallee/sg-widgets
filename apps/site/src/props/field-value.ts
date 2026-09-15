@@ -9,6 +9,7 @@ export default {
     { name: 'statuses', type: '`Record<string, StatusRecord> | null`', default: '`null`', meaning: 'Status rows by code, for the status name and icon.' },
     { name: 'siteUrl', type: '`string`', default: 'the context\'s', meaning: 'The site the stock sprite is served from, and the site a linked row is addressed on.' },
     { name: 'entityVariant', type: '`\'chip\' | \'link\' | \'text\'`', default: '`\'chip\'`', meaning: 'How an entity or multi-entity value draws.' },
+    { name: 'density', type: '`\'compact\' | \'default\'`', default: '`\'default\'`', meaning: 'The density of the collection around the value. Compact draws its chip and badge a step smaller.' },
     { name: 'preview', type: '`string[]`', default: '—', meaning: 'Field paths shown in a hover card on a linked row. Needs a context.' },
     { name: 'context', type: '`SgContext`', default: '—', meaning: 'The widget context: the site url, the site preferences and the hover card\'s read.' },
     { name: 'client', type: '`SgClient`', default: '—', meaning: 'A client, for an app with no context. One context is built per client and shared.' },

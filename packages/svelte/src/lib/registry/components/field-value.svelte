@@ -1,3 +1,13 @@
+<script lang="ts" module>
+	import type { ChipSize } from '$lib/registry/components/leaf-classes.js';
+
+	/** The collection density the value is drawn in. */
+	export type FieldValueDensity = 'compact' | 'default';
+
+	/** A chip or a badge sits a step under the row it is in (`docs/design-rules.md` rule 3). */
+	const CHIP: Record<FieldValueDensity, ChipSize> = { compact: 'xs', default: 'sm' };
+</script>
+
 <script lang="ts">
 	import type { HTMLAttributes } from 'svelte/elements';
 	import type {
@@ -39,6 +49,8 @@
 		siteUrl?: string;
 		/** How an entity or multi_entity value draws: a chip, a link or bare text. */
 		entityVariant?: EntityChipVariant;
+		/** The density of the collection around the value. Compact drops its chip and badge a step. */
+		density?: FieldValueDensity;
 		/** Field paths shown in a hover card on a linked row. Needs a context. */
 		preview?: string[];
 		/** The widget context: the site url, the site preferences and the hover card's read. */
@@ -69,6 +81,7 @@
 		statuses = null,
 		siteUrl,
 		entityVariant = 'chip',
+		density = 'default',
 		preview,
 		context,
 		client,
@@ -145,7 +158,7 @@
 	{:else if kind === 'entity'}
 		<EntityChip
 			entity={value as EntityRef}
-			size="sm"
+			size={CHIP[density]}
 			variant={entityVariant}
 			siteUrl={site}
 			{preview}
@@ -154,7 +167,7 @@
 	{:else if kind === 'multi_entity'}
 		<span class="flex min-w-0 flex-wrap items-center gap-2">
 			{#each value as EntityRef[] as entity (`${entity.type}:${entity.id}`)}
-				<EntityChip {entity} size="sm" variant={entityVariant} siteUrl={site} {preview} context={ctx} />
+				<EntityChip {entity} size={CHIP[density]} variant={entityVariant} siteUrl={site} {preview} context={ctx} />
 			{/each}
 		</span>
 	{:else if kind === 'status'}
@@ -162,7 +175,7 @@
 			code={String(value)}
 			status={statuses?.[String(value)] ?? null}
 			{field}
-			size="sm"
+			size={CHIP[density]}
 			siteUrl={site}
 		/>
 	{:else if kind === 'image'}

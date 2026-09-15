@@ -8,7 +8,7 @@ import {
   usableStatuses,
 } from '../src/status.js';
 import { STOCK_ICON_CELLS } from '../src/status-icons.js';
-import { displayNameOf, normalizeField, statusFieldFor } from '../src/schema.js';
+import { displayNameOf, fieldSchemaOverride, normalizeField, statusFieldFor } from '../src/schema.js';
 
 describe('usableStatuses', () => {
   const field = {
@@ -100,5 +100,22 @@ describe('schema', () => {
     expect(displayNameOf({ code: 'sh010', name: 'x' })).toBe('sh010');
     expect(displayNameOf({ content: 'Comp' })).toBe('Comp');
     expect(displayNameOf({}, '#12')).toBe('#12');
+  });
+});
+
+describe('the fields the schema types wrongly', () => {
+  it('reads Note.read_by_current_user as a list of unread and read', () => {
+    const field = normalizeField('read_by_current_user', {
+      name: { value: 'Read by Current User', editable: true },
+      entity_type: { value: 'Note', editable: false },
+      data_type: { value: 'checkbox', editable: false },
+      editable: { value: true, editable: false },
+      mandatory: { value: false, editable: false },
+      unique: { value: false, editable: false },
+      properties: {},
+    });
+    expect(field.dataType).toBe('list');
+    expect(field.validValues).toEqual(['unread', 'read']);
+    expect(fieldSchemaOverride('Shot', 'sg_status_list')).toBeUndefined();
   });
 });

@@ -103,7 +103,9 @@ export function StatusBadge({
 
   const content = (
     <>
-      {showGlyph ? <StatusGlyph status={status} siteUrl={siteUrl} className={CHIP_GLYPH[size]} /> : null}
+      {showGlyph ? (
+        <StatusGlyph status={status} siteUrl={siteUrl} onColor={Boolean(paint)} className={CHIP_GLYPH[size]} />
+      ) : null}
       <MatchText text={textIcon ?? text} query={query} className={cn('truncate', !showText && 'sr-only')} />
     </>
   );

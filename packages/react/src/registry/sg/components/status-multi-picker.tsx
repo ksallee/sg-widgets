@@ -12,6 +12,7 @@ import { clearableForField, matchesTokens, NO_MATCH_LABEL } from '@sg-widgets/co
 import { Combobox as ComboboxPrimitive } from '@base-ui/react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
+import { LEAF_GLYPH } from '@/registry/sg/components/leaf-classes';
 import {
   PICKER_ARMED,
   PICKER_CHIP as BADGE,
@@ -20,6 +21,7 @@ import {
 import { PickerControl } from '@/registry/sg/components/picker-control';
 import { PickerRow } from '@/registry/sg/components/picker-row';
 import { StatusBadge, type StatusBadgeVariant } from '@/registry/sg/components/status-badge';
+import { StatusGlyph } from '@/registry/sg/components/status-glyph';
 
 export type StatusMultiPickerSize = 'sm' | 'md' | 'lg';
 
@@ -157,10 +159,10 @@ function statusOptionStore(
  * it: the vocabulary is read once and the query input narrows it in the browser
  * (field_types/status_list).
  *
- * A row is the shared picker row of rule 9, after its checkbox, with the status as its
- * label: a status offered as an option is the badge the filter bar's facets draw, one
- * step under the control, with the matched runs bold and the code right-aligned after
- * it. The control keeps its own badges for the selection.
+ * A row is the shared picker row of rule 9, after its checkbox: the status glyph as the
+ * leading mark, the display label with the matched runs bold, and the code
+ * right-aligned. The badge stays in the control, where a status is a value rather than
+ * an option.
  */
 export function StatusMultiPicker({
   context,
@@ -276,21 +278,11 @@ export function StatusMultiPicker({
           indicator={<Checkbox checked={chosen} tabIndex={-1} aria-hidden="true" className="pointer-events-none" />}
           row={rowOf(option)}
           query={search}
-          thumbnail={false}
           subLabel={subLabel?.(option)}
           secondary={secondaryOf(option)}
           size={size}
           context={context}
-          label={
-            <StatusBadge
-              code={code}
-              status={query.statuses.get(code) ?? null}
-              field={badgeField}
-              size={BADGE[size]}
-              query={search}
-              siteUrl={site}
-            />
-          }
+          glyph={<StatusGlyph status={query.statuses.get(code) ?? null} siteUrl={site} fallback className={LEAF_GLYPH[size]} />}
         />
       </ComboboxPrimitive.Item>
     );

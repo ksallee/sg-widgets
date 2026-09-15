@@ -1,12 +1,14 @@
-// Both status pickers list the shared picker row with the status as its label: a badge
-// with a surface of its own, on the chip step under the control, never a bare glyph
-// beside plain text. `showCode={false}` drops the code, a caller's own secondary
-// replaces it, and a pick still lands in the control as a badge.
+// A status offered as an option is a glyph and its name, never a badge: both status
+// pickers and the filter bar's status facet draw the shared row, the status icon as the
+// leading mark, the label with the matched runs bold, and the code or the count
+// right-aligned. `showCode={false}` drops the code, a caller's own secondary replaces it,
+// and a pick still lands in the control as a badge. The sprite cell carries the dark
+// treatment on a dark page and nothing on a light one.
 //
-//   pnpm qa --start --path /widgets/status-picker/ --framework both --drive tools/drives/status-picker-rows.js
+//   pnpm qa --start --path /widgets/status-picker/ --framework both --dark --drive tools/drives/status-picker-rows.js
 //
-// The single picker is on the page; the multi picker is opened in a same-origin iframe,
-// so both are read in one run.
+// The single picker is on the page; the multi picker and the filter bar are opened in
+// same-origin iframes, so all three are read in one run.
 const failures = [];
 const seen = {};
 
@@ -69,45 +71,60 @@ async function frame(path) {
   return el.contentDocument;
 }
 
-/** The chip ladder: a badge sits one step under the control it is in. */
-const CHIP_HEIGHT = { sm: 20, md: 24, lg: 32 };
+/** The drawing on a mark: `none` on a light page, the sprite's treatment on a dark one. */
+const filterOf = (el) => el.ownerDocument.defaultView.getComputedStyle(el).filter;
 
-/** True where a colour is drawn at all rather than left transparent. */
-const opaque = (colour) => Boolean(colour) && !/^(transparent$|rgba\(.*,\s*0\s*\)$)/.test(colour);
+/**
+ * The sprite key of a mark drawn from the stock sprite. A status with no cell to draw
+ * takes the neutral dot, which carries the key as well and is a token in both schemes.
+ */
+function spriteKey(el) {
+  if (!el?.dataset.statusIcon) return '';
+  const image = el.ownerDocument.defaultView.getComputedStyle(el).backgroundImage;
+  return el.tagName === 'IMG' || image !== 'none' ? el.dataset.statusIcon : '';
+}
 
-/** What one list row draws, as the anatomy of rule 9, with the status as its label. */
+/** What one list row draws, as the anatomy of rule 9. */
 function anatomy(row) {
-  const badge = row.querySelector('[data-slot="picker-row-label"] [data-slot="status-badge"]');
-  const style = badge && badge.ownerDocument.defaultView.getComputedStyle(badge);
+  const mark = row.querySelector('[data-slot="picker-row-leading"] [data-slot="status-glyph"]');
   return {
     code: row.dataset.option ?? row.dataset.statusCode ?? '',
-    bare: Boolean(row.querySelector('[data-slot="status-badge"][data-variant="glyph"]')),
+    glyph: Boolean(mark),
     leading: Boolean(row.querySelector('[data-slot="picker-row-leading"]')),
-    badge: Boolean(badge),
-    icon: Boolean(badge?.querySelector('[data-slot="status-glyph"]')),
-    label: badge?.textContent.trim() ?? '',
-    height: badge ? Math.round(badge.getBoundingClientRect().height) : 0,
-    // A badge in a row is a surface: the pill's own border and fill, which is what a
-    // bare sprite on a dark page has none of.
-    surface: Boolean(style) && parseFloat(style.borderTopWidth) > 0 && opaque(style.borderTopColor) && opaque(style.backgroundColor),
+    badge: Boolean(row.querySelector('[data-slot="status-badge"]')),
+    label: row.querySelector('[data-slot="picker-row-name"]')?.textContent.trim() ?? '',
+    sprite: spriteKey(mark),
+    filter: mark ? filterOf(mark) : '',
     secondary: row.querySelector('[data-slot="picker-row-secondary"]')?.textContent.trim() ?? '',
   };
 }
 
-function readRows(rows, where, size) {
+function readRows(rows, where) {
   const drawn = rows.map(anatomy);
   for (const row of drawn) {
-    if (!row.badge) failures.push(`${where}: ${row.code} draws no badge in the list`);
-    if (row.bare) failures.push(`${where}: ${row.code} still draws the bare glyph`);
-    if (row.leading) failures.push(`${where}: ${row.code} keeps a leading slot beside its badge`);
-    if (row.badge && !row.surface) failures.push(`${where}: ${row.code}'s badge has no surface of its own`);
-    if (row.badge && row.height !== CHIP_HEIGHT[size]) {
-      failures.push(`${where}: ${row.code}'s badge stands ${row.height}px, not the ${CHIP_HEIGHT[size]}px step under a ${size} control`);
-    }
-    if (!row.label) failures.push(`${where}: ${row.code} has no label`);
+    if (row.badge) failures.push(`${where}: ${row.code} draws a badge in the list`);
+    if (!row.leading || !row.glyph) failures.push(`${where}: ${row.code} has no status glyph`);
+    if (!row.label) failures.push(`${where}: ${row.code} has no text label`);
   }
   return drawn;
 }
+
+/** The mark carries the sprite's treatment on a dark page, and nothing on a light one. */
+function readTreatment(drawn, where, dark) {
+  const marks = drawn.filter((row) => row.sprite);
+  if (marks.length === 0) {
+    failures.push(`${where}: no row drew a sprite cell to read`);
+    return '';
+  }
+  const treated = marks.filter((row) => row.filter && row.filter !== 'none');
+  if (dark && treated.length !== marks.length) {
+    failures.push(`${where}: ${marks.length - treated.length} of ${marks.length} marks carry no treatment in dark`);
+  }
+  if (!dark && treated.length > 0) failures.push(`${where}: ${treated.length} marks carry a treatment on a light page`);
+  return marks[0].filter;
+}
+
+const isDark = () => document.documentElement.classList.contains('dark');
 
 for (const framework of ['svelte', 'react']) {
   const pane = $(`[data-pane="${framework}"]`);
@@ -120,14 +137,11 @@ for (const framework of ['svelte', 'react']) {
   const live = (rows) => rows.filter((row) => !row.closest('[data-closed]') && row.getClientRects().length > 0);
   const options = () => live($$('[data-slot="status-picker-option"]'));
   let lastTrigger = null;
-  /** The control ladder the open picker stands on, which the badge takes a step under. */
-  let lastSize = 'md';
   const openSingle = async (demo) => {
     const settled = await until(() => {
       const el = $(`[data-demo="${demo}"] [data-slot="status-picker"]`, pane);
       return el && !el.dataset.loading ? el : null;
     }, 15000);
-    lastSize = settled?.dataset.size ?? 'md';
     const trigger = settled && $('[data-slot="status-picker-control"]', settled);
     if (!trigger) {
       failures.push(`${framework}: no ${demo} status picker to open`);
@@ -141,14 +155,27 @@ for (const framework of ['svelte', 'react']) {
 
   const listed = await openSingle('p70');
   if (listed) {
-    const drawn = readRows(listed, `${framework} status-picker`, lastSize);
+    const drawn = readRows(listed, `${framework} status-picker`);
     const ip = drawn.find((row) => row.code === 'ip');
     if (!ip) failures.push(`${framework}: the status picker has no ip row`);
     else if (ip.secondary !== 'ip') failures.push(`${framework}: ip reads "${ip.secondary}" as its secondary, not the code`);
     note.picker = drawn.slice(0, 3);
 
+    // The treatment follows the page: read it in the theme the run is in, then in the
+    // other one, with the same rows on show, then back, so the frames below read the
+    // theme the run was asked for.
+    const startedDark = isDark();
+    note.treatment = {};
+    note.treatment[startedDark ? 'dark' : 'light'] = readTreatment(drawn, `${framework} status-picker`, startedDark);
+    harness.set({ theme: startedDark ? 'light' : 'dark' });
+    await wait(400);
+    const flipped = options().map(anatomy);
+    note.treatment[isDark() ? 'dark' : 'light'] = readTreatment(flipped, `${framework} status-picker flipped`, isDark());
+    harness.set({ theme: startedDark ? 'dark' : 'light' });
+    await wait(400);
+
     // A pick closes the list and lands in the control as a badge.
-    const apr = listed.find((row) => row.dataset.option === 'apr');
+    const apr = options().find((row) => row.dataset.option === 'apr');
     if (apr) {
       apr.click();
       pointer(apr);
@@ -165,7 +192,7 @@ for (const framework of ['svelte', 'react']) {
 
   const bare = await openSingle('no-code');
   if (bare) {
-    const withCode = readRows(bare, `${framework} status-picker showCode=false`, lastSize).filter((row) => row.secondary);
+    const withCode = readRows(bare, `${framework} status-picker showCode=false`).filter((row) => row.secondary);
     note.noCode = withCode.length;
     if (withCode.length > 0) failures.push(`${framework}: showCode={false} left ${withCode.length} codes on the rows`);
   }
@@ -173,7 +200,7 @@ for (const framework of ['svelte', 'react']) {
 
   const own = await openSingle('own-secondary');
   if (own) {
-    const drawn = readRows(own, `${framework} status-picker secondary`, lastSize);
+    const drawn = readRows(own, `${framework} status-picker secondary`);
     note.ownSecondary = drawn.find((row) => row.code === 'ip')?.secondary ?? '';
     if (note.ownSecondary !== 'Animation') failures.push(`${framework}: the caller's secondary reads "${note.ownSecondary}", not Animation`);
   }
@@ -194,7 +221,6 @@ for (const framework of ['svelte', 'react']) {
       const el = $(`[data-demo="${demo}"] [data-slot="status-multi-picker"]`, mPane);
       return el && !el.dataset.loading ? el : null;
     }, 15000);
-    lastSize = settled?.dataset.size ?? 'md';
     const control = settled && $('[data-slot="status-multi-picker-control"]', settled);
     if (!control) {
       failures.push(`${framework}: no ${demo} status multi picker to open`);
@@ -207,7 +233,7 @@ for (const framework of ['svelte', 'react']) {
 
   const mListed = await openMulti('both');
   if (mListed) {
-    const drawn = readRows(mListed, `${framework} status-multi-picker`, lastSize);
+    const drawn = readRows(mListed, `${framework} status-multi-picker`);
     const boxes = mListed.filter((row) => row.querySelector('[data-slot="status-multi-picker-check"]')).length;
     note.multi = drawn.slice(0, 3);
     note.checkboxes = boxes;
@@ -228,17 +254,17 @@ for (const framework of ['svelte', 'react']) {
     note.chip = chip?.dataset.statusCode ?? '';
     if (note.chip !== 'rev') failures.push(`${framework}: the picked status did not land in the control as a badge chip`);
 
-    // The badge is the row's label, so the search box's matched runs are bold inside it.
+    // The row's label is text, so the search box's matched runs are bold in its name.
     const input = $('[data-slot="status-multi-picker-input"]', doc);
     if (!input) failures.push(`${framework}: the status multi picker popup has no search box`);
     else {
       type(input, 'in');
       const marked = await until(() => {
-        const runs = $$('[data-slot="status-multi-picker-option"] [data-slot="status-badge"] .font-semibold', doc);
+        const runs = $$('[data-slot="status-multi-picker-option"] [data-slot="picker-row-name"] .font-semibold', doc);
         return runs.length > 0 ? runs : null;
       }, 4000);
       note.marked = marked?.map((run) => run.textContent) ?? [];
-      if (!marked) failures.push(`${framework}: no badge marked the query's run in the multi picker list`);
+      if (!marked) failures.push(`${framework}: no row marked the query's run in the multi picker list`);
       type(input, '');
       await wait(200);
     }
@@ -247,7 +273,7 @@ for (const framework of ['svelte', 'react']) {
 
   const mBare = await openMulti('no-code');
   if (mBare) {
-    const withCode = readRows(mBare, `${framework} status-multi-picker showCode=false`, lastSize).filter((row) => row.secondary);
+    const withCode = readRows(mBare, `${framework} status-multi-picker showCode=false`).filter((row) => row.secondary);
     note.multiNoCode = withCode.length;
     if (withCode.length > 0) failures.push(`${framework}: showCode={false} left ${withCode.length} codes on the multi rows`);
   }
@@ -255,11 +281,78 @@ for (const framework of ['svelte', 'react']) {
 
   const mOwn = await openMulti('own-secondary');
   if (mOwn) {
-    const drawn = readRows(mOwn, `${framework} status-multi-picker secondary`, lastSize);
+    const drawn = readRows(mOwn, `${framework} status-multi-picker secondary`);
     note.multiOwnSecondary = drawn.find((row) => row.code === 'ip')?.secondary ?? '';
     if (note.multiOwnSecondary !== 'Animation') failures.push(`${framework}: the multi picker's own secondary reads "${note.multiOwnSecondary}"`);
   }
   if (!(await dismiss(doc, mRows))) failures.push(`${framework}: a status multi picker list would not close`);
+
+  /* ------------------------------------------------------------ facet rows */
+
+  const bar = await frame('/widgets/filter-bar/');
+  const bPane = await until(() => $(`[data-pane="${framework}"]`, bar), 15000);
+  const pill = bPane && (await until(() => $('[data-slot="filter-pill"][data-field="sg_status_list"]', bPane), 15000));
+  if (!pill) {
+    failures.push(`${framework}: the filter bar drew no status pill`);
+    seen[framework] = note;
+    continue;
+  }
+  const facetRows = () => live($$('[data-option]', bar));
+  // A pill's popover takes the whole press, and a press that lands before the island
+  // has hydrated does nothing, so the press is repeated until the list answers. The
+  // counts are read before the rows are drawn, which is what each wait is for.
+  const facetTrigger = $('[data-slot="filter-pill-trigger"]', pill);
+  let opened = null;
+  for (let i = 0; i < 6 && !opened; i += 1) {
+    for (const kind of ['pointerdown', 'mousedown', 'pointerup', 'mouseup']) {
+      facetTrigger.dispatchEvent(new PointerEvent(kind, { bubbles: true, cancelable: true, button: 0, pointerType: 'mouse' }));
+    }
+    facetTrigger.click();
+    opened = await until(() => (facetRows().length > 0 ? facetRows() : null), 5000);
+  }
+  if (!opened) failures.push(`${framework}: the status facet listed no value`);
+  else {
+    const drawn = opened.map((row) => {
+      const mark = row.querySelector('[data-slot="status-glyph"]');
+      const sprite = spriteKey(mark);
+      return {
+        key: row.dataset.option,
+        glyph: Boolean(mark),
+        badge: Boolean(row.querySelector('[data-slot="status-badge"]')),
+        label: row.querySelector('[title]')?.textContent.trim() ?? '',
+        count: row.querySelector('[data-slot="facet-count"]')?.textContent.trim() ?? '',
+        sprite,
+        filter: sprite ? filterOf(mark) : '',
+      };
+    });
+    note.facets = drawn.slice(0, 3);
+    for (const row of drawn) {
+      if (row.badge) failures.push(`${framework} facet: ${row.key} draws a badge in the checklist`);
+      if (!row.glyph) failures.push(`${framework} facet: ${row.key} has no status glyph`);
+      if (!row.label) failures.push(`${framework} facet: ${row.key} has no text label`);
+      if (!row.count) failures.push(`${framework} facet: ${row.key} lost its count`);
+    }
+    // The frame reads the same stored theme, which the drive left on its second setting.
+    const barDark = bar.documentElement.classList.contains('dark');
+    const sprites = drawn.filter((row) => row.sprite);
+    const treated = sprites.filter((row) => row.filter !== 'none');
+    note.facetTreatment = { theme: barDark ? 'dark' : 'light', filter: sprites[0]?.filter ?? '' };
+    if (sprites.length === 0) failures.push(`${framework} facet: no row drew a sprite cell to read`);
+    if (barDark && treated.length !== sprites.length) {
+      failures.push(`${framework} facet: ${sprites.length - treated.length} marks carry no treatment in dark`);
+    }
+    if (!barDark && treated.length > 0) failures.push(`${framework} facet: ${treated.length} marks carry a treatment on a light page`);
+
+    // A ticked value is what the filter holds, and the pill draws it as a badge.
+    opened[0].click();
+    pointer(opened[0]);
+    const badged = await until(
+      () => $('[data-slot="filter-pill"][data-field="sg_status_list"] [data-slot="status-badge"]', bPane),
+      6000,
+    );
+    note.pillBadge = badged?.dataset.statusCode ?? '';
+    if (!badged) failures.push(`${framework} facet: the pill drew no badge for the value it holds`);
+  }
 
   seen[framework] = note;
 }
@@ -269,7 +362,7 @@ if (Object.keys(seen).length === 0) failures.push('no framework pane was on show
 return {
   verdict:
     failures.length === 0
-      ? 'PASS both status pickers list picker rows whose label is a badge on the chip step, with its own surface and its matched runs, showCode and a caller secondary shape them, and a pick lands as a badge'
+      ? 'PASS both status pickers and the status facet list a glyph mark before a text label, no badge in a row, the sprite treated in dark and left alone in light, the code and the count right-aligned, and a pick still lands as a badge'
       : `FAIL ${failures.join('; ')}`,
   seen,
 };

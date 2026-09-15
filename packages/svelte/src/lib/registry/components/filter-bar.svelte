@@ -66,9 +66,11 @@
 	import { cn, type WithElementRef } from '$lib/utils.js';
 	import { entityFields } from '$lib/registry/components/entity-fields.svelte.js';
 	import FilterDialog from '$lib/registry/components/filter-dialog.svelte';
-	import { REMOVE_CONTROL } from '$lib/registry/components/leaf-classes.js';
+	import { LEAF_GLYPH, REMOVE_CONTROL } from '$lib/registry/components/leaf-classes.js';
+	import MatchText from '$lib/registry/components/match-text.svelte';
 	import StateLine from '$lib/registry/components/state-line.svelte';
 	import StatusBadge from '$lib/registry/components/status-badge.svelte';
+	import StatusGlyph from '$lib/registry/components/status-glyph.svelte';
 
 	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>, HTMLDivElement> & {
 		entityType: string;
@@ -217,7 +219,8 @@
 	</button>
 {/snippet}
 
-{#snippet valueLabel(name: string, key: string, label: string, query: string)}
+<!-- One value in a pill, where a status is a value: a badge on a status field, its label everywhere else. -->
+{#snippet valueLabel(name: string, key: string, label: string)}
 	{#if isStatus(name)}
 		{#await statuses then table}
 			<StatusBadge
@@ -225,13 +228,30 @@
 				status={table.get(key) ?? null}
 				field={fields[name] ?? null}
 				size={BADGE[size]}
-				{query}
 				siteUrl={context.siteUrl}
 			/>
 		{/await}
 	{:else}
 		{label}
 	{/if}
+{/snippet}
+
+<!--
+	One checklist row: the status glyph as a leading mark before the label, the way a
+	picker row whose label is a name reads, with the matched runs of the box bold.
+-->
+{#snippet rowValue(name: string, key: string, label: string)}
+	{#if isStatus(name)}
+		{#await statuses then table}
+			<StatusGlyph
+				status={table.get(key) ?? null}
+				siteUrl={context.siteUrl}
+				fallback
+				class={LEAF_GLYPH[size]}
+			/>
+		{/await}
+	{/if}
+	<MatchText text={label} query={facetQuery} class="truncate" />
 {/snippet}
 
 <!--
@@ -249,7 +269,7 @@
 			{#each shown.shown as label, i (i)}
 				<span class="flex min-w-0 items-center truncate">
 					{#if shown.values.length > 0}
-						{@render valueLabel(name, keyOf(shown.values[i] as Scalar), label, '')}
+						{@render valueLabel(name, keyOf(shown.values[i] as Scalar), label)}
 					{:else}
 						{label}
 					{/if}
@@ -288,8 +308,8 @@
 								tabindex={-1}
 								aria-hidden="true"
 							/>
-							<span class="flex min-w-0 flex-1 items-center truncate" title={option.label}>
-								{@render valueLabel(name, option.key, option.label, facetQuery)}
+							<span class="flex min-w-0 flex-1 items-center gap-1.5 truncate" title={option.label}>
+								{@render rowValue(name, option.key, option.label)}
 							</span>
 							<span class="text-muted-foreground text-xs tabular-nums" data-slot="facet-count">
 								{option.count}

@@ -1169,7 +1169,9 @@
         "local:entity-fields",
         "local:control-classes",
         "local:leaf-classes",
+        "local:match-text",
         "local:status-badge",
+        "local:status-glyph",
         "local:state-line",
         "button",
         "local:checkbox",
@@ -1226,8 +1228,10 @@
       ],
       "registryDependencies": [
         "local:list-picker",
+        "local:leaf-classes",
         "local:picker-classes",
-        "local:status-badge"
+        "local:status-badge",
+        "local:status-glyph"
       ],
       "files": [
         {
@@ -1249,9 +1253,11 @@
       ],
       "registryDependencies": [
         "local:picker-control",
+        "local:leaf-classes",
         "local:picker-classes",
         "local:picker-row",
         "local:status-badge",
+        "local:status-glyph",
         "local:checkbox"
       ],
       "files": [

@@ -120,6 +120,10 @@ both frameworks answer a key the same way, and it is read as a reference and not
 A readonly control keeps full contrast and loses the clear control and the chevron. A disabled one
 takes no press and no key.
 
+The clear control follows `clearable`, and a widget bound to a named field takes that answer from
+the field: a field the site flags mandatory is never clearable, since clearing it writes a value the
+site refuses. `clearableForField` in core is the one reading of that rule.
+
 ## Keyboard
 
 <Props name="picker-control" kind="keyboard" />

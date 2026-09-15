@@ -23,6 +23,7 @@ export default function StatusPickerDemo() {
   const [shared, setShared] = useState<string | undefined>(undefined);
   const [project, setProject] = useState<string | undefined>('Active');
   const [unknown, setUnknown] = useState<string | undefined>('zz_retired');
+  const [note, setNote] = useState<string | undefined>('opn');
   const [switching, setSwitching] = useState<string | undefined>('part');
   const [switchTo, setSwitchTo] = useState(otherProjectId);
 
@@ -83,6 +84,21 @@ export default function StatusPickerDemo() {
               onValueChange={setProject}
             />
           </div>
+        </div>
+      </section>
+
+      <section className={group}>
+        <h4 className={label}>A mandatory field, which offers no clear</h4>
+        <div className={row}>
+          <div className={box} data-demo="mandatory">
+            <StatusPicker
+              context={context}
+              entityType="Note"
+              value={note}
+              onValueChange={setNote}
+            />
+          </div>
+          <span className={readout}>{note ?? '—'}</span>
         </div>
       </section>
 

@@ -6,6 +6,7 @@ import { condition, group, toApi3Hash } from '../src/filter.js';
 import type { PickerRow } from '../src/picker.js';
 import {
   asFilterGroup,
+  clearableForField,
   createEntitySearch,
   entityKey,
   fitChips,
@@ -673,5 +674,17 @@ describe('createEntitySearch', () => {
     search.hydrate([{ type: 'Shot', id: 862 }]);
     await until(() => search.state.error !== null);
     expect(search.known.get('Shot:862')?.name).toBe('Shot 862');
+  });
+});
+
+describe('clearableForField', () => {
+  it('drops the clear on a mandatory field and keeps the caller answer otherwise', () => {
+    expect(clearableForField(true, { mandatory: true })).toBe(false);
+    expect(clearableForField(undefined, { mandatory: true })).toBe(false);
+    expect(clearableForField(true, { mandatory: false })).toBe(true);
+    expect(clearableForField(false, { mandatory: false })).toBe(false);
+    // A field the widget has not read is not mandatory as far as it knows.
+    expect(clearableForField(undefined, null)).toBe(true);
+    expect(clearableForField(false, null)).toBe(false);
   });
 });

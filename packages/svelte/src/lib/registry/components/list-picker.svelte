@@ -14,7 +14,13 @@
 	import type { Snippet } from 'svelte';
 	import type { HTMLAttributes } from 'svelte/elements';
 	import type { FieldSchema } from '@sg-widgets/core';
-	import { matchesTokens, NO_ROWS_LABEL, statusLabel, usableStatuses } from '@sg-widgets/core';
+	import {
+		clearableForField,
+		matchesTokens,
+		NO_ROWS_LABEL,
+		statusLabel,
+		usableStatuses
+	} from '@sg-widgets/core';
 	import { Combobox } from 'bits-ui';
 	import PickerControl from '$lib/registry/components/picker-control.svelte';
 	import Check from '@lucide/svelte/icons/check';
@@ -102,7 +108,7 @@
 		emptyLabel = NO_ROWS_LABEL,
 		searchable = false,
 		searchPlaceholder = 'Search values…',
-		clearable = true,
+		clearable = undefined,
 		clearLabel = 'Clear the value',
 		triggerLabel = 'Show the values',
 		showCode = false,
@@ -205,7 +211,7 @@
 			inert={!readonly && (disabled || loading)}
 			{readonly}
 			{invalid}
-			clearable={clearable && field?.mandatory !== true}
+			clearable={clearableForField(clearable, field)}
 			{placeholder}
 			{searchPlaceholder}
 			bind:open

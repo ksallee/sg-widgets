@@ -2,7 +2,7 @@ import type * as React from 'react';
 import { useState } from 'react';
 import type { ReactNode } from 'react';
 import type { FieldSchema, PickerSummary, StatusOption } from '@sg-widgets/core';
-import { matchesTokens, NO_ROWS_LABEL, statusLabel, usableStatuses } from '@sg-widgets/core';
+import { clearableForField, matchesTokens, NO_ROWS_LABEL, statusLabel, usableStatuses } from '@sg-widgets/core';
 import { Combobox as ComboboxPrimitive } from '@base-ui/react';
 import { X } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -107,7 +107,7 @@ export function ListMultiPicker({
   emptyLabel = NO_ROWS_LABEL,
   searchable = false,
   searchPlaceholder = 'Search values…',
-  clearable = true,
+  clearable,
   clearLabel = 'Clear the values',
   triggerLabel = 'Show the values',
   showCode = false,
@@ -250,7 +250,7 @@ export function ListMultiPicker({
           disabled={disabled}
           readonly={readonly}
           invalid={invalid}
-          clearable={clearable && field?.mandatory !== true}
+          clearable={clearableForField(clearable, field)}
           placeholder={placeholder}
           searchPlaceholder={searchPlaceholder}
           open={open}

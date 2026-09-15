@@ -6,8 +6,8 @@
 
 <script lang="ts">
 	import type { HTMLAttributes } from 'svelte/elements';
-	import type { PickerRow, SgContext, StatusOption, StatusRecord } from '@sg-widgets/core';
-	import { matchesTokens, NO_MATCH_LABEL } from '@sg-widgets/core';
+	import type { FieldSchema, PickerRow, SgContext, StatusOption, StatusRecord } from '@sg-widgets/core';
+	import { clearableForField, matchesTokens, NO_MATCH_LABEL } from '@sg-widgets/core';
 	import { Combobox } from 'bits-ui';
 	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
@@ -41,6 +41,7 @@
 		loadingLabel?: string;
 		/** Shown in place of what the failed read said. */
 		errorLabel?: string;
+		/** Offer a control that clears the selection. A mandatory field is never clearable. */
 		clearable?: boolean;
 		readonly?: boolean;
 		disabled?: boolean;
@@ -79,7 +80,7 @@
 		emptyLabel = NO_MATCH_LABEL,
 		loadingLabel,
 		errorLabel,
-		clearable = true,
+		clearable = undefined,
 		readonly = false,
 		disabled = false,
 		invalid = false,
@@ -108,6 +109,8 @@
 		loading: boolean;
 		error: string | null;
 		options: StatusOption[];
+		/** The field the codes come from, which is what clause 8 reads `mandatory` off. */
+		field: FieldSchema | null;
 		statuses: ReadonlyMap<string, StatusRecord>;
 	}
 
@@ -125,10 +128,19 @@
 	 * a "last seen" key.
 	 */
 	function load(type: string, ids: number[], name: string | undefined): Loaded {
-		const state = $state<Loaded>({ loading: true, error: null, options: [], statuses: new Map() });
-		Promise.all([optionsFor(type, ids, name), statusTable.byCode()]).then(
-			([options, statuses]) => {
+		const state = $state<Loaded>({
+			loading: true,
+			error: null,
+			options: [],
+			field: null,
+			statuses: new Map()
+		});
+		// The field itself, for its `mandatory` flag.
+		const named = name === undefined ? schema.statusField(type) : schema.field(type, name);
+		Promise.all([optionsFor(type, ids, name), named, statusTable.byCode()]).then(
+			([options, found, statuses]) => {
 				state.options = options;
+				state.field = typeof found === 'string' || found === undefined ? null : found;
 				state.statuses = statuses;
 				state.loading = false;
 			},
@@ -256,7 +268,7 @@
 		{inert}
 		{readonly}
 		{invalid}
-		{clearable}
+		clearable={clearableForField(clearable, query.field)}
 		{placeholder}
 		{searchPlaceholder}
 		bind:open

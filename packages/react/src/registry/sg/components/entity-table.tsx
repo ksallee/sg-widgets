@@ -1012,7 +1012,7 @@ export function EntityTable({
                         icon={CircleAlert}
                         label={stateLine('error', { errorLabel }, snapshot.error?.message)}
                       >
-                        <Button variant="outline" size="sm" onClick={() => control.retry()}>
+                        <Button variant="outline" onClick={() => control.retry()}>
                           Retry
                         </Button>
                       </StateLine>
@@ -1032,7 +1032,7 @@ export function EntityTable({
                 ) : control.bottom === 'more' ? (
                   <TableRow data-slot="entity-table-load-more" className="hover:bg-transparent">
                     <TableCell colSpan={leafColumns.length} className="p-2 text-center">
-                      <Button variant="outline" size="sm" onClick={() => void source.loadMore()}>
+                      <Button variant="outline" onClick={() => void source.loadMore()}>
                         Load more
                       </Button>
                     </TableCell>

@@ -1053,7 +1053,7 @@
 									icon={CircleAlert}
 									label={stateLine('error', { errorLabel }, snapshot.error?.message)}
 								>
-									<Button variant="outline" size="sm" onclick={() => control.retry()}>Retry</Button>
+									<Button variant="outline" onclick={() => control.retry()}>Retry</Button>
 								</StateLine>
 							</Table.Cell>
 						</Table.Row>
@@ -1071,7 +1071,7 @@
 					{:else if control.bottom === 'more'}
 						<Table.Row data-slot="entity-table-load-more" class="hover:bg-transparent">
 							<Table.Cell colspan={layout.length} class="p-2 text-center">
-								<Button variant="outline" size="sm" onclick={() => void source.loadMore()}>Load more</Button>
+								<Button variant="outline" onclick={() => void source.loadMore()}>Load more</Button>
 							</Table.Cell>
 						</Table.Row>
 					{:else if control.bottom === 'sentinel'}

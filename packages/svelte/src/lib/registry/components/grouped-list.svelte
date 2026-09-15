@@ -573,7 +573,7 @@
 					icon={CircleAlert}
 					label={stateLine('error', { errorLabel }, snapshot.error?.message)}
 				>
-					<Button variant="outline" size="sm" onclick={() => control.retry()}>Retry</Button>
+					<Button variant="outline" onclick={() => control.retry()}>Retry</Button>
 				</StateLine>
 			{:else if control.bottom === 'loading'}
 				<div data-slot="grouped-list-loading" class="p-2" aria-busy="true" aria-label={loadingText}>
@@ -581,7 +581,7 @@
 				</div>
 			{:else if control.bottom === 'more'}
 				<div data-slot="grouped-list-load-more" class="flex justify-center p-2">
-					<Button variant="outline" size="sm" onclick={() => void source.loadMore()}>Load more</Button>
+					<Button variant="outline" onclick={() => void source.loadMore()}>Load more</Button>
 				</div>
 			{:else if control.bottom === 'sentinel'}
 				<div

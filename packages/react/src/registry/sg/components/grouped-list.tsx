@@ -550,7 +550,7 @@ export function GroupedList({
                 icon={CircleAlert}
                 label={stateLine('error', { errorLabel }, snapshot.error?.message)}
               >
-                <Button variant="outline" size="sm" onClick={() => control.retry()}>
+                <Button variant="outline" onClick={() => control.retry()}>
                   Retry
                 </Button>
               </StateLine>
@@ -565,7 +565,7 @@ export function GroupedList({
               </div>
             ) : control.bottom === 'more' ? (
               <div data-slot="grouped-list-load-more" className="flex justify-center p-2">
-                <Button variant="outline" size="sm" onClick={() => void source.loadMore()}>
+                <Button variant="outline" onClick={() => void source.loadMore()}>
                   Load more
                 </Button>
               </div>

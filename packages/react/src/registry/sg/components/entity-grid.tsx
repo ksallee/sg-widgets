@@ -427,7 +427,7 @@ export function EntityGrid({
                 icon={CircleAlert}
                 label={stateLine('error', { errorLabel }, snapshot.error?.message)}
               >
-                <Button variant="outline" size="sm" onClick={() => control.retry()}>
+                <Button variant="outline" onClick={() => control.retry()}>
                   Retry
                 </Button>
               </StateLine>
@@ -437,7 +437,7 @@ export function EntityGrid({
               </div>
             ) : control.bottom === 'more' ? (
               <div data-slot="entity-grid-load-more" className="flex justify-center">
-                <Button variant="outline" size="sm" onClick={() => void source.loadMore()}>
+                <Button variant="outline" onClick={() => void source.loadMore()}>
                   Load more
                 </Button>
               </div>

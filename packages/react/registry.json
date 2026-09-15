@@ -671,6 +671,7 @@
       ],
       "registryDependencies": [
         "https://sg-widgets.dev/r/react/state-line.json",
+        "https://sg-widgets.dev/r/react/picker-classes.json",
         "button",
         "checkbox",
         "https://sg-widgets.dev/r/react/command.json",
@@ -1053,6 +1054,7 @@
       ],
       "registryDependencies": [
         "https://sg-widgets.dev/r/react/entity-fields.json",
+        "https://sg-widgets.dev/r/react/leaf-classes.json",
         "https://sg-widgets.dev/r/react/state-line.json",
         "button",
         "select",
@@ -1096,7 +1098,7 @@
       ],
       "registryDependencies": [
         "https://sg-widgets.dev/r/react/control-classes.json",
-        "badge",
+        "https://sg-widgets.dev/r/react/leaf-classes.json",
         "button",
         "dialog",
         "https://sg-widgets.dev/r/react/filter-editor.json"
@@ -1125,6 +1127,8 @@
       "registryDependencies": [
         "https://sg-widgets.dev/r/react/entity-fields.json",
         "https://sg-widgets.dev/r/react/control-classes.json",
+        "https://sg-widgets.dev/r/react/leaf-classes.json",
+        "https://sg-widgets.dev/r/react/state-line.json",
         "badge",
         "button",
         "checkbox",
@@ -1155,7 +1159,8 @@
         "lucide-react"
       ],
       "registryDependencies": [
-        "badge",
+        "https://sg-widgets.dev/r/react/leaf-classes.json",
+        "https://sg-widgets.dev/r/react/state-line.json",
         "button",
         "popover",
         "separator",

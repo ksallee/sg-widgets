@@ -1,13 +1,14 @@
 import { useMemo, useState, useSyncExternalStore } from 'react';
 import type { ReactNode } from 'react';
 import type {
+  FieldSchema,
   PickerRow as PickerRowData,
   PickerSummary,
   SgContext,
   StatusOption,
   StatusRecord,
 } from '@sg-widgets/core';
-import { matchesTokens, NO_MATCH_LABEL } from '@sg-widgets/core';
+import { clearableForField, matchesTokens, NO_MATCH_LABEL } from '@sg-widgets/core';
 import { Combobox as ComboboxPrimitive } from '@base-ui/react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
@@ -46,6 +47,7 @@ export interface StatusMultiPickerProps extends React.HTMLAttributes<HTMLDivElem
   loadingLabel?: string;
   /** Shown in place of what the failed read said. */
   errorLabel?: string;
+  /** Offer a control that clears the selection. A mandatory field is never clearable. */
   clearable?: boolean;
   readonly?: boolean;
   disabled?: boolean;
@@ -75,10 +77,12 @@ interface Loaded {
   loading: boolean;
   error: string | null;
   options: StatusOption[];
+  /** The field the codes come from, which is what clause 8 reads `mandatory` off. */
+  field: FieldSchema | null;
   statuses: ReadonlyMap<string, StatusRecord>;
 }
 
-const LOADING: Loaded = { loading: true, error: null, options: [], statuses: new Map() };
+const LOADING: Loaded = { loading: true, error: null, options: [], field: null, statuses: new Map() };
 
 /**
  * One load, as a store. The read starts in a memo over the props and goes through the
@@ -102,6 +106,8 @@ function statusOptionStore(
       : ids.length === 1
         ? schema.statusOptions(entityType, first, field)
         : schema.statusOptionsForProjects(entityType, ids, field);
+  // The field itself, for its `mandatory` flag.
+  const named = field === undefined ? schema.statusField(entityType) : schema.field(entityType, field);
 
   const listeners = new Set<() => void>();
   let snapshot = LOADING;
@@ -109,13 +115,21 @@ function statusOptionStore(
     snapshot = next;
     for (const listener of listeners) listener();
   };
-  void Promise.all([options, statuses.byCode()]).then(
-    ([resolved, table]) => settle({ loading: false, error: null, options: resolved, statuses: table }),
+  void Promise.all([options, named, statuses.byCode()]).then(
+    ([resolved, found, table]) =>
+      settle({
+        loading: false,
+        error: null,
+        options: resolved,
+        field: typeof found === 'string' || found === undefined ? null : found,
+        statuses: table,
+      }),
     (error: unknown) =>
       settle({
         loading: false,
         error: error instanceof Error ? error.message : String(error),
         options: [],
+        field: null,
         statuses: new Map(),
       }),
   );
@@ -161,7 +175,7 @@ export function StatusMultiPicker({
   emptyLabel = NO_MATCH_LABEL,
   loadingLabel,
   errorLabel,
-  clearable = true,
+  clearable,
   readonly = false,
   disabled = false,
   invalid = false,
@@ -341,7 +355,7 @@ export function StatusMultiPicker({
         inert={inert}
         readonly={readonly}
         invalid={invalid}
-        clearable={clearable}
+        clearable={clearableForField(clearable, query.field)}
         placeholder={placeholder}
         searchPlaceholder={searchPlaceholder}
         open={open}

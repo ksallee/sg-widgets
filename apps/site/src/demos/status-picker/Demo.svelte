@@ -13,6 +13,7 @@
 	let shared = $state<string | undefined>(undefined);
 	let project = $state<string | undefined>('Active');
 	let unknown = $state<string | undefined>('zz_retired');
+	let note = $state<string | undefined>('opn');
 	let switching = $state<string | undefined>('part');
 	let switchTo = $state(otherProjectId);
 
@@ -60,6 +61,16 @@
 			<div class={box} data-demo="project">
 				<StatusPicker {context} entityType="Project" bind:value={project} />
 			</div>
+		</div>
+	</section>
+
+	<section class={group}>
+		<h4 class={label}>A mandatory field, which offers no clear</h4>
+		<div class={row}>
+			<div class={box} data-demo="mandatory">
+				<StatusPicker {context} entityType="Note" bind:value={note} />
+			</div>
+			<span class={readout}>{note ?? '—'}</span>
 		</div>
 	</section>
 

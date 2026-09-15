@@ -37,6 +37,10 @@ function rather than a field name. The control keeps the badge.
 Without a project the options are the site vocabulary, which hides nothing. `projectIds` offers the
 intersection of what each project allows, in the first project's order.
 
+The clear control follows the field. Left unset, `clearable` reads the field's schema, and a field
+the site flags mandatory offers no clear, since clearing it writes a value the site refuses. Set it
+and your answer stands, except that a mandatory field is never clearable.
+
 The root carries the size and, while the options load, `data-loading`.
 
 ## Events

@@ -237,6 +237,19 @@ export function projectPickerFilters(
   return mergeFilters(asFilterGroup(extra), includeArchived ? null : condition('archived', 'is', false));
 }
 
+/**
+ * Clause 8 of the picker contract: the clear control follows `clearable`, and a
+ * mandatory field never offers one. A field whose schema the widget has not read is
+ * not mandatory as far as it knows, so the caller's answer stands.
+ */
+export function clearableForField(
+  clearable: boolean | undefined,
+  field: { mandatory?: boolean } | null | undefined,
+): boolean {
+  if (field?.mandatory === true) return false;
+  return clearable ?? true;
+}
+
 /* -------------------------------------------------------------------------- */
 /* highlighting                                                               */
 /* -------------------------------------------------------------------------- */

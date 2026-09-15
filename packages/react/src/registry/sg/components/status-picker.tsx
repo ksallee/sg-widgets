@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
-import type { SgContext, StatusOption, StatusRecord } from '@sg-widgets/core';
+import type { FieldSchema, SgContext, StatusOption, StatusRecord } from '@sg-widgets/core';
 import { NO_ROWS_LABEL } from '@sg-widgets/core';
 import { ListPicker } from '@/registry/sg/components/list-picker';
 import { PICKER_CHIP as BADGE } from '@/registry/sg/components/picker-classes';
@@ -30,6 +30,7 @@ export interface StatusPickerProps extends Omit<React.HTMLAttributes<HTMLDivElem
   loadingLabel?: string;
   /** Shown in place of what the failed read said. */
   errorLabel?: string;
+  /** Offer a control that clears the value. A mandatory field is never clearable. */
   clearable?: boolean;
   readonly?: boolean;
   disabled?: boolean;
@@ -53,10 +54,12 @@ interface Loaded {
   loading: boolean;
   error: string | null;
   options: StatusOption[];
+  /** The field the codes come from, which is what clause 8 reads `mandatory` off. */
+  field: FieldSchema | null;
   statuses: ReadonlyMap<string, StatusRecord>;
 }
 
-const LOADING: Loaded = { loading: true, error: null, options: [], statuses: new Map() };
+const LOADING: Loaded = { loading: true, error: null, options: [], field: null, statuses: new Map() };
 
 /**
  * One load, as a store. The read starts in a memo over the props and goes through the
@@ -81,19 +84,30 @@ function statusOptionStore(
         ? schema.statusOptions(entityType, first, field)
         : schema.statusOptionsForProjects(entityType, ids, field);
 
+  // The field itself, for its display name and its `mandatory` flag.
+  const named = field === undefined ? schema.statusField(entityType) : schema.field(entityType, field);
+
   const listeners = new Set<() => void>();
   let snapshot = LOADING;
   const settle = (next: Loaded) => {
     snapshot = next;
     for (const listener of listeners) listener();
   };
-  void Promise.all([options, statuses.byCode()]).then(
-    ([resolved, table]) => settle({ loading: false, error: null, options: resolved, statuses: table }),
+  void Promise.all([options, named, statuses.byCode()]).then(
+    ([resolved, found, table]) =>
+      settle({
+        loading: false,
+        error: null,
+        options: resolved,
+        field: typeof found === 'string' || found === undefined ? null : found,
+        statuses: table,
+      }),
     (error: unknown) =>
       settle({
         loading: false,
         error: error instanceof Error ? error.message : String(error),
         options: [],
+        field: null,
         statuses: new Map(),
       }),
   );
@@ -110,6 +124,9 @@ function statusOptionStore(
 
 /**
  * One status, picked from the codes a project offers.
+ *
+ * The clear follows clause 8 of the picker contract: the field's own schema decides,
+ * and a site that flags its status field mandatory gets no cross.
  *
  * The list picker with a status row and a badge for its value. The options are
  * `valid_values` minus the project's `hidden_values`, read with `project_id`; over
@@ -135,7 +152,7 @@ export function StatusPicker({
   emptyLabel = NO_ROWS_LABEL,
   loadingLabel,
   errorLabel,
-  clearable = true,
+  clearable,
   readonly = false,
   disabled = false,
   invalid = false,
@@ -198,6 +215,7 @@ export function StatusPicker({
       errorLabel={errorLabel}
       loading={query.loading}
       loadError={query.error}
+      field={query.field}
       clearable={clearable}
       clearLabel="Clear the status"
       triggerLabel="Show the statuses"

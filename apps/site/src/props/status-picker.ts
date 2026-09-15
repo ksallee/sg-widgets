@@ -12,7 +12,7 @@ export default {
     { name: 'emptyLabel', type: '`string`', default: '`\'No rows\'`', meaning: 'Shown when the field offers nothing.' },
     { name: 'loadingLabel', type: '`string`', default: '`\'Loading…\'`', meaning: 'Names the skeletons a read stands behind, for a screen reader.' },
     { name: 'errorLabel', type: '`string`', default: '—', meaning: 'Shown in place of what the failed read said.' },
-    { name: 'clearable', type: '`boolean`', default: '`true`', meaning: 'Offers a control that clears the selection.' },
+    { name: 'clearable', type: '`boolean`', default: 'the field', meaning: 'Offers a control that clears the value. Unset, it follows the field: a mandatory one is never clearable.' },
     { name: 'readonly', type: '`boolean`', default: '`false`', meaning: 'Keeps full contrast and drops the chevron, the popup and the clear control.' },
     { name: 'disabled', type: '`boolean`', default: '`false`', meaning: 'Greys the control and takes it out of the tab order.' },
     { name: 'invalid', type: '`boolean`', default: '`false`', meaning: 'Sets `aria-invalid` and the destructive ring.' },

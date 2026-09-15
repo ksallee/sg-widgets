@@ -4,7 +4,7 @@
 
 <script lang="ts">
 	import type { HTMLAttributes } from 'svelte/elements';
-	import type { SgContext, StatusOption, StatusRecord } from '@sg-widgets/core';
+	import type { FieldSchema, SgContext, StatusOption, StatusRecord } from '@sg-widgets/core';
 	import { NO_ROWS_LABEL } from '@sg-widgets/core';
 	import ListPicker from '$lib/registry/components/list-picker.svelte';
 	import { PICKER_CHIP as BADGE } from '$lib/registry/components/picker-classes.js';
@@ -31,6 +31,7 @@
 		loadingLabel?: string;
 		/** Shown in place of what the failed read said. */
 		errorLabel?: string;
+		/** Offer a control that clears the value. A mandatory field is never clearable. */
 		clearable?: boolean;
 		readonly?: boolean;
 		disabled?: boolean;
@@ -62,7 +63,7 @@
 		emptyLabel = NO_ROWS_LABEL,
 		loadingLabel,
 		errorLabel,
-		clearable = true,
+		clearable = undefined,
 		readonly = false,
 		disabled = false,
 		invalid = false,
@@ -88,6 +89,8 @@
 		loading: boolean;
 		error: string | null;
 		options: StatusOption[];
+		/** The field the codes come from, which is what clause 8 reads `mandatory` off. */
+		field: FieldSchema | null;
 		statuses: ReadonlyMap<string, StatusRecord>;
 	}
 
@@ -105,10 +108,19 @@
 	 * a "last seen" key.
 	 */
 	function load(type: string, ids: number[], name: string | undefined): Loaded {
-		const state = $state<Loaded>({ loading: true, error: null, options: [], statuses: new Map() });
-		Promise.all([optionsFor(type, ids, name), statusTable.byCode()]).then(
-			([options, statuses]) => {
+		const state = $state<Loaded>({
+			loading: true,
+			error: null,
+			options: [],
+			field: null,
+			statuses: new Map()
+		});
+		// The field itself, for its display name and its `mandatory` flag.
+		const named = name === undefined ? schema.statusField(type) : schema.field(type, name);
+		Promise.all([optionsFor(type, ids, name), named, statusTable.byCode()]).then(
+			([options, found, statuses]) => {
 				state.options = options;
+				state.field = typeof found === 'string' || found === undefined ? null : found;
 				state.statuses = statuses;
 				state.loading = false;
 			},
@@ -153,6 +165,9 @@
 <!--
 	One status, picked from the codes a project offers.
 
+	The clear follows clause 8 of the picker contract: the field's own schema decides,
+	and a site that flags its status field mandatory gets no cross.
+
 	The list picker with a status row and a badge for its value. The options are
 	`valid_values` minus the project's `hidden_values`, read with `project_id`; over
 	several projects they are the intersection of those sets. REST does not enforce
@@ -178,6 +193,7 @@
 	{errorLabel}
 	loading={query.loading}
 	loadError={query.error}
+	field={query.field}
 	{clearable}
 	clearLabel="Clear the status"
 	triggerLabel="Show the statuses"

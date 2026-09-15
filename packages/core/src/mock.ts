@@ -160,13 +160,14 @@ const AUDIT: Record<string, FieldSpec> = {
   updated_by: { displayName: 'Updated by', dataType: 'entity', editable: false, validTypes: ['HumanUser', 'ApiUser'] },
 };
 
-function statusSpec(validValues: string[], defaultValue: string): FieldSpec {
+function statusSpec(validValues: string[], defaultValue: string, mandatory = false): FieldSpec {
   return {
     displayName: 'Status',
     dataType: 'status_list',
     validValues,
     displayValues: Object.fromEntries(validValues.map((c) => [c, STATUS_DISPLAY[c] ?? c])),
     defaultValue,
+    mandatory,
   };
 }
 
@@ -298,7 +299,10 @@ const SPECS: Record<string, Record<string, FieldSpec>> = {
     // `"<subject> - <content>"` when both are set (entity_types/Note).
     subject: { displayName: 'Subject', dataType: 'text', mandatory: true },
     content: { displayName: 'Body', dataType: 'text' },
-    sg_status_list: statusSpec(NOTE_STATUSES, 'opn'),
+    // A site is free to flag a status field mandatory, and Note's commonly is. The probed
+    // site's Version status reads `mandatory: false` (probe 009); the flag is per site and
+    // per field, so a widget reads it rather than assuming either way.
+    sg_status_list: statusSpec(NOTE_STATUSES, 'opn', true),
     sg_note_type: { displayName: 'Note Type', dataType: 'list', validValues: NOTE_TYPES },
     // The codes `unread` and `read`, never a boolean (067_notes_in_the_stream).
     read_by_current_user: { displayName: 'Read by Current User', dataType: 'list', validValues: ['unread', 'read'] },

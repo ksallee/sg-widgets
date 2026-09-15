@@ -199,13 +199,14 @@ export function FilterBar({
   const isStatus = (name: string): boolean => renderKindFor(fields[name]?.dataType ?? '') === 'status';
 
   /** One facet value, as a badge on a status field and as its label everywhere else. */
-  const valueLabel = (name: string, key: string, label: string): ReactNode =>
+  const valueLabel = (name: string, key: string, label: string, query: string): ReactNode =>
     isStatus(name) ? (
       <StatusBadge
         code={key}
         status={statuses[key] ?? null}
         field={fields[name] ?? null}
         size={BADGE[size]}
+        query={query}
         siteUrl={context.siteUrl}
       />
     ) : (
@@ -228,7 +229,7 @@ export function FilterBar({
         {shown.values.length > 0
           ? shown.shown.map((label, i) => (
               <span key={keyOf(shown.values[i] as Scalar)} className="flex min-w-0 items-center truncate">
-                {valueLabel(name, keyOf(shown.values[i] as Scalar), label)}
+                {valueLabel(name, keyOf(shown.values[i] as Scalar), label, '')}
               </span>
             ))
           : shown.shown.map((label) => (
@@ -305,7 +306,7 @@ export function FilterBar({
                       aria-hidden="true"
                     />
                     <span className="flex min-w-0 flex-1 items-center truncate" title={option.label}>
-                      {valueLabel(name, option.key, option.label)}
+                      {valueLabel(name, option.key, option.label, facetQuery)}
                     </span>
                     <span className="text-muted-foreground text-xs tabular-nums" data-slot="facet-count">
                       {option.count}

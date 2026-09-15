@@ -145,6 +145,7 @@
       ],
       "registryDependencies": [
         "https://sg-widgets.dev/r/react/leaf-classes.json",
+        "https://sg-widgets.dev/r/react/match-text.json",
         "https://sg-widgets.dev/r/react/status-glyph.json"
       ],
       "docs": "Pass the resolved Status row for colour and icon, or just a field schema for the label. An unknown code renders as itself in a muted badge.",

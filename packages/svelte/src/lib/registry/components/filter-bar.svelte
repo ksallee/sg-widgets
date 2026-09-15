@@ -217,7 +217,7 @@
 	</button>
 {/snippet}
 
-{#snippet valueLabel(name: string, key: string, label: string)}
+{#snippet valueLabel(name: string, key: string, label: string, query: string)}
 	{#if isStatus(name)}
 		{#await statuses then table}
 			<StatusBadge
@@ -225,6 +225,7 @@
 				status={table.get(key) ?? null}
 				field={fields[name] ?? null}
 				size={BADGE[size]}
+				{query}
 				siteUrl={context.siteUrl}
 			/>
 		{/await}
@@ -248,7 +249,7 @@
 			{#each shown.shown as label, i (i)}
 				<span class="flex min-w-0 items-center truncate">
 					{#if shown.values.length > 0}
-						{@render valueLabel(name, keyOf(shown.values[i] as Scalar), label)}
+						{@render valueLabel(name, keyOf(shown.values[i] as Scalar), label, '')}
 					{:else}
 						{label}
 					{/if}
@@ -288,7 +289,7 @@
 								aria-hidden="true"
 							/>
 							<span class="flex min-w-0 flex-1 items-center truncate" title={option.label}>
-								{@render valueLabel(name, option.key, option.label)}
+								{@render valueLabel(name, option.key, option.label, facetQuery)}
 							</span>
 							<span class="text-muted-foreground text-xs tabular-nums" data-slot="facet-count">
 								{option.count}

@@ -64,6 +64,8 @@ export interface PickerRowProps {
   siteUrl?: string;
   /** Drawn in the leading slot when the row carries no picture. */
   glyph?: React.ReactNode;
+  /** The row's main text, where a row's label is not text: a status option is a badge. */
+  label?: React.ReactNode;
   /** What the indicator column holds: a tick, a checkbox, or nothing while the row is not taken. */
   indicator?: React.ReactNode;
   /** The `data-slot` the indicator column carries. Defaults to `picker-row-indicator`. */
@@ -125,7 +127,8 @@ function useSecondaryPlan(
  * caller learns the six props once.
  *
  * The component draws the row's contents, not its box: the caller owns the list item,
- * its selection state and anything it puts in front, such as a checkbox.
+ * its selection state and anything it puts in front, such as a checkbox. A row whose
+ * label is not text gives one: a status option is a badge, which marks its own runs.
  */
 export function PickerRow({
   row,
@@ -142,6 +145,7 @@ export function PickerRow({
   context,
   siteUrl,
   glyph,
+  label,
   indicator,
   indicatorSlot,
   indicatorAt = 'start',
@@ -207,22 +211,24 @@ export function PickerRow({
 
       <span data-slot="picker-row-text" className={cn('flex min-w-0 flex-1 flex-col', TEXT[size])}>
         <span data-slot="picker-row-label" className="flex min-w-0 items-center gap-1.5" title={title}>
-          <span className="truncate">
-            {crumbs.map((crumb, i) => (
-              <Fragment key={`crumb-${i}`}>
-                <span className="text-muted-foreground">{crumb}</span>
-                <span aria-hidden="true" className="text-muted-foreground">
-                  {' › '}
-                </span>
-              </Fragment>
-            ))}
-            <MatchText
-              data-slot="picker-row-name"
-              text={row.name}
-              query={query}
-              className={crumbs.length > 0 ? 'font-medium' : undefined}
-            />
-          </span>
+          {label ?? (
+            <span className="truncate">
+              {crumbs.map((crumb, i) => (
+                <Fragment key={`crumb-${i}`}>
+                  <span className="text-muted-foreground">{crumb}</span>
+                  <span aria-hidden="true" className="text-muted-foreground">
+                    {' › '}
+                  </span>
+                </Fragment>
+              ))}
+              <MatchText
+                data-slot="picker-row-name"
+                text={row.name}
+                query={query}
+                className={crumbs.length > 0 ? 'font-medium' : undefined}
+              />
+            </span>
+          )}
           {code ? (
             <span data-slot="picker-row-code" className="text-muted-foreground shrink-0 font-mono text-xs">
               {code}

@@ -4,6 +4,7 @@ import { statusGlyph, statusLabel, statusPaint } from '@sg-widgets/core';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { CHIP_BOX, CHIP_CROSS, CHIP_GLYPH, CHIP_PAD, CHIP_SPACING, LEAF_GLYPH, REMOVE_CONTROL, type ChipSize } from '@/registry/sg/components/leaf-classes';
+import { MatchText } from '@/registry/sg/components/match-text';
 import { StatusGlyph } from '@/registry/sg/components/status-glyph';
 
 /** How much of the status to show. `glyph` is the bare icon, with no pill around it. */
@@ -24,6 +25,8 @@ export interface StatusBadgeProps extends Omit<React.HTMLAttributes<HTMLSpanElem
   /** Paint the badge in the status colour instead of the neutral surface. */
   color?: boolean;
   label?: StatusBadgeLabel;
+  /** What was searched for, whose matched runs the label draws bold. */
+  query?: string;
   /** The site the stock sprite is served from, for icons the package does not bundle. */
   siteUrl?: string;
   /** Draw a remove control inside the pill. The icon-only variant has no room for it and ignores this. */
@@ -43,7 +46,8 @@ export interface StatusBadgeProps extends Omit<React.HTMLAttributes<HTMLSpanElem
  * and the code is not on show is the tooltip, so a code is always one hover away from
  * its name. The badge is neutral by default; `color` paints it in `bg_color`,
  * comma-separated decimal RGB and never hex (probe 010), the one raw colour the design
- * rules allow.
+ * rules allow. The label draws the matched runs of `query` bold, so a badge standing as
+ * a row in a searched list reads as the rows beside it do.
  *
  * `removable` draws a cross inside the pill, after the label, in the badge's own
  * foreground: under `color` that is the readable black or white the status colour gives,
@@ -52,8 +56,9 @@ export interface StatusBadgeProps extends Omit<React.HTMLAttributes<HTMLSpanElem
  * already carries a colour of its own.
  *
  * `glyph` is the icon alone, in its own colour, with no pill around it: no border, no
- * background, no inset, sized like a row glyph. It is what a list row's leading slot
- * draws, where a bordered pill would read as a second surface. The label stays as the
+ * background, no inset, sized like a row glyph. It is the leading mark of a row whose
+ * label is an entity's name, where a bordered pill would read as a second surface; a
+ * status listed as an option of its own is the badge instead. The label stays as the
  * accessible name and the tooltip, `color` has nothing to paint, and there is no room for
  * a cross. A status with no icon to draw takes the neutral dot, so a row always carries a
  * leading mark.
@@ -66,6 +71,7 @@ export function StatusBadge({
   size = 'md',
   color = false,
   label = 'name',
+  query = '',
   siteUrl,
   removable = false,
   onRemove,
@@ -98,7 +104,7 @@ export function StatusBadge({
   const content = (
     <>
       {showGlyph ? <StatusGlyph status={status} siteUrl={siteUrl} className={CHIP_GLYPH[size]} /> : null}
-      <span className={cn('truncate', !showText && 'sr-only')}>{textIcon ?? text}</span>
+      <MatchText text={textIcon ?? text} query={query} className={cn('truncate', !showText && 'sr-only')} />
     </>
   );
 

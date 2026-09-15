@@ -1,6 +1,7 @@
-// Both status pickers list the shared picker row: the bare status glyph, the label and
-// the code, never a pill badge. `showCode={false}` drops the code, a caller's own
-// secondary replaces it, and a pick still lands in the control as a badge.
+// Both status pickers list the shared picker row with the status as its label: a badge
+// with a surface of its own, on the chip step under the control, never a bare glyph
+// beside plain text. `showCode={false}` drops the code, a caller's own secondary
+// replaces it, and a pick still lands in the control as a badge.
 //
 //   pnpm qa --start --path /widgets/status-picker/ --framework both --drive tools/drives/status-picker-rows.js
 //
@@ -17,6 +18,13 @@ async function until(read, ms = 10000) {
     if (Date.now() > end) return null;
     await wait(50);
   }
+}
+
+/** Set a controlled input's value the way a keystroke does. */
+function type(input, text) {
+  const setter = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(input), 'value')?.set;
+  setter ? setter.call(input, text) : (input.value = text);
+  input.dispatchEvent(new Event('input', { bubbles: true }));
 }
 
 function pointer(el) {
@@ -61,23 +69,41 @@ async function frame(path) {
   return el.contentDocument;
 }
 
-/** What one list row draws, as the anatomy of rule 9. */
+/** The chip ladder: a badge sits one step under the control it is in. */
+const CHIP_HEIGHT = { sm: 20, md: 24, lg: 32 };
+
+/** True where a colour is drawn at all rather than left transparent. */
+const opaque = (colour) => Boolean(colour) && !/^(transparent$|rgba\(.*,\s*0\s*\)$)/.test(colour);
+
+/** What one list row draws, as the anatomy of rule 9, with the status as its label. */
 function anatomy(row) {
+  const badge = row.querySelector('[data-slot="picker-row-label"] [data-slot="status-badge"]');
+  const style = badge && badge.ownerDocument.defaultView.getComputedStyle(badge);
   return {
     code: row.dataset.option ?? row.dataset.statusCode ?? '',
-    glyph: Boolean(row.querySelector('[data-slot="picker-row-leading"] [data-slot="status-glyph"]')),
+    bare: Boolean(row.querySelector('[data-slot="status-badge"][data-variant="glyph"]')),
     leading: Boolean(row.querySelector('[data-slot="picker-row-leading"]')),
-    label: row.querySelector('[data-slot="picker-row-name"]')?.textContent.trim() ?? '',
+    badge: Boolean(badge),
+    icon: Boolean(badge?.querySelector('[data-slot="status-glyph"]')),
+    label: badge?.textContent.trim() ?? '',
+    height: badge ? Math.round(badge.getBoundingClientRect().height) : 0,
+    // A badge in a row is a surface: the pill's own border and fill, which is what a
+    // bare sprite on a dark page has none of.
+    surface: Boolean(style) && parseFloat(style.borderTopWidth) > 0 && opaque(style.borderTopColor) && opaque(style.backgroundColor),
     secondary: row.querySelector('[data-slot="picker-row-secondary"]')?.textContent.trim() ?? '',
-    badge: Boolean(row.querySelector('[data-slot="status-badge"]:not([data-variant="glyph"])')),
   };
 }
 
-function readRows(rows, where) {
+function readRows(rows, where, size) {
   const drawn = rows.map(anatomy);
   for (const row of drawn) {
-    if (row.badge) failures.push(`${where}: ${row.code} still draws a pill badge in the list`);
-    if (!row.leading || !row.glyph) failures.push(`${where}: ${row.code} has no status glyph`);
+    if (!row.badge) failures.push(`${where}: ${row.code} draws no badge in the list`);
+    if (row.bare) failures.push(`${where}: ${row.code} still draws the bare glyph`);
+    if (row.leading) failures.push(`${where}: ${row.code} keeps a leading slot beside its badge`);
+    if (row.badge && !row.surface) failures.push(`${where}: ${row.code}'s badge has no surface of its own`);
+    if (row.badge && row.height !== CHIP_HEIGHT[size]) {
+      failures.push(`${where}: ${row.code}'s badge stands ${row.height}px, not the ${CHIP_HEIGHT[size]}px step under a ${size} control`);
+    }
     if (!row.label) failures.push(`${where}: ${row.code} has no label`);
   }
   return drawn;
@@ -94,11 +120,14 @@ for (const framework of ['svelte', 'react']) {
   const live = (rows) => rows.filter((row) => !row.closest('[data-closed]') && row.getClientRects().length > 0);
   const options = () => live($$('[data-slot="status-picker-option"]'));
   let lastTrigger = null;
+  /** The control ladder the open picker stands on, which the badge takes a step under. */
+  let lastSize = 'md';
   const openSingle = async (demo) => {
     const settled = await until(() => {
       const el = $(`[data-demo="${demo}"] [data-slot="status-picker"]`, pane);
       return el && !el.dataset.loading ? el : null;
     }, 15000);
+    lastSize = settled?.dataset.size ?? 'md';
     const trigger = settled && $('[data-slot="status-picker-control"]', settled);
     if (!trigger) {
       failures.push(`${framework}: no ${demo} status picker to open`);
@@ -112,7 +141,7 @@ for (const framework of ['svelte', 'react']) {
 
   const listed = await openSingle('p70');
   if (listed) {
-    const drawn = readRows(listed, `${framework} status-picker`);
+    const drawn = readRows(listed, `${framework} status-picker`, lastSize);
     const ip = drawn.find((row) => row.code === 'ip');
     if (!ip) failures.push(`${framework}: the status picker has no ip row`);
     else if (ip.secondary !== 'ip') failures.push(`${framework}: ip reads "${ip.secondary}" as its secondary, not the code`);
@@ -136,7 +165,7 @@ for (const framework of ['svelte', 'react']) {
 
   const bare = await openSingle('no-code');
   if (bare) {
-    const withCode = readRows(bare, `${framework} status-picker showCode=false`).filter((row) => row.secondary);
+    const withCode = readRows(bare, `${framework} status-picker showCode=false`, lastSize).filter((row) => row.secondary);
     note.noCode = withCode.length;
     if (withCode.length > 0) failures.push(`${framework}: showCode={false} left ${withCode.length} codes on the rows`);
   }
@@ -144,7 +173,7 @@ for (const framework of ['svelte', 'react']) {
 
   const own = await openSingle('own-secondary');
   if (own) {
-    const drawn = readRows(own, `${framework} status-picker secondary`);
+    const drawn = readRows(own, `${framework} status-picker secondary`, lastSize);
     note.ownSecondary = drawn.find((row) => row.code === 'ip')?.secondary ?? '';
     if (note.ownSecondary !== 'Animation') failures.push(`${framework}: the caller's secondary reads "${note.ownSecondary}", not Animation`);
   }
@@ -165,6 +194,7 @@ for (const framework of ['svelte', 'react']) {
       const el = $(`[data-demo="${demo}"] [data-slot="status-multi-picker"]`, mPane);
       return el && !el.dataset.loading ? el : null;
     }, 15000);
+    lastSize = settled?.dataset.size ?? 'md';
     const control = settled && $('[data-slot="status-multi-picker-control"]', settled);
     if (!control) {
       failures.push(`${framework}: no ${demo} status multi picker to open`);
@@ -177,7 +207,7 @@ for (const framework of ['svelte', 'react']) {
 
   const mListed = await openMulti('both');
   if (mListed) {
-    const drawn = readRows(mListed, `${framework} status-multi-picker`);
+    const drawn = readRows(mListed, `${framework} status-multi-picker`, lastSize);
     const boxes = mListed.filter((row) => row.querySelector('[data-slot="status-multi-picker-check"]')).length;
     note.multi = drawn.slice(0, 3);
     note.checkboxes = boxes;
@@ -197,12 +227,27 @@ for (const framework of ['svelte', 'react']) {
     );
     note.chip = chip?.dataset.statusCode ?? '';
     if (note.chip !== 'rev') failures.push(`${framework}: the picked status did not land in the control as a badge chip`);
+
+    // The badge is the row's label, so the search box's matched runs are bold inside it.
+    const input = $('[data-slot="status-multi-picker-input"]', doc);
+    if (!input) failures.push(`${framework}: the status multi picker popup has no search box`);
+    else {
+      type(input, 'in');
+      const marked = await until(() => {
+        const runs = $$('[data-slot="status-multi-picker-option"] [data-slot="status-badge"] .font-semibold', doc);
+        return runs.length > 0 ? runs : null;
+      }, 4000);
+      note.marked = marked?.map((run) => run.textContent) ?? [];
+      if (!marked) failures.push(`${framework}: no badge marked the query's run in the multi picker list`);
+      type(input, '');
+      await wait(200);
+    }
   }
   if (!(await dismiss(doc, mRows))) failures.push(`${framework}: a status multi picker list would not close`);
 
   const mBare = await openMulti('no-code');
   if (mBare) {
-    const withCode = readRows(mBare, `${framework} status-multi-picker showCode=false`).filter((row) => row.secondary);
+    const withCode = readRows(mBare, `${framework} status-multi-picker showCode=false`, lastSize).filter((row) => row.secondary);
     note.multiNoCode = withCode.length;
     if (withCode.length > 0) failures.push(`${framework}: showCode={false} left ${withCode.length} codes on the multi rows`);
   }
@@ -210,7 +255,7 @@ for (const framework of ['svelte', 'react']) {
 
   const mOwn = await openMulti('own-secondary');
   if (mOwn) {
-    const drawn = readRows(mOwn, `${framework} status-multi-picker secondary`);
+    const drawn = readRows(mOwn, `${framework} status-multi-picker secondary`, lastSize);
     note.multiOwnSecondary = drawn.find((row) => row.code === 'ip')?.secondary ?? '';
     if (note.multiOwnSecondary !== 'Animation') failures.push(`${framework}: the multi picker's own secondary reads "${note.multiOwnSecondary}"`);
   }
@@ -224,7 +269,7 @@ if (Object.keys(seen).length === 0) failures.push('no framework pane was on show
 return {
   verdict:
     failures.length === 0
-      ? 'PASS both status pickers list picker rows with the glyph, the label and the code, showCode and a caller secondary shape them, and a pick lands as a badge'
+      ? 'PASS both status pickers list picker rows whose label is a badge on the chip step, with its own surface and its matched runs, showCode and a caller secondary shape them, and a pick lands as a badge'
       : `FAIL ${failures.join('; ')}`,
   seen,
 };

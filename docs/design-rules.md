@@ -214,6 +214,12 @@ composes it rather than drawing a second one. A list that can tick a row opens t
 indicator column, whose width is fixed whether or not the row is ticked, so a label sits at one x
 down the whole list.
 
+A status listed as an option is a badge, and the badge is the row's label rather than a mark before
+it: the icon and the name in their pill, on the chip step of rule 3 under the control, with the code
+right-aligned after it. The pickers and the filter bar's facet rows draw it the same way. The bare
+glyph variant is the leading mark of a row whose label is an entity's name, as the tree and the
+grouped list draw it, and never the whole of what a row says about a status.
+
 A popup list fades at whichever edge has more content past it and holds a gutter for its scrollbar,
 and carries a live region under it saying what it is doing: the read in flight, the count it
 answered, the empty line, or what a failed read said. The live region is what a reader hears; the

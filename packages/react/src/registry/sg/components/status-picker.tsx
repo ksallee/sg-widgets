@@ -136,9 +136,10 @@ function statusOptionStore(
  * (field_types/status_list). When a later option set drops the selected code, the
  * picker clears it and emits once.
  *
- * A row is the shared picker row of rule 9: the status icon as the leading glyph, the
- * display label, and the code right-aligned. The badge stays in the control, where a
- * status is a value rather than a row.
+ * A row is the shared picker row of rule 9, with the status as its label: a status
+ * offered as an option is the badge the filter bar's facets draw, one step under the
+ * control, and the code sits right-aligned after it. The control keeps its own badge
+ * for the value.
  */
 export function StatusPicker({
   context,
@@ -240,13 +241,12 @@ export function StatusPicker({
           className="min-w-0"
         />
       )}
-      mark={(option) => (
+      optionLabel={(option) => (
         <StatusBadge
           code={option.code}
           status={query.statuses.get(option.code) ?? null}
           field={badgeField}
-          variant="glyph"
-          size={size}
+          size={BADGE[size]}
           siteUrl={site}
         />
       )}

@@ -15,6 +15,7 @@
 	import X from '@lucide/svelte/icons/x';
 	import { cn, type WithElementRef } from '$lib/utils.js';
 	import { CHIP_BOX, CHIP_CROSS, CHIP_GLYPH, CHIP_PAD, CHIP_SPACING, LEAF_GLYPH, REMOVE_CONTROL } from '$lib/registry/components/leaf-classes.js';
+	import MatchText from '$lib/registry/components/match-text.svelte';
 	import StatusGlyph from '$lib/registry/components/status-glyph.svelte';
 
 	// `color` is a deprecated HTML attribute Svelte types as `never`, so it is dropped
@@ -31,6 +32,8 @@
 		/** Paint the badge in the status colour instead of the neutral surface. */
 		color?: boolean;
 		label?: StatusBadgeLabel;
+		/** What was searched for, whose matched runs the label draws bold. */
+		query?: string;
 		/** The site the stock sprite is served from, for icons the package does not bundle. */
 		siteUrl?: string;
 		/** Draw a remove control inside the pill. The icon-only variant has no room for it and ignores this. */
@@ -48,6 +51,7 @@
 		size = 'md',
 		color = false,
 		label = 'name',
+		query = '',
 		siteUrl = undefined,
 		removable = false,
 		onRemove,
@@ -88,7 +92,8 @@
 	and the code is not on show is the tooltip, so a code is always one hover away from
 	its name. The badge is neutral by default; `color` paints it in `bg_color`,
 	comma-separated decimal RGB and never hex (probe 010), the one raw colour the design
-	rules allow.
+	rules allow. The label draws the matched runs of `query` bold, so a badge standing as
+	a row in a searched list reads as the rows beside it do.
 
 	`display_type` picks one of three icon renderings (010_status_icons): `image` is a
 	self-contained data URI, `html` is the label itself and so replaces the text rather
@@ -104,8 +109,9 @@
 	the pill already carries a colour of its own.
 
 	`glyph` is the icon alone, in its own colour, with no pill around it: no border, no
-	background, no inset, sized like a row glyph. It is what a list row's leading slot
-	draws, where a bordered pill would read as a second surface. The label stays as the
+	background, no inset, sized like a row glyph. It is the leading mark of a row whose
+	label is an entity's name, where a bordered pill would read as a second surface; a
+	status listed as an option of its own is the badge instead. The label stays as the
 	accessible name and the tooltip, `color` has nothing to paint, and there is no room
 	for a cross. A status with no icon to draw takes the neutral dot, so a row always
 	carries a leading mark.
@@ -114,7 +120,7 @@
 	{#if showGlyph}
 		<StatusGlyph {status} {siteUrl} class={CHIP_GLYPH[size]} />
 	{/if}
-	<span class={cn('truncate', !showText && 'sr-only')}>{textIcon ?? text}</span>
+	<MatchText text={textIcon ?? text} {query} class={cn('truncate', !showText && 'sr-only')} />
 {/snippet}
 
 {#if code}

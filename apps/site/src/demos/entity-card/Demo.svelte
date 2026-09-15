@@ -8,10 +8,11 @@
 	const context = createDemoContext();
 
 	/**
-	 * Three paths, the first dotted through a link that accepts several types, so its
-	 * label names the type it travels through.
+	 * Four paths. The first dotted through a link that accepts several types, so its
+	 * label names the type it travels through, and the last the row's own status, which
+	 * the header draws and the grid therefore does not.
 	 */
-	const FIELDS = ['entity.Shot.sg_sequence', 'user', 'description'];
+	const FIELDS = ['entity.Shot.sg_sequence', 'user', 'description', 'sg_status_list'];
 	const SIZES = ['sm', 'md', 'lg'] as const;
 
 	// The mock's rows are one project's already; a real site's are not.

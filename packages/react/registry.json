@@ -216,7 +216,7 @@
       "name": "thumbnail",
       "type": "registry:component",
       "title": "Thumbnail",
-      "description": "A row's thumbnail, with aspect ratio, an explicit no-image placeholder and a play overlay.",
+      "description": "A row's thumbnail, with aspect ratio, the entity's own glyph where there is no picture, and a play overlay.",
       "categories": [
         "flow-production-tracking",
         "atom"
@@ -226,8 +226,10 @@
         "lucide-react",
         "cn"
       ],
-      "registryDependencies": [],
-      "docs": "The value of an image field is the only state marker there is: null, still transcoding, or ready. All three render.",
+      "registryDependencies": [
+        "https://sg-widgets.dev/r/react/entity-glyphs.json"
+      ],
+      "docs": "The value of an image field is the only state marker there is: null, still transcoding, or ready. All three render; pass entityType so the empty one draws the row's glyph.",
       "files": [
         {
           "path": "src/registry/sg/components/thumbnail.tsx",

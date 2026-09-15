@@ -104,9 +104,12 @@ export default function ThumbnailDemo() {
           <h4 className={label}>No image, still transcoding, failed to load</h4>
           <div className={row}>
             <Thumbnail src={null} size="lg" />
+            <Thumbnail src={null} size="lg" entityType="Shot" />
+            <Thumbnail src={null} size="lg" entityType="Asset" />
+            <Thumbnail src={null} size="lg" entityType="Version" />
             <Thumbnail src={PENDING} size="lg" />
-            <Thumbnail src={BROKEN} size="lg" />
-            <Thumbnail src={null} size="lg" aspect="square" playable />
+            <Thumbnail src={BROKEN} size="lg" entityType="Shot" />
+            <Thumbnail src={null} size="lg" aspect="square" entityType="Task" playable />
           </div>
         </section>
       </div>

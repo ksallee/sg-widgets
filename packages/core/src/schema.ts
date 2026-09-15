@@ -135,18 +135,30 @@ export function normalizeFields(response: RawFieldsResponse, entityType?: string
   return out;
 }
 
+/** The field name a type's own status lives under. Project's is a plain `list`. */
+export function statusFieldNameFor(entityType: string): string {
+  return entityType === 'Project' ? 'sg_status' : 'sg_status_list';
+}
+
 /**
  * The status field of an entity type. Every type but Project uses `sg_status_list`
  * (data type `status_list`); Project's is `sg_status`, a plain `list`. Prefer the
  * schema when you have it; the name guess is the fallback.
+ *
+ * The conventional name wins over any other `status_list` field on the type. A site
+ * is free to add its own — a client status, a delivery status — and a schema read
+ * answers them in no order the caller controls, so picking the first one found makes
+ * a type's status whichever field the response happened to list first.
  */
 export function statusFieldFor(entityType: string, fields?: Record<string, FieldSchema>): FieldSchema | string {
+  const name = statusFieldNameFor(entityType);
   if (fields) {
+    const own = fields[name];
+    if (own) return own;
     const status = Object.values(fields).find((f) => f.dataType === 'status_list');
     if (status) return status;
-    if (entityType === 'Project' && fields['sg_status']) return fields['sg_status'];
   }
-  return entityType === 'Project' ? 'sg_status' : 'sg_status_list';
+  return name;
 }
 
 /**

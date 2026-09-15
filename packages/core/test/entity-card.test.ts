@@ -40,7 +40,20 @@ describe('loadEntityCard', () => {
     expect(card.name.length).toBeGreaterThan(0);
     expect(card.typeLabel).toBe('Shot');
     expect(card.status?.code).toBeTruthy();
-    expect(card.columns.map((c) => c.label)).toEqual(['Status']);
+    // The header already carries this status, so the column naming the same field is gone.
+    expect(card.columns).toEqual([]);
+  });
+
+  it('keeps a linked row status, which is a different row from the one the card is of', async () => {
+    const sg = context();
+    const first = (await sg.client.search('Version', { fields: ['code'], page: { size: 1 } })).data[0];
+    const card = await loadEntityCard(
+      sg,
+      { type: 'Version', id: first?.id ?? 0 },
+      { fields: ['sg_status_list', 'sg_task.Task.sg_status_list'] },
+    );
+    expect(card.columns.map((c) => c.path)).toEqual(['sg_task.Task.sg_status_list']);
+    expect(card.status?.field.name).toBe('sg_status_list');
   });
 
   it('labels a dotted path through a field with several valid types', async () => {
@@ -89,6 +102,14 @@ describe('describeEntityCard', () => {
     const sg = context();
     const row = (await sg.client.search('HumanUser', { fields: ['name'], page: { size: 1 } })).data[0];
     expect((await describeEntityCard(sg, row!)).status).toBeNull();
+  });
+
+  it('drops a Project column naming sg_status, the status field of that type', async () => {
+    const sg = context();
+    const first = (await sg.client.search('Project', { fields: ['name'], page: { size: 1 } })).data[0];
+    const card = await loadEntityCard(sg, { type: 'Project', id: first?.id ?? 0 }, { fields: ['sg_status', 'sg_type'] });
+    expect(card.status?.field.name).toBe('sg_status');
+    expect(card.columns.map((c) => c.path)).toEqual(['sg_type']);
   });
 
   it('falls back to type and id when the row has no name', async () => {

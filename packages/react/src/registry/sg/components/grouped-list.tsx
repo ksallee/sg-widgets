@@ -487,6 +487,7 @@ export function GroupedList({
                                 src={cellValue(row, thumbnail) as string | null}
                                 alt=""
                                 size={THUMB[size][density]}
+                                entityType={row.type}
                                 className="shrink-0"
                               />
                             ) : leading ? (

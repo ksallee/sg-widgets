@@ -588,7 +588,12 @@
 								{#if thumbnail !== false}
 									<span class={cn('flex shrink-0 items-center', LEAD[size])}>
 										{#if thumbOf(node)}
-											<Thumbnail src={thumbOf(node)} aspect="square" size={LEAF[size]} />
+											<Thumbnail
+												src={thumbOf(node)}
+												aspect="square"
+												size={LEAF[size]}
+												entityType={node.entity?.type ?? null}
+											/>
 										{/if}
 									</span>
 								{/if}

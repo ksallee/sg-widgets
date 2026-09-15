@@ -38,9 +38,10 @@
 	import type { HTMLAttributes } from 'svelte/elements';
 	import { imageState } from '@sg-widgets/core';
 	import Hourglass from '@lucide/svelte/icons/hourglass';
-	import ImageOff from '@lucide/svelte/icons/image-off';
+	import ImageIcon from '@lucide/svelte/icons/image';
 	import Play from '@lucide/svelte/icons/play';
 	import { cn, type WithElementRef } from '$lib/utils.js';
+	import { entityGlyph } from '$lib/registry/components/entity-glyphs.js';
 
 	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>, HTMLDivElement> & {
 		/** The `image` field's value, or null. Presigned and re-signed on every read (field_types/image). */
@@ -48,6 +49,8 @@
 		alt?: string;
 		aspect?: ThumbnailAspect;
 		size?: ThumbnailSize;
+		/** The row's entity type, whose glyph stands in when there is no picture. */
+		entityType?: string | null;
 		/** Draws a centred play badge, the way the desktop tk-framework-qtwidgets label marks playable media. */
 		playable?: boolean;
 	};
@@ -57,6 +60,7 @@
 		alt = '',
 		aspect = '16:9',
 		size = 'md',
+		entityType = null,
 		playable = false,
 		class: className,
 		ref = $bindable(null),
@@ -66,6 +70,8 @@
 	// Held as the failing URL, not a flag, so a new `src` retries on its own.
 	let failed = $state<string | null>(null);
 	const imgState = $derived(failed !== null && failed === src ? 'none' : imageState(src));
+	// A row with no type still has a picture's shape to stand in for.
+	const Empty = $derived(entityType ? entityGlyph(entityType) : ImageIcon);
 </script>
 
 <!--
@@ -73,9 +79,10 @@
 
 	The value of an `image` field is the only state marker there is: null means the row
 	never had one, and the `/images/status/transient/` prefix means it is still
-	transcoding, so neither is tested for truthiness (field_types/image). Both states
-	get an explicit glyph rather than an empty box, as does a URL that fails to load:
-	the value is presigned and expires, so a stale one is a normal outcome. Corners
+	transcoding, so neither is tested for truthiness (field_types/image). Having none
+	is the ordinary case and reads as one: the type's own glyph on the muted box,
+	never a broken picture. A URL that fails to load reads the same, since the value
+	is presigned and expires, so a stale one is a normal outcome. Corners
 	follow `--radius` through `rounded-md`, and the height comes from the size ladder
 	while the width follows the aspect, so the atom never sets a fixed width.
 -->
@@ -112,9 +119,9 @@
 		<span
 			role="img"
 			aria-label="No image"
-			class="text-muted-foreground flex items-center justify-center"
+			class="text-muted-foreground flex items-center justify-center opacity-70"
 		>
-			<ImageOff aria-hidden="true" class={GLYPH[size]} />
+			<Empty aria-hidden="true" class={GLYPH[size]} />
 		</span>
 	{/if}
 

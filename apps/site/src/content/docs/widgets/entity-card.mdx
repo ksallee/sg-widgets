@@ -57,6 +57,11 @@ linked row a link to its own page, and everything else the text core's formatter
 that names no field is shown under its own text with an empty value. A badge sits one step under
 the card's own size.
 
+The header names the row's own status, so a path naming that same field is not drawn a second time
+in the grid. A path that ends at a linked row's status is a different row's status and stays.
+The field is the type's conventional one, `sg_status_list` or `sg_status` on a Project, whatever
+other status fields the site has added to the type.
+
 A card with no row yet shows a skeleton shaped like the card; a read that fails shows the message
 inline.
 
@@ -97,7 +102,9 @@ does not have is a 400 and not an empty column: a Task has neither `code` nor `n
 (entity_types/Task).
 
 Every type but Project holds its status in `sg_status_list`; Project's is `sg_status`, a plain list
-with no Status row behind it (entity_types/Project).
+with no Status row behind it (entity_types/Project). A site may add status fields of its own to a
+type, and a schema read answers them in no fixed order, so the conventional name is what a row's
+status is read from and never whichever status field the response listed first.
 
 The web app addresses a row at `/detail/<Type>/<id>`. The API hands that path out for one type only,
 as `Project.landing_page_url`, site-relative and with the site url left to the caller

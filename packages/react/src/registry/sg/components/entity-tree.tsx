@@ -595,7 +595,7 @@ export function EntityTree({
                     {thumbnail !== false ? (
                       <span className={cn('flex shrink-0 items-center', LEAD[size])}>
                         {thumbOf(node) ? (
-                          <Thumbnail src={thumbOf(node)} aspect="square" size={LEAF[size]} />
+                          <Thumbnail src={thumbOf(node)} aspect="square" size={LEAF[size]} entityType={node.entity?.type ?? null} />
                         ) : null}
                       </span>
                     ) : null}

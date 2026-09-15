@@ -188,6 +188,7 @@
 				src={picture}
 				aspect="square"
 				{size}
+				entityType={row.type}
 				class={roundThumbnail ? 'rounded-full' : undefined}
 			/>
 		{/if}

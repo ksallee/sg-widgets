@@ -8,7 +8,14 @@ import {
   usableStatuses,
 } from '../src/status.js';
 import { STOCK_ICON_CELLS } from '../src/status-icons.js';
-import { displayNameOf, fieldSchemaOverride, normalizeField, normalizeFields, statusFieldFor } from '../src/schema.js';
+import {
+  displayNameOf,
+  fieldSchemaOverride,
+  normalizeField,
+  normalizeFields,
+  statusFieldFor,
+  statusFieldNameFor,
+} from '../src/schema.js';
 
 describe('usableStatuses', () => {
   const field = {
@@ -95,6 +102,28 @@ describe('schema', () => {
     expect(f.hiddenValues).toEqual(['fin']);
     expect(statusFieldFor('Version', { sg_status_list: f })).toBe(f);
     expect(statusFieldFor('Project')).toBe('sg_status');
+  });
+  it('the conventional status field wins over another status_list the site added', () => {
+    const shape = (name: string, displayName: string) => ({
+      name,
+      displayName,
+      entityType: 'Shot',
+      dataType: 'status_list' as const,
+      editable: true,
+      mandatory: false,
+      unique: false,
+    });
+    // A schema read answers in no order the caller controls, so the first status_list
+    // found is not the type's status.
+    const fields = {
+      sg_client_status: shape('sg_client_status', 'Client Status'),
+      sg_status_list: shape('sg_status_list', 'Status'),
+    };
+    expect(statusFieldFor('Shot', fields)).toBe(fields.sg_status_list);
+    // With no conventional field the first status_list is still better than a guess.
+    expect(statusFieldFor('Shot', { sg_client_status: fields.sg_client_status })).toBe(fields.sg_client_status);
+    expect(statusFieldFor('Shot', {})).toBe('sg_status_list');
+    expect(statusFieldNameFor('Project')).toBe('sg_status');
   });
   it('display name falls back through the conventional fields', () => {
     expect(displayNameOf({ code: 'sh010', name: 'x' })).toBe('sh010');

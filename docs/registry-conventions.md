@@ -13,9 +13,19 @@ One kebab-case name per widget, **identical in both registries**: `status-badge`
 
 Every item is `type: "registry:component"`, with one exception: a shadcn primitive this repo has
 replaced ships as its own `registry:ui` item under the primitive's own name, so a consumer installing
-a widget gets this repo's version rather than the upstream one. React's `command` is that item; every
-item that named `"command"` names its URL instead. Files inside such an item are `type: "registry:ui"`
-so they install to the consumer's `ui` alias, which is what `@/components/ui/<name>` rewrites to.
+a widget gets this repo's version rather than the upstream one. React's `command` is that item;
+Svelte's are `command`, `select` and `checkbox`. Every item that named the plain upstream name names
+this registry's item instead. Files inside such an item are `type: "registry:ui"` so they install to
+the consumer's `ui` alias, which is what `@/components/ui/<name>` and `$lib/components/ui/<name>`
+rewrite to.
+
+A primitive earns an item only when this repo's copy carries a decision of its own: an export
+upstream does not have, a rule a widget is written against, a measured change made after the folder
+was vendored. Class order is not a change, and neither is upstream's drift since — the icon
+placeholder, a `calc()` written with underscores, a `cn-` hook, a renamed Tailwind variant. Those
+primitives stay upstream's and are named plainly, so a consumer gets the version upstream maintains.
+A primitive item declares the packages its own files import, which for a vendored primitive is not
+`@sg-widgets/core` unless it reaches into core.
 
 Files are `type: "registry:component"` too, and every
 item is a single file. Multi-file items are possible but flatten differently in each CLI (see §6),
@@ -115,8 +125,13 @@ The site serves both trees statically at `/r/react/<name>.json` and `/r/svelte/<
   one segment, so `@/registry/sg/<name>/<name>` rewrites to `@/components/<name>/<name>` while the
   file installs flat at `@/components/<name>.tsx`. Broken import, no error.
 - A Svelte **single-file** `registry:ui` item installs to `<ui>/<file>` while a multi-file one
-  installs to `<ui>/<item-name>/<file>`. Our items are all `registry:component`, which always
-  flattens to the alias root.
+  installs to `<ui>/<item-name>/<file>`. The three primitive items are multi-file and land where
+  `$lib/components/ui/<name>/index.js` expects them; every other item is `registry:component`, which
+  always flattens to the alias root.
+- A source alias only becomes a placeholder if `registry.json` names it. The Svelte `ui` alias is
+  `$lib/components/ui`, the folder the primitives live in, so `$UI$` reaches the consumer's own
+  alias. Point it anywhere else and the import string survives the build verbatim and only works
+  for a consumer whose alias happens to match.
 - shadcn-svelte's `registry build` drops `docs` and `categories`; React keeps both.
 - Item content is copied into the consumer's tree and edited by them. Nothing in an item may
   import from another package in this monorepo except `@sg-widgets/core`.

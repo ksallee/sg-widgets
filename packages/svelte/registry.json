@@ -4,7 +4,7 @@
   "homepage": "https://sg-widgets.dev",
   "aliases": {
     "components": "$lib/registry/components",
-    "ui": "$lib/registry/ui",
+    "ui": "$lib/components/ui",
     "hooks": "$lib/registry/hooks",
     "lib": "$lib/registry/lib",
     "utils": "$lib/utils"
@@ -20,6 +20,9 @@
         "@lucide/svelte"
       ],
       "registryDependencies": [
+        "local:command",
+        "local:select",
+        "local:checkbox",
         "local:status-glyph",
         "local:status-badge",
         "local:entity-chip",
@@ -81,6 +84,158 @@
         "local:context-selector"
       ],
       "files": []
+    },
+    {
+      "name": "command",
+      "type": "registry:ui",
+      "title": "Command",
+      "description": "A list that is always open, always in place and always holds a highlight, over Bits UI.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte",
+        "bits-ui"
+      ],
+      "registryDependencies": [
+        "dialog",
+        "input-group",
+        "separator"
+      ],
+      "files": [
+        {
+          "path": "src/lib/components/ui/command/command-dialog.svelte",
+          "type": "registry:ui"
+        },
+        {
+          "path": "src/lib/components/ui/command/command-empty.svelte",
+          "type": "registry:ui"
+        },
+        {
+          "path": "src/lib/components/ui/command/command-group.svelte",
+          "type": "registry:ui"
+        },
+        {
+          "path": "src/lib/components/ui/command/command-input.svelte",
+          "type": "registry:ui"
+        },
+        {
+          "path": "src/lib/components/ui/command/command-item.svelte",
+          "type": "registry:ui"
+        },
+        {
+          "path": "src/lib/components/ui/command/command-link-item.svelte",
+          "type": "registry:ui"
+        },
+        {
+          "path": "src/lib/components/ui/command/command-list.svelte",
+          "type": "registry:ui"
+        },
+        {
+          "path": "src/lib/components/ui/command/command-loading.svelte",
+          "type": "registry:ui"
+        },
+        {
+          "path": "src/lib/components/ui/command/command-separator.svelte",
+          "type": "registry:ui"
+        },
+        {
+          "path": "src/lib/components/ui/command/command-shortcut.svelte",
+          "type": "registry:ui"
+        },
+        {
+          "path": "src/lib/components/ui/command/command-status.svelte",
+          "type": "registry:ui"
+        },
+        {
+          "path": "src/lib/components/ui/command/command.svelte",
+          "type": "registry:ui"
+        },
+        {
+          "path": "src/lib/components/ui/command/index.ts",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "select",
+      "type": "registry:ui",
+      "title": "Select",
+      "description": "A select whose list is padded inside its popup and whose scroll buttons sit over it.",
+      "dependencies": [
+        "@lucide/svelte",
+        "bits-ui"
+      ],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "src/lib/components/ui/select/index.ts",
+          "type": "registry:ui"
+        },
+        {
+          "path": "src/lib/components/ui/select/select-content.svelte",
+          "type": "registry:ui"
+        },
+        {
+          "path": "src/lib/components/ui/select/select-group-heading.svelte",
+          "type": "registry:ui"
+        },
+        {
+          "path": "src/lib/components/ui/select/select-group.svelte",
+          "type": "registry:ui"
+        },
+        {
+          "path": "src/lib/components/ui/select/select-item.svelte",
+          "type": "registry:ui"
+        },
+        {
+          "path": "src/lib/components/ui/select/select-label.svelte",
+          "type": "registry:ui"
+        },
+        {
+          "path": "src/lib/components/ui/select/select-portal.svelte",
+          "type": "registry:ui"
+        },
+        {
+          "path": "src/lib/components/ui/select/select-scroll-down-button.svelte",
+          "type": "registry:ui"
+        },
+        {
+          "path": "src/lib/components/ui/select/select-scroll-up-button.svelte",
+          "type": "registry:ui"
+        },
+        {
+          "path": "src/lib/components/ui/select/select-separator.svelte",
+          "type": "registry:ui"
+        },
+        {
+          "path": "src/lib/components/ui/select/select-trigger.svelte",
+          "type": "registry:ui"
+        },
+        {
+          "path": "src/lib/components/ui/select/select.svelte",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "checkbox",
+      "type": "registry:ui",
+      "title": "Checkbox",
+      "description": "A checkbox with an indeterminate box, the radius of the theme and a stroke-3 mark.",
+      "dependencies": [
+        "@lucide/svelte",
+        "bits-ui"
+      ],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "src/lib/components/ui/checkbox/checkbox.svelte",
+          "type": "registry:ui"
+        },
+        {
+          "path": "src/lib/components/ui/checkbox/index.ts",
+          "type": "registry:ui"
+        }
+      ]
     },
     {
       "name": "status-glyph",
@@ -154,7 +309,7 @@
         "local:state-line",
         "local:status-badge",
         "local:thumbnail",
-        "checkbox",
+        "local:checkbox",
         "skeleton"
       ],
       "files": [
@@ -338,7 +493,7 @@
       "registryDependencies": [
         "local:search-skeleton",
         "local:state-line",
-        "command",
+        "local:command",
         "skeleton"
       ],
       "docs": "The debounce, the ticket that drops a stale answer, the page and its load-more row, and the list with its error, loading and empty blocks.",
@@ -487,7 +642,7 @@
       "registryDependencies": [
         "local:picker-control",
         "local:picker-classes",
-        "checkbox"
+        "local:checkbox"
       ],
       "files": [
         {
@@ -508,7 +663,7 @@
       "registryDependencies": [
         "local:state-line",
         "popover",
-        "command",
+        "local:command",
         "skeleton"
       ],
       "files": [
@@ -547,8 +702,8 @@
         "local:state-line",
         "local:picker-classes",
         "button",
-        "checkbox",
-        "command",
+        "local:checkbox",
+        "local:command",
         "skeleton",
         "local:field-picker",
         "local:sortable"
@@ -731,7 +886,7 @@
         "local:picker-control",
         "local:picker-row",
         "local:picker-classes",
-        "checkbox"
+        "local:checkbox"
       ],
       "files": [
         {
@@ -864,7 +1019,7 @@
         "local:leaf-classes",
         "local:state-line",
         "button",
-        "select",
+        "local:select",
         "skeleton",
         "toggle-group",
         "local:checkbox-editor",
@@ -928,10 +1083,10 @@
         "local:state-line",
         "badge",
         "button",
-        "checkbox",
-        "command",
+        "local:checkbox",
+        "local:command",
         "popover",
-        "select",
+        "local:select",
         "local:filter-dialog"
       ],
       "files": [
@@ -1002,7 +1157,7 @@
         "local:picker-classes",
         "local:picker-row",
         "local:status-badge",
-        "checkbox"
+        "local:checkbox"
       ],
       "files": [
         {
@@ -1058,7 +1213,7 @@
       "registryDependencies": [
         "button",
         "input",
-        "select"
+        "local:select"
       ],
       "files": [
         {
@@ -1085,12 +1240,12 @@
         "local:field-editor",
         "local:picker-classes",
         "table",
-        "checkbox",
+        "local:checkbox",
         "skeleton",
         "input",
         "button",
         "dropdown-menu",
-        "select"
+        "local:select"
       ],
       "files": [
         {
@@ -1116,7 +1271,7 @@
         "skeleton",
         "input",
         "button",
-        "select"
+        "local:select"
       ],
       "files": [
         {
@@ -1140,11 +1295,11 @@
         "local:state-line",
         "local:field-value",
         "local:thumbnail",
-        "checkbox",
+        "local:checkbox",
         "skeleton",
         "input",
         "button",
-        "select"
+        "local:select"
       ],
       "files": [
         {
@@ -1167,7 +1322,7 @@
         "local:field-value",
         "local:status-badge",
         "local:thumbnail",
-        "checkbox",
+        "local:checkbox",
         "skeleton",
         "input"
       ],
@@ -1214,7 +1369,7 @@
         "local:picker-classes",
         "local:entity-chip",
         "local:picker-row",
-        "checkbox"
+        "local:checkbox"
       ],
       "files": [
         {
@@ -1313,7 +1468,7 @@
         "local:control-classes",
         "local:entity-chip",
         "local:picker-row",
-        "command",
+        "local:command",
         "dialog",
         "button",
         "kbd"
@@ -1339,7 +1494,7 @@
         "local:entity-glyphs",
         "local:picker-classes",
         "local:picker-row",
-        "command"
+        "local:command"
       ],
       "files": [
         {

@@ -6,9 +6,11 @@
 	import type { HTMLAttributes } from 'svelte/elements';
 	import type { FieldSchema, SgContext, StatusOption, StatusRecord } from '@sg-widgets/core';
 	import { NO_ROWS_LABEL } from '@sg-widgets/core';
+	import { LEAF_GLYPH } from '$lib/registry/components/leaf-classes.js';
 	import ListPicker from '$lib/registry/components/list-picker.svelte';
 	import { PICKER_CHIP as BADGE } from '$lib/registry/components/picker-classes.js';
 	import StatusBadge from '$lib/registry/components/status-badge.svelte';
+	import StatusGlyph from '$lib/registry/components/status-glyph.svelte';
 	import type { WithElementRef } from '$lib/utils.js';
 
 	type Props = WithElementRef<Omit<HTMLAttributes<HTMLDivElement>, 'slot'>, HTMLDivElement> & {
@@ -176,10 +178,9 @@
 	(field_types/status_list). When a later option set drops the selected code, the
 	picker clears it and emits once.
 
-	A row is the shared picker row of rule 9, with the status as its label: a status
-	offered as an option is the badge the filter bar's facets draw, one step under the
-	control, and the code sits right-aligned after it. The control keeps its own badge
-	for the value.
+	A row is the shared picker row of rule 9: the status glyph as the leading mark, the
+	display label as the row's text, and the code right-aligned. The badge stays in the
+	control, where a status is a value rather than an option.
 -->
 <ListPicker
 	bind:ref
@@ -221,13 +222,12 @@
 		/>
 	{/snippet}
 
-	{#snippet optionLabel(option: StatusOption)}
-		<StatusBadge
-			code={option.code}
+	{#snippet mark(option: StatusOption)}
+		<StatusGlyph
 			status={query.statuses.get(option.code) ?? null}
-			field={badgeField}
-			size={BADGE[size]}
 			siteUrl={site}
+			fallback
+			class={LEAF_GLYPH[size]}
 		/>
 	{/snippet}
 </ListPicker>

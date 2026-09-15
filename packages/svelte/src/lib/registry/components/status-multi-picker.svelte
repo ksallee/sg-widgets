@@ -11,6 +11,7 @@
 	import { Combobox } from 'bits-ui';
 	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
+	import { LEAF_GLYPH } from '$lib/registry/components/leaf-classes.js';
 	import PickerControl from '$lib/registry/components/picker-control.svelte';
 	import Row from '$lib/registry/components/picker-row.svelte';
 	import {
@@ -19,6 +20,7 @@
 		PICKER_ROW
 	} from '$lib/registry/components/picker-classes.js';
 	import StatusBadge, { type StatusBadgeVariant } from '$lib/registry/components/status-badge.svelte';
+	import StatusGlyph from '$lib/registry/components/status-glyph.svelte';
 
 	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>, HTMLDivElement> & {
 		/** The widget context. The options and the status table are read through it, once per page. */
@@ -232,10 +234,10 @@
 	it: the vocabulary is read once and the query input narrows it in the browser
 	(field_types/status_list).
 
-	A row is the shared picker row of rule 9, after its checkbox, with the status as its
-	label: a status offered as an option is the badge the filter bar's facets draw, one
-	step under the control, with the matched runs bold and the code right-aligned after
-	it. The control keeps its own badges for the selection.
+	A row is the shared picker row of rule 9, after its checkbox: the status glyph as the
+	leading mark, the display label with the matched runs bold, and the code
+	right-aligned. The badge stays in the control, where a status is a value rather than
+	an option.
 -->
 <div
 	bind:this={ref}
@@ -325,7 +327,6 @@
 					<Row
 						row={rowOf(option)}
 						query={search}
-						thumbnail={false}
 						subLabel={subLabel?.(option)}
 						secondary={secondaryOf(option)}
 						{size}
@@ -335,14 +336,12 @@
 						{#snippet indicator()}
 							<Checkbox checked={chosen} tabindex={-1} aria-hidden="true" class="pointer-events-none" />
 						{/snippet}
-						{#snippet label()}
-							<StatusBadge
-								code={option.code}
+						{#snippet glyph()}
+							<StatusGlyph
 								status={query.statuses.get(option.code) ?? null}
-								field={badgeField}
-								size={BADGE[size]}
-								query={search}
 								siteUrl={site}
+								fallback
+								class={LEAF_GLYPH[size]}
 							/>
 						{/snippet}
 					</Row>

@@ -1,5 +1,5 @@
-// A status facet badges its values, a facet takes the caller's name, and a pill holds
-// its width with everything ticked.
+// A status facet marks its values with the status glyph before the label, a facet takes
+// the caller's name, and a pill holds its width with everything ticked.
 //
 //   pnpm qa --start --path /widgets/filter-bar/ --framework both --drive tools/drives/filter-bar-facets.js
 //
@@ -56,11 +56,15 @@ for (const framework of drawn) {
   });
   if (!rows) return { verdict: `FAIL ${framework} listed no value under the status facet`, notes };
 
-  // Every row of a status facet draws a badge rather than its label as text.
+  // Every row of a status facet carries the glyph before its label, and none of them a badge.
+  const marked = rows.filter((row) => row.querySelector('[data-slot="status-glyph"]'));
   const badged = rows.filter((row) => row.querySelector('[data-slot="status-badge"]'));
-  notes.push(`${framework}: ${badged.length} of ${rows.length} status rows carry a badge`);
-  if (badged.length !== rows.length) {
-    return { verdict: `FAIL ${framework} drew ${rows.length - badged.length} status values as plain text`, notes };
+  notes.push(`${framework}: ${marked.length} of ${rows.length} status rows carry a glyph mark`);
+  if (marked.length !== rows.length) {
+    return { verdict: `FAIL ${framework} drew ${rows.length - marked.length} status values with no glyph`, notes };
+  }
+  if (badged.length > 0) {
+    return { verdict: `FAIL ${framework} drew ${badged.length} facet rows as badges`, notes };
   }
 
   // Tick every one of them, which is the widest a pill can get. A tick rewrites the tree
@@ -111,4 +115,4 @@ for (const framework of drawn) {
 pill(drawn[0], 'sg_status_list')?.scrollIntoView({ block: 'center' });
 await wait(400);
 
-return { verdict: 'PASS status facets badge their values, a facet takes the caller name, and a full pill holds its width', notes };
+return { verdict: 'PASS status facets mark their values with the glyph, the pill badges what it holds, a facet takes the caller name, and a full pill holds its width', notes };

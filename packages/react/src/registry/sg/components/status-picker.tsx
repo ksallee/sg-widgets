@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import type { FieldSchema, SgContext, StatusOption, StatusRecord } from '@sg-widgets/core';
 import { NO_ROWS_LABEL } from '@sg-widgets/core';
+import { LEAF_GLYPH } from '@/registry/sg/components/leaf-classes';
 import { ListPicker } from '@/registry/sg/components/list-picker';
 import { PICKER_CHIP as BADGE } from '@/registry/sg/components/picker-classes';
 import { StatusBadge } from '@/registry/sg/components/status-badge';
+import { StatusGlyph } from '@/registry/sg/components/status-glyph';
 
 export type StatusPickerSize = 'sm' | 'md' | 'lg';
 
@@ -136,10 +138,9 @@ function statusOptionStore(
  * (field_types/status_list). When a later option set drops the selected code, the
  * picker clears it and emits once.
  *
- * A row is the shared picker row of rule 9, with the status as its label: a status
- * offered as an option is the badge the filter bar's facets draw, one step under the
- * control, and the code sits right-aligned after it. The control keeps its own badge
- * for the value.
+ * A row is the shared picker row of rule 9: the status glyph as the leading mark, the
+ * display label as the row's text, and the code right-aligned. The badge stays in the
+ * control, where a status is a value rather than an option.
  */
 export function StatusPicker({
   context,
@@ -241,14 +242,8 @@ export function StatusPicker({
           className="min-w-0"
         />
       )}
-      optionLabel={(option) => (
-        <StatusBadge
-          code={option.code}
-          status={query.statuses.get(option.code) ?? null}
-          field={badgeField}
-          size={BADGE[size]}
-          siteUrl={site}
-        />
+      mark={(option) => (
+        <StatusGlyph status={query.statuses.get(option.code) ?? null} siteUrl={site} fallback className={LEAF_GLYPH[size]} />
       )}
       {...rest}
     />

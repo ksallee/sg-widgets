@@ -118,7 +118,7 @@
 -->
 {#snippet content()}
 	{#if showGlyph}
-		<StatusGlyph {status} {siteUrl} class={CHIP_GLYPH[size]} />
+		<StatusGlyph {status} {siteUrl} onColor={Boolean(paint)} class={CHIP_GLYPH[size]} />
 	{/if}
 	<MatchText text={textIcon ?? text} {query} class={cn('truncate', !showText && 'sr-only')} />
 {/snippet}

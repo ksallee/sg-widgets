@@ -214,11 +214,13 @@ composes it rather than drawing a second one. A list that can tick a row opens t
 indicator column, whose width is fixed whether or not the row is ticked, so a label sits at one x
 down the whole list.
 
-A status listed as an option is a badge, and the badge is the row's label rather than a mark before
-it: the icon and the name in their pill, on the chip step of rule 3 under the control, with the code
-right-aligned after it. The pickers and the filter bar's facet rows draw it the same way. The bare
-glyph variant is the leading mark of a row whose label is an entity's name, as the tree and the
-grouped list draw it, and never the whole of what a row says about a status.
+A status offered as an option is not a badge: a list of options is read by its names, and a column of
+pills is noise. The row is the status glyph as its leading mark and the name as plain text beside it,
+with the matched runs bold and the code or the count right-aligned after it, in the two pickers and in
+the filter bar's facet rows alike. The badge is what a status is where it is a value rather than an
+option: the selected value in a control, a list row's status column, a card, a table cell. The stock
+sprite was drawn for a light page, so the glyph inverts and keeps its hue in dark; a site's own icon
+is left as it was sent.
 
 A popup list fades at whichever edge has more content past it and holds a gutter for its scrollbar,
 and carries a live region under it saying what it is doing: the read in flight, the count it

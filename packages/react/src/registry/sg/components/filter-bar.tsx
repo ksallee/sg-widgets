@@ -41,9 +41,11 @@ import {
 } from '@/registry/sg/components/control-classes';
 import { useEntityFields } from '@/registry/sg/components/entity-fields';
 import { FilterDialog } from '@/registry/sg/components/filter-dialog';
-import { CHIP_CROSS, REMOVE_CONTROL, type ChipSize } from '@/registry/sg/components/leaf-classes';
+import { CHIP_CROSS, LEAF_GLYPH, REMOVE_CONTROL, type ChipSize } from '@/registry/sg/components/leaf-classes';
+import { MatchText } from '@/registry/sg/components/match-text';
 import { StateLine } from '@/registry/sg/components/state-line';
 import { StatusBadge, type StatusBadgeSize } from '@/registry/sg/components/status-badge';
+import { StatusGlyph } from '@/registry/sg/components/status-glyph';
 
 export type FilterBarSize = ControlSize;
 
@@ -198,20 +200,32 @@ export function FilterBar({
   /** True where the facet's values are status codes, which draw as badges rather than text. */
   const isStatus = (name: string): boolean => renderKindFor(fields[name]?.dataType ?? '') === 'status';
 
-  /** One facet value, as a badge on a status field and as its label everywhere else. */
-  const valueLabel = (name: string, key: string, label: string, query: string): ReactNode =>
+  /** One value in a pill, where a status is a value: a badge on a status field, its label everywhere else. */
+  const valueLabel = (name: string, key: string, label: string): ReactNode =>
     isStatus(name) ? (
       <StatusBadge
         code={key}
         status={statuses[key] ?? null}
         field={fields[name] ?? null}
         size={BADGE[size]}
-        query={query}
         siteUrl={context.siteUrl}
       />
     ) : (
       label
     );
+
+  /**
+   * One checklist row: the status glyph as a leading mark before the label, the way a
+   * picker row whose label is a name reads, with the matched runs of the box bold.
+   */
+  const rowValue = (name: string, key: string, label: string): ReactNode => (
+    <>
+      {isStatus(name) ? (
+        <StatusGlyph status={statuses[key] ?? null} siteUrl={context.siteUrl} fallback className={LEAF_GLYPH[size]} />
+      ) : null}
+      <MatchText text={label} query={facetQuery} className="truncate" />
+    </>
+  );
 
   /**
    * A pill's value: the values it has room to name, then `+n`. It is capped and
@@ -229,7 +243,7 @@ export function FilterBar({
         {shown.values.length > 0
           ? shown.shown.map((label, i) => (
               <span key={keyOf(shown.values[i] as Scalar)} className="flex min-w-0 items-center truncate">
-                {valueLabel(name, keyOf(shown.values[i] as Scalar), label, '')}
+                {valueLabel(name, keyOf(shown.values[i] as Scalar), label)}
               </span>
             ))
           : shown.shown.map((label) => (
@@ -305,8 +319,8 @@ export function FilterBar({
                       tabIndex={-1}
                       aria-hidden="true"
                     />
-                    <span className="flex min-w-0 flex-1 items-center truncate" title={option.label}>
-                      {valueLabel(name, option.key, option.label, facetQuery)}
+                    <span className="flex min-w-0 flex-1 items-center gap-1.5 truncate" title={option.label}>
+                      {rowValue(name, option.key, option.label)}
                     </span>
                     <span className="text-muted-foreground text-xs tabular-nums" data-slot="facet-count">
                       {option.count}

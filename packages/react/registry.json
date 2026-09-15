@@ -1188,7 +1188,9 @@
         "https://sg-widgets.dev/r/react/entity-fields.json",
         "https://sg-widgets.dev/r/react/control-classes.json",
         "https://sg-widgets.dev/r/react/leaf-classes.json",
+        "https://sg-widgets.dev/r/react/match-text.json",
         "https://sg-widgets.dev/r/react/status-badge.json",
+        "https://sg-widgets.dev/r/react/status-glyph.json",
         "https://sg-widgets.dev/r/react/state-line.json",
         "button",
         "checkbox",
@@ -1252,8 +1254,10 @@
       ],
       "registryDependencies": [
         "https://sg-widgets.dev/r/react/list-picker.json",
+        "https://sg-widgets.dev/r/react/leaf-classes.json",
         "https://sg-widgets.dev/r/react/picker-classes.json",
-        "https://sg-widgets.dev/r/react/status-badge.json"
+        "https://sg-widgets.dev/r/react/status-badge.json",
+        "https://sg-widgets.dev/r/react/status-glyph.json"
       ],
       "docs": "Pass a cached SgClient. The options are valid_values minus the project hidden_values; a code outside them still renders.",
       "files": [
@@ -1279,9 +1283,11 @@
       ],
       "registryDependencies": [
         "https://sg-widgets.dev/r/react/picker-control.json",
+        "https://sg-widgets.dev/r/react/leaf-classes.json",
         "https://sg-widgets.dev/r/react/picker-classes.json",
         "https://sg-widgets.dev/r/react/picker-row.json",
         "https://sg-widgets.dev/r/react/status-badge.json",
+        "https://sg-widgets.dev/r/react/status-glyph.json",
         "checkbox"
       ],
       "docs": "Pass a cached SgClient. Selections outside the option set keep a row of their own rather than being dropped.",

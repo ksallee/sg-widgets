@@ -18,6 +18,8 @@
 	};
 	/** A chip inside a control sits one step down the leaf ladder. */
 	const CHIP: Record<ContextSelectorSize, 'xs' | 'sm' | 'md'> = { sm: 'xs', md: 'sm', lg: 'md' };
+	/** A skeleton stands in for a row, so its leading slot is the row's picture. */
+	const LEAD: Record<ContextSelectorSize, string> = { sm: 'size-6', md: 'size-8', lg: 'size-10' };
 
 	/** What a widget or a publish needs to know about where the user is working. */
 	export interface WorkContext {
@@ -67,15 +69,18 @@
 <script lang="ts">
 	import type { HTMLAttributes } from 'svelte/elements';
 	import type { PickerRow, SgContext } from '@sg-widgets/core';
-	import { NO_ROWS_LABEL, pathOf, prependRecent, rowFields } from '@sg-widgets/core';
+	import { NO_ROWS_LABEL, pathOf, prependRecent, rowFields, watchOverflow } from '@sg-widgets/core';
 	import ChevronDown from '@lucide/svelte/icons/chevron-down';
+	import History from '@lucide/svelte/icons/history';
 	import ListChecks from '@lucide/svelte/icons/list-checks';
 	import * as Popover from '$lib/components/ui/popover/index.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
 	import EntityChip from '$lib/registry/components/entity-chip.svelte';
 	import HierarchicalSearch from '$lib/registry/components/hierarchical-search.svelte';
+	import { LIST_FADE } from '$lib/registry/components/picker-classes.js';
 	import Row from '$lib/registry/components/picker-row.svelte';
 	import SearchControl, { type SearchAnswer } from '$lib/registry/components/search-control.svelte';
+	import StateLine from '$lib/registry/components/state-line.svelte';
 
 	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>, HTMLDivElement> & {
 		/** The widget context. Every read goes through it, so widgets on a page share one cache. */
@@ -144,6 +149,12 @@
 		ref = $bindable(null),
 		...rest
 	}: Props = $props();
+
+	// Each section fades at whichever edge has more past it, per rule 9 of the design rules.
+	let recentsEl = $state<HTMLDivElement | null>(null);
+	let tasksEl = $state<HTMLDivElement | null>(null);
+	$effect(() => watchOverflow(recentsEl));
+	$effect(() => watchOverflow(tasksEl));
 
 	const rootPath = $derived(workContext.project ? `/Project/${workContext.project.id}` : '/');
 	const chips = $derived(
@@ -241,7 +252,7 @@
 	one `_search` on Task filtered by `task_assignees`, grouped under their project.
 -->
 {#snippet noTasks()}
-	<p data-slot="context-tasks-empty" class="text-muted-foreground px-2 py-1.5 text-sm">{emptyLabel}</p>
+	<StateLine state="empty" slotName="context-tasks-empty" icon={ListChecks} label={emptyLabel} />
 {/snippet}
 
 {#snippet taskRows({ items }: { items: MyTask[]; query: string; loading: boolean })}
@@ -304,40 +315,44 @@
 			align="start"
 			class="flex w-96 max-w-[calc(100vw-2rem)] flex-col gap-3 p-3"
 		>
-			<section data-slot="context-recents" class="flex max-h-28 flex-col overflow-y-auto">
+			<section data-slot="context-recents" class="flex min-h-0 flex-col">
 				<h4 class={heading}>Recent</h4>
-				{#if recents.length === 0}
-					<p class="text-muted-foreground px-2 py-1.5 text-sm">Nothing yet.</p>
-				{:else}
-					{#each recents as recent (keyOf(recent))}
-						<button type="button" class={recentClass} onclick={() => apply(recent)}>
-							<span class="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-								{#each [recent.project, recent.entity, recent.task].filter((r) => r !== null) as chip (`${chip.type}:${chip.id}`)}
-									<EntityChip entity={chip} size={CHIP[size]} {context} />
-								{/each}
-							</span>
-						</button>
-					{/each}
-				{/if}
+				<div bind:this={recentsEl} class={cn('flex max-h-28 flex-col overflow-y-auto', LIST_FADE)}>
+					{#if recents.length === 0}
+						<StateLine state="empty" slotName="context-recents-empty" icon={History} label="Nothing yet." />
+					{:else}
+						{#each recents as recent (keyOf(recent))}
+							<button type="button" class={recentClass} onclick={() => apply(recent)}>
+								<span class="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+									{#each [recent.project, recent.entity, recent.task].filter((r) => r !== null) as chip (`${chip.type}:${chip.id}`)}
+										<EntityChip entity={chip} size={CHIP[size]} {context} />
+									{/each}
+								</span>
+							</button>
+						{/each}
+					{/if}
+				</div>
 			</section>
 
-			<section data-slot="context-my-tasks" class="flex max-h-52 flex-col overflow-y-auto">
+			<section data-slot="context-my-tasks" class="flex min-h-0 flex-col">
 				<h4 class={heading}>My tasks</h4>
-				<SearchControl
-					load={loadTasks}
-					shell="bare"
-					readsEmpty
-					enabled={currentUser !== null}
-					request={currentUser ? `${currentUser.type}:${currentUser.id}` : ''}
-					errorSlot="context-tasks-error"
-					loadingSlot={null}
-					skeletonLines={2}
-					skeletonLead="size-4 shrink-0"
-					{loadingLabel}
-					{errorLabel}
-					rows={taskRows}
-					empty={noTasks}
-				/>
+				<div bind:this={tasksEl} class={cn('flex max-h-52 flex-col overflow-y-auto', LIST_FADE)}>
+					<SearchControl
+						load={loadTasks}
+						shell="bare"
+						readsEmpty
+						enabled={currentUser !== null}
+						request={currentUser ? `${currentUser.type}:${currentUser.id}` : ''}
+						errorSlot="context-tasks-error"
+						loadingSlot={null}
+						skeletonLines={2}
+						skeletonLead={cn('shrink-0', LEAD[size])}
+						{loadingLabel}
+						{errorLabel}
+						rows={taskRows}
+						empty={noTasks}
+					/>
+				</div>
 			</section>
 
 			<section data-slot="context-hierarchy" class="flex flex-col">

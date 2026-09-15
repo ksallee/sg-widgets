@@ -19,14 +19,26 @@ way, but nothing generates `lib/utils` itself.
 
 ## The core package
 
-`@sg-widgets/core` is not on npm yet. Every item names it as a dependency, so `add` writes it into
-`package.json` and the install that follows fails to resolve it. Point the spec at a local checkout
-and install again.
+`@sg-widgets/core` is not on npm yet. Every item names it as a dependency, and the CLI installs an
+item's packages in one call, which fails on that name and installs none of the others: the files
+land, `package.json` is left as it was, and `"latest"` is written over a `link:` spec already there.
+Install the packages yourself afterwards, with core pointed at a local checkout.
 
 ```sh
-pnpm add @sg-widgets/core@link:../sg-widgets/packages/core
+pnpm add @sg-widgets/core@link:../sg-widgets/packages/core \
+  bits-ui @lucide/svelte @internationalized/date \
+  @tanstack/svelte-table @tanstack/virtual-core \
+  clsx tailwind-merge tw-animate-css
 ```
 
-`add` writes `"latest"` over that spec every time it runs, so the line is put back after each
-install. The widgets import core by its bare name and nothing else in an item reaches into this
-repository, so a published package will drop straight in.
+```sh
+pnpm add @sg-widgets/core@link:../sg-widgets/packages/core \
+  @base-ui/react lucide-react \
+  @tanstack/react-table @tanstack/react-virtual \
+  clsx tailwind-merge tw-animate-css
+```
+
+That is the whole set for the whole registry; a host installing one widget needs only what that
+item names. The line is put back after each `add`. The widgets import core by its bare name and
+nothing else in an item reaches into this repository, so a published package will drop straight in
+and the CLI's own install will carry the rest.

@@ -409,6 +409,7 @@ export function GroupedList({
                             field={groupBy.field}
                             statuses={statuses}
                             context={context}
+                            density={density}
                           />
                         </span>
                         <span className="text-muted-foreground font-mono text-xs tabular-nums">
@@ -494,6 +495,7 @@ export function GroupedList({
                                     field={subColumn.field}
                                     statuses={statuses}
                                     context={context}
+                                    density={density}
                                     className="text-muted-foreground text-xs"
                                   />
                                 </span>
@@ -507,6 +509,7 @@ export function GroupedList({
                                     field={column.field}
                                     statuses={statuses}
                                     context={context}
+                                    density={density}
                                     className="min-w-0 text-xs"
                                   />
                                 </span>
@@ -522,6 +525,7 @@ export function GroupedList({
                                   field={secondaryColumn.field}
                                   statuses={statuses}
                                   context={context}
+                                  density={density}
                                   className="text-muted-foreground w-auto text-xs"
                                 />
                               </span>
@@ -546,7 +550,7 @@ export function GroupedList({
                 icon={CircleAlert}
                 label={stateLine('error', { errorLabel }, snapshot.error?.message)}
               >
-                <Button variant="outline" size="sm" onClick={() => control.retry()}>
+                <Button variant="outline" onClick={() => control.retry()}>
                   Retry
                 </Button>
               </StateLine>
@@ -561,7 +565,7 @@ export function GroupedList({
               </div>
             ) : control.bottom === 'more' ? (
               <div data-slot="grouped-list-load-more" className="flex justify-center p-2">
-                <Button variant="outline" size="sm" onClick={() => void source.loadMore()}>
+                <Button variant="outline" onClick={() => void source.loadMore()}>
                   Load more
                 </Button>
               </div>

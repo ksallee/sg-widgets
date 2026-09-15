@@ -31,7 +31,7 @@ import { cn } from '@/lib/utils';
 import { useLatest } from '@/registry/sg/components/collection-source';
 import { FieldValue } from '@/registry/sg/components/field-value';
 import { StateLine } from '@/registry/sg/components/state-line';
-import { StatusBadge } from '@/registry/sg/components/status-badge';
+import { StatusBadge, type StatusBadgeSize } from '@/registry/sg/components/status-badge';
 import { Thumbnail } from '@/registry/sg/components/thumbnail';
 
 type DivProps = Omit<React.HTMLAttributes<HTMLDivElement>, 'children' | 'onSelect' | 'onError'>;
@@ -47,6 +47,8 @@ const LEAD: Record<EntityTreeSize, string> = { sm: 'size-5', md: 'size-6', lg: '
 const GLYPH: Record<EntityTreeSize, string> = { sm: 'size-3.5', md: 'size-4', lg: 'size-5' };
 /** A leaf inside a row sits one step down the ladder. */
 const LEAF: Record<EntityTreeSize, 'sm' | 'md'> = { sm: 'sm', md: 'sm', lg: 'md' };
+/** A badge sits one step under the row it is in, on the chip ladder of `docs/design-rules.md`. */
+const BADGE: Record<EntityTreeSize, StatusBadgeSize> = { sm: 'xs', md: 'sm', lg: 'md' };
 
 /** What a `row` render prop is handed. It draws a row's contents, not its chevron or its box. */
 export interface EntityTreeRowContext {
@@ -638,7 +640,7 @@ export function EntityTree({
                         status={plan.statuses?.[status] ?? null}
                         field={node.entity ? (plan.status[node.entity.type] ?? null) : null}
                         variant="glyph"
-                        size={LEAF[size]}
+                        size={BADGE[size]}
                         siteUrl={site}
                         className="shrink-0"
                       />
@@ -663,6 +665,7 @@ export function EntityTree({
                           statuses={plan.statuses}
                           siteUrl={site}
                           context={context}
+                          density={density}
                           className="w-auto justify-end text-xs"
                         />
                       </span>

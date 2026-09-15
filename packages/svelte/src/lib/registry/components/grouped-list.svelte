@@ -437,7 +437,14 @@
 								})}
 							{:else}
 								<span class="min-w-0 truncate">
-									<FieldValue value={group.value} dataType={groupBy.dataType} field={groupBy.field} {statuses} {context} />
+									<FieldValue
+										value={group.value}
+										dataType={groupBy.dataType}
+										field={groupBy.field}
+										{statuses}
+										{context}
+										{density}
+									/>
 								</span>
 								<span class="text-muted-foreground font-mono text-xs tabular-nums">{group.rows.length}</span>
 							{/if}
@@ -512,6 +519,7 @@
 														field={subColumn.field}
 														{statuses}
 														{context}
+														{density}
 														class="text-muted-foreground text-xs"
 													/>
 												</span>
@@ -525,6 +533,7 @@
 														field={column.field}
 														{statuses}
 														{context}
+														{density}
 														class="min-w-0 text-xs"
 													/>
 												</span>
@@ -540,6 +549,7 @@
 													field={secondaryColumn.field}
 													{statuses}
 													{context}
+													{density}
 													class="text-muted-foreground w-auto text-xs"
 												/>
 											</span>
@@ -563,7 +573,7 @@
 					icon={CircleAlert}
 					label={stateLine('error', { errorLabel }, snapshot.error?.message)}
 				>
-					<Button variant="outline" size="sm" onclick={() => control.retry()}>Retry</Button>
+					<Button variant="outline" onclick={() => control.retry()}>Retry</Button>
 				</StateLine>
 			{:else if control.bottom === 'loading'}
 				<div data-slot="grouped-list-loading" class="p-2" aria-busy="true" aria-label={loadingText}>
@@ -571,7 +581,7 @@
 				</div>
 			{:else if control.bottom === 'more'}
 				<div data-slot="grouped-list-load-more" class="flex justify-center p-2">
-					<Button variant="outline" size="sm" onclick={() => void source.loadMore()}>Load more</Button>
+					<Button variant="outline" onclick={() => void source.loadMore()}>Load more</Button>
 				</div>
 			{:else if control.bottom === 'sentinel'}
 				<div

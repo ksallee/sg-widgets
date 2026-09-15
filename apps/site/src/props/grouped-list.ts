@@ -15,7 +15,7 @@ export default {
     { name: 'details', type: '`CollectionColumn[]`', default: '`[]`', meaning: 'Extra values drawn under the label. The source must already read their paths.' },
     { name: 'statuses', type: '`Record<string, StatusRecord> | null`', default: '`null`', meaning: 'Status rows by code.' },
     { name: 'context', type: '`SgContext`', default: '—', meaning: 'The widget context. Values render with its preferences, and an entity value links to the row\'s page when it carries a site.' },
-    { name: 'density', type: '`\'compact\' | \'default\'`', default: '`\'default\'`', meaning: 'Compact halves the vertical row padding.' },
+    { name: 'density', type: '`\'compact\' | \'default\'`', default: '`\'default\'`', meaning: 'Compact halves the vertical row padding and draws a row chip and badge a step smaller.' },
     { name: 'selectable', type: '`boolean`', default: '`false`', meaning: 'Draws a checkbox on each row.' },
     { name: 'isRowDisabled', type: '`(row) => boolean`', default: '—', meaning: 'True for a row that cannot be selected or reached by Tab.' },
     { name: 'collapsed', type: '`string[]`', default: '`[]`', meaning: 'Keys of the groups that are shut, two-way.' },

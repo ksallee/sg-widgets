@@ -71,6 +71,7 @@ import {
 import { CollectionFooter } from '@/registry/sg/components/collection-footer';
 import { FieldEditor } from '@/registry/sg/components/field-editor';
 import { FieldValue } from '@/registry/sg/components/field-value';
+import { PICKER_ICON_BUTTON } from '@/registry/sg/components/picker-classes';
 import { StateLine } from '@/registry/sg/components/state-line';
 
 export type EntityTableDensity = 'compact' | 'default';
@@ -657,9 +658,10 @@ export function EntityTable({
                       </span>
                     ) : column ? (
                       <>
+                        {/* The head owns the room beside its menu, so nothing inside it carries a margin. */}
                         <div
                           data-slot="entity-table-head"
-                          className={cn('flex w-full min-w-0 items-center', HEAD[size])}
+                          className={cn('flex w-full min-w-0 items-center', HEAD[size], columnMenu && 'pr-1')}
                         >
                           <button
                             type="button"
@@ -705,7 +707,10 @@ export function EntityTable({
                           <DropdownMenu>
                             <DropdownMenuTrigger
                               aria-label={`${column.header} column menu`}
-                              className="text-muted-foreground hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring focus-visible:ring-offset-background data-[state=open]:bg-accent data-[state=open]:text-accent-foreground mr-1 flex size-6 shrink-0 items-center justify-center rounded-md outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2"
+                              className={cn(
+                                PICKER_ICON_BUTTON,
+                                'text-muted-foreground data-[state=open]:bg-accent data-[state=open]:text-accent-foreground',
+                              )}
                             >
                               <EllipsisVertical aria-hidden="true" className="size-4" />
                             </DropdownMenuTrigger>
@@ -785,7 +790,8 @@ export function EntityTable({
                 <TableRow key={index}>
                   {leafColumns.map((column) => (
                     <TableCell key={column.id} className={cellClass}>
-                      <Skeleton className="h-4 w-full" />
+                      {/* A skeleton costs what a row costs: the 24px a cell's tallest value stands at. */}
+                      <Skeleton className="h-6 w-full" />
                     </TableCell>
                   ))}
                 </TableRow>
@@ -854,6 +860,7 @@ export function EntityTable({
                                     field={groupColumn?.field}
                                     statuses={statuses}
                                     context={context}
+                                    density={density}
                                   />
                                 </span>
                                 <span className="text-muted-foreground font-mono text-xs tabular-nums">
@@ -980,6 +987,7 @@ export function EntityTable({
                                     field={column.field}
                                     statuses={statuses}
                                     context={context}
+                                    density={density}
                                   />
                                   {cellError && cellError.key === key && cellError.path === column.path ? (
                                     <span className="text-destructive block truncate text-xs" title={cellError.message}>
@@ -1004,7 +1012,7 @@ export function EntityTable({
                         icon={CircleAlert}
                         label={stateLine('error', { errorLabel }, snapshot.error?.message)}
                       >
-                        <Button variant="outline" size="sm" onClick={() => control.retry()}>
+                        <Button variant="outline" onClick={() => control.retry()}>
                           Retry
                         </Button>
                       </StateLine>
@@ -1024,7 +1032,7 @@ export function EntityTable({
                 ) : control.bottom === 'more' ? (
                   <TableRow data-slot="entity-table-load-more" className="hover:bg-transparent">
                     <TableCell colSpan={leafColumns.length} className="p-2 text-center">
-                      <Button variant="outline" size="sm" onClick={() => void source.loadMore()}>
+                      <Button variant="outline" onClick={() => void source.loadMore()}>
                         Load more
                       </Button>
                     </TableCell>

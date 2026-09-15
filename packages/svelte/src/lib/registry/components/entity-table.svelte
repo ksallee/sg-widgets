@@ -133,6 +133,7 @@
 	import CollectionFooter from '$lib/registry/components/collection-footer.svelte';
 	import FieldEditor from '$lib/registry/components/field-editor.svelte';
 	import FieldValue from '$lib/registry/components/field-value.svelte';
+	import { PICKER_ICON_BUTTON } from '$lib/registry/components/picker-classes.js';
 	import StateLine from '$lib/registry/components/state-line.svelte';
 
 	type Props = WithElementRef<Omit<HTMLAttributes<HTMLDivElement>, 'children'>, HTMLDivElement> & {
@@ -711,9 +712,10 @@
 									/>
 								</span>
 							{:else if column}
+								<!-- The head owns the room beside its menu, so nothing inside it carries a margin. -->
 								<div
 									data-slot="entity-table-head"
-									class={cn('flex w-full min-w-0 items-center', HEAD[size])}
+									class={cn('flex w-full min-w-0 items-center', HEAD[size], columnMenu && 'pr-1')}
 								>
 									<button
 										type="button"
@@ -757,7 +759,10 @@
 									<DropdownMenu.Root>
 										<DropdownMenu.Trigger
 											aria-label="{column.header} column menu"
-											class="text-muted-foreground hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring focus-visible:ring-offset-background data-[state=open]:bg-accent data-[state=open]:text-accent-foreground mr-1 flex size-6 shrink-0 items-center justify-center rounded-md outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2"
+											class={cn(
+												PICKER_ICON_BUTTON,
+												'text-muted-foreground data-[state=open]:bg-accent data-[state=open]:text-accent-foreground'
+											)}
 										>
 											<EllipsisVertical aria-hidden="true" class="size-4" />
 										</DropdownMenu.Trigger>
@@ -830,7 +835,8 @@
 					{#each { length: 8 } as _, index (index)}
 						<Table.Row>
 							{#each layout as entry (entry.id)}
-								<Table.Cell class={cellClass}><Skeleton class="h-4 w-full" /></Table.Cell>
+								<!-- A skeleton costs what a row costs: the 24px a cell's tallest value stands at. -->
+								<Table.Cell class={cellClass}><Skeleton class="h-6 w-full" /></Table.Cell>
 							{/each}
 						</Table.Row>
 					{/each}
@@ -896,6 +902,7 @@
 													field={groupColumn?.field}
 													{statuses}
 													{context}
+													{density}
 												/>
 											</span>
 											<span class="text-muted-foreground font-mono text-xs tabular-nums">{item.count}</span>
@@ -1018,6 +1025,7 @@
 															field={column.field}
 															{statuses}
 															{context}
+															{density}
 														/>
 														{#if cellError && cellError.key === key && cellError.path === column.path}
 															<span class="text-destructive block truncate text-xs" title={cellError.message}>
@@ -1045,7 +1053,7 @@
 									icon={CircleAlert}
 									label={stateLine('error', { errorLabel }, snapshot.error?.message)}
 								>
-									<Button variant="outline" size="sm" onclick={() => control.retry()}>Retry</Button>
+									<Button variant="outline" onclick={() => control.retry()}>Retry</Button>
 								</StateLine>
 							</Table.Cell>
 						</Table.Row>
@@ -1063,7 +1071,7 @@
 					{:else if control.bottom === 'more'}
 						<Table.Row data-slot="entity-table-load-more" class="hover:bg-transparent">
 							<Table.Cell colspan={layout.length} class="p-2 text-center">
-								<Button variant="outline" size="sm" onclick={() => void source.loadMore()}>Load more</Button>
+								<Button variant="outline" onclick={() => void source.loadMore()}>Load more</Button>
 							</Table.Cell>
 						</Table.Row>
 					{:else if control.bottom === 'sentinel'}

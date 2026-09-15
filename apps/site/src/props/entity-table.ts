@@ -9,7 +9,7 @@ export default {
     { name: 'projectId', type: '`number`', default: '—', meaning: 'The project the columns were resolved with. Scopes a status, list or entity cell editor.' },
     { name: 'precision', type: '`number`', default: '—', meaning: 'Decimals a float cell keeps.' },
     { name: 'symbol', type: '`string`', default: '`\'$\'`', meaning: 'Shown before the value in a currency cell.' },
-    { name: 'density', type: '`\'compact\' | \'default\'`', default: '`\'default\'`', meaning: 'Compact halves the vertical cell padding.' },
+    { name: 'density', type: '`\'compact\' | \'default\'`', default: '`\'default\'`', meaning: 'Compact halves the vertical cell padding and draws a cell chip and badge a step smaller.' },
     { name: 'selectable', type: '`boolean`', default: '`false`', meaning: 'Draws a checkbox column.' },
     { name: 'isRowDisabled', type: '`(row) => boolean`', default: '—', meaning: 'True for a row that cannot be selected or edited.' },
     { name: 'groupBy', type: '`string | null`', default: '`null`', meaning: 'Collapses rows under headers of a shared value at this path.' },

@@ -1,5 +1,6 @@
 <script lang="ts" module>
 	import type { TreeCheckState, TreeNode } from '@sg-widgets/core';
+	import type { StatusBadgeSize } from '$lib/registry/components/status-badge.svelte';
 
 	export type EntityTreeSize = 'sm' | 'md' | 'lg';
 
@@ -26,6 +27,8 @@
 	const GLYPH: Record<EntityTreeSize, string> = { sm: 'size-3.5', md: 'size-4', lg: 'size-5' };
 	/** A leaf inside a row sits one step down the ladder. */
 	const LEAF: Record<EntityTreeSize, 'sm' | 'md'> = { sm: 'sm', md: 'sm', lg: 'md' };
+	/** A badge sits one step under the row it is in, on the chip ladder of `docs/design-rules.md`. */
+	const BADGE: Record<EntityTreeSize, StatusBadgeSize> = { sm: 'xs', md: 'sm', lg: 'md' };
 
 	/** `aria-checked` as a tree row spells it: `mixed` for a part-checked branch. */
 	function checkedAttr(state: TreeCheckState): 'true' | 'false' | 'mixed' {
@@ -617,7 +620,7 @@
 										status={plan.statuses?.[status] ?? null}
 										field={node.entity ? (plan.status[node.entity.type] ?? null) : null}
 										variant="glyph"
-										size={LEAF[size]}
+										size={BADGE[size]}
 										siteUrl={site}
 										class="shrink-0"
 									/>
@@ -640,6 +643,7 @@
 											statuses={plan.statuses}
 											siteUrl={site}
 											{context}
+											{density}
 											class="w-auto justify-end text-xs"
 										/>
 									</span>

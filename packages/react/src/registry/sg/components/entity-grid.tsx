@@ -45,6 +45,9 @@ const GAP_PX: Record<EntityGridDensity, number> = { compact: 6, default: 12 };
 /** Tile heights, so a virtualised grid can be measured before it is drawn. */
 const TILE_HEIGHT: Record<EntityGridSize, number> = { sm: 148, md: 190, lg: 232 };
 
+/** The inset of the tile's own body, so a skeleton costs what a tile costs. */
+const TILE_BODY: Record<EntityGridSize, string> = { sm: 'p-3', md: 'p-3', lg: 'p-4' };
+
 /** What a `card` render prop is handed. It draws one grid cell in place of the tile. */
 export interface EntityGridCardContext {
   row: EntityRow;
@@ -325,11 +328,17 @@ export function EntityGrid({
             className={cn('grid', GAP[density])}
             style={columns}
           >
+            {/* A skeleton stands in for a tile: the same surface, the same inset, the same height. */}
             {Array.from({ length: 8 }, (_, index) => (
-              <div key={index} className="flex flex-col gap-1.5">
-                <Skeleton className="aspect-video w-full" />
-                <Skeleton className="h-4 w-3/4" />
-                <Skeleton className="h-3 w-1/2" />
+              <div
+                key={index}
+                className="border-border bg-card flex min-w-0 flex-col overflow-hidden rounded-lg border"
+              >
+                <Skeleton className="aspect-video w-full rounded-none" />
+                <div className={cn('flex min-w-0 flex-col gap-1.5', TILE_BODY[size])}>
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-3 w-1/2" />
+                </div>
               </div>
             ))}
           </div>
@@ -418,7 +427,7 @@ export function EntityGrid({
                 icon={CircleAlert}
                 label={stateLine('error', { errorLabel }, snapshot.error?.message)}
               >
-                <Button variant="outline" size="sm" onClick={() => control.retry()}>
+                <Button variant="outline" onClick={() => control.retry()}>
                   Retry
                 </Button>
               </StateLine>
@@ -428,7 +437,7 @@ export function EntityGrid({
               </div>
             ) : control.bottom === 'more' ? (
               <div data-slot="entity-grid-load-more" className="flex justify-center">
-                <Button variant="outline" size="sm" onClick={() => void source.loadMore()}>
+                <Button variant="outline" onClick={() => void source.loadMore()}>
                   Load more
                 </Button>
               </div>

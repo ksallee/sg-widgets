@@ -9,4 +9,6 @@ sg-widgets is a set of shadcn-compatible widgets for Flow Production Tracking (f
 - The React widgets are a shadcn registry built on Base UI.
 - The Svelte widgets are a shadcn-svelte registry built on Bits UI.
 
-Both registries consume only shadcn design tokens, so they follow your theme.
+Both registries consume only shadcn design tokens, so they follow your theme. A widget installs the shadcn primitives it is built on.
+
+Everything else a page needs, a tooltip, tabs, an accordion, a sheet, a toast, comes from [shadcn/ui](https://ui.shadcn.com/docs/components) for React and [shadcn-svelte](https://shadcn-svelte.com/docs/components) for Svelte, installed the same way. The registry carries no item of its own for them.

@@ -14,7 +14,6 @@ import {
   hierarchyLoader,
   hierarchySearcher,
   isEmptyValue,
-  matchRuns,
   NO_MATCH_LABEL,
   NO_ROWS_LABEL,
   pathOf,
@@ -30,6 +29,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { useLatest } from '@/registry/sg/components/collection-source';
 import { FieldValue } from '@/registry/sg/components/field-value';
+import { MatchText } from '@/registry/sg/components/match-text';
 import { StateLine } from '@/registry/sg/components/state-line';
 import { StatusBadge, type StatusBadgeSize } from '@/registry/sg/components/status-badge';
 import { Thumbnail } from '@/registry/sg/components/thumbnail';
@@ -602,17 +602,13 @@ export function EntityTree({
 
                     <span className="flex min-w-0 flex-1 flex-col">
                       <span className="flex min-w-0 items-center gap-1.5">
-                        <span data-slot="entity-tree-label" className="truncate" title={name}>
-                          {matchRuns(name, snap.search).map((part, index) =>
-                            part.match ? (
-                              <span key={index} className="font-semibold">
-                                {part.text}
-                              </span>
-                            ) : (
-                              <span key={index}>{part.text}</span>
-                            ),
-                          )}
-                        </span>
+                        <MatchText
+                          data-slot="entity-tree-label"
+                          text={name}
+                          query={snap.search}
+                          className="truncate"
+                          title={name}
+                        />
                         {code ? (
                           <span
                             data-slot="entity-tree-code"

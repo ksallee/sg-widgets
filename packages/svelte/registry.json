@@ -31,6 +31,7 @@
         "local:user-avatar",
         "local:field-value",
         "local:picker-row",
+        "local:match-text",
         "local:state-line",
         "local:search-skeleton",
         "local:picker-classes",
@@ -415,11 +416,30 @@
         "local:picker-classes",
         "local:field-value",
         "local:thumbnail",
-        "local:user-avatar"
+        "local:user-avatar",
+        "local:match-text"
       ],
       "files": [
         {
           "path": "src/lib/registry/components/picker-row.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "match-text",
+      "type": "registry:component",
+      "title": "Match Text",
+      "description": "A label with the words of a search query at the weight the design rules give a match.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "clsx",
+        "tailwind-merge"
+      ],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "src/lib/registry/components/match-text.svelte",
           "type": "registry:component"
         }
       ]
@@ -1406,7 +1426,8 @@
         "local:thumbnail",
         "local:checkbox",
         "skeleton",
-        "input"
+        "input",
+        "local:match-text"
       ],
       "files": [
         {

@@ -25,6 +25,7 @@
         "https://sg-widgets.dev/r/react/user-avatar.json",
         "https://sg-widgets.dev/r/react/field-value.json",
         "https://sg-widgets.dev/r/react/picker-row.json",
+        "https://sg-widgets.dev/r/react/match-text.json",
         "https://sg-widgets.dev/r/react/state-line.json",
         "https://sg-widgets.dev/r/react/search-skeleton.json",
         "https://sg-widgets.dev/r/react/picker-classes.json",
@@ -308,12 +309,35 @@
         "https://sg-widgets.dev/r/react/picker-classes.json",
         "https://sg-widgets.dev/r/react/field-value.json",
         "https://sg-widgets.dev/r/react/thumbnail.json",
-        "https://sg-widgets.dev/r/react/user-avatar.json"
+        "https://sg-widgets.dev/r/react/user-avatar.json",
+        "https://sg-widgets.dev/r/react/match-text.json"
       ],
       "docs": "The six row-anatomy props of rule 9. It draws a row's contents, not its box: the caller owns the list item.",
       "files": [
         {
           "path": "src/registry/sg/components/picker-row.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "match-text",
+      "type": "registry:component",
+      "title": "Match Text",
+      "description": "A label with the words of a search query at the weight the design rules give a match.",
+      "categories": [
+        "flow-production-tracking",
+        "atom"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "cn"
+      ],
+      "registryDependencies": [],
+      "docs": "Pass the label and the query. Every word of the query is marked wherever it occurs, which is what the text search matched on.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/match-text.tsx",
           "type": "registry:component"
         }
       ]
@@ -1464,7 +1488,8 @@
         "https://sg-widgets.dev/r/react/thumbnail.json",
         "checkbox",
         "@shadcn/skeleton",
-        "@shadcn/input"
+        "@shadcn/input",
+        "https://sg-widgets.dev/r/react/match-text.json"
       ],
       "docs": "Expands one level per call through POST /hierarchy/_expand. seedPath opens the tree to a row on mount; checkboxes propagate both ways.",
       "files": [

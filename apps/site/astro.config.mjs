@@ -83,7 +83,7 @@ export default defineConfig({
             },
             {
               label: 'Display',
-              items: ['status-badge', 'entity-chip', 'entity-card', 'field-value'].map((n) => ({ slug: `widgets/${n}` })),
+              items: ['status-badge', 'entity-chip', 'entity-card', 'field-value', 'match-text'].map((n) => ({ slug: `widgets/${n}` })),
             },
             {
               label: 'Pickers',

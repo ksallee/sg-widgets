@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createQueryCache } from '../src/query.js';
+import { matchRuns } from '../src/search.js';
 import { MockClient } from '../src/mock.js';
 import type { WireGroup } from '../src/filter.js';
 import { condition, group, toApi3Hash } from '../src/filter.js';
@@ -230,6 +231,20 @@ describe('pruneFilterToFields', () => {
 });
 
 describe('highlightRuns', () => {
+  it('is the one splitting, under the name the pickers use', () => {
+    expect(highlightRuns).toBe(matchRuns);
+    for (const [label, query] of [
+      ['Published Anna', 'pub an'],
+      ['abcdef', 'abc bcd'],
+      ['', 'x'],
+      ['Ada Lovelace', ''],
+    ] as const) {
+      expect(highlightRuns(label, query)).toEqual(matchRuns(label, query));
+      // The runs rebuild the label exactly, whatever the query was.
+      expect(highlightRuns(label, query).map((run) => run.text).join('')).toBe(label);
+    }
+  });
+
   it('marks every occurrence of every word', () => {
     expect(highlightRuns('Published Anna', 'pub an')).toEqual([
       { text: 'Pub', match: true },

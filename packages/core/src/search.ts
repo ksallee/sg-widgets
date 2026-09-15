@@ -35,6 +35,10 @@ interface Range {
  * Matching is case-insensitive and every word is highlighted wherever it occurs,
  * because that is what the server matched on. Overlapping words merge into one
  * run, so a run never nests and the runs always rebuild the label exactly.
+ *
+ * The result is text, never markup: a widget draws each run as an element and
+ * never sets HTML from a row. It is the one splitting in this package, and
+ * `highlightRuns` is the name the pickers were written against.
  */
 export function matchRuns(label: string, query: string): MatchRun[] {
   if (label.length === 0) return [];

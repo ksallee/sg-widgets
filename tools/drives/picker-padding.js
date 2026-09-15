@@ -5,7 +5,7 @@
 // Returns one row per picker, per framework, per size, with the computed padding of the
 // control, its height, and the x of the first thing drawn inside it. The verdict holds
 // when a chip-valued control is tighter filled than empty and a text-valued one is
-// tighter empty than filled, the empty control keeps the 8/9/10 ladder, md holds its
+// tighter empty than filled, the empty control keeps the 7/8/9 ladder, md holds its
 // height across the two states, and the frameworks agree.
 
 const CONTROL = [
@@ -16,7 +16,7 @@ const CONTROL = [
   '[data-slot="context-selector-trigger"]',
 ].join(',');
 
-const LADDER = { sm: 32, md: 36, lg: 40 };
+const LADDER = { sm: 28, md: 32, lg: 36 };
 
 // Controls that put a chip or a badge in the value: the filled leading inset matches the
 // room above and below it, so the chip sits evenly, and the empty state gives the reading
@@ -136,7 +136,7 @@ for (const [name, pair] of pairs) {
 
 const verdict =
   failures.length === 0
-    ? `PASS ${pairs.size} picker/size pairs over both frameworks: a chip-valued control is tighter filled and a text-valued one tighter empty, the empty ladder is 8/9/10, md holds its height across the states and the frameworks agree`
+    ? `PASS ${pairs.size} picker/size pairs over both frameworks: a chip-valued control is tighter filled and a text-valued one tighter empty, the empty ladder is 7/8/9, md holds its height across the states and the frameworks agree`
     : `FAIL ${failures.length} checks over ${pairs.size} pairs: ${failures.slice(0, 10).join('; ')}`;
 
 return { verdict, pairs: pairs.size, failures, rows };

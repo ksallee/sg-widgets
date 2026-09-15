@@ -112,7 +112,7 @@ function CommandInput({
 }: React.ComponentProps<typeof AutocompletePrimitive.Input>) {
   return (
     <div data-slot="command-input-wrapper" className="p-1 pb-0">
-      <InputGroup className="h-9! rounded-lg! border-input/30 bg-input/30 shadow-none! *:data-[slot=input-group-addon]:pl-3!">
+      <InputGroup className="h-8! rounded-lg! border-input/30 bg-input/30 shadow-none! *:data-[slot=input-group-addon]:pl-3!">
         <AutocompletePrimitive.Input
           data-slot="command-input"
           className={cn(

@@ -53,7 +53,7 @@ const CROSS: Record<FilterBarSize, ChipSize> = { sm: 'xs', md: 'sm', lg: 'md' };
  * The pill's trailing edge: the room above the cross, so its box sits as far from the
  * right as from the top (`docs/design-rules.md` rule 3).
  */
-const CROSS_PAD: Record<FilterBarSize, string> = { sm: 'pr-[7px]', md: 'pr-2', lg: 'pr-[9px]' };
+const CROSS_PAD: Record<FilterBarSize, string> = { sm: 'pr-[5px]', md: 'pr-1.5', lg: 'pr-[7px]' };
 /** A badge sits one step under the pill it is in (`docs/design-rules.md` rule 3). */
 const BADGE: Record<FilterBarSize, StatusBadgeSize> = { sm: 'xs', md: 'sm', lg: 'md' };
 /**

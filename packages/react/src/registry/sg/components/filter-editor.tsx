@@ -137,7 +137,7 @@ function dottedPaths(node: FilterNode, out: string[] = []): string[] {
 /** Everything a row needs that does not come from its own node. */
 export type FilterEditorSize = 'sm' | 'md' | 'lg';
 
-/** A condition row is a control inside a control, so its ladder sits one step down. */
+/** The control ladder of `docs/design-rules.md`, which a condition's own controls stand on. */
 const BOX: Record<FilterEditorSize, string> = { sm: 'h-7', md: 'h-8', lg: 'h-9' };
 const INNER: Record<FilterEditorSize, 'sm' | 'md'> = { sm: 'sm', md: 'sm', lg: 'md' };
 /** A cross sits one step under the row's own control on the chip ladder. */

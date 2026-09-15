@@ -21,7 +21,7 @@ export default {
     { name: 'searchable', type: '`boolean`', default: '`true`', meaning: 'A summary control keeps a search row. A fixed set has nothing to search.' },
     { name: 'textValue', type: '`boolean`', default: '`false`', meaning: 'The filled value is plain text, so the control keeps the reading inset in both states.' },
     { name: 'rowKey', type: '`string`', default: 'size, summary and labels', meaning: 'What the chips look like, so a change re-measures the row.' },
-    { name: 'size', type: '`\'sm\' | \'md\' | \'lg\'`', default: '`\'md\'`', meaning: 'Control height: 8, 9 and 10.' },
+    { name: 'size', type: '`\'sm\' | \'md\' | \'lg\'`', default: '`\'md\'`', meaning: 'Control height: 7, 8 and 9.' },
     { name: 'disabled', type: '`boolean`', default: '`false`' },
     { name: 'inert', type: '`boolean`', default: '`disabled`', meaning: 'The primitive takes no input. Wider than disabled: a loading picker is inert too.' },
     { name: 'readonly', type: '`boolean`', default: '`false`' },

@@ -429,7 +429,7 @@
 				aria-label={searchPlaceholder}
 				aria-busy={snap.searching ? true : undefined}
 				data-slot="entity-tree-search"
-				class="h-9 px-3 pe-8"
+				class="h-8 px-3 pe-8"
 			/>
 			{#if snap.searching}
 				<Loader

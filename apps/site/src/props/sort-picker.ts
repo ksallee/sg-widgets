@@ -9,7 +9,7 @@ export default {
     { name: 'paths', type: '`string[]`', default: '—', meaning: 'Only these paths are offered, so a table\'s toolbar sorts on the columns it shows. A link stays in the list while an offered path runs through it.' },
     { name: 'disabled', type: '`boolean`', default: '`false`', meaning: 'Blocks the trigger.' },
     { name: 'open', type: '`boolean`', default: '`false`', meaning: 'Whether the popover is showing. Two-way in Svelte.' },
-    { name: 'size', type: '`\'sm\' | \'md\' | \'lg\'`', default: '`\'md\'`', meaning: 'Trigger heights 8, 9 and 10.' },
+    { name: 'size', type: '`\'sm\' | \'md\' | \'lg\'`', default: '`\'md\'`', meaning: 'Trigger heights 7, 8 and 9.' },
     { name: 'class / className', type: '`string`', default: '—', meaning: 'Merged after the widget\'s own classes.' },
   ],
   events: [

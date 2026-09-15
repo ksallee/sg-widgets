@@ -47,6 +47,36 @@ export function filterEntityTypes(types: readonly EntityTypeInfo[], restrictions
   return types.filter((t) => (!allow || allow.has(t.name)) && !deny?.has(t.name));
 }
 
+/** What an entity-type picker draws: the rows on offer and the label a code takes. */
+export interface EntityTypeOptions {
+  /** Types on offer, `allow` first and `deny` second. */
+  types: EntityTypeInfo[];
+  /** Those the query matches, on display name or code. */
+  shown: EntityTypeInfo[];
+  /** A code's display name, or the code itself where the site offers no such type. */
+  labelOf: (code: string) => string;
+}
+
+/**
+ * The options both entity-type pickers derive from one schema read.
+ *
+ * The vocabulary is one read of 12KB (probe 002), so the query narrows the derived
+ * list in the browser rather than asking for it again. `loaded` is `null` while the
+ * read is in flight, which offers nothing and labels a code as itself.
+ */
+export function entityTypeOptions(
+  loaded: readonly EntityTypeInfo[] | null,
+  options: EntityTypeRestrictions & { query?: string } = {},
+): EntityTypeOptions {
+  const types = loaded ? filterEntityTypes(loaded, options) : [];
+  const byName = new Map(types.map((t) => [t.name, t]));
+  return {
+    types,
+    shown: types.filter((t) => matchesTokens(options.query ?? '', t.displayName, t.name)),
+    labelOf: (code: string) => byName.get(code)?.displayName ?? code,
+  };
+}
+
 /* -------------------------------------------------------------------------- */
 /* dotted field paths                                                         */
 /* -------------------------------------------------------------------------- */

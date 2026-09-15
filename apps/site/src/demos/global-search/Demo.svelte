@@ -25,7 +25,7 @@
 		<GlobalSearch
 			{context}
 			entityTypes={TYPES}
-			hotkey
+			hotkey="/"
 			{recents}
 			onRecentsChange={(next) => (recents = next)}
 			onSelect={(entity) => (picked = entity)}

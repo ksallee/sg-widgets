@@ -4,11 +4,14 @@ description: One Flow Production Tracking status, picked from the codes a projec
 ---
 
 import Demo from '../../../components/Demo.astro';
+import Props from '../../../components/Props.astro';
 
 Picks one status code for an entity type, offering only the codes the project it is scoped to allows.
 
 It is the [list picker](/widgets/list-picker/) configured with a status row and a badge for its
 value: the same control, popup, press rule and keyboard as every other picker.
+
+Single and multi: [StatusMultiPicker](/widgets/status-multi-picker/) takes several codes.
 
 ## Install
 
@@ -21,29 +24,7 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/status-picker.
 
 ## Props
 
-| prop | type | default | meaning |
-|---|---|---|---|
-| `context` | `SgContext` | required | The widget context. The options and the status table are read through it, once per page. |
-| `entityType` | `string` | required | The type whose status field is offered. |
-| `projectId` | `number` | — | Offer the codes this project allows. |
-| `projectIds` | `number[]` | — | Offer the codes every one of these projects allows. |
-| `field` | `string` | status field | A list or status field other than the type's own. |
-| `value` | `string` | — | The selected code. `bind:value` in Svelte, `value` with `onValueChange` in React. |
-| `placeholder` | `string` | `'Select a status'` | Shown with no selection. |
-| `emptyLabel` | `string` | `'No rows'` | Shown when the field offers nothing. |
-| `loadingLabel` | `string` | `'Loading…'` | Names the skeletons a read stands behind, for a screen reader. |
-| `errorLabel` | `string` | — | Shown in place of what the failed read said. |
-| `clearable` | `boolean` | `true` | Offers a control that clears the selection. |
-| `readonly` | `boolean` | `false` | Keeps full contrast and drops the chevron, the popup and the clear control. |
-| `disabled` | `boolean` | `false` | Greys the control and takes it out of the tab order. |
-| `invalid` | `boolean` | `false` | Sets `aria-invalid` and the destructive ring. |
-| `showCode` | `boolean` | `true` | Draws the code as a row's right-aligned secondary, when it says more than the label. |
-| `secondary` | `(option) => string` | the code | A row's right-aligned value, of the caller's own making. |
-| `subLabel` | `(option) => string` | — | The muted line under a row's label. |
-| `siteUrl` | `string` | the context's | Passed to every badge, for a sprite cell outside the status icon set. |
-| `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Heights 8, 9 and 10. |
-| `open` | `boolean` | `false` | Whether the popup is showing. Two-way in Svelte. |
-| `class` / `className` | `string` | — | Merged after the widget's own classes. |
+<Props name="status-picker" />
 
 Every other attribute is spread onto the root: `id`, `aria-*`, `data-*`, key handlers and a
 `ref` to the root element.
@@ -60,6 +41,8 @@ The root carries the size and, while the options load, `data-loading`.
 
 ## Events
 
+<Props name="status-picker" kind="events" />
+
 `onValueChange` fires with the code, or with `undefined` when the selection is cleared. It also fires
 once with `undefined` when a new option set drops the selected code, which is what a project change
 does.
@@ -72,14 +55,7 @@ None. The rows are the shared picker row; the closed state is a status badge.
 
 ## Keyboard
 
-| key | does |
-|---|---|
-| <kbd>Space</kbd>, <kbd>Enter</kbd>, <kbd>↓</kbd> | Opens the list |
-| <kbd>↑</kbd> <kbd>↓</kbd> | Moves the highlight |
-| <kbd>Enter</kbd> | Selects the highlighted status and closes |
-| <kbd>Backspace</kbd> | In an empty search box, clears the status |
-| <kbd>Esc</kbd> | Closes and keeps the selection |
-| <kbd>Tab</kbd> | Leaves the control, or reaches the clear control when there is one |
+<Props name="status-picker" kind="keyboard" />
 
 ## API behaviour
 

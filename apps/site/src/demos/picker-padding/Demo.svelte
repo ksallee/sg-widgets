@@ -12,6 +12,7 @@
 	} from '$lib/registry/components/context-selector.svelte';
 	import EntityMultiPicker from '$lib/registry/components/entity-multi-picker.svelte';
 	import EntityPicker from '$lib/registry/components/entity-picker.svelte';
+	import EntityTypeMultiPicker from '$lib/registry/components/entity-type-multi-picker.svelte';
 	import EntityTypePicker from '$lib/registry/components/entity-type-picker.svelte';
 	import FieldPicker from '$lib/registry/components/field-picker.svelte';
 	import ProjectMultiPicker from '$lib/registry/components/project-multi-picker.svelte';
@@ -159,7 +160,7 @@
 			data-qa-size={size}
 		>
 			<span class={caption}>entity-type-multi-picker</span>
-			<EntityTypePicker {context} multiple {size} value={filled ? ['Shot', 'Asset'] : []} />
+			<EntityTypeMultiPicker {context} {size} value={filled ? ['Shot', 'Asset'] : []} />
 		</div>
 
 		<div

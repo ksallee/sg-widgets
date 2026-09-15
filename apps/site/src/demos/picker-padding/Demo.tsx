@@ -11,12 +11,15 @@ import type { EntityRef } from '@sg-widgets/core';
 import { ContextSelector, type WorkContext } from '@/registry/sg/components/context-selector';
 import { EntityMultiPicker } from '@/registry/sg/components/entity-multi-picker';
 import { EntityPicker } from '@/registry/sg/components/entity-picker';
+import { EntityTypeMultiPicker } from '@/registry/sg/components/entity-type-multi-picker';
 import { EntityTypePicker } from '@/registry/sg/components/entity-type-picker';
 import { FieldPicker } from '@/registry/sg/components/field-picker';
-import { ProjectMultiPicker, ProjectPicker } from '@/registry/sg/components/project-picker';
+import { ProjectMultiPicker } from '@/registry/sg/components/project-multi-picker';
+import { ProjectPicker } from '@/registry/sg/components/project-picker';
 import { StatusMultiPicker } from '@/registry/sg/components/status-multi-picker';
 import { StatusPicker } from '@/registry/sg/components/status-picker';
-import { UserMultiPicker, UserPicker } from '@/registry/sg/components/user-picker';
+import { UserMultiPicker } from '@/registry/sg/components/user-multi-picker';
+import { UserPicker } from '@/registry/sg/components/user-picker';
 import { createDemoContext } from '../_shared/client';
 
 type Size = 'sm' | 'md' | 'lg';
@@ -54,7 +57,7 @@ export default function PickerPaddingDemo() {
       ['status-picker', <StatusPicker context={context} entityType="Version" projectId={projectId} size={size} value={filled ? 'ip' : undefined} />],
       ['status-multi-picker', <StatusMultiPicker context={context} entityType="Version" projectId={projectId} size={size} value={filled ? ['ip', 'apr'] : []} />],
       ['entity-type-picker', <EntityTypePicker context={context} size={size} value={filled ? 'Shot' : null} />],
-      ['entity-type-multi-picker', <EntityTypePicker context={context} multiple size={size} value={filled ? ['Shot', 'Asset'] : []} />],
+      ['entity-type-multi-picker', <EntityTypeMultiPicker context={context} size={size} value={filled ? ['Shot', 'Asset'] : []} />],
       ['field-picker', <FieldPicker context={context} entityType="Version" size={size} value={filled ? 'code' : ''} />],
       ['context-selector', <ContextSelector context={context} size={size} workContext={work} currentUser={PERSON} />],
     ];

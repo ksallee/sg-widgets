@@ -81,7 +81,8 @@ export function CheckboxEditor({
           aria-invalid={invalid}
           aria-label={field?.displayName ?? placeholder ?? label}
           onCheckedChange={toggle}
-          className={readonly ? 'data-disabled:cursor-default data-disabled:opacity-100' : undefined}
+          // Disabled wins over readonly, so a control that is both still reads inert.
+          className={readonly && !disabled ? 'data-disabled:cursor-default data-disabled:opacity-100' : undefined}
         />
         <span aria-hidden="true" className="truncate text-sm select-none">
           {label}

@@ -1,22 +1,30 @@
 <script lang="ts" module>
 	import {
+		CONTROL_BUTTON,
 		CONTROL_GLYPH,
 		CONTROL_HEIGHT,
 		CONTROL_PAD,
 		type ControlSize
 	} from '$lib/registry/components/control-classes.js';
+	import { CHIP_CROSS, type ChipSize } from '$lib/registry/components/leaf-classes.js';
 
 	export type FilterBarSize = ControlSize;
 
-	/** The remove control sits inside the pill, so it takes the tighter padding. */
-	const REMOVE_PAD: Record<FilterBarSize, string> = { sm: 'px-1.5', md: 'px-2', lg: 'px-2' };
+	/** A cross inside the pill sits one step under it on the chip ladder. */
+	const CROSS: Record<FilterBarSize, ChipSize> = { sm: 'xs', md: 'sm', lg: 'md' };
+	/**
+	 * The pill's trailing edge: the room above the cross, so its box sits as far from the
+	 * right as from the top (`docs/design-rules.md` rule 3).
+	 */
+	const CROSS_PAD: Record<FilterBarSize, string> = { sm: 'pr-[7px]', md: 'pr-2', lg: 'pr-[9px]' };
 	/** The button step beside a pill of each height. */
-	const BTN: Record<FilterBarSize, 'sm' | 'default' | 'lg'> = { sm: 'sm', md: 'default', lg: 'lg' };
 </script>
 
 <script lang="ts">
 	import type { HTMLAttributes } from 'svelte/elements';
 	import PlusIcon from '@lucide/svelte/icons/plus';
+	import SearchXIcon from '@lucide/svelte/icons/search-x';
+	import TriangleAlertIcon from '@lucide/svelte/icons/triangle-alert';
 	import XIcon from '@lucide/svelte/icons/x';
 	import type {
 		FacetValue,
@@ -39,6 +47,7 @@
 		toApi3Hash,
 		asFilterGroup,
 		group,
+		matchesTokens,
 		withoutPaths
 	} from '@sg-widgets/core';
 	import { Badge } from '$lib/components/ui/badge/index.js';
@@ -49,6 +58,8 @@
 	import { cn, type WithElementRef } from '$lib/utils.js';
 	import { entityFields } from '$lib/registry/components/entity-fields.svelte.js';
 	import FilterDialog from '$lib/registry/components/filter-dialog.svelte';
+	import { REMOVE_CONTROL } from '$lib/registry/components/leaf-classes.js';
+	import StateLine from '$lib/registry/components/state-line.svelte';
 
 	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>, HTMLDivElement> & {
 		entityType: string;
@@ -101,6 +112,8 @@
 	const base = $derived(asFilterGroup(baseFilter));
 	const scope = $derived(toApi3Hash(base ? group('and', [base, withoutPaths(value, facets)]) : withoutPaths(value, facets)));
 	const tally = $derived(loadFacets(scope, fields, facets));
+	/** What the open facet's search box holds. */
+	let facetQuery = $state('');
 	const activeCount = $derived(facets.filter((name) => Boolean(findCondition(value, name))).length);
 
 	async function loadFacets(
@@ -168,30 +181,29 @@
 		{disabled}
 		data-slot="filter-pill-remove"
 		aria-label="Remove {label} filter"
-		class={cn(
-			'border-border text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring/50 inline-flex shrink-0 items-center border-l outline-none focus-visible:ring-3 disabled:pointer-events-none disabled:opacity-50',
-			CONTROL_HEIGHT[size],
-			REMOVE_PAD[size]
-		)}
+		class={cn(REMOVE_CONTROL, 'disabled:pointer-events-none disabled:opacity-50')}
 		onclick={() => commit(withoutPaths(value, [name]))}
 	>
-		<XIcon class={CONTROL_GLYPH[size]} />
+		<XIcon aria-hidden="true" class={CHIP_CROSS[CROSS[size]]} />
 	</button>
 {/snippet}
 
 {#snippet facetList(name: string)}
 	{@const selected = selectedOf(name)}
 	<Popover.Content strategy="fixed" class="w-64 p-0" align="start">
-		<Command.Root>
-			<Command.Input placeholder="Search values…" />
+		<Command.Root shouldFilter={false}>
+			<Command.Input bind:value={facetQuery} placeholder="Search values…" />
 			<Command.List>
 				{#await tally}
 					<p class="text-muted-foreground py-6 text-center text-sm">Counting…</p>
 				{:then found}
-					<Command.Empty>No value.</Command.Empty>
-					{#each found[name] ?? [] as option (option.key)}
+					<Command.Empty>
+						<StateLine state="empty" icon={SearchXIcon} label="No value." pad="none" />
+					</Command.Empty>
+					<!-- The box matches what it was given rather than what a read answered, so the rows drawn are the rows the list holds. -->
+					{#each (found[name] ?? []).filter((option) => matchesTokens(facetQuery, option.label, option.key)) as option (option.key)}
 						<Command.Item
-							value="{option.label} {option.key}"
+							value={option.key}
 							data-option={option.key}
 							onSelect={() => toggle(name, option)}
 						>
@@ -207,7 +219,12 @@
 						</Command.Item>
 					{/each}
 				{:catch error}
-					<p class="text-destructive py-6 text-center text-sm">{error.message}</p>
+					<StateLine
+						state="error"
+						slotName="filter-bar-error"
+						icon={TriangleAlertIcon}
+						label={error.message}
+					/>
 				{/await}
 			</Command.List>
 		</Command.Root>
@@ -215,7 +232,7 @@
 			<div class="border-border border-t p-1">
 				<Button
 					variant="ghost"
-					size="sm"
+					size={CONTROL_BUTTON[size]}
 					class="w-full"
 					data-slot="filter-pill-clear"
 					onclick={() => commit(setFacet(value, name, []))}
@@ -264,6 +281,7 @@
 					class={cn(
 						'border-border inline-flex max-w-full min-w-0 items-center overflow-hidden rounded-lg border text-sm',
 						CONTROL_HEIGHT[size],
+						found && parts && CROSS_PAD[size],
 						found ? 'bg-background' : 'text-muted-foreground max-w-72 border-dashed'
 					)}
 				>
@@ -307,7 +325,8 @@
 				aria-label={describeCondition(found, field)}
 				class={cn(
 					'border-border bg-background inline-flex max-w-full min-w-0 items-center overflow-hidden rounded-lg border text-sm',
-					CONTROL_HEIGHT[size]
+					CONTROL_HEIGHT[size],
+					CROSS_PAD[size]
 				)}
 			>
 				<span
@@ -327,9 +346,9 @@
 	{#if activeCount > 0}
 		<Button
 			variant="ghost"
-			size={BTN[size]}
+			size={CONTROL_BUTTON[size]}
 			{disabled}
-			class="text-muted-foreground hover:text-foreground"
+			class="text-muted-foreground"
 			data-slot="filter-clear-all"
 			onclick={() => commit(withoutPaths(value, facets))}
 		>

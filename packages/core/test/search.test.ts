@@ -1,5 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { matchRuns, matchesEveryWord, prependRecent, searchTypeMap, searchWords } from '../src/search.js';
+import {
+  hasMorePage,
+  matchRuns,
+  matchesEveryWord,
+  prependRecent,
+  pressGate,
+  projectOfPath,
+  queryPlan,
+  requestGate,
+  searchTypeMap,
+  searchView,
+  searchWords,
+} from '../src/search.js';
 
 describe('searchWords', () => {
   it('splits on whitespace and drops the empties', () => {
@@ -84,5 +96,89 @@ describe('prependRecent', () => {
     const made = [{ type: 'Shot', id: 1 }];
     prependRecent(made, { type: 'Shot', id: 2 }, 5, keyOf);
     expect(made).toEqual([{ type: 'Shot', id: 1 }]);
+  });
+});
+
+describe('hasMorePage', () => {
+  it('reads a full page as a sign of another one', () => {
+    expect(hasMorePage(25, 25)).toBe(true);
+    expect(hasMorePage(24, 25)).toBe(false);
+    expect(hasMorePage(0, 25)).toBe(false);
+  });
+});
+
+describe('projectOfPath', () => {
+  it('reads the project a root path names', () => {
+    expect(projectOfPath('/Project/70')).toBe(70);
+    expect(projectOfPath('/Project/70/Shot')).toBe(70);
+  });
+
+  it('answers nothing on the site root', () => {
+    expect(projectOfPath('/')).toBeNull();
+    expect(projectOfPath('/Shot/1')).toBeNull();
+  });
+});
+
+describe('queryPlan', () => {
+  it('debounces a query with words in it', () => {
+    expect(queryPlan('sh010', false)).toBe('debounce');
+    expect(queryPlan('sh010', true)).toBe('debounce');
+  });
+
+  it('empties the list on an empty query, unless the widget reads on one', () => {
+    expect(queryPlan('   ', false)).toBe('clear');
+    expect(queryPlan('   ', true)).toBe('now');
+  });
+});
+
+describe('searchView', () => {
+  const state = { error: null, loading: false, count: 0, asked: true };
+
+  it('puts the error first', () => {
+    expect(searchView({ ...state, error: 'boom', loading: true, count: 3 })).toBe('error');
+  });
+
+  it('stands the skeletons in for a first page only', () => {
+    expect(searchView({ ...state, loading: true })).toBe('loading');
+    expect(searchView({ ...state, loading: true, count: 3 })).toBe('rows');
+  });
+
+  it('holds the empty line back until something has been asked for', () => {
+    expect(searchView(state)).toBe('empty');
+    expect(searchView({ ...state, asked: false })).toBe('rows');
+  });
+});
+
+describe('requestGate', () => {
+  it('drops an answer whose ticket was replaced', () => {
+    const gate = requestGate();
+    const first = gate.next();
+    const second = gate.next();
+    expect(gate.holds(first)).toBe(false);
+    expect(gate.holds(second)).toBe(true);
+  });
+
+  it('cancels what is in flight without starting anything', () => {
+    const gate = requestGate();
+    const ticket = gate.next();
+    gate.cancel();
+    expect(gate.holds(ticket)).toBe(false);
+    expect(gate.holds(gate.next())).toBe(true);
+  });
+});
+
+describe('pressGate', () => {
+  it('answers a replacement the press led to, once', () => {
+    const gate = pressGate();
+    gate.mark();
+    expect(gate.takes()).toBe(true);
+    expect(gate.takes()).toBe(false);
+  });
+
+  it('answers nothing outside the window, and nothing at all without a press', () => {
+    expect(pressGate().takes()).toBe(false);
+    const stale = pressGate(0);
+    stale.mark();
+    expect(stale.takes()).toBe(false);
   });
 });

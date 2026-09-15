@@ -1,5 +1,6 @@
 <script lang="ts" module>
 	import type { TreeCheckState, TreeNode } from '@sg-widgets/core';
+	import type { StatusBadgeSize } from '$lib/registry/components/status-badge.svelte';
 
 	export type EntityTreeSize = 'sm' | 'md' | 'lg';
 
@@ -26,6 +27,8 @@
 	const GLYPH: Record<EntityTreeSize, string> = { sm: 'size-3.5', md: 'size-4', lg: 'size-5' };
 	/** A leaf inside a row sits one step down the ladder. */
 	const LEAF: Record<EntityTreeSize, 'sm' | 'md'> = { sm: 'sm', md: 'sm', lg: 'md' };
+	/** A badge sits one step under the row it is in, on the chip ladder of `docs/design-rules.md`. */
+	const BADGE: Record<EntityTreeSize, StatusBadgeSize> = { sm: 'xs', md: 'sm', lg: 'md' };
 
 	/** `aria-checked` as a tree row spells it: `mixed` for a part-checked branch. */
 	function checkedAttr(state: TreeCheckState): 'true' | 'false' | 'mixed' {
@@ -383,7 +386,9 @@
 		const root = ref;
 		if (!path || !root || !document.activeElement?.closest('[data-path]')) return;
 		if (!root.contains(document.activeElement)) return;
-		root.querySelector<HTMLElement>(`[data-path="${CSS.escape(path)}"]`)?.focus({ preventScroll: true });
+		const row = root.querySelector<HTMLElement>(`[data-path="${CSS.escape(path)}"]`);
+		row?.focus({ preventScroll: true });
+		row?.scrollIntoView({ block: 'nearest' });
 	});
 
 	const loadingText = $derived(stateLine('loading', { loadingLabel }));
@@ -448,9 +453,11 @@
 				label={stateLine('error', { errorLabel }, snap.error?.message)}
 			/>
 		{:else if snap.status === 'loading' || snap.status === 'idle'}
-			<div class="flex flex-col gap-2 p-1" aria-busy="true" aria-label={loadingText}>
+			<div class="flex flex-col" aria-busy="true" aria-label={loadingText}>
 				{#each { length: 5 } as _, index (index)}
-					<Skeleton class="h-6 w-full" />
+					<div class={cn('flex items-center', ROW[density])}>
+						<Skeleton class="h-5 w-full" />
+					</div>
 				{/each}
 			</div>
 		{:else if snap.rows.length === 0}
@@ -507,7 +514,7 @@
 							tabindex={row.focused && !disabled ? 0 : -1}
 							onclick={() => activate(row)}
 							class={cn(
-								'focus-visible:ring-ring focus-visible:ring-offset-background flex min-w-0 cursor-default gap-2 rounded-sm outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2',
+								'focus-visible:ring-ring focus-visible:ring-offset-background relative flex min-w-0 focus-visible:z-10 cursor-default gap-2 rounded-sm outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2',
 								ROW[density],
 								TEXT[size],
 								hasSubLabel ? 'items-start' : 'items-center',
@@ -613,7 +620,7 @@
 										status={plan.statuses?.[status] ?? null}
 										field={node.entity ? (plan.status[node.entity.type] ?? null) : null}
 										variant="glyph"
-										size={LEAF[size]}
+										size={BADGE[size]}
 										siteUrl={site}
 										class="shrink-0"
 									/>
@@ -636,6 +643,7 @@
 											statuses={plan.statuses}
 											siteUrl={site}
 											{context}
+											{density}
 											class="w-auto justify-end text-xs"
 										/>
 									</span>

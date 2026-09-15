@@ -1,13 +1,11 @@
 <script lang="ts">
 	import type { EntityRef } from '@sg-widgets/core';
 	import ProjectPicker from '$lib/registry/components/project-picker.svelte';
-	import ProjectMultiPicker from '$lib/registry/components/project-multi-picker.svelte';
 	import { createDemoContext } from '../_shared/client';
 
 	const context = createDemoContext();
 
 	let one = $state<EntityRef | null>(null);
-	let several = $state<EntityRef[]>([]);
 	let archived = $state<EntityRef | null>(null);
 	// A bare reference: type and id, no name. Resolved on mount.
 	let bare = $state<EntityRef | null>({ type: 'Project', id: context.projectFor(71) });
@@ -35,14 +33,6 @@
 		<div class={field}>
 			<span class={caption}>One project, clearable</span>
 			<ProjectPicker {context} bind:value={one} clearable />
-		</div>
-	</section>
-
-	<section class={group} data-demo-case="multi">
-		<h4 class={label}>Several, with checkbox rows</h4>
-		<div class={field}>
-			<span class={caption}>Several projects at once</span>
-			<ProjectMultiPicker {context} bind:value={several} clearable />
 		</div>
 	</section>
 

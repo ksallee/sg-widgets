@@ -4,9 +4,12 @@ description: Several Flow Production Tracking statuses, picked from the codes a 
 ---
 
 import Demo from '../../../components/Demo.astro';
+import Props from '../../../components/Props.astro';
 
 Picks any number of status codes for an entity type, offering only the codes the project it is scoped
 to allows.
+
+Single and multi: [StatusPicker](/widgets/status-picker/) takes one code.
 
 ## Install
 
@@ -19,33 +22,7 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/status-multi-p
 
 ## Props
 
-| prop | type | default | meaning |
-|---|---|---|---|
-| `context` | `SgContext` | required | The widget context. The options and the status table are read through it, once per page. |
-| `entityType` | `string` | required | The type whose status field is offered. |
-| `projectId` | `number` | — | Offer the codes this project allows. |
-| `projectIds` | `number[]` | — | Offer the codes every one of these projects allows. |
-| `field` | `string` | status field | A list or status field other than the type's own. |
-| `value` | `string[]` | `[]` | The selected codes. `bind:value` in Svelte, `value` with `onValueChange` in React. |
-| `placeholder` | `string` | `'Select statuses'` | Shown with nothing selected. |
-| `searchPlaceholder` | `string` | `'Search statuses…'` | Placeholder of the search box. |
-| `emptyLabel` | `string` | `'No match'` | Shown when the search matches nothing. |
-| `loadingLabel` | `string` | `'Loading…'` | Names the skeletons a read stands behind, for a screen reader. |
-| `errorLabel` | `string` | — | Shown in place of what the failed read said. |
-| `clearable` | `boolean` | `true` | Offers a control that clears the selection. |
-| `readonly` | `boolean` | `false` | Keeps full contrast and drops the chevron, the popup and the clear control. |
-| `disabled` | `boolean` | `false` | Greys the control and takes it out of the tab order. |
-| `invalid` | `boolean` | `false` | Sets `aria-invalid` and the destructive ring. |
-| `showCode` | `boolean` | `true` | Draws the code as a row's right-aligned secondary, when it says more than the label. |
-| `secondary` | `(option) => string` | the code | A row's right-aligned value, of the caller's own making. |
-| `subLabel` | `(option) => string` | — | The muted line under a row's label. |
-| `summary` | `'chips' \| 'ellipsis' \| 'count'` | `'ellipsis'` | How many of the selection the control shows. |
-| `badge` | `'both' \| 'icon' \| 'text'` | `'both'` | What one selected status is drawn as. |
-| `max` | `number` | `0` | Badges drawn before the rest becomes `+n`. `0` lets the row fit what it can, and `badge="icon"` draws twice as many. |
-| `siteUrl` | `string` | the context's | Passed to every badge, for a sprite cell outside the status icon set. |
-| `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Heights 8, 9 and 10. |
-| `open` | `boolean` | `false` | Whether the popup is showing. Two-way in Svelte. |
-| `class` / `className` | `string` | — | Merged after the widget's own classes. |
+<Props name="status-multi-picker" />
 
 Every other attribute is spread onto the root: `id`, `aria-*`, `data-*`, key handlers and a
 `ref` to the root element.
@@ -72,6 +49,8 @@ The root carries the size and, while the options load, `data-loading`.
 
 ## Events
 
+<Props name="status-multi-picker" kind="events" />
+
 `onValueChange` fires with the whole array on every change, including the empty array from the clear
 control. A selected code the option set does not carry is kept, never dropped.
 
@@ -83,16 +62,7 @@ None. The rows are the shared picker row; the closed state is status badges.
 
 ## Keyboard
 
-| key | does |
-|---|---|
-| <kbd>Space</kbd>, <kbd>Enter</kbd> | On the chevron, opens the list |
-| any text | Narrows the rows, from the caret under `chips` and from the popup's search box otherwise |
-| <kbd>↑</kbd> <kbd>↓</kbd> | Moves the highlight and keeps it in view; the last row holds it rather than wrapping |
-| <kbd>Home</kbd> <kbd>End</kbd> | First and last row |
-| <kbd>Enter</kbd> | Toggles the highlighted status; the list stays open |
-| <kbd>Backspace</kbd> | In an empty search box, highlights the last chip; a second one removes it |
-| <kbd>Esc</kbd> | Closes, keeps the selection and clears the query; on a closed control it does nothing |
-| <kbd>Tab</kbd> | Leaves the control, or reaches the clear control when there is one |
+<Props name="status-multi-picker" kind="keyboard" />
 
 ## API behaviour
 

@@ -66,6 +66,7 @@
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
 	import StateLine from '$lib/registry/components/state-line.svelte';
+	import { PICKER_ICON_BUTTON } from '$lib/registry/components/picker-classes.js';
 
 	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>, HTMLDivElement> & {
 		/** The widget context. The schema is read through it, once per page. */
@@ -344,7 +345,7 @@ const ICONS: Record<string, typeof Type> = {
 			open,
 			query: search,
 			count: value === '' ? 0 : 1,
-			armed: null,
+			focused: null,
 			editable: !readonly && !disabled,
 			multiple: false
 		});
@@ -517,12 +518,15 @@ const ICONS: Record<string, typeof Type> = {
 					{:else if fields === null}
 						<div
 							data-slot="field-picker-loading"
-							class="flex flex-col gap-2 p-1"
+							class="flex flex-col"
 							aria-busy="true"
 							aria-label={stateLine('loading', { loadingLabel })}
 						>
 							{#each [0, 1, 2] as row (row)}
-								<Skeleton class="h-10 w-full" />
+								<div class="flex flex-col gap-1 px-2 py-1.5">
+									<Skeleton class="h-5 w-2/3" />
+									<Skeleton class="h-3 w-1/4" />
+								</div>
 							{/each}
 						</div>
 					{:else}
@@ -583,7 +587,7 @@ const ICONS: Record<string, typeof Type> = {
 					data-slot="field-picker-clear"
 					aria-label="Clear the field"
 					onclick={() => emit('')}
-					class="hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring focus-visible:ring-offset-background pointer-events-auto shrink-0 rounded-sm p-0.5 opacity-70 outline-none transition-colors duration-150 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-2 motion-safe:active:scale-[0.98]"
+					class={PICKER_ICON_BUTTON}
 				>
 					<X aria-hidden="true" class={GLYPH[size]} />
 				</button>

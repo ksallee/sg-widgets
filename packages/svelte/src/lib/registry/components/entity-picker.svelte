@@ -85,6 +85,7 @@
 	import { Combobox } from 'bits-ui';
 	import EntityChip from '$lib/registry/components/entity-chip.svelte';
 	import PickerControl from '$lib/registry/components/picker-control.svelte';
+	import Check from '@lucide/svelte/icons/check';
 	import Row from '$lib/registry/components/picker-row.svelte';
 	import { PICKER_ARMED, PICKER_CHIP, PICKER_ROW } from '$lib/registry/components/picker-classes.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
@@ -215,7 +216,6 @@
 	);
 	const options = $derived(withSelectedPinned(snap.rows, value ? [value] : [], search.known));
 	const polymorphic = $derived(entityTypes.length > 1);
-	const hasSubLabel = $derived(Boolean(subLabelField || subLabel));
 	const selectedKey = $derived(value ? entityKey(value) : '');
 
 	/** The caller's own sub-label. Absent, the row reads `subLabelField` itself. */
@@ -293,6 +293,7 @@
 		onClear={clear}
 		loading={snap.loading && options.length === 0}
 		error={snap.error?.message ?? null}
+		count={options.length}
 		empty={options.length === 0}
 		{emptyLabel}
 		{loadingLabel}
@@ -322,7 +323,7 @@
 					data-checked={chosen ? 'true' : undefined}
 					value={entityKey(row)}
 					label={row.name}
-					class={cn(PICKER_ROW, hasSubLabel && 'items-start')}
+					class={PICKER_ROW}
 				>
 					<Row
 						{row}
@@ -337,7 +338,12 @@
 						{size}
 						{context}
 						siteUrl={site}
-					/>
+						indicatorAt="end"
+					>
+						{#snippet indicator()}
+							{#if chosen}<Check aria-hidden="true" class="size-4" />{/if}
+						{/snippet}
+					</Row>
 				</Combobox.Item>
 			{/each}
 		{/snippet}

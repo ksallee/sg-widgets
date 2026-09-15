@@ -8,20 +8,26 @@ import {
   GripVerticalIcon,
   XIcon,
 } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Separator } from '@/components/ui/separator';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { cn } from '@/lib/utils';
 import { FieldPicker } from '@/registry/sg/components/field-picker';
+import { CHIP_BOX, CHIP_PAD, type ChipSize } from '@/registry/sg/components/leaf-classes';
 import { useSortable } from '@/registry/sg/components/sortable';
+import { StateLine } from '@/registry/sg/components/state-line';
 
 export type SortPickerSize = 'sm' | 'md' | 'lg';
 
 /** Controls follow the input ladder of `docs/design-rules.md`. */
 const BOX: Record<SortPickerSize, string> = { sm: 'h-8 px-2', md: 'h-9 px-3', lg: 'h-10 px-3' };
 const GLYPH: Record<SortPickerSize, string> = { sm: 'size-4', md: 'size-4', lg: 'size-5' };
+/** The count beside the label is a chip, so it takes the step under the control. */
+const COUNT: Record<SortPickerSize, ChipSize> = { sm: 'xs', md: 'sm', lg: 'md' };
+/** A text chip wears the entity chip's surface, as a picker's code chip does. */
+const COUNT_CHIP =
+  'bg-secondary text-secondary-foreground inline-flex shrink-0 items-center rounded-md border tabular-nums';
 
 export interface SortPickerProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange'> {
   /** The root element. */
@@ -165,18 +171,21 @@ export function SortPicker({
             {label}
           </span>
           {value.length > 1 ? (
-            <Badge variant="secondary" className="shrink-0" data-slot="sort-count">
+            <span
+              data-slot="sort-count"
+              className={cn(COUNT_CHIP, CHIP_BOX[COUNT[size]], CHIP_PAD[COUNT[size]].text)}
+            >
               {value.length}
-            </Badge>
+            </span>
           ) : null}
         </PopoverTrigger>
         <PopoverContent data-picker="sort" className="flex w-96 flex-col gap-3 p-3" align="start">
-          <div className="flex min-w-0 flex-col gap-2" data-slot="sort-keys" ref={sortableRef}>
+          <div className="flex min-w-0 flex-col" data-slot="sort-keys" ref={sortableRef}>
             {value.map((key, i) => (
               <div
                 key={key.field}
                 className={cn(
-                  'bg-popover flex min-w-0 items-center gap-2 rounded-md',
+                  'bg-popover flex min-w-0 items-center gap-2 rounded-md px-2 py-0.5',
                   'data-[dragging]:z-10 data-[dragging]:opacity-90 data-[dragging]:shadow-md',
                   'data-[drop-target]:bg-accent/40',
                 )}
@@ -192,7 +201,7 @@ export function SortPicker({
                   onKeyDown={(event) => onKeyKeys(event, i)}
                   aria-label={`Reorder ${nameOf(key.field)}`}
                   title="Drag to reorder, or press Space and use the arrow keys"
-                  className="cursor-grab touch-none active:cursor-grabbing"
+                  className="cursor-grab touch-none rounded-sm active:cursor-grabbing"
                 >
                   <GripVerticalIcon />
                 </Button>
@@ -223,6 +232,7 @@ export function SortPicker({
                   size="icon-sm"
                   aria-label="Remove"
                   data-slot="sort-remove"
+                  className="rounded-sm"
                   onClick={() => commit(value.filter((_, j) => j !== i))}
                 >
                   <XIcon />
@@ -230,9 +240,12 @@ export function SortPicker({
               </div>
             ))}
             {value.length === 0 ? (
-              <p className="text-muted-foreground py-6 text-center text-sm">
-                No sort. Rows come back id ascending.
-              </p>
+              <StateLine
+                state="empty"
+                slotName="sort-empty"
+                icon={ArrowUpDownIcon}
+                label="No sort. Rows come back id ascending."
+              />
             ) : null}
           </div>
           <div

@@ -5,6 +5,8 @@
 
 	/** The leading slot follows the thumbnail ladder of `docs/design-rules.md`. */
 	const LEAD: Record<PickerRowSize, string> = { sm: 'size-6', md: 'size-8', lg: 'size-10' };
+	/** The indicator column is as tall as the leading slot, so a checkbox centres on the picture. */
+	const LEAD_HEIGHT: Record<PickerRowSize, string> = { sm: 'h-6', md: 'h-8', lg: 'h-10' };
 	const GLYPH: Record<PickerRowSize, string> = { sm: 'size-3.5', md: 'size-4', lg: 'size-5' };
 	/** A row's text, on the leaf ladder of `docs/design-rules.md`. */
 	const TEXT: Record<PickerRowSize, string> = { sm: 'text-xs', md: 'text-sm', lg: 'text-base' };
@@ -37,6 +39,13 @@
 		context?: SgContext;
 		/** The site the status sprite is served from. Defaults to the context's. */
 		siteUrl?: string;
+		/** The `data-slot` the indicator column carries. Defaults to `picker-row-indicator`. */
+		indicatorSlot?: string;
+		/**
+		 * Where the indicator column sits. A checkbox leads; a single picker's tick trails, where an
+		 * unticked row leaves no gap before its label.
+		 */
+		indicatorAt?: 'start' | 'end';
 	}
 </script>
 
@@ -55,6 +64,7 @@
 		secondaryType
 	} from '@sg-widgets/core';
 	import { cn } from '$lib/utils.js';
+	import { PICKER_ROW_INDICATOR } from '$lib/registry/components/picker-classes.js';
 	import FieldValue from '$lib/registry/components/field-value.svelte';
 	import Thumbnail from '$lib/registry/components/thumbnail.svelte';
 	import UserAvatar from '$lib/registry/components/user-avatar.svelte';
@@ -62,6 +72,8 @@
 	type Props = PickerRowProps & {
 		/** Drawn in the leading slot when the row carries no picture. */
 		glyph?: Snippet;
+		/** What the indicator column holds: a tick, a checkbox, or nothing while the row is not taken. */
+		indicator?: Snippet;
 	};
 
 	let {
@@ -78,7 +90,10 @@
 		size = 'md',
 		context,
 		siteUrl,
-		glyph
+		glyph,
+		indicator,
+		indicatorSlot,
+		indicatorAt = 'start'
 	}: Props = $props();
 
 	const anatomy = $derived({ thumbnail, subLabelField, secondaryField, showCode });
@@ -139,6 +154,20 @@
 	The component draws the row's contents, not its box: the caller owns the list item,
 	its selection state and anything it puts in front, such as a checkbox.
 -->
+{#snippet indicatorCell()}
+	<!-- Fixed whether or not the row is ticked, so the labels, or the secondaries before a trailing tick, sit at one x. -->
+	<span
+		data-slot={indicatorSlot ?? 'picker-row-indicator'}
+		class={cn(PICKER_ROW_INDICATOR, thumbnail !== false && LEAD_HEIGHT[size])}
+	>
+		{@render indicator?.()}
+	</span>
+{/snippet}
+
+{#if indicator && indicatorAt === 'start'}
+	{@render indicatorCell()}
+{/if}
+
 {#if thumbnail !== false}
 	<span data-slot="picker-row-leading" class={cn('flex shrink-0 items-center justify-center', LEAD[size])}>
 		{#if person}
@@ -213,4 +242,8 @@
 			class="w-auto justify-end text-xs"
 		/>
 	</span>
+{/if}
+
+{#if indicator && indicatorAt === 'end'}
+	{@render indicatorCell()}
 {/if}

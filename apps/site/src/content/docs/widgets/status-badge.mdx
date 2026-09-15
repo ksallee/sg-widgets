@@ -4,6 +4,7 @@ description: One Flow Production Tracking status as a badge.
 ---
 
 import Demo from '../../../components/Demo.astro';
+import Props from '../../../components/Props.astro';
 
 Renders one status code as a badge carrying the site's own label and icon.
 
@@ -18,20 +19,7 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/status-badge.j
 
 ## Props
 
-| prop | type | default | meaning |
-|---|---|---|---|
-| `code` | `string` | required | The stored status code. An empty code renders nothing. |
-| `status` | `StatusRecord \| null` | `null` | The resolved Status row. Supplies the name, colour and icon. |
-| `field` | `FieldSchema \| null` | `null` | Fallback label source, through its display values. |
-| `variant` | `'both' \| 'icon' \| 'text' \| 'glyph'` | `'both'` | Icon-only and glyph keep the label as screen-reader text and a tooltip. |
-| `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Heights 6, 8 and 10. |
-| `color` | `boolean` | `false` | Paints the badge in the status colour instead of the neutral surface. |
-| `label` | `'name' \| 'code'` | `'name'` | Which of the two the badge shows. The other one is the tooltip. |
-| `siteUrl` | `string` | — | The site the stock sprite is served from. Needed only for a sprite cell outside the status icon set. |
-| `removable` | `boolean` | `false` | Draws a remove control inside the pill, after the label. `variant="icon"` and `variant="glyph"` have no room for it and ignore this. |
-| `onRemove` | `(code: string) => void` | — | Fires with the code when the remove control is pressed. |
-| `removeLabel` | `string` | `Remove <label>` | The accessible name of the remove control. |
-| `class` / `className` | `string` | — | Merged after the widget's own classes. |
+<Props name="status-badge" />
 
 The name resolves in one order: the Status row's name, then the field's display value, then the raw
 code. A code unknown to both renders as itself in the label and in the tooltip.
@@ -56,10 +44,7 @@ None.
 
 ## Keyboard
 
-| key | what it does |
-|---|---|
-| <kbd>Tab</kbd> | Reaches the remove control of a removable badge. The badge itself is not focusable |
-| <kbd>Enter</kbd> / <kbd>Space</kbd> | Removes, from that control |
+<Props name="status-badge" kind="keyboard" />
 
 ## API behaviour
 
@@ -77,3 +62,14 @@ is in the REST API (010_status_icons). Every icon the status picker offers, 94 c
 the core package and draws with no site access; the shipped statuses, the rows with no `created_by`,
 all use one of them (probe 061). A key outside that set draws from the site's own copy of the sprite,
 so it needs `siteUrl`; without one it falls back to a neutral dot.
+
+## StatusGlyph
+
+One status icon, at whatever size the caller draws it. The badge draws it, and so does every row
+that shows a status. An uploaded icon is a self-contained data URI. A sprite icon names a cell of
+the stock sprite: the 94 cells of the shipped statuses are bundled in core and draw with no site
+access, any other cell draws from the site's own copy and so needs `siteUrl`, and a key with neither
+resolves to a neutral dot. An HTML icon is the label itself, so it draws no picture; `fallback`
+gives it the dot instead, which is what a list row wants.
+
+<Props name="status-glyph" />

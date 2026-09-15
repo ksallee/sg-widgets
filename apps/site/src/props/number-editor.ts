@@ -1,0 +1,37 @@
+import type { PropsFile } from './_types';
+
+export default {
+  extends: { name: 'value-editor', omit: ['slotName', 'message', 'render'] },
+  props: [
+    { name: 'value', type: '`number | string | null`', default: '`null`', meaning: 'The stored value. Two-way in Svelte.' },
+    { name: 'onValueChange', type: '`(value: number | string | null) => void`', default: '—', meaning: 'Called when the input commits.' },
+    { name: 'dataType', type: '`\'number\' | \'float\' | \'percent\' | \'duration\' | \'timecode\' | \'currency\'`', default: '`\'number\'`', meaning: 'Picks the parse, the format, the affix and the step.' },
+    { name: 'field', type: '`FieldSchema | null`', default: '`null`', meaning: 'Supplies the accessible label and the required flag.' },
+    { name: 'precision', type: '`number`', default: '`6`', meaning: 'Decimals kept on a float or a currency.' },
+    { name: 'hoursPerDay', type: '`number`', default: '`8`', meaning: 'The site\'s working day, for the day unit on a duration.' },
+    { name: 'frameRate', type: '`number`', default: '—', meaning: 'Frames per second, for the frame form of a timecode and its one-frame step.' },
+    { name: 'symbol', type: '`string`', default: '`\'$\'`', meaning: 'Shown before the value on a currency field.' },
+    { name: 'inline', type: '`boolean`', default: '`false`', meaning: 'Compact for one row: a fixed width for the data type, the steppers inside the input, no hint.' },
+    { name: 'min / max', type: '`number`', default: '`0` and `100` on a percent, the 32-bit bounds elsewhere', meaning: 'Range the value is held in.' },
+    { name: 'step', type: '`number`', default: 'the data type\'s', meaning: 'What one step moves.' },
+    { name: 'scrub', type: '`boolean`', default: '`false`', meaning: 'Name the control and let a drag across that name change the value.' },
+    { name: 'label', type: '`string`', default: 'the field\'s display name', meaning: 'The name over a scrub area.' },
+    { name: 'locale', type: '`string`', default: 'the runtime\'s', meaning: 'Locale the value is written in.' },
+    { name: 'hint', type: '`boolean`', default: '`false`', meaning: 'Show the stored form under the control, such as the minutes behind a duration.' },
+    { name: 'disabled', type: '`boolean`', default: '`false`' },
+    { name: 'readonly', type: '`boolean`', default: '`false`' },
+    { name: 'invalid', type: '`boolean`', default: '`false`', meaning: 'Forced invalid state.' },
+    { name: 'error', type: '`string | null`', default: '`null`', meaning: 'A message from the caller, shown in place of the parse error.' },
+    { name: 'onErrorChange', type: '`(error: string | null) => void`', default: '—', meaning: 'Called when the parse error appears or clears.' },
+    { name: 'placeholder', type: '`string`', default: '—' },
+    { name: 'class / className', type: '`string`', default: '—', meaning: 'Merged after the widget\'s own classes.' },
+  ],
+  keyboard: [
+    { key: '`Up` / `Down`', does: 'Steps once.' },
+    { key: '`Shift` + `Up` / `Down`', does: 'Steps ten times.' },
+    { key: '`Page Up` / `Page Down`', does: 'Steps a hundred times.' },
+    { key: '`Enter`', does: 'Commits.' },
+    { key: '`Escape`', does: 'Restores the stored value.' },
+    { key: '`Tab`', does: 'Commits by leaving the control.' },
+  ],
+} satisfies PropsFile;

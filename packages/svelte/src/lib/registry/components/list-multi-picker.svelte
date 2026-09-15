@@ -24,8 +24,10 @@
 		PICKER_ARMED,
 		PICKER_ROW,
 		PICKER_TEXT_CHIP,
-		PICKER_TEXT_CHIP_BOX
+		PICKER_TEXT_CHIP_BOX,
+		PICKER_TEXT_CHIP_CROSS
 	} from '$lib/registry/components/picker-classes.js';
+	import { REMOVE_CONTROL } from '$lib/registry/components/leaf-classes.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
 
 	type Props = WithElementRef<Omit<HTMLAttributes<HTMLDivElement>, 'slot'>, HTMLDivElement> & {
@@ -210,6 +212,7 @@
 			bind:query={search}
 			onRemoveAt={removeAt}
 			onClear={() => emit([])}
+			count={shown.length}
 			empty={shown.length === 0}
 			{emptyLabel}
 			{clearLabel}
@@ -233,9 +236,9 @@
 							data-slot={`${slot}-remove`}
 							aria-label={`Remove ${labelOf(code)}`}
 							onclick={() => remove(code)}
-							class="hover:text-foreground focus-visible:ring-ring focus-visible:ring-offset-background shrink-0 rounded-sm opacity-60 outline-none transition-colors duration-150 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-2 motion-safe:active:scale-[0.98]"
+							class={REMOVE_CONTROL}
 						>
-							<X aria-hidden="true" class="size-3" />
+							<X aria-hidden="true" class={PICKER_TEXT_CHIP_CROSS[size]} />
 						</button>
 					{/if}
 				</span>
@@ -252,9 +255,6 @@
 						label={option.label}
 						class={PICKER_ROW}
 					>
-						<span data-slot={`${slot}-check`} class="flex h-5 shrink-0 items-center">
-							<Checkbox checked={chosen} tabindex={-1} aria-hidden="true" class="pointer-events-none" />
-						</span>
 						<Row
 							row={{ type: LIST_ROW_TYPE, id: 0, name: option.label, values: {} }}
 							query={searchable ? search : ''}
@@ -262,7 +262,12 @@
 							subLabel={subLabel?.(option)}
 							secondary={secondaryOf(option)}
 							{size}
-						/>
+							indicatorSlot={`${slot}-check`}
+						>
+							{#snippet indicator()}
+								<Checkbox checked={chosen} tabindex={-1} aria-hidden="true" class="pointer-events-none" />
+							{/snippet}
+						</Row>
 					</Combobox.Item>
 				{/each}
 			{/snippet}

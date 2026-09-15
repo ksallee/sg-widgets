@@ -31,7 +31,7 @@ import { cn } from '@/lib/utils';
 import { useLatest } from '@/registry/sg/components/collection-source';
 import { FieldValue } from '@/registry/sg/components/field-value';
 import { StateLine } from '@/registry/sg/components/state-line';
-import { StatusBadge } from '@/registry/sg/components/status-badge';
+import { StatusBadge, type StatusBadgeSize } from '@/registry/sg/components/status-badge';
 import { Thumbnail } from '@/registry/sg/components/thumbnail';
 
 type DivProps = Omit<React.HTMLAttributes<HTMLDivElement>, 'children' | 'onSelect' | 'onError'>;
@@ -47,6 +47,8 @@ const LEAD: Record<EntityTreeSize, string> = { sm: 'size-5', md: 'size-6', lg: '
 const GLYPH: Record<EntityTreeSize, string> = { sm: 'size-3.5', md: 'size-4', lg: 'size-5' };
 /** A leaf inside a row sits one step down the ladder. */
 const LEAF: Record<EntityTreeSize, 'sm' | 'md'> = { sm: 'sm', md: 'sm', lg: 'md' };
+/** A badge sits one step under the row it is in, on the chip ladder of `docs/design-rules.md`. */
+const BADGE: Record<EntityTreeSize, StatusBadgeSize> = { sm: 'xs', md: 'sm', lg: 'md' };
 
 /** What a `row` render prop is handed. It draws a row's contents, not its chevron or its box. */
 export interface EntityTreeRowContext {
@@ -405,7 +407,9 @@ export function EntityTree({
     const root = rootRef.current;
     if (!cursor || !root || !document.activeElement?.closest('[data-path]')) return;
     if (!root.contains(document.activeElement)) return;
-    root.querySelector<HTMLElement>(`[data-path="${CSS.escape(cursor)}"]`)?.focus({ preventScroll: true });
+    const row = root.querySelector<HTMLElement>(`[data-path="${CSS.escape(cursor)}"]`);
+    row?.focus({ preventScroll: true });
+    row?.scrollIntoView({ block: 'nearest' });
   }, [cursor]);
 
   useEffect(moveFocus, [moveFocus, snap.rows]);
@@ -458,13 +462,11 @@ export function EntityTree({
             label={stateLine('error', { errorLabel }, snap.error?.message)}
           />
         ) : snap.status === 'loading' || snap.status === 'idle' ? (
-          <div
-            className="flex flex-col gap-2 p-1"
-            aria-busy="true"
-            aria-label={stateLine('loading', { loadingLabel })}
-          >
+          <div className="flex flex-col" aria-busy="true" aria-label={stateLine('loading', { loadingLabel })}>
             {Array.from({ length: 5 }, (_, index) => (
-              <Skeleton key={index} className="h-6 w-full" />
+              <div key={index} className={cn('flex items-center', ROW[density])}>
+                <Skeleton className="h-5 w-full" />
+              </div>
             ))}
           </div>
         ) : snap.rows.length === 0 ? (
@@ -520,7 +522,7 @@ export function EntityTree({
                     tabIndex={row.focused && !row.disabled ? 0 : -1}
                     onClick={() => activate(row)}
                     className={cn(
-                      'focus-visible:ring-ring focus-visible:ring-offset-background flex min-w-0 cursor-default gap-2 rounded-sm outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2',
+                      'focus-visible:ring-ring focus-visible:ring-offset-background relative flex min-w-0 focus-visible:z-10 cursor-default gap-2 rounded-sm outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2',
                       ROW[density],
                       TEXT[size],
                       hasSubLabel ? 'items-start' : 'items-center',
@@ -638,7 +640,7 @@ export function EntityTree({
                         status={plan.statuses?.[status] ?? null}
                         field={node.entity ? (plan.status[node.entity.type] ?? null) : null}
                         variant="glyph"
-                        size={LEAF[size]}
+                        size={BADGE[size]}
                         siteUrl={site}
                         className="shrink-0"
                       />
@@ -663,6 +665,7 @@ export function EntityTree({
                           statuses={plan.statuses}
                           siteUrl={site}
                           context={context}
+                          density={density}
                           className="w-auto justify-end text-xs"
                         />
                       </span>

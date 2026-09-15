@@ -4,11 +4,14 @@ description: Several values of a list field, picked from the set its schema decl
 ---
 
 import Demo from '../../../components/Demo.astro';
+import Props from '../../../components/Props.astro';
 
 Chooses several values of a list field, offering the vocabulary its schema declares.
 
 It is the shared picker control with rows from the field's valid values. The set is fixed and read
 once, so there is no search row unless a caller asks for one, and a chosen value is a plain chip.
+
+Single and multi: [ListPicker](/widgets/list-picker/) takes one value.
 
 ## Install
 
@@ -35,32 +38,7 @@ press on it opens the list.
 
 ## Props
 
-| prop | type | default | meaning |
-|---|---|---|---|
-| `value` | `string[]` | `[]` | The chosen values. Two-way in Svelte. |
-| `onValueChange` | `(value: string[]) => void` | — | Called on every change, with the whole list. |
-| `field` | `FieldSchema \| null` | `null` | Supplies the valid values, the labels and the hidden values. |
-| `projectId` | `number` | — | Given, the field's hidden values are removed from the list. |
-| `options` | `{ code, label }[]` | — | The set on offer, of the caller's own making. Wins over the field. |
-| `slot` | `string` | `'list-multi-picker'` | The `data-slot` prefix every part of this picker carries. |
-| `picker` | `string` | `'list'` | The `data-picker` the popup carries. |
-| `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Heights 8, 9 and 10. |
-| `disabled` | `boolean` | `false` | Greys the control and takes it out of the tab order. |
-| `readonly` | `boolean` | `false` | Keeps full contrast and drops the chevron, the popup and the remove controls. |
-| `invalid` | `boolean` | `false` | Sets `aria-invalid` and the destructive ring. |
-| `error` | `string \| null` | `null` | A message from the caller, drawn under the control. |
-| `placeholder` | `string` | `'Select values'` | Shown while nothing is chosen. |
-| `emptyLabel` | `string` | `'No rows'` | Shown when the list offers nothing. |
-| `searchable` | `boolean` | `false` | Offers a search box, which narrows the set in the browser. |
-| `searchPlaceholder` | `string` | `'Search values…'` | Placeholder of the search box. |
-| `clearable` | `boolean` | `true` | Offers a control that clears the selection. A mandatory field is never clearable. |
-| `showCode` | `boolean` | `false` | Draws the stored string as a row's right-aligned secondary, where it says more than the label. |
-| `secondary` | `(option) => string` | the value | A row's right-aligned value, of the caller's own making. |
-| `subLabel` | `(option) => string` | — | The muted line under a row's label. |
-| `summary` | `'chips' \| 'ellipsis' \| 'count'` | `'ellipsis'` | What the control shows for the selection. |
-| `max` | `number` | `0` | Chips drawn before the rest becomes `+n`. `0` lets the row fit what it can. |
-| `open` | `boolean` | `false` | Whether the popup is showing. Two-way in Svelte. |
-| `class` / `className` | `string` | — | Merged after the widget's own classes. |
+<Props name="list-multi-picker" />
 
 Every other attribute is spread onto the root: `id`, `aria-*`, `data-*`, key handlers and a `ref`
 to the root element.
@@ -70,6 +48,8 @@ with `showCode`, the stored string right-aligned.
 
 ## Events
 
+<Props name="list-multi-picker" kind="events" />
+
 `onValueChange` fires as soon as a row is checked or unchecked, and with an empty list when the
 selection is cleared. `onErrorChange` fires with `null` on that same change, so a message the caller
 set clears when the field is answered.
@@ -78,18 +58,11 @@ set clears when the field is answered.
 
 ## Slots
 
-`errorMessage` receives the message and renders the line under the control.
+<Props name="list-multi-picker" kind="slots" />
 
 ## Keyboard
 
-| key | does |
-|---|---|
-| <kbd>Space</kbd>, <kbd>Enter</kbd>, <kbd>↓</kbd> | Opens the list |
-| <kbd>↑</kbd> <kbd>↓</kbd> | Move the highlight |
-| typing | Narrows the list, where the picker is searchable |
-| <kbd>Enter</kbd> | Checks or unchecks the highlighted row. The list stays open |
-| <kbd>Backspace</kbd> | Highlights the last chip; a second press removes it |
-| <kbd>Esc</kbd> | Closes the list and keeps the selection |
+<Props name="list-multi-picker" kind="keyboard" />
 
 ## API behaviour
 

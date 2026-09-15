@@ -19,6 +19,7 @@ const BOX: Record<UserAvatarSize, string> = {
  * reads the same under every theme. Like status colour, it is data, not a token.
  */
 const TINT =
+  // oxlint-disable-next-line shadcn/no-arbitrary-values
   'bg-[oklch(0.93_0.05_var(--sg-hue))] text-[oklch(0.42_0.13_var(--sg-hue))] dark:bg-[oklch(0.32_0.06_var(--sg-hue))] dark:text-[oklch(0.86_0.09_var(--sg-hue))]';
 
 export interface UserAvatarProps extends Omit<React.HTMLAttributes<HTMLSpanElement>, 'children'> {

@@ -4,6 +4,7 @@ description: A Flow Production Tracking filter tree, edited as rows and nested g
 ---
 
 import Demo from '../../../components/Demo.astro';
+import Props from '../../../components/Props.astro';
 
 Edits a filter tree. A row is a field, an operator and a value; groups nest under All or Any. The
 field is chosen with FieldPicker, so a row may filter through a link on a dotted path, and the value
@@ -26,26 +27,14 @@ nesting reads as one indent; the foot carries the add-condition and add-group co
 
 ## Props
 
-| prop | type | default | meaning |
-|---|---|---|---|
-| `entityType` | `string` | required | Type the root of every field path is read on. |
-| `context` | `SgContext` | required | The widget context. Every read goes through it, so widgets on a page share one cache. |
-| `value` | `FilterGroup` | `emptyFilter()` | The tree. Two-way in Svelte through `bind:value`. |
-| `hidePaths` | `string[]` | `[]` | Paths kept out of the field list. A pattern hides itself and everything under it. |
-| `projectId` | `number` | — | Scopes the status pickers to the codes one project allows. |
-| `emptyLabel` | `string` | `'Nothing chosen'` | Shown when a group holds no condition. |
-| `disabled` | `boolean` | `false` | Dims the editor and blocks every control. |
-| `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Condition-row heights 7, 8 and 9: a row is a control inside a control, so its ladder sits one step down. |
-| `class` / `className` | `string` | — | Merged after the widget's own classes. |
+<Props name="filter-editor" />
 
 Every other attribute is spread onto the root: `id`, `aria-*`, `data-*`, key handlers and a
 `ref` to the root element.
 
 ## Events
 
-| event | payload | when |
-|---|---|---|
-| `onChange` | `FilterGroup` | The whole tree changed, on every edit. Svelte also binds it with `bind:value`. |
+<Props name="filter-editor" kind="events" />
 
 ## Value editors
 
@@ -79,11 +68,7 @@ A duration is typed as `1h 30m`, `1:30` or `90` and stored as the 90 minutes all
 
 ## Slots
 
-| slot | React | Svelte | gets |
-|---|---|---|---|
-| field chooser | `fieldChooser` | `fieldChooser` snippet | `entityType`, the current `path`, `hidePaths`, `filterableOnly`, `disabled`, `onSelect(path)`. |
-| value editor | `valueEditor` | `valueEditor` snippet | `field`, `dataType`, `operator`, `value`, `arity`, `disabled`, `onChange(value)`. |
-| entity value | `entityEditor` | `entityEditor` snippet | The same arguments as the value editor. |
+<Props name="filter-editor" kind="slots" />
 
 The field chooser is FieldPicker unless the slot replaces it. The value editor slot replaces every
 control in the table above; the entity slot replaces only the two entity pickers, for a caller that
@@ -91,16 +76,7 @@ wants its own row or its own search.
 
 ## Keyboard
 
-| key | does |
-|---|---|
-| `Tab` | Moves between field, operator, value and the remove control of each row. |
-| `Enter`, `Space` | Opens the field chooser, the operator menu or a value popover. |
-| `Arrow` keys | Move the cursor in an open menu or list; move between All and Any. |
-| `Right arrow` | Descends into the highlighted link in the field chooser. |
-| `Left arrow` | Goes back one level in the field chooser. |
-| `Enter` | Chooses the highlighted field, operator or value. In a multi-value list it checks the highlighted entry and the list stays open. |
-| `Escape` | Closes the open menu or popover. |
-| `Backspace` | In an entity picker's empty search box, arms the last chip; a second press removes it. |
+<Props name="filter-editor" kind="keyboard" />
 
 ## Operators
 
@@ -179,3 +155,10 @@ whatever the depth. The chip wording follows bazza/ui's data-table-filter 2025.0
 buckets around today come from Dice UI's data table config, its `isRelativeToToday` date operator
 (`docs/config/data-table.ts`, commit `6e0ab98`), mapped onto the calendar operators this API
 documents. None of the three is installed.
+
+## EntityFields
+
+One entity type's fields, read through the context and kept. Every row of the editor asks it what a
+path is, so the chooser, the operator list and the value control all read one answer. The schema
+service caches, so this reaches the network once per type however often the editor redraws
+(probe 002).

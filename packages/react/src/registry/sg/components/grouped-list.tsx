@@ -357,9 +357,11 @@ export function GroupedList({
             label={stateLine('error', { errorLabel }, snapshot.error?.message)}
           />
         ) : view === 'loading' ? (
-          <div className="flex flex-col gap-2 p-2" aria-busy="true" aria-label={loadingText}>
+          <div className="flex flex-col" aria-busy="true" aria-label={loadingText}>
             {Array.from({ length: 8 }, (_, index) => (
-              <Skeleton key={index} className="h-6 w-full" />
+              <div key={index} className={cn('border-border/50 flex items-center border-b last:border-b-0', rowClass)}>
+                <Skeleton className="h-5 w-full" />
+              </div>
             ))}
           </div>
         ) : view === 'empty' ? (
@@ -407,6 +409,7 @@ export function GroupedList({
                             field={groupBy.field}
                             statuses={statuses}
                             context={context}
+                            density={density}
                           />
                         </span>
                         <span className="text-muted-foreground font-mono text-xs tabular-nums">
@@ -470,7 +473,7 @@ export function GroupedList({
                               disabled={disabled}
                               onClick={() => (selectable ? control.toggle(row) : onSelect?.(row))}
                               onKeyDown={(event) => onRowKeyDown(event, row)}
-                              className="focus-visible:ring-ring focus-visible:ring-offset-background flex min-w-0 flex-1 flex-col items-start rounded-sm text-left outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+                              className="focus-visible:ring-ring focus-visible:ring-offset-background relative flex min-w-0 focus-visible:z-10 flex-1 flex-col items-start rounded-sm text-left outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
                             >
                               <span className="flex w-full min-w-0 items-center gap-1.5">
                                 <span className={cn('min-w-0 truncate', TEXT[size])} title={label}>
@@ -492,6 +495,7 @@ export function GroupedList({
                                     field={subColumn.field}
                                     statuses={statuses}
                                     context={context}
+                                    density={density}
                                     className="text-muted-foreground text-xs"
                                   />
                                 </span>
@@ -505,6 +509,7 @@ export function GroupedList({
                                     field={column.field}
                                     statuses={statuses}
                                     context={context}
+                                    density={density}
                                     className="min-w-0 text-xs"
                                   />
                                 </span>
@@ -520,6 +525,7 @@ export function GroupedList({
                                   field={secondaryColumn.field}
                                   statuses={statuses}
                                   context={context}
+                                  density={density}
                                   className="text-muted-foreground w-auto text-xs"
                                 />
                               </span>
@@ -544,7 +550,7 @@ export function GroupedList({
                 icon={CircleAlert}
                 label={stateLine('error', { errorLabel }, snapshot.error?.message)}
               >
-                <Button variant="outline" size="sm" onClick={() => control.retry()}>
+                <Button variant="outline" onClick={() => control.retry()}>
                   Retry
                 </Button>
               </StateLine>
@@ -559,7 +565,7 @@ export function GroupedList({
               </div>
             ) : control.bottom === 'more' ? (
               <div data-slot="grouped-list-load-more" className="flex justify-center p-2">
-                <Button variant="outline" size="sm" onClick={() => void source.loadMore()}>
+                <Button variant="outline" onClick={() => void source.loadMore()}>
                   Load more
                 </Button>
               </div>

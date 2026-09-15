@@ -1,17 +1,14 @@
 <script lang="ts" module>
 	import type { Snippet } from 'svelte';
+	import { CHIP_CROSS, type ChipSize } from '$lib/registry/components/leaf-classes.js';
 
 	export type FilterEditorSize = 'sm' | 'md' | 'lg';
 
 	/** A condition row is a control inside a control, so its ladder sits one step down. */
 	const BOX: Record<FilterEditorSize, string> = { sm: 'h-7', md: 'h-8', lg: 'h-9' };
 	const INNER: Record<FilterEditorSize, 'sm' | 'md'> = { sm: 'sm', md: 'sm', lg: 'md' };
-	const BTN: Record<FilterEditorSize, 'xs' | 'sm' | 'default'> = { sm: 'xs', md: 'sm', lg: 'default' };
-	const ICON: Record<FilterEditorSize, 'icon-xs' | 'icon-sm' | 'icon'> = {
-		sm: 'icon-xs',
-		md: 'icon-sm',
-		lg: 'icon'
-	};
+	/** A cross sits one step under the row's own control on the chip ladder. */
+	const CROSS: Record<FilterEditorSize, ChipSize> = { sm: 'xs', md: 'xs', lg: 'sm' };
 	const TOGGLE: Record<FilterEditorSize, 'sm' | 'default'> = { sm: 'sm', md: 'sm', lg: 'default' };
 	import type {
 		ConditionValue,
@@ -122,6 +119,7 @@
 		withRelativeWindow
 	} from '@sg-widgets/core';
 	import { Button } from '$lib/components/ui/button/index.js';
+	import { CONTROL_BUTTON } from '$lib/registry/components/control-classes.js';
 	import * as Select from '$lib/components/ui/select/index.js';
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
 	import * as ToggleGroup from '$lib/components/ui/toggle-group/index.js';
@@ -135,6 +133,7 @@
 	import EntityMultiPicker from '$lib/registry/components/entity-multi-picker.svelte';
 	import EntityPicker from '$lib/registry/components/entity-picker.svelte';
 	import FieldPicker from '$lib/registry/components/field-picker.svelte';
+	import { REMOVE_CONTROL } from '$lib/registry/components/leaf-classes.js';
 	import ListMultiPicker from '$lib/registry/components/list-multi-picker.svelte';
 	import ListPicker from '$lib/registry/components/list-picker.svelte';
 	import NumberEditor from '$lib/registry/components/number-editor.svelte';
@@ -398,23 +397,22 @@
 				{@render scalarEditor(kind, dataType, label, item, (v) =>
 					set(withListValue(current, i, v) as ConditionValue)
 				)}
-				<Button
-					variant="ghost"
-					size={ICON[size]}
-					class="text-muted-foreground hover:text-foreground shrink-0"
+				<button
+					type="button"
+					class={cn(REMOVE_CONTROL, 'disabled:pointer-events-none disabled:opacity-50')}
 					{disabled}
 					aria-label="Remove value"
 					data-slot="filter-list-remove"
 					onclick={() => set(withoutListValue(current, i) as ConditionValue)}
 				>
-					<XIcon />
-				</Button>
+					<XIcon aria-hidden="true" class={CHIP_CROSS[CROSS[size]]} />
+				</button>
 			</div>
 		{/each}
 		<Button
 			variant="ghost"
-			size={BTN[size]}
-			class="text-muted-foreground hover:text-foreground shrink-0"
+			size={CONTROL_BUTTON[size]}
+			class="text-muted-foreground shrink-0"
 			{disabled}
 			data-slot="filter-list-add"
 			onclick={() => set(withAddedListValue(current) as ConditionValue)}
@@ -598,17 +596,18 @@
 			{@render operatorSlot(path, node)}
 			{@render valueSlot(path, node)}
 		</div>
-		<Button
-			variant="ghost"
-			size={ICON[size]}
-			class="text-muted-foreground hover:text-foreground mt-1 shrink-0 self-start"
-			{disabled}
-			aria-label="Remove condition"
-			data-slot="filter-remove"
-			onclick={() => commit(removeAt(value, path))}
-		>
-			<XIcon />
-		</Button>
+		<div class="flex h-9 shrink-0 items-center self-start">
+			<button
+				type="button"
+				class={cn(REMOVE_CONTROL, 'disabled:pointer-events-none disabled:opacity-50')}
+				{disabled}
+				aria-label="Remove condition"
+				data-slot="filter-remove"
+				onclick={() => commit(removeAt(value, path))}
+			>
+				<XIcon aria-hidden="true" class={CHIP_CROSS[CROSS[size]]} />
+			</button>
+		</div>
 	</div>
 {/snippet}
 
@@ -642,17 +641,18 @@
 			</ToggleGroup.Root>
 			<span class="text-muted-foreground min-w-0 flex-1 truncate text-xs">of these match</span>
 			{#if depth > 0}
-				<Button
-					variant="ghost"
-					size={ICON[size]}
-					class="text-muted-foreground hover:text-foreground mt-1 shrink-0 self-start"
-					{disabled}
-					aria-label="Remove group"
-					data-slot="filter-remove"
-					onclick={() => commit(removeAt(value, path))}
-				>
-					<XIcon />
-				</Button>
+				<div class="flex h-9 shrink-0 items-center self-start">
+					<button
+						type="button"
+						class={cn(REMOVE_CONTROL, 'disabled:pointer-events-none disabled:opacity-50')}
+						{disabled}
+						aria-label="Remove group"
+						data-slot="filter-remove"
+						onclick={() => commit(removeAt(value, path))}
+					>
+						<XIcon aria-hidden="true" class={CHIP_CROSS[CROSS[size]]} />
+					</button>
+				</div>
 			{/if}
 		</div>
 		<div
@@ -673,8 +673,8 @@
 		<div class="flex min-w-0 flex-wrap items-center gap-1 pl-3" data-slot="filter-foot">
 			<Button
 				variant="ghost"
-				size={BTN[size]}
-				class="text-muted-foreground hover:text-foreground"
+				size={CONTROL_BUTTON[size]}
+				class="text-muted-foreground"
 				{disabled}
 				data-slot="filter-add-condition"
 				data-path={path.join('.')}
@@ -685,8 +685,8 @@
 			</Button>
 			<Button
 				variant="ghost"
-				size={BTN[size]}
-				class="text-muted-foreground hover:text-foreground"
+				size={CONTROL_BUTTON[size]}
+				class="text-muted-foreground"
 				{disabled}
 				data-slot="filter-add-group"
 				data-path={path.join('.')}

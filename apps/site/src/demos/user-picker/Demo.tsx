@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { EntityRef } from '@sg-widgets/core';
-import { UserMultiPicker, UserPicker } from '@/registry/sg/components/user-picker';
+import { UserPicker } from '@/registry/sg/components/user-picker';
 import { getDemoContext } from '../_shared/client';
 
 const group = 'flex flex-col gap-2';
@@ -21,12 +21,11 @@ export default function UserPickerDemo() {
   const context = getDemoContext();
 
   const [one, setOne] = useState<EntityRef | null>(null);
-  const [people, setPeople] = useState<EntityRef[]>([]);
   const [byAddress, setByAddress] = useState<EntityRef | null>(null);
   const [peopleOnly, setPeopleOnly] = useState<EntityRef | null>(null);
   const [withInactive, setWithInactive] = useState<EntityRef | null>(null);
   // A bare reference: type and id, no name. Resolved on mount.
-  const [bare, setBare] = useState<EntityRef[]>([{ type: 'HumanUser', id: 22 }]);
+  const [bare, setBare] = useState<EntityRef | null>({ type: 'HumanUser', id: 22 });
 
   return (
     <div className="flex flex-col gap-3">
@@ -35,14 +34,6 @@ export default function UserPickerDemo() {
         <div className={field}>
           <span className={caption}>One person or script, clearable</span>
           <UserPicker context={context} value={one} onValueChange={setOne} clearable />
-        </div>
-      </section>
-
-      <section className={group} data-demo-case="multi">
-        <h4 className={label}>Several, with checkbox rows</h4>
-        <div className={field}>
-          <span className={caption}>Several people at once</span>
-          <UserMultiPicker context={context} value={people} onValueChange={setPeople} clearable />
         </div>
       </section>
 
@@ -79,7 +70,7 @@ export default function UserPickerDemo() {
         <h4 className={label}>Bare reference, resolved on mount</h4>
         <div className={field}>
           <span className={caption}>Type and id in, name resolved on mount</span>
-          <UserMultiPicker context={context} value={bare} onValueChange={setBare} clearable />
+          <UserPicker context={context} value={bare} onValueChange={setBare} clearable />
         </div>
       </section>
 

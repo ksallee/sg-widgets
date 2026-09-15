@@ -392,9 +392,11 @@
 				label={stateLine('error', { errorLabel }, snapshot.error?.message)}
 			/>
 		{:else if view === 'loading'}
-			<div class="flex flex-col gap-2 p-2" aria-busy="true" aria-label={loadingText}>
+			<div class="flex flex-col" aria-busy="true" aria-label={loadingText}>
 				{#each { length: 8 } as _, index (index)}
-					<Skeleton class="h-6 w-full" />
+					<div class={cn('border-border/50 flex items-center border-b last:border-b-0', rowClass)}>
+						<Skeleton class="h-5 w-full" />
+					</div>
 				{/each}
 			</div>
 		{:else if view === 'empty'}
@@ -435,7 +437,14 @@
 								})}
 							{:else}
 								<span class="min-w-0 truncate">
-									<FieldValue value={group.value} dataType={groupBy.dataType} field={groupBy.field} {statuses} {context} />
+									<FieldValue
+										value={group.value}
+										dataType={groupBy.dataType}
+										field={groupBy.field}
+										{statuses}
+										{context}
+										{density}
+									/>
 								</span>
 								<span class="text-muted-foreground font-mono text-xs tabular-nums">{group.rows.length}</span>
 							{/if}
@@ -492,7 +501,7 @@
 											{disabled}
 											onclick={() => (selectable ? control.toggle(row) : onSelect?.(row))}
 											onkeydown={(event) => onRowKeydown(event, row)}
-											class="focus-visible:ring-ring focus-visible:ring-offset-background flex min-w-0 flex-1 flex-col items-start rounded-sm text-left outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+											class="focus-visible:ring-ring focus-visible:ring-offset-background relative flex min-w-0 focus-visible:z-10 flex-1 flex-col items-start rounded-sm text-left outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
 										>
 											<span class="flex w-full min-w-0 items-center gap-1.5">
 												<span class={cn('min-w-0 truncate', TEXT[size])} title={label}>{label}</span>
@@ -510,6 +519,7 @@
 														field={subColumn.field}
 														{statuses}
 														{context}
+														{density}
 														class="text-muted-foreground text-xs"
 													/>
 												</span>
@@ -523,6 +533,7 @@
 														field={column.field}
 														{statuses}
 														{context}
+														{density}
 														class="min-w-0 text-xs"
 													/>
 												</span>
@@ -538,6 +549,7 @@
 													field={secondaryColumn.field}
 													{statuses}
 													{context}
+													{density}
 													class="text-muted-foreground w-auto text-xs"
 												/>
 											</span>
@@ -561,7 +573,7 @@
 					icon={CircleAlert}
 					label={stateLine('error', { errorLabel }, snapshot.error?.message)}
 				>
-					<Button variant="outline" size="sm" onclick={() => control.retry()}>Retry</Button>
+					<Button variant="outline" onclick={() => control.retry()}>Retry</Button>
 				</StateLine>
 			{:else if control.bottom === 'loading'}
 				<div data-slot="grouped-list-loading" class="p-2" aria-busy="true" aria-label={loadingText}>
@@ -569,7 +581,7 @@
 				</div>
 			{:else if control.bottom === 'more'}
 				<div data-slot="grouped-list-load-more" class="flex justify-center p-2">
-					<Button variant="outline" size="sm" onclick={() => void source.loadMore()}>Load more</Button>
+					<Button variant="outline" onclick={() => void source.loadMore()}>Load more</Button>
 				</div>
 			{:else if control.bottom === 'sentinel'}
 				<div

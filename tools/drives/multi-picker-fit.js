@@ -4,6 +4,7 @@
 //
 //   pnpm qa --start --path /widgets/status-multi-picker/ --framework both --drive tools/drives/multi-picker-fit.js
 //   pnpm qa --start --path /widgets/entity-multi-picker/ --framework both --drive tools/drives/multi-picker-fit.js
+//   pnpm qa --start --path /widgets/entity-type-multi-picker/ --framework both --drive tools/drives/multi-picker-fit.js
 
 const failures = [];
 const seen = {};
@@ -30,7 +31,7 @@ async function until(read, timeoutMs = 8000) {
 const PICKERS = [
   { slot: 'status-multi-picker', row: 'status-multi-picker-badges', popup: 'status', narrow: '[data-demo="summary-ellipsis-narrow"]', token: '[data-demo="summary-chips-5"]' },
   { slot: 'entity-picker', row: 'entity-picker-chips', popup: 'entity-multi', narrow: '[data-demo-summary="ellipsis-narrow"]', token: '[data-demo-summary="chips"]' },
-  { slot: 'entity-type-picker', row: 'entity-type-picker-chips', popup: 'entity-type', narrow: '[data-demo-summary="ellipsis-narrow"]', token: '[data-demo-summary="chips"]' },
+  { slot: 'entity-type-picker', row: 'entity-type-picker-chips', popup: 'entity-type-multi', narrow: '[data-demo-summary="ellipsis-narrow"]', token: '[data-demo-summary="chips"]' },
 ];
 
 const picker = PICKERS.find((p) => $(`[data-slot="${p.slot}-control"]`));

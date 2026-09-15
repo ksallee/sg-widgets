@@ -1,12 +1,15 @@
 ---
 title: UserPicker
-description: People and script accounts, chosen by server-side search across name, login and email.
+description: One person or script account, chosen by server-side search across name, login and email.
 ---
 
 import Demo from '../../../components/Demo.astro';
+import Props from '../../../components/Props.astro';
 
 Searches people, and optionally script accounts, on the server, with an avatar and an address on
 every row.
+
+Single and multi: [UserMultiPicker](/widgets/user-multi-picker/) takes several people.
 
 ## Install
 
@@ -15,24 +18,14 @@ pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/user-picker.json
 pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/user-picker.json
 ```
 
-The item holds both variants. React installs one file exporting `UserPicker` and `UserMultiPicker`;
-Svelte installs `user-picker.svelte` and `user-multi-picker.svelte`. Both configure the generic
-pickers, which are installed alongside.
+The item installs the single picker alone. A caller who installed it for `UserMultiPicker` takes
+the `user-multi-picker` item instead; this note stands for one release.
 
-<Demo name="user-picker" title="UserPicker and UserMultiPicker: scripts, inactive people, hydration, sizes, states" />
+<Demo name="user-picker" title="UserPicker: scripts, inactive people, hydration, sizes, states" />
 
 ## Props
 
-Every prop of [EntityPicker](/widgets/entity-picker/) and
-[EntityMultiPicker](/widgets/entity-multi-picker/) except `entityTypes`, plus:
-
-| prop | type | default | meaning |
-|---|---|---|---|
-| `includeApiUsers` | `boolean` | `true` | Search script accounts alongside people. |
-| `includeInactive` | `boolean` | `false` | Offer people whose status is `dis`. |
-
-`placeholder` defaults to `Search for a person`, or `Search for people` on the multi picker. The
-multi picker takes `summary` and `max` like every other multi picker.
+<Props name="user-picker" />
 
 The query is matched against the display-name chain and the email, and against `login` while the
 query holds no whitespace. Both fields are requested so the row can show them. A person's sub-label
@@ -41,11 +34,7 @@ instead.
 
 ## Events
 
-| event | payload | when |
-|---|---|---|
-| `onValueChange` | `EntityRef`, `PickerRow` | The selection changed. The multi picker sends arrays. |
-| `onError` | `Error` | A read failed. The list shows it inline as well. |
-| `onOpenChange` | `boolean` | The popup opened or closed. Svelte also binds it with `bind:open`. |
+<Props name="user-picker" kind="events" />
 
 ## Slots
 
@@ -53,8 +42,7 @@ None.
 
 ## Keyboard
 
-The same as [EntityPicker](/widgets/entity-picker/) and
-[EntityMultiPicker](/widgets/entity-multi-picker/).
+<Props name="user-picker" kind="keyboard" />
 
 ## API behaviour
 

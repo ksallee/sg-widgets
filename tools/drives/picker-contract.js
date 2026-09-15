@@ -4,8 +4,8 @@
 //
 //   [data-slot$="-control"]            every picker on the base: entity, entity multi, user,
 //                                      user multi, project, project multi, status, status multi,
-//                                      entity type, list, list multi, and the department demos
-//                                      of the picker-control page
+//                                      entity type, entity type multi, list, list multi, and the
+//                                      department demos of the picker-control page
 //   [data-slot="field-picker-trigger"] the field picker, on the Popover and the Command list
 //   [data-slot="sort-trigger"]         the sort picker, on the Popover over an ordered panel
 //
@@ -14,21 +14,22 @@
 //
 // One line per picker page:
 //
-//   pnpm qa --start --path /widgets/entity-picker/       --framework both --drive tools/drives/picker-contract.js
-//   pnpm qa --start --path /widgets/entity-multi-picker/ --framework both --drive tools/drives/picker-contract.js
-//   pnpm qa --start --path /widgets/user-picker/         --framework both --drive tools/drives/picker-contract.js
-//   pnpm qa --start --path /widgets/project-picker/      --framework both --drive tools/drives/picker-contract.js
-//   pnpm qa --start --path /widgets/status-picker/       --framework both --drive tools/drives/picker-contract.js
-//   pnpm qa --start --path /widgets/status-multi-picker/ --framework both --drive tools/drives/picker-contract.js
-//   pnpm qa --start --path /widgets/entity-type-picker/  --framework both --drive tools/drives/picker-contract.js
-//   pnpm qa --start --path /widgets/list-picker/         --framework both --drive tools/drives/picker-contract.js
-//   pnpm qa --start --path /widgets/list-multi-picker/   --framework both --drive tools/drives/picker-contract.js
-//   pnpm qa --start --path /widgets/field-picker/        --framework both --drive tools/drives/picker-contract.js
-//   pnpm qa --start --path /widgets/sort-picker/         --framework both --drive tools/drives/picker-contract.js
-//   pnpm qa --start --path /widgets/column-picker/       --framework both --drive tools/drives/picker-contract.js
-//   pnpm qa --start --path /widgets/picker-control/      --framework both --drive tools/drives/picker-contract.js
-//
-// The user multi and project multi pickers are demos of the user and project pages.
+//   pnpm qa --start --path /widgets/entity-picker/            --framework both --drive tools/drives/picker-contract.js
+//   pnpm qa --start --path /widgets/entity-multi-picker/      --framework both --drive tools/drives/picker-contract.js
+//   pnpm qa --start --path /widgets/user-picker/              --framework both --drive tools/drives/picker-contract.js
+//   pnpm qa --start --path /widgets/user-multi-picker/        --framework both --drive tools/drives/picker-contract.js
+//   pnpm qa --start --path /widgets/project-picker/           --framework both --drive tools/drives/picker-contract.js
+//   pnpm qa --start --path /widgets/project-multi-picker/     --framework both --drive tools/drives/picker-contract.js
+//   pnpm qa --start --path /widgets/status-picker/            --framework both --drive tools/drives/picker-contract.js
+//   pnpm qa --start --path /widgets/status-multi-picker/      --framework both --drive tools/drives/picker-contract.js
+//   pnpm qa --start --path /widgets/entity-type-picker/       --framework both --drive tools/drives/picker-contract.js
+//   pnpm qa --start --path /widgets/entity-type-multi-picker/ --framework both --drive tools/drives/picker-contract.js
+//   pnpm qa --start --path /widgets/list-picker/              --framework both --drive tools/drives/picker-contract.js
+//   pnpm qa --start --path /widgets/list-multi-picker/        --framework both --drive tools/drives/picker-contract.js
+//   pnpm qa --start --path /widgets/field-picker/             --framework both --drive tools/drives/picker-contract.js
+//   pnpm qa --start --path /widgets/sort-picker/              --framework both --drive tools/drives/picker-contract.js
+//   pnpm qa --start --path /widgets/column-picker/            --framework both --drive tools/drives/picker-contract.js
+//   pnpm qa --start --path /widgets/picker-control/           --framework both --drive tools/drives/picker-contract.js
 //
 // The clauses, numbered as design rule 7. Each runs on the controls whose shape it fits: the
 // press and keyboard clauses once per shape a page draws, the state clauses on every control.
@@ -38,11 +39,15 @@
 //   2 caret-lands        the caret takes focus: the control's own inline, the popup's on a summary
 //   3 escape-closes      Escape closes the list and leaves the query empty
 //   3 escape-closed      Escape on a closed picker opens nothing and keeps the value
-//   4 backspace          an empty query: the first arms the last chip and the second removes it
-//                        on a multi picker, and it clears the value on a single one. An armed
-//                        chip is read from the `data-armed` every picker's chip carries. A
-//                        picker the caller keeps empty has nothing to press against, and the
-//                        run says so rather than failing.
+//   4 chip-keys          an empty query: Backspace takes the caret to the last chip of a multi
+//                        picker, the arrows walk the row, a second Backspace removes the chip
+//                        under the caret and leaves it on the neighbour, and one Backspace
+//                        clears a single picker. The chip holding the caret is read from the
+//                        `data-armed` every picker's chip carries. A picker the caller keeps
+//                        empty has nothing to press against, and the run says so rather than
+//                        failing.
+//   4 pick-then-chips    a press on a row leaves the caret where the next Backspace still
+//                        reaches the chips, with no focus call of the drive's own
 //   5 arrows-follow      the highlighted row stays inside the list's scroll box
 //   6 pick-open          a pick keeps a multi picker open and closes a single one
 //   7 outside-press      a press outside the control and the popup closes the list
@@ -400,40 +405,108 @@ async function fill(shape) {
   return filled(shape.el);
 }
 
-async function backspace(shape, note) {
+/** The chips of a control, and which of them holds the caret. */
+const chipsOf = (shape) => $$('[data-chip]', shape.el);
+const caretChip = (shape) => chipsOf(shape).findIndex((chip) => chip.dataset.armed === 'true');
+
+/**
+ * A press on a row leaves the caret where the next key reaches the chips. No focus call
+ * of the drive's own: the point of the clause is where the pick left it.
+ */
+async function pickThenChips(shape, note) {
+  if (!shape.multiple || !shape.list || !shape.caret) return 'not a multi list';
+  if (!(await open(shape))) {
+    note('pick-then-chips', 'the list would not open');
+    return 'would not open';
+  }
+  const row = await offered(shape);
+  if (!row) {
+    await close(shape);
+    return 'no row to take';
+  }
+  const before = valueOf(shape.el);
+  if (!(await choose(row, () => valueOf(shape.el) !== before))) {
+    note('pick-then-chips', 'a press on a row changed nothing in the control');
+    await close(shape);
+    return 'no pick';
+  }
+  await wait(250);
+  if (chipsOf(shape).length === 0) {
+    await close(shape);
+    return 'draws no chip';
+  }
+  const holder = document.activeElement ?? shape.el;
+  key(holder, 'Backspace');
+  const reached = await until(() => caretChip(shape) >= 0, 1500);
+  if (!reached) {
+    const where = holder?.dataset?.slot ?? holder?.tagName ?? 'nothing';
+    note('pick-then-chips', `Backspace after a press on a row reached no chip (the caret was on ${where})`);
+  }
+  await close(shape);
+  return reached ? 'reached' : 'missed';
+}
+
+async function chipKeys(shape, note) {
   if (!shape.caret) return 'no caret';
   // A caller that keeps its picker empty, the column picker's field picker among them,
   // leaves this clause nothing to press against.
   if (!(await fill(shape))) return 'nothing to take';
   if (!(await open(shape))) {
-    note('backspace', 'the list would not open');
+    note('chip-keys', 'the list would not open');
     return 'would not open';
   }
   const caret = caretOf(shape);
   if (!caret) {
-    note('backspace', 'the picker holds no caret to press Backspace in');
+    note('chip-keys', 'the picker holds no caret to press Backspace in');
     await close(shape);
     return 'no caret';
   }
   caret.focus({ preventScroll: true });
   if (!caret.readOnly) typeInto(caret, '');
   await wait(120);
-  const chips = () => $$('[data-chip]', shape.el).length;
-  const armed = () => $$('[data-chip][data-armed="true"]', shape.el).length;
-  const before = { chips: chips(), value: valueOf(shape.el) };
+  const count = () => chipsOf(shape).length;
+  const before = { chips: count(), value: valueOf(shape.el) };
 
-  key(caret, 'Backspace');
-  await wait(300);
-  if (shape.multiple) {
-    if (armed() !== 1) note('backspace', `the first Backspace armed ${armed()} chips, wanted 1`);
-    if (chips() !== before.chips) note('backspace', `the first Backspace already removed a chip (${chips()} of ${before.chips} left)`);
+  if (!shape.multiple) {
     key(caret, 'Backspace');
-    const gone = await until(() => chips() === before.chips - 1, 2000);
-    if (!gone) note('backspace', 'the second Backspace removed no chip');
-    else if (armed() > 0) note('backspace', 'a chip stayed armed after the removal');
-  } else {
     const cleared = await until(() => !filled(shape.el), 2000);
-    if (!cleared) note('backspace', `one Backspace left the value as it was (${before.value})`);
+    if (!cleared) note('chip-keys', `one Backspace left the value as it was (${before.value})`);
+    await close(shape);
+    return 'ran';
+  }
+
+  // The caret lands on the last chip, and the row is still whole.
+  key(caret, 'Backspace');
+  await until(() => caretChip(shape) >= 0, 1500);
+  if (caretChip(shape) !== before.chips - 1) {
+    note('chip-keys', `Backspace left the caret on chip ${caretChip(shape)}, wanted ${before.chips - 1}`);
+  }
+  if (count() !== before.chips) {
+    note('chip-keys', `Backspace already removed a chip (${count()} of ${before.chips} left)`);
+  }
+
+  // The arrows walk the row. A row of one has nowhere to walk.
+  if (before.chips > 1) {
+    key(caret, 'ArrowLeft');
+    await wait(150);
+    if (caretChip(shape) !== before.chips - 2) {
+      note('chip-keys', `ArrowLeft left the caret on chip ${caretChip(shape)}, wanted ${before.chips - 2}`);
+    }
+    key(caret, 'ArrowRight');
+    await wait(150);
+    if (caretChip(shape) !== before.chips - 1) {
+      note('chip-keys', `ArrowRight left the caret on chip ${caretChip(shape)}, wanted ${before.chips - 1}`);
+    }
+  }
+
+  // A second Backspace takes the chip under the caret and leaves it on the neighbour.
+  key(caret, 'Backspace');
+  const gone = await until(() => count() === before.chips - 1, 2000);
+  if (!gone) note('chip-keys', 'the second Backspace removed no chip');
+  else if (before.chips > 1 && caretChip(shape) !== before.chips - 2) {
+    note('chip-keys', `the removal left the caret on chip ${caretChip(shape)}, wanted ${before.chips - 2}`);
+  } else if (before.chips === 1 && caretChip(shape) >= 0) {
+    note('chip-keys', 'the last chip went and the caret stayed on a chip');
   }
   await close(shape);
   return 'ran';
@@ -543,14 +616,15 @@ for (const framework of ['svelte', 'react']) {
       await escapeCloses(shape, under);
       await arrowsFollow(shape, under);
       await pickOpen(shape, under);
-      const took = await backspace(shape, under);
+      const afterPick = await pickThenChips(shape, under);
+      const took = await chipKeys(shape, under);
       await outsidePress(shape, under);
       await escapeClosed(shape, under);
       await clearControl(shape, under);
-      checked.push({ slot: shape.slot, demo: where(shape.el), shape: shapeKey, backspace: took });
+      checked.push({ slot: shape.slot, demo: where(shape.el), shape: shapeKey, chipKeys: took, afterPick });
       continue;
     }
-    checked.push({ slot: shape.slot, demo: where(shape.el), shape: shapeKey, backspace: 'not reached' });
+    checked.push({ slot: shape.slot, demo: where(shape.el), shape: shapeKey, chipKeys: 'not reached' });
   }
 
   await settle();

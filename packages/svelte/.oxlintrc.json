@@ -1,0 +1,30 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "oxc"],
+  "jsPlugins": ["@shadcn/lint"],
+  "settings": {
+    "shadcn": {
+      "ui": "$lib/components/ui",
+      "note": "docs/design-rules.md rule 1 holds the approved exceptions."
+    }
+  },
+  "overrides": [
+    {
+      "files": ["src/lib/registry/components/*.ts"],
+      "rules": {
+        "shadcn/no-restyle": ["warn", { "allow": ["layout"] }],
+        "shadcn/no-raw-colors": ["warn", { "scanAllStrings": true }],
+        "shadcn/no-arbitrary-values": [
+          "warn",
+          {
+            "scanAllStrings": true,
+            "allow": ["pr-[5px]", "pr-[7px]", "pr-[9px]", "rounded-[inherit]"]
+          }
+        ],
+        "shadcn/no-inline-styles": "warn",
+        "shadcn/no-unknown-classes": "warn",
+        "shadcn/require-static-classes": "warn"
+      }
+    }
+  ]
+}

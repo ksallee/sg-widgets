@@ -1,8 +1,8 @@
 import type * as React from 'react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { EntityRef, FieldSpec, PickerRow as PickerRowData, SearchHit, SgContext, WireCondition } from '@sg-widgets/core';
 import {
-  errorText,
+  hasMorePage,
   hydrate,
   NO_MATCH_LABEL,
   pathOf,
@@ -10,27 +10,19 @@ import {
   prependRecent,
   rowFields,
   scopeToProject,
-  SEARCH_DEBOUNCE_MS,
+  SEARCH_PAGE_SIZE,
   searchTypeMap,
-  stateLine,
 } from '@sg-widgets/core';
-import { Search, TriangleAlert } from 'lucide-react';
-import {
-  Command,
-  CommandDialog,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from '@/components/ui/command';
+import { Search } from 'lucide-react';
+import { CommandGroup, CommandItem } from '@/components/ui/command';
 import { Button } from '@/components/ui/button';
 import { Kbd } from '@/components/ui/kbd';
 import { cn } from '@/lib/utils';
 import { CONTROL_GLYPH, CONTROL_HEIGHT, type ControlSize } from '@/registry/sg/components/control-classes';
 import { EntityChip } from '@/registry/sg/components/entity-chip';
 import { PickerRow } from '@/registry/sg/components/picker-row';
-import { SearchSkeleton } from '@/registry/sg/components/search-skeleton';
-import { StateLine } from '@/registry/sg/components/state-line';
+import type { SearchAnswer, SearchRequest } from '@/registry/sg/components/search-control';
+import { SearchControl } from '@/registry/sg/components/search-control';
 
 /** Types to search, either bare names or names with a filter each. */
 export type GlobalSearchTypes = string[] | Record<string, WireCondition[] | null>;
@@ -47,8 +39,6 @@ export const GLOBAL_SEARCH_TYPES = ['Asset', 'Shot', 'Sequence', 'Task', 'Versio
 
 /** A stable empty list, so the default never changes what a memo depends on. */
 const EMPTY_FIELDS: string[] = [];
-/** The endpoint's cap and its default (probe 053). */
-const PAGE_SIZE = 25;
 
 /** The modifier the hotkey shows, from the platform the page is on. */
 const META =
@@ -60,10 +50,17 @@ function keyOf(ref: EntityRef): string {
   return `${ref.type}:${ref.id}`;
 }
 
+function hitKey(hit: SearchHit): string {
+  return keyOf(hit.ref);
+}
+
 export type GlobalSearchSize = ControlSize;
 
 /** A chip inside a row sits one step down the leaf ladder. */
-const CHIP: Record<GlobalSearchSize, 'sm' | 'md'> = { sm: 'sm', md: 'sm', lg: 'md' };
+const CHIP: Record<GlobalSearchSize, 'xs' | 'sm' | 'md'> = { sm: 'xs', md: 'sm', lg: 'md' };
+
+/** A skeleton stands in for a row, so its leading slot is the row's picture. */
+const LEAD: Record<GlobalSearchSize, string> = { sm: 'size-6', md: 'size-8', lg: 'size-10' };
 
 export interface GlobalSearchProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onSelect'> {
   /** The root element. */
@@ -91,7 +88,8 @@ export interface GlobalSearchProps extends Omit<React.HTMLAttributes<HTMLDivElem
   /** Extra fields to request, so a caller's own sub-label or secondary can read them. */
   fields?: string[];
   /** Opens the palette on Cmd/Ctrl+K. Ignored on the inline variant. */
-  hotkey?: boolean;
+  /** Opens the palette on Cmd or Ctrl and K; a string names another key. */
+  hotkey?: boolean | string;
   /** Render as a combobox in the page instead of a dialog behind a trigger. */
   inline?: boolean;
   size?: GlobalSearchSize;
@@ -169,19 +167,8 @@ export function GlobalSearch({
     [onOpenChange],
   );
 
-  const [query, setQueryState] = useState('');
-  const [hits, setHits] = useState<SearchHit[]>([]);
-  /** The highlighted row. cmdk owns it between pages; a new page moves it to its first row. */
-  const [cursor, setCursor] = useState('');
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [failure, setFailure] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
   const [displayNames, setDisplayNames] = useState<Record<string, string>>({});
-
-  /** An answer whose id is no longer the current one lost the race and is dropped. */
-  const requestId = useRef(0);
-  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   useEffect(() => {
     let live = true;
@@ -198,8 +185,10 @@ export function GlobalSearch({
   }, [schema]);
 
   const order = useMemo(() => Object.keys(searchTypeMap(entityTypes)), [entityTypes]);
+  const showRecents = query.trim().length === 0 && recents.length > 0;
 
-  const groups = useMemo((): GlobalSearchGroup[] => {
+  /** The rows the answer holds, under one heading per type, in the order asked for. */
+  function groupsOf(hits: SearchHit[]): GlobalSearchGroup[] {
     const byType = new Map<string, SearchHit[]>();
     for (const hit of hits) {
       const list = byType.get(hit.ref.type);
@@ -209,62 +198,21 @@ export function GlobalSearch({
     return order
       .filter((type) => byType.has(type))
       .map((type) => ({ type, label: displayNames[type] ?? type, hits: byType.get(type) as SearchHit[] }));
-  }, [hits, order, displayNames]);
+  }
 
-  const showRecents = query.trim().length === 0 && recents.length > 0;
-  const empty = !loading && failure === null && groups.length === 0 && query.trim().length > 0;
-
-  const run = useCallback(
-    async (text: string, nextPage: number): Promise<void> => {
-      const id = (requestId.current += 1);
-      setLoading(true);
-      setFailure(null);
-      try {
-        let types = searchTypeMap(entityTypes);
-        if (projectId !== null && projectId !== undefined) types = await scopeToProject(schema, types, projectId);
-        const rows = await context.client.textSearch(text, types, { size: PAGE_SIZE, number: nextPage });
-        const found = await hydrate(context.client, rows, {
-          fields: rowFields({ thumbnail, labelField, subLabelField, secondaryField, showCode, fields }),
-          labelField,
-        });
-        if (id !== requestId.current) return;
-        setHits((current) => (nextPage === 1 ? found : [...current, ...found]));
-        setPage(nextPage);
-        // A page lands under the row that asked for it: the highlight moves to its first
-        // row, so the list stays where the reader was instead of returning to the top.
-        if (nextPage > 1 && found[0]) setCursor(`${found[0].ref.type}:${found[0].ref.id}`);
-        // The answer carries no `links`, so a full page is the only sign of another one (probe 006).
-        setHasMore(rows.length === PAGE_SIZE);
-      } catch (error) {
-        if (id !== requestId.current) return;
-        setFailure(errorText(error));
-        setHits([]);
-        setHasMore(false);
-      } finally {
-        if (id === requestId.current) setLoading(false);
-      }
+  const load = useCallback(
+    async ({ query: text, page }: SearchRequest): Promise<SearchAnswer<SearchHit>> => {
+      let types = searchTypeMap(entityTypes);
+      if (projectId !== null && projectId !== undefined) types = await scopeToProject(schema, types, projectId);
+      const found = await context.client.textSearch(text, types, { size: SEARCH_PAGE_SIZE, number: page });
+      const hits = await hydrate(context.client, found, {
+        fields: rowFields({ thumbnail, labelField, subLabelField, secondaryField, showCode, fields }),
+        labelField,
+      });
+      return { items: hits, hasMore: hasMorePage(found.length, SEARCH_PAGE_SIZE) };
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [context.client, entityTypes, projectId, schema, thumbnail, labelField, subLabelField, secondaryField, showCode, fields],
-  );
-
-  const setQuery = useCallback(
-    (text: string): void => {
-      setQueryState(text);
-      clearTimeout(timer.current);
-      // Bumping the id here is the cancellation: a request already in flight for the
-      // text just replaced can no longer write its answer.
-      requestId.current += 1;
-      setHits([]);
-      setHasMore(false);
-      if (text.trim().length === 0) {
-        setLoading(false);
-        return;
-      }
-      setLoading(true);
-      timer.current = setTimeout(() => void run(text, 1), SEARCH_DEBOUNCE_MS);
-    },
-    [run],
   );
 
   const choose = useCallback(
@@ -274,19 +222,20 @@ export function GlobalSearch({
       if (!inline) setOpen(false);
       setQuery('');
     },
-    [inline, onRecentsChange, onSelect, recentLimit, recents, setOpen, setQuery],
+    [inline, onRecentsChange, onSelect, recentLimit, recents, setOpen],
   );
 
+  const hotkeyKey = typeof hotkey === 'string' ? hotkey : 'k';
   useEffect(() => {
     if (!hotkey || inline) return;
     const onKeydown = (event: KeyboardEvent): void => {
-      if (event.key.toLowerCase() !== 'k' || !(event.metaKey || event.ctrlKey)) return;
+      if (event.key.toLowerCase() !== hotkeyKey.toLowerCase() || !(event.metaKey || event.ctrlKey)) return;
       event.preventDefault();
       setOpen(!open);
     };
     window.addEventListener('keydown', onKeydown);
     return () => window.removeEventListener('keydown', onKeydown);
-  }, [hotkey, inline, open, setOpen]);
+  }, [hotkey, hotkeyKey, inline, open, setOpen]);
 
   /** The row a hit draws as: the reference, its label and the values the second read answered. */
   function rowOf(hit: SearchHit): PickerRowData {
@@ -328,95 +277,69 @@ export function GlobalSearch({
     );
   }
 
-  const body = (
-    <>
-      <CommandInput value={query} placeholder={placeholder} onValueChange={setQuery} />
-      <CommandList data-sg-search-list>
-        {failure !== null ? (
-          <StateLine
-            state="error"
-            slotName="search-error"
-            icon={TriangleAlert}
-            label={stateLine('error', { errorLabel }, failure)}
-          />
-        ) : loading && hits.length === 0 ? (
-          <SearchSkeleton slotName="search-loading" label={stateLine('loading', { loadingLabel })} />
-        ) : empty ? (
-          <StateLine state="empty" slotName="search-empty" icon={Search} label={emptyLabel} />
-        ) : showRecents ? (
-          <CommandGroup heading="Recent">
-            {recents.map((entity) => (
-              <CommandItem
-                key={`${entity.type}:${entity.id}`}
-                value={`recent:${entity.type}:${entity.id}`}
-                onSelect={() => choose(entity)}
-              >
-                <EntityChip entity={entity} size={CHIP[size]} context={context} />
-                <span className="text-muted-foreground truncate text-xs">
-                  {displayNames[entity.type] ?? entity.type}
-                </span>
-              </CommandItem>
-            ))}
-          </CommandGroup>
-        ) : (
-          <>
-            {groups.map((group) => (
-              <CommandGroup key={group.type} heading={group.label}>
-                {group.hits.map((hit) => (
-                  <CommandItem
-                    key={`${hit.ref.type}:${hit.ref.id}`}
-                    value={`${hit.ref.type}:${hit.ref.id}`}
-                    data-entity-type={hit.ref.type}
-                    data-entity-id={hit.ref.id}
-                    onSelect={() => choose(hit.ref)}
-                  >
-                    {row(hit)}
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            ))}
-            {hasMore ? (
-              <CommandItem
-                value="load-more"
-                data-slot="search-load-more"
-                onSelect={() => void run(query, page + 1)}
-              >
-                <span className="text-muted-foreground flex-1 text-center text-sm">
-                  {loading ? 'Loading…' : 'Load more'}
-                </span>
-              </CommandItem>
-            ) : null}
-          </>
-        )}
-      </CommandList>
-    </>
+  function rows({ items }: { items: SearchHit[] }) {
+    if (showRecents) {
+      return (
+        <CommandGroup heading="Recent">
+          {recents.map((entity) => (
+            <CommandItem key={keyOf(entity)} value={`recent:${keyOf(entity)}`} onSelect={() => choose(entity)}>
+              <EntityChip entity={entity} size={CHIP[size]} context={context} />
+              <span className="text-muted-foreground truncate text-xs">
+                {displayNames[entity.type] ?? entity.type}
+              </span>
+            </CommandItem>
+          ))}
+        </CommandGroup>
+      );
+    }
+    return groupsOf(items).map((group) => (
+      <CommandGroup key={group.type} heading={group.label}>
+        {group.hits.map((hit) => (
+          <CommandItem
+            key={hitKey(hit)}
+            value={hitKey(hit)}
+            data-entity-type={hit.ref.type}
+            data-entity-id={hit.ref.id}
+            onSelect={() => choose(hit.ref)}
+          >
+            {row(hit)}
+          </CommandItem>
+        ))}
+      </CommandGroup>
+    ));
+  }
+
+  const control = (
+    <SearchControl<SearchHit>
+      load={load}
+      query={query}
+      onQueryChange={setQuery}
+      shell={inline ? 'command' : 'dialog'}
+      commandClass="border-border rounded-lg border"
+      open={open}
+      onOpenChange={setOpen}
+      title="Search"
+      description="Search across the site by name."
+      placeholder={placeholder}
+      emptyLabel={emptyLabel}
+      loadingLabel={loadingLabel}
+      errorLabel={errorLabel}
+      skeletonLead={cn('shrink-0', LEAD[size])}
+      paging
+      rows={rows}
+    />
   );
 
   if (inline) {
     return (
-      <div
-        ref={ref}
-        data-slot="global-search"
-        data-variant="inline"
-        className={cn('w-full', className)}
-        {...rest}
-      >
-        {/* Server-side matching only, so the list never filters what came back. */}
-        <Command shouldFilter={false} value={cursor} onValueChange={setCursor} className="border-border rounded-lg border">
-          {body}
-        </Command>
+      <div ref={ref} data-slot="global-search" data-variant="inline" className={cn('w-full', className)} {...rest}>
+        {control}
       </div>
     );
   }
 
   return (
-    <div
-      ref={ref}
-      data-slot="global-search"
-      data-variant="dialog"
-      className={cn('w-full', className)}
-      {...rest}
-    >
+    <div ref={ref} data-slot="global-search" data-variant="dialog" className={cn('w-full', className)} {...rest}>
       {trigger ? (
         trigger({ open: () => setOpen(true) })
       ) : (
@@ -431,14 +354,10 @@ export function GlobalSearch({
             <Search aria-hidden="true" className={cn('opacity-70', CONTROL_GLYPH[size])} />
             <span className="truncate">{label}</span>
           </span>
-          {hotkey ? <Kbd>{META}K</Kbd> : null}
+          {hotkey ? <Kbd>{META}{hotkeyKey.toUpperCase()}</Kbd> : null}
         </Button>
       )}
-      <CommandDialog open={open} onOpenChange={setOpen} title="Search" description="Search across the site by name.">
-        <Command shouldFilter={false} value={cursor} onValueChange={setCursor}>
-          {body}
-        </Command>
-      </CommandDialog>
+      {control}
     </div>
   );
 }

@@ -4,6 +4,109 @@
   "homepage": "https://sg-widgets.dev",
   "items": [
     {
+      "name": "sg-widgets",
+      "type": "registry:component",
+      "title": "sg-widgets",
+      "description": "Every item of this registry in one install.",
+      "categories": [
+        "flow-production-tracking"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "https://sg-widgets.dev/r/react/command.json",
+        "https://sg-widgets.dev/r/react/status-glyph.json",
+        "https://sg-widgets.dev/r/react/status-badge.json",
+        "https://sg-widgets.dev/r/react/entity-chip.json",
+        "https://sg-widgets.dev/r/react/entity-card.json",
+        "https://sg-widgets.dev/r/react/thumbnail.json",
+        "https://sg-widgets.dev/r/react/user-avatar.json",
+        "https://sg-widgets.dev/r/react/field-value.json",
+        "https://sg-widgets.dev/r/react/picker-row.json",
+        "https://sg-widgets.dev/r/react/state-line.json",
+        "https://sg-widgets.dev/r/react/search-skeleton.json",
+        "https://sg-widgets.dev/r/react/picker-classes.json",
+        "https://sg-widgets.dev/r/react/control-classes.json",
+        "https://sg-widgets.dev/r/react/leaf-classes.json",
+        "https://sg-widgets.dev/r/react/entity-glyphs.json",
+        "https://sg-widgets.dev/r/react/field-error.json",
+        "https://sg-widgets.dev/r/react/editor-calendar.json",
+        "https://sg-widgets.dev/r/react/value-editor.json",
+        "https://sg-widgets.dev/r/react/picker-control.json",
+        "https://sg-widgets.dev/r/react/search-control.json",
+        "https://sg-widgets.dev/r/react/entity-type-picker.json",
+        "https://sg-widgets.dev/r/react/entity-type-multi-picker.json",
+        "https://sg-widgets.dev/r/react/field-picker.json",
+        "https://sg-widgets.dev/r/react/sortable.json",
+        "https://sg-widgets.dev/r/react/column-picker.json",
+        "https://sg-widgets.dev/r/react/text-editor.json",
+        "https://sg-widgets.dev/r/react/number-editor.json",
+        "https://sg-widgets.dev/r/react/checkbox-editor.json",
+        "https://sg-widgets.dev/r/react/date-editor.json",
+        "https://sg-widgets.dev/r/react/date-time-editor.json",
+        "https://sg-widgets.dev/r/react/list-picker.json",
+        "https://sg-widgets.dev/r/react/list-select.json",
+        "https://sg-widgets.dev/r/react/list-multi-picker.json",
+        "https://sg-widgets.dev/r/react/list-multi-select.json",
+        "https://sg-widgets.dev/r/react/url-editor.json",
+        "https://sg-widgets.dev/r/react/color-editor.json",
+        "https://sg-widgets.dev/r/react/field-editor.json",
+        "https://sg-widgets.dev/r/react/entity-fields.json",
+        "https://sg-widgets.dev/r/react/filter-editor.json",
+        "https://sg-widgets.dev/r/react/filter-dialog.json",
+        "https://sg-widgets.dev/r/react/filter-bar.json",
+        "https://sg-widgets.dev/r/react/sort-picker.json",
+        "https://sg-widgets.dev/r/react/status-picker.json",
+        "https://sg-widgets.dev/r/react/status-multi-picker.json",
+        "https://sg-widgets.dev/r/react/collection-source.json",
+        "https://sg-widgets.dev/r/react/collection-control.json",
+        "https://sg-widgets.dev/r/react/collection-footer.json",
+        "https://sg-widgets.dev/r/react/entity-table.json",
+        "https://sg-widgets.dev/r/react/entity-grid.json",
+        "https://sg-widgets.dev/r/react/grouped-list.json",
+        "https://sg-widgets.dev/r/react/entity-tree.json",
+        "https://sg-widgets.dev/r/react/entity-picker.json",
+        "https://sg-widgets.dev/r/react/entity-multi-picker.json",
+        "https://sg-widgets.dev/r/react/user-picker.json",
+        "https://sg-widgets.dev/r/react/user-multi-picker.json",
+        "https://sg-widgets.dev/r/react/project-picker.json",
+        "https://sg-widgets.dev/r/react/project-multi-picker.json",
+        "https://sg-widgets.dev/r/react/global-search.json",
+        "https://sg-widgets.dev/r/react/hierarchical-search.json",
+        "https://sg-widgets.dev/r/react/context-selector.json"
+      ],
+      "docs": "Installs every widget and every shared part at once. Add a single item instead when you only need one.",
+      "files": []
+    },
+    {
+      "name": "command",
+      "type": "registry:ui",
+      "title": "Command",
+      "description": "A list that is always open, always in place and always holds a highlight, over Base UI's Autocomplete.",
+      "categories": [
+        "flow-production-tracking",
+        "atom"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "@base-ui/react",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "dialog",
+        "input-group"
+      ],
+      "docs": "The search box, the list with its edge fades, the group, the row, the live region and the dialog shell every search widget and field list in this registry is drawn with.",
+      "files": [
+        {
+          "path": "src/components/ui/command.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
       "name": "status-glyph",
       "type": "registry:component",
       "title": "Status Glyph",
@@ -166,6 +269,7 @@
       ],
       "registryDependencies": [
         "https://sg-widgets.dev/r/react/entity-chip.json",
+        "https://sg-widgets.dev/r/react/leaf-classes.json",
         "https://sg-widgets.dev/r/react/status-badge.json",
         "https://sg-widgets.dev/r/react/thumbnail.json",
         "switch"
@@ -191,6 +295,7 @@
         "@sg-widgets/core"
       ],
       "registryDependencies": [
+        "https://sg-widgets.dev/r/react/picker-classes.json",
         "https://sg-widgets.dev/r/react/field-value.json",
         "https://sg-widgets.dev/r/react/thumbnail.json",
         "https://sg-widgets.dev/r/react/user-avatar.json"
@@ -427,10 +532,62 @@
       ]
     },
     {
+      "name": "search-control",
+      "type": "registry:component",
+      "title": "Search Control",
+      "description": "The query lifecycle and the list every search widget in this registry is built on.",
+      "categories": [
+        "flow-production-tracking",
+        "atom"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "https://sg-widgets.dev/r/react/search-skeleton.json",
+        "https://sg-widgets.dev/r/react/state-line.json",
+        "https://sg-widgets.dev/r/react/command.json",
+        "skeleton"
+      ],
+      "docs": "The debounce, the ticket that drops a stale answer, the page and its load-more row, and the list with its error, loading and empty blocks.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/search-control.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
       "name": "entity-type-picker",
       "type": "registry:component",
       "title": "Entity Type Picker",
-      "description": "One entity type of a Flow Production Tracking site, or several, as a searchable combobox.",
+      "description": "One entity type of a Flow Production Tracking site, as a searchable combobox.",
+      "categories": [
+        "flow-production-tracking",
+        "picker"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "@base-ui/react"
+      ],
+      "registryDependencies": [
+        "https://sg-widgets.dev/r/react/picker-control.json",
+        "https://sg-widgets.dev/r/react/picker-classes.json"
+      ],
+      "docs": "Takes a SchemaService. `allow` and `deny` narrow the derived options, so changing them re-filters with no second call.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/entity-type-picker.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "entity-type-multi-picker",
+      "type": "registry:component",
+      "title": "Entity Type Multi Picker",
+      "description": "Several entity types of a Flow Production Tracking site, as a searchable combobox with checkbox rows.",
       "categories": [
         "flow-production-tracking",
         "picker"
@@ -445,10 +602,10 @@
         "https://sg-widgets.dev/r/react/picker-classes.json",
         "checkbox"
       ],
-      "docs": "Takes a SchemaService. `allow` and `deny` narrow the derived options, so changing them re-filters with no second call.",
+      "docs": "Takes a SchemaService. The value is an array of codes, and the control shows it as chips, as `+n` or as a count.",
       "files": [
         {
-          "path": "src/registry/sg/components/entity-type-picker.tsx",
+          "path": "src/registry/sg/components/entity-type-multi-picker.tsx",
           "type": "registry:component"
         }
       ]
@@ -469,7 +626,7 @@
       "registryDependencies": [
         "https://sg-widgets.dev/r/react/state-line.json",
         "popover",
-        "command",
+        "https://sg-widgets.dev/r/react/command.json",
         "skeleton"
       ],
       "docs": "Emits ShotGrid's dotted path. Only single entity fields are descended into; a path through a multi-entity field reads back nothing.",
@@ -516,9 +673,10 @@
       ],
       "registryDependencies": [
         "https://sg-widgets.dev/r/react/state-line.json",
+        "https://sg-widgets.dev/r/react/picker-classes.json",
         "button",
         "checkbox",
-        "command",
+        "https://sg-widgets.dev/r/react/command.json",
         "skeleton",
         "https://sg-widgets.dev/r/react/field-picker.json",
         "https://sg-widgets.dev/r/react/sortable.json"
@@ -839,6 +997,7 @@
         "@base-ui/react"
       ],
       "registryDependencies": [
+        "https://sg-widgets.dev/r/react/control-classes.json",
         "https://sg-widgets.dev/r/react/field-value.json",
         "https://sg-widgets.dev/r/react/text-editor.json",
         "https://sg-widgets.dev/r/react/number-editor.json",
@@ -897,7 +1056,9 @@
         "lucide-react"
       ],
       "registryDependencies": [
+        "https://sg-widgets.dev/r/react/control-classes.json",
         "https://sg-widgets.dev/r/react/entity-fields.json",
+        "https://sg-widgets.dev/r/react/leaf-classes.json",
         "https://sg-widgets.dev/r/react/state-line.json",
         "button",
         "select",
@@ -941,7 +1102,7 @@
       ],
       "registryDependencies": [
         "https://sg-widgets.dev/r/react/control-classes.json",
-        "badge",
+        "https://sg-widgets.dev/r/react/leaf-classes.json",
         "button",
         "dialog",
         "https://sg-widgets.dev/r/react/filter-editor.json"
@@ -970,10 +1131,12 @@
       "registryDependencies": [
         "https://sg-widgets.dev/r/react/entity-fields.json",
         "https://sg-widgets.dev/r/react/control-classes.json",
+        "https://sg-widgets.dev/r/react/leaf-classes.json",
+        "https://sg-widgets.dev/r/react/state-line.json",
         "badge",
         "button",
         "checkbox",
-        "command",
+        "https://sg-widgets.dev/r/react/command.json",
         "popover",
         "select",
         "https://sg-widgets.dev/r/react/filter-dialog.json"
@@ -1000,7 +1163,8 @@
         "lucide-react"
       ],
       "registryDependencies": [
-        "badge",
+        "https://sg-widgets.dev/r/react/leaf-classes.json",
+        "https://sg-widgets.dev/r/react/state-line.json",
         "button",
         "popover",
         "separator",
@@ -1161,6 +1325,7 @@
         "https://sg-widgets.dev/r/react/state-line.json",
         "https://sg-widgets.dev/r/react/field-value.json",
         "https://sg-widgets.dev/r/react/field-editor.json",
+        "https://sg-widgets.dev/r/react/picker-classes.json",
         "table",
         "checkbox",
         "skeleton",
@@ -1341,13 +1506,36 @@
         "lucide-react"
       ],
       "registryDependencies": [
-        "https://sg-widgets.dev/r/react/entity-picker.json",
-        "https://sg-widgets.dev/r/react/entity-multi-picker.json"
+        "https://sg-widgets.dev/r/react/entity-picker.json"
       ],
-      "docs": "One file exporting UserPicker and UserMultiPicker. Both configure the generic pickers; neither forks them.",
+      "docs": "Configures the generic entity picker for people; it does not fork it.",
       "files": [
         {
           "path": "src/registry/sg/components/user-picker.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "user-multi-picker",
+      "type": "registry:component",
+      "title": "User Multi Picker",
+      "description": "Several people and script accounts, chosen by server-side search across name, login and email.",
+      "categories": [
+        "flow-production-tracking",
+        "picker"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "https://sg-widgets.dev/r/react/entity-multi-picker.json"
+      ],
+      "docs": "The person configuration on the generic multi picker. The value is an array of references, shown as chips.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/user-multi-picker.tsx",
           "type": "registry:component"
         }
       ]
@@ -1366,13 +1554,36 @@
         "lucide-react"
       ],
       "registryDependencies": [
-        "https://sg-widgets.dev/r/react/entity-picker.json",
-        "https://sg-widgets.dev/r/react/entity-multi-picker.json"
+        "https://sg-widgets.dev/r/react/entity-picker.json"
       ],
-      "docs": "One file exporting ProjectPicker and ProjectMultiPicker. Archived projects are left out unless includeArchived is set.",
+      "docs": "Archived projects are left out unless includeArchived is set.",
       "files": [
         {
           "path": "src/registry/sg/components/project-picker.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "project-multi-picker",
+      "type": "registry:component",
+      "title": "Project Multi Picker",
+      "description": "Several projects, chosen by server-side search, with the project thumbnail and its status.",
+      "categories": [
+        "flow-production-tracking",
+        "picker"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "https://sg-widgets.dev/r/react/entity-multi-picker.json"
+      ],
+      "docs": "The project configuration on the generic multi picker. The value is an array of references, shown as chips.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/project-multi-picker.tsx",
           "type": "registry:component"
         }
       ]
@@ -1391,16 +1602,14 @@
         "lucide-react"
       ],
       "registryDependencies": [
-        "https://sg-widgets.dev/r/react/search-skeleton.json",
+        "https://sg-widgets.dev/r/react/search-control.json",
         "https://sg-widgets.dev/r/react/control-classes.json",
-        "https://sg-widgets.dev/r/react/state-line.json",
         "https://sg-widgets.dev/r/react/entity-chip.json",
         "https://sg-widgets.dev/r/react/picker-row.json",
-        "command",
+        "https://sg-widgets.dev/r/react/command.json",
         "dialog",
         "button",
-        "kbd",
-        "skeleton"
+        "kbd"
       ],
       "docs": "One text search covers every configured type. Results are grouped by type with the matched words in bold; Cmd/Ctrl+K opens it when hotkey is on.",
       "files": [
@@ -1424,12 +1633,11 @@
         "lucide-react"
       ],
       "registryDependencies": [
-        "https://sg-widgets.dev/r/react/search-skeleton.json",
+        "https://sg-widgets.dev/r/react/search-control.json",
         "https://sg-widgets.dev/r/react/entity-glyphs.json",
-        "https://sg-widgets.dev/r/react/state-line.json",
+        "https://sg-widgets.dev/r/react/picker-classes.json",
         "https://sg-widgets.dev/r/react/picker-row.json",
-        "command",
-        "skeleton"
+        "https://sg-widgets.dev/r/react/command.json"
       ],
       "docs": "Browses one level per call and searches by matching words, then asking where each hit sits. Emits the row picked and the path that reaches it.",
       "files": [
@@ -1453,14 +1661,14 @@
         "lucide-react"
       ],
       "registryDependencies": [
-        "https://sg-widgets.dev/r/react/search-skeleton.json",
+        "https://sg-widgets.dev/r/react/search-control.json",
         "https://sg-widgets.dev/r/react/control-classes.json",
-        "https://sg-widgets.dev/r/react/state-line.json",
         "https://sg-widgets.dev/r/react/entity-chip.json",
+        "https://sg-widgets.dev/r/react/picker-classes.json",
         "https://sg-widgets.dev/r/react/picker-row.json",
         "https://sg-widgets.dev/r/react/hierarchical-search.json",
-        "popover",
-        "skeleton"
+        "https://sg-widgets.dev/r/react/state-line.json",
+        "popover"
       ],
       "docs": "Installs HierarchicalSearch alongside it. Assigned tasks are one search on Task filtered by task_assignees.",
       "files": [

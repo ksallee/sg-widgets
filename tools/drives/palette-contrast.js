@@ -27,6 +27,12 @@ const SHARED = [
   '--input',
   '--ring',
   '--radius',
+  '--success',
+  '--success-foreground',
+  '--warning',
+  '--warning-foreground',
+  '--info',
+  '--info-foreground',
 ];
 
 const until = async (fn, ms = 8000) => {

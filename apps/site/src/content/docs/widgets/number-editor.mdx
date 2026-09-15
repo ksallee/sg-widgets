@@ -4,6 +4,7 @@ description: 'The numeric family as one input: number, float, percent, currency,
 ---
 
 import Demo from '../../../components/Demo.astro';
+import Props from '../../../components/Props.astro';
 
 Edits any numeric field as a number field, with the parse, the format and the step chosen by the
 data type.
@@ -58,31 +59,7 @@ at the bound it would cross. An empty field lands on zero on its first step.
 
 ## Props
 
-| prop | type | default | meaning |
-|---|---|---|---|
-| `value` | `number \| string \| null` | `null` | The stored value. Two-way in Svelte. |
-| `onValueChange` | `(value: number \| string \| null) => void` | — | Called when the input commits. |
-| `dataType` | `'number' \| 'float' \| 'percent' \| 'duration' \| 'timecode' \| 'currency'` | `'number'` | Picks the parse, the format, the affix and the step. |
-| `field` | `FieldSchema \| null` | `null` | Supplies the accessible label and the required flag. |
-| `precision` | `number` | `6` | Decimals kept on a float or a currency. |
-| `hoursPerDay` | `number` | `8` | The site's working day, for the day unit on a duration. |
-| `frameRate` | `number` | — | Frames per second, for the frame form of a timecode and its one-frame step. |
-| `symbol` | `string` | `'$'` | Shown before the value on a currency field. |
-| `inline` | `boolean` | `false` | Compact for one row: a fixed width for the data type, the steppers inside the input, no hint. |
-| `min` / `max` | `number` | `0` and `100` on a percent, the 32-bit bounds elsewhere | Range the value is held in. |
-| `step` | `number` | the data type's | What one step moves. |
-| `scrub` | `boolean` | `false` | Name the control and let a drag across that name change the value. |
-| `label` | `string` | the field's display name | The name over a scrub area. |
-| `locale` | `string` | the runtime's | Locale the value is written in. |
-| `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Control height. |
-| `hint` | `boolean` | `false` | Show the stored form under the control, such as the minutes behind a duration. |
-| `disabled` | `boolean` | `false` | |
-| `readonly` | `boolean` | `false` | |
-| `invalid` | `boolean` | `false` | Forced invalid state. |
-| `error` | `string \| null` | `null` | A message from the caller, shown in place of the parse error. |
-| `onErrorChange` | `(error: string \| null) => void` | — | Called when the parse error appears or clears. |
-| `placeholder` | `string` | — | |
-| `class` / `className` | `string` | — | Merged after the widget's own classes. |
+<Props name="number-editor" />
 
 ## Events
 
@@ -95,14 +72,7 @@ state and reports the message through `onErrorChange`.
 
 ## Keyboard
 
-| key | does |
-|---|---|
-| `Up` / `Down` | Steps once. |
-| `Shift` + `Up` / `Down` | Steps ten times. |
-| `Page Up` / `Page Down` | Steps a hundred times. |
-| `Enter` | Commits. |
-| `Escape` | Restores the stored value. |
-| `Tab` | Commits by leaving the control. |
+<Props name="number-editor" kind="keyboard" />
 
 The steppers are out of the tab order: the input reaches every value they do. Holding one down
 repeats after 400ms, then every 60ms.

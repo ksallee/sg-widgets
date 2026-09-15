@@ -75,7 +75,9 @@ function freePort(start = portBase()) {
 }
 
 async function startSite(port) {
-  const proc = spawn('./node_modules/.bin/astro', ['dev', '--host', '127.0.0.1', '--port', String(port)], {
+  // `--ignore-lock`: astro refuses a second dev server while one holds its lock file,
+  // and the isolated server must start beside whatever the user has running on 4321.
+  const proc = spawn('./node_modules/.bin/astro', ['dev', '--ignore-lock', '--host', '127.0.0.1', '--port', String(port)], {
     cwd: SITE,
     env: { ...process.env, ASTRO_DEV_BACKGROUND: '1' },
     stdio: ['ignore', 'pipe', 'pipe'],

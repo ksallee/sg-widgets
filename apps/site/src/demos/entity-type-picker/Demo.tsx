@@ -1,9 +1,8 @@
-import { Fragment, useState } from 'react';
+import { useState } from 'react';
 import { EntityTypePicker } from '@/registry/sg/components/entity-type-picker';
 import { DemoContextProvider, useSgContext } from '../_shared/react';
 
 const PRODUCTION = ['Project', 'Sequence', 'Shot', 'Asset', 'Version', 'Task'];
-const SUMMARIES = ['chips', 'ellipsis', 'count'] as const;
 
 const group = 'flex flex-col gap-3';
 /** One control per row, at the pane's full width, with its caption above it. */
@@ -11,78 +10,29 @@ const stack = 'flex flex-col gap-4';
 const field = 'flex w-full flex-col gap-2';
 const label = 'text-muted-foreground text-xs';
 const readout = 'text-muted-foreground font-mono text-xs';
-/** At most 20rem, so the fit has something to cut against. */
-const narrow = 'max-w-80';
 
 function Pickers() {
   const context = useSgContext();
   const [one, setOne] = useState<string | null>('Shot');
-  const [many, setMany] = useState<string[]>(['Version']);
-  /** One value per summary demo, so every control on the page takes an edit. */
-  const [shown, setShown] = useState<Record<string, string[]>>({});
-  const shownAt = (at: string) => shown[at] ?? PRODUCTION;
-  const showAt = (at: string, next: string[]) => setShown({ ...shown, [at]: next });
+  const [any, setAny] = useState<string | null>(null);
 
   return (
     <div className="flex flex-col gap-4">
       <div className={field} data-demo="single">
-        <span className={label}>Single, allow list: the six production types</span>
-        <EntityTypePicker
-          context={context}
-          value={one}
-          onValueChange={(next) => setOne(next as string | null)}
-          allow={PRODUCTION}
-        />
+        <span className={label}>Allow list: the six production types</span>
+        <EntityTypePicker context={context} value={one} onValueChange={setOne} allow={PRODUCTION} />
         <span className={readout}>{one ?? 'null'}</span>
       </div>
 
-      <div className={field} data-demo="multi">
-        <span className={label}>Multi, deny list: everything but the two user types</span>
+      <div className={field} data-demo="deny">
+        <span className={label}>Deny list: everything but the two user types</span>
         <EntityTypePicker
           context={context}
-          multiple
-          value={many}
-          onValueChange={(next) => setMany((next as string[] | null) ?? [])}
+          value={any}
+          onValueChange={setAny}
           deny={['HumanUser', 'ApiUser']}
-          placeholder="Select entity types"
         />
-        <span className={readout}>[{many.join(', ')}]</span>
-      </div>
-
-      <div className={group} data-demo="summary">
-        <span className={label}>What the control shows for six selected, wide and narrow</span>
-        <div className={stack}>
-          {SUMMARIES.map((summary) => (
-            <Fragment key={summary}>
-              <div className={field} data-demo-summary={summary}>
-                <span className={label}>{summary}, full width</span>
-                <EntityTypePicker
-                  context={context}
-                  multiple
-                  value={shownAt(summary)}
-                  onValueChange={(next) => showAt(summary, (next as string[] | null) ?? [])}
-                  summary={summary}
-                  allow={PRODUCTION}
-                  clearable={false}
-                />
-              </div>
-              <div className={field} data-demo-summary={`${summary}-narrow`}>
-                <span className={label}>{summary}, at most 20rem</span>
-                <div className={narrow}>
-                  <EntityTypePicker
-                    context={context}
-                    multiple
-                    value={shownAt(`${summary}-narrow`)}
-                    onValueChange={(next) => showAt(`${summary}-narrow`, (next as string[] | null) ?? [])}
-                    summary={summary}
-                    allow={PRODUCTION}
-                    clearable={false}
-                  />
-                </div>
-              </div>
-            </Fragment>
-          ))}
-        </div>
+        <span className={readout}>{any ?? 'null'}</span>
       </div>
 
       <div className={group} data-demo="codes">

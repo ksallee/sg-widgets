@@ -16,7 +16,7 @@
 		UrlValue,
 		UrlWriteValue
 	} from '@sg-widgets/core';
-	import { createEntitySource, emptyFilter, resolveColumns, toSortSpecs } from '@sg-widgets/core';
+	import { condition, createEntitySource, group, resolveColumns, toSortSpecs } from '@sg-widgets/core';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import * as Popover from '$lib/components/ui/popover/index.js';
 	import CheckboxEditor from '$lib/registry/components/checkbox-editor.svelte';
@@ -33,10 +33,13 @@
 	import EntityPicker from '$lib/registry/components/entity-picker.svelte';
 	import EntityTable from '$lib/registry/components/entity-table.svelte';
 	import EntityTree from '$lib/registry/components/entity-tree.svelte';
+	import EntityTypeMultiPicker from '$lib/registry/components/entity-type-multi-picker.svelte';
 	import EntityTypePicker from '$lib/registry/components/entity-type-picker.svelte';
 	import FieldPicker from '$lib/registry/components/field-picker.svelte';
 	import FilterBar from '$lib/registry/components/filter-bar.svelte';
+	import FilterEditor from '$lib/registry/components/filter-editor.svelte';
 	import GlobalSearch from '$lib/registry/components/global-search.svelte';
+	import ListMultiPicker from '$lib/registry/components/list-multi-picker.svelte';
 	import ListPicker from '$lib/registry/components/list-picker.svelte';
 	import NumberEditor from '$lib/registry/components/number-editor.svelte';
 	import ProjectPicker from '$lib/registry/components/project-picker.svelte';
@@ -97,8 +100,19 @@
 	});
 
 	let columns = $state<CollectionColumn[]>([]);
-	let filter = $state<FilterGroup>(emptyFilter());
-	let sortKeys = $state<SortKey[]>([]);
+	// A ticked pill, a count beside More filters and two sort keys, so the crosses and the
+	// count chips the consistency drive reads are drawn.
+	let filter = $state<FilterGroup>(group('and', [condition('sg_status_list', 'in', ['ip', 'apr'])]));
+	let sortKeys = $state<SortKey[]>([
+		{ field: 'code', direction: 'asc' },
+		{ field: 'created_at', direction: 'desc' }
+	]);
+	let editorFilter = $state<FilterGroup>(
+		group('and', [
+			condition('sg_status_list', 'in', ['ip', 'apr']),
+			condition('sg_first_frame', 'in', [1001, 1101])
+		])
+	);
 	let paths = $state<string[]>([...SHOWN]);
 
 	let note = $state<string | null>('Plate handed over with the cut change.');
@@ -107,6 +121,7 @@
 	let approvedAt = $state<string | null>('2026-03-04T13:06:07Z');
 	let flagged = $state(true);
 	let listValue = $state<string | null>('Type A');
+	let listValues = $state<string[]>(['Type A', 'Type B']);
 	let colour = $state<string | null>('0,126,174');
 	let movie = $state<UrlValue | null>({
 		url: 'https://example.com/plate.mov',
@@ -193,6 +208,10 @@
 			<span class={cellLabel}>Type</span>
 			<EntityTypePicker {context} {size} value="Shot" />
 		</div>
+		<div class={cell} data-qa-widget="entity-type-multi-picker" data-qa-size={size}>
+			<span class={cellLabel}>Types</span>
+			<EntityTypeMultiPicker {context} {size} value={['Shot', 'Asset']} />
+		</div>
 		<div
 			class={cell}
 			data-qa-widget="field-picker"
@@ -224,17 +243,18 @@
 			<div data-qa-widget="sort-picker" data-qa-size="md" data-qa-popup="sort-trigger">
 				<SortPicker entityType="Version" {context} bind:value={sortKeys} />
 			</div>
-			<div data-qa-widget="column-picker" data-qa-size="md">
+			<div data-qa-widget="column-picker" data-qa-size="md" data-qa-popup="popover-trigger">
 				<Popover.Root>
 					<Popover.Trigger>
 						{#snippet child({ props })}
 							<Button variant="outline" {...props}>Columns</Button>
 						{/snippet}
 					</Popover.Trigger>
-					<Popover.Content strategy="fixed" align="start" class="w-72">
+					<Popover.Content strategy="fixed" align="start" class="w-72 p-3">
 						<ColumnPicker
 							{context}
 							entityType="Version"
+							showCount
 							deepLinks={false}
 							filter={(_field, path) => SHOWN.includes(path)}
 							value={paths}
@@ -264,6 +284,7 @@
 					{statuses}
 					{context}
 					editable
+					selectable
 					paging="pages"
 					maxHeight="22rem"
 				/>
@@ -321,6 +342,10 @@
 					<span class={fieldLabel}>Version type</span>
 					<ListPicker bind:value={listValue} field={versionType} />
 				</div>
+				<div class={field} data-qa-widget="list-multi-picker" data-qa-size="md">
+					<span class={fieldLabel}>Version types</span>
+					<ListMultiPicker bind:value={listValues} field={versionType} />
+				</div>
 				<div class={field} data-qa-widget="color-editor" data-qa-size="md">
 					<span class={fieldLabel}>Colour</span>
 					<ColorEditor bind:value={colour} field={{ displayName: 'Color', mandatory: false }} />
@@ -341,6 +366,16 @@
 			{#each SIZES as size (size)}
 				{@render pickers(size)}
 			{/each}
+		</section>
+
+		<section class={section} data-qa-widget="filter-editor" data-qa-size="md">
+			<h4 class={heading}>Filter tree</h4>
+			<FilterEditor
+				entityType="Version"
+				{context}
+				bind:value={editorFilter}
+				hidePaths={['sg_task']}
+			/>
 		</section>
 
 		<p class="text-sm" data-qa-widget="inline-atoms">

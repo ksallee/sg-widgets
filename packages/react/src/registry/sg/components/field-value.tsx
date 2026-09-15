@@ -22,8 +22,15 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 import { EntityChip, type EntityChipVariant } from '@/registry/sg/components/entity-chip';
+import type { ChipSize } from '@/registry/sg/components/leaf-classes';
 import { StatusBadge } from '@/registry/sg/components/status-badge';
 import { Thumbnail } from '@/registry/sg/components/thumbnail';
+
+/** The collection density the value is drawn in. */
+export type FieldValueDensity = 'compact' | 'default';
+
+/** A chip or a badge sits a step under the row it is in (`docs/design-rules.md` rule 3). */
+const CHIP: Record<FieldValueDensity, ChipSize> = { compact: 'xs', default: 'sm' };
 
 export interface FieldValueProps extends Omit<React.HTMLAttributes<HTMLSpanElement>, 'children'> {
   /** The raw attribute (or relationship) value, exactly as the API returned it. */
@@ -38,6 +45,8 @@ export interface FieldValueProps extends Omit<React.HTMLAttributes<HTMLSpanEleme
   siteUrl?: string;
   /** How an entity or multi_entity value draws: a chip, a link or bare text. */
   entityVariant?: EntityChipVariant;
+  /** The density of the collection around the value. Compact drops its chip and badge a step. */
+  density?: FieldValueDensity;
   /** Field paths shown in a hover card on a linked row. Needs a context. */
   preview?: string[];
   /** The widget context: the site url, the site preferences and the hover card's read. */
@@ -77,6 +86,7 @@ export function FieldValue({
   statuses = null,
   siteUrl,
   entityVariant = 'chip',
+  density = 'default',
   preview,
   context,
   client,
@@ -137,7 +147,7 @@ export function FieldValue({
       ) : kind === 'entity' ? (
         <EntityChip
           entity={value as EntityRef}
-          size="sm"
+          size={CHIP[density]}
           variant={entityVariant}
           siteUrl={site}
           preview={preview}
@@ -149,7 +159,7 @@ export function FieldValue({
             <EntityChip
               key={`${entity.type}:${entity.id}`}
               entity={entity}
-              size="sm"
+              size={CHIP[density]}
               variant={entityVariant}
               siteUrl={site}
               preview={preview}
@@ -162,7 +172,7 @@ export function FieldValue({
           code={String(value)}
           status={statuses?.[String(value)] ?? null}
           field={field}
-          size="sm"
+          size={CHIP[density]}
           siteUrl={site}
         />
       ) : kind === 'image' ? (

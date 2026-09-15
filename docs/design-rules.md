@@ -17,7 +17,15 @@ The goal is one system: a page mixing ten of our widgets must read as one hand.
 
 - Parents own the gap. A flex or grid container sets `gap-*`; children never carry `m*`, `mt-*`, `ml-*`
   to space themselves from siblings. If you reach for a margin, you are missing a container.
-- Padding belongs to the surface that has a border or background, not to its content.
+- A parent owns a zero gap too. A list of rows is a flex column with no gap, as every popup list is,
+  so hover, drop-target and dragging fills run edge to edge. `gap-2` is for items in a row - chips,
+  buttons, a glyph and its text - never for rows in a list.
+- Padding belongs to the surface that has a border or background, not to its content. A row's padding
+  is the inset of its own surface, never spacing between rows.
+- The height ladder of rule 3 is for controls. A row's height follows its content, and `size` moves a
+  row's text and its glyphs, as it does in the pickers.
+- Skeletons stand in for rows: same inset, same height, same zero gap, so a list holds its place when
+  data lands.
 - One scale, used everywhere:
 
   | role | class |
@@ -28,12 +36,16 @@ The goal is one system: a page mixing ten of our widgets must read as one hand.
   | between stacked form fields | `gap-4` |
   | popover / card / dialog padding | `p-3` (compact), `p-4` (default) |
   | list row padding | `px-2 py-1.5` |
+  | list row holding an icon button | `px-2 py-0.5`, so the button ladder sets the row at 28, 32 and 36 |
   | table cell padding | `px-3 py-2` |
 
 - Density is a prop on collections (`density: "compact" | "default"`), never a global. Compact halves the
   vertical padding only.
-- Alignment: every row is `flex items-center`; multi-line rows are `flex items-start` with a fixed-size
-  leading slot (thumbnail, avatar, checkbox) so text always starts at the same x.
+- Alignment: every row is `flex items-center` with a fixed-size leading slot (thumbnail, avatar,
+  checkbox) so text always starts at the same x. A picker option with a sub-label stays centred and
+  takes `py-1`, so its two lines stand as tall as a one-line option with a picture; a tree row with a
+  sub-label is `flex items-start`. A multi picker's checkbox centres on the picture beside it; a single
+  picker's tick trails the row instead, so an unticked row leaves no gap before its label.
 - Truncation: single-line text gets `truncate min-w-0` and a `title` attribute with the full value.
   Never let a widget grow past its container horizontally.
 
@@ -43,12 +55,22 @@ The goal is one system: a page mixing ten of our widgets must read as one hand.
   `h-10`). Icons inside controls are `size-4` for sm/md and `size-5` for lg. Thumbnails in list rows are
   `size-6` (sm), `size-8` (md), `size-10` (lg); cards and detail panes use `xl` (h-16) and `2xl` (h-24).
   Avatars follow the first three sizes.
+- A chip or a badge sits one step under the control it is in: `xs` (h-5) in sm, `sm` (h-6) in md and `md`
+  (h-8) in lg, at medium weight, with a `size-3`, `size-3.5` or `size-4` glyph. Its inline padding is
+  optically aligned: the edge beside a glyph takes a step less than a bare text edge (`xs`: `px-1.5`
+  bare, `pl-1` beside a glyph), and the edge beside a cross matches the room above the cross, so its
+  box sits as far from the right as from the top. The glyph sits `gap-1` from the label at `xs` and `sm` and
+  `gap-1.5` above, and the cross a step closer, since its own padding already reads as space. The
+  cross grows with the chip, `size-3` at `xs` to `size-4.5` at `lg`.
 - A picker control insets its leading edge to match the room above and below the chip or badge it
   holds, so a value sits evenly inside the border. It carries `data-empty`, which
   gives that reading inset back and takes the vertical inset down one step (md: `pl-2 py-0.5`), so an
   empty control reads as a plain input. A control whose filled value is plain text, `FieldPicker`
   among them, keeps the reading inset in both states. `min-h` never changes, so the height holds
   across the two states; the trailing inset is reserve for the clear and open controls and stays put.
+- An icon control — a clear, an open, a remove — is drawn at the glyph's own size and carries a
+  44px box on a coarse pointer, as a pseudo-element centred on it, so a finger has something to
+  hit and no layout moves. One class string per ladder holds it.
 - Width is the caller's business: widgets are `w-full` by default and never set a fixed width. A caller
   wraps in a sized container.
 
@@ -57,9 +79,9 @@ The goal is one system: a page mixing ten of our widgets must read as one hand.
 Motion explains a change; it never decorates. Every animated property must answer "what did this movement
 tell the user".
 
-- Durations: `duration-150` for hover/press/focus feedback, `duration-200` for popovers, menus and
-  chips entering or leaving, `duration-300` only for large surfaces (dialogs, sheets, expanding panels).
-  Nothing over 300ms.
+- Durations: `duration-100` for a popover, a menu, a picker popup or a dialog entering or leaving,
+  `duration-150` for hover/press/focus feedback, `duration-200` for chips and rows entering or
+  leaving, `duration-300` only for a large expanding panel. Nothing over 300ms.
 - Easing: enter with `ease-out`, exit with `ease-in`, hover with the default. Never linear.
 - Animate only `opacity`, `transform` (translate, scale) and `height` via CSS grid or the `tw-animate-css`
   helpers. Never animate `width`, `margin`, `padding` or `top/left`.
@@ -89,7 +111,7 @@ tell the user".
 - Selected rows: `bg-accent text-accent-foreground`. Highlighted (keyboard cursor) uses the same, never a
   second colour.
 - A remove control inside a chip or a badge hovers with a wash of its own foreground
-  (`hover:bg-current/15`), never the destructive tint: the chip and the status badge read the same.
+  (`hover:bg-current/8`), never the destructive tint: the chip and the status badge read the same.
 - Empty, loading and error states are part of every data widget and are visually consistent: a centred
   `text-sm text-muted-foreground` line with a `size-4` icon, `py-6` inside popovers, `py-10` in tables.
 
@@ -128,8 +150,10 @@ The picker contract. Every picker behaves the same, on the base or on a primitiv
 2. The caret lands in the control's own input on open, or in the popup's search box on a
    summary control. Every focus call passes `preventScroll`.
 3. Escape closes the list and clears the query. On a closed picker it does nothing.
-4. Backspace in an empty query arms the last chip and a second removes it on a multi picker,
-   and clears the value on a single one.
+4. Backspace and `ArrowLeft` in an empty query take the caret to the last chip of a multi
+   picker, and Backspace clears the value of a single one. On a chip, the arrows walk the
+   row, Backspace and Delete remove it and leave the caret on its neighbour, Enter, Space
+   and a printable key give the caret back to the input, and `ArrowDown` opens the list.
 5. `ArrowUp` and `ArrowDown` keep the highlighted row in view, across a load-more page.
 6. A pick keeps a multi picker open and closes a single one.
 7. An outside press closes the list.
@@ -141,6 +165,13 @@ The picker contract. Every picker behaves the same, on the base or on a primitiv
 every picker page, in both frameworks. A picker that keeps a primitive meets the contract all
 the same; its docs page says in one line why it keeps the primitive, and the drive is the proof
 it behaves alike.
+
+A search widget is not built from the command primitive either. `search-control`, one item per
+package, is the query lifecycle — the pause before a query is asked for, the ticket that drops an
+answer the next query replaced, the page and its load-more row, and the highlight across that page
+— and the list it feeds: the error line, the skeletons shaped like the rows they stand in for, the
+empty line, and the rows. A search supplies the read behind it and draws its own rows, and declares
+the base as a registry dependency.
 
 ## 8. Checklist for a PR
 
@@ -176,7 +207,14 @@ resolved from the schema so the value renders by its data type. `fields` only ev
 request; a list of values a widget draws is `details`.
 
 The row itself is one component per framework, `picker-row`, and every widget that lists entity rows
-composes it rather than drawing a second one.
+composes it rather than drawing a second one. A list that can tick a row opens the row on an
+indicator column, whose width is fixed whether or not the row is ticked, so a label sits at one x
+down the whole list.
+
+A popup list fades at whichever edge has more content past it and holds a gutter for its scrollbar,
+and carries a live region under it saying what it is doing: the read in flight, the count it
+answered, the empty line, or what a failed read said. The live region is what a reader hears; the
+state line of rule 5 is what a reader sees, and the two never become one element.
 
 ## 10. Wordmark
 

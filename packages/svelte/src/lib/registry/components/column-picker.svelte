@@ -2,11 +2,16 @@
 	export type ColumnPickerSize = 'sm' | 'md' | 'lg';
 	export type ColumnPickerLayout = 'list' | 'dual';
 
-	/** Rows follow the control ladder of `docs/design-rules.md`. */
-	const ROW: Record<ColumnPickerSize, string> = {
-		sm: 'min-h-8',
-		md: 'min-h-9',
-		lg: 'min-h-10'
+	/** A row's height follows its content; `size` moves its text and its glyphs. */
+	const TEXT: Record<ColumnPickerSize, string> = {
+		sm: 'text-xs',
+		md: 'text-sm',
+		lg: 'text-base'
+	};
+	const GLYPH: Record<ColumnPickerSize, string> = {
+		sm: 'size-3.5',
+		md: 'size-4',
+		lg: 'size-5'
 	};
 	const ACTION: Record<ColumnPickerSize, 'icon-xs' | 'icon-sm' | 'icon'> = {
 		sm: 'icon-xs',
@@ -67,6 +72,7 @@
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
 	import FieldPicker from '$lib/registry/components/field-picker.svelte';
+	import { PICKER_ICON_BUTTON } from '$lib/registry/components/picker-classes.js';
 	import StateLine from '$lib/registry/components/state-line.svelte';
 	import { createSortable } from '$lib/registry/components/sortable.svelte.js';
 
@@ -420,7 +426,7 @@
 				aria-label="Go back one level"
 				title="Back (Left arrow)"
 				onclick={back}
-				class="hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring focus-visible:ring-offset-background shrink-0 rounded-sm p-0.5 opacity-70 outline-none transition-colors duration-150 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-2 motion-safe:active:scale-[0.98]"
+				class={PICKER_ICON_BUTTON}
 			>
 				<ChevronLeft aria-hidden="true" class="size-4" />
 			</button>
@@ -444,7 +450,7 @@
 				aria-label="Back to the root type"
 				title="Reset"
 				onclick={reset}
-				class="hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring focus-visible:ring-offset-background shrink-0 rounded-sm p-0.5 opacity-70 outline-none transition-colors duration-150 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-2 motion-safe:active:scale-[0.98]"
+				class={PICKER_ICON_BUTTON}
 			>
 				<RotateCcw aria-hidden="true" class="size-4" />
 			</button>
@@ -479,23 +485,25 @@
 					<Command.Item
 						value={target}
 						onSelect={() => choosing && descend(choosing, target)}
-						class={cn('gap-2', ROW[size])}
+						class={TEXT[size]}
 					>
-						<Link aria-hidden="true" class="size-4 shrink-0 opacity-70" />
+						<Link aria-hidden="true" class={cn('shrink-0 opacity-70', GLYPH[size])} />
 						<span class="min-w-0 flex-1 truncate">{target}</span>
 						<span class="text-muted-foreground shrink-0 text-xs">entity type</span>
-						<ChevronRight aria-hidden="true" class="size-4 shrink-0 opacity-50" />
+						<ChevronRight aria-hidden="true" class={cn('shrink-0 opacity-50', GLYPH[size])} />
 					</Command.Item>
 				{/each}
 			{:else if fields === null}
 				<div
 					data-slot="column-picker-loading"
-					class="flex flex-col gap-2 p-1"
+					class="flex flex-col"
 					aria-busy="true"
 					aria-label={stateLine('loading', { loadingLabel })}
 				>
 					{#each [0, 1, 2] as row (row)}
-						<Skeleton class="h-8 w-full" />
+						<div class="flex items-center px-2 py-1.5">
+							<Skeleton class="h-5 w-full" />
+						</div>
 					{/each}
 				</div>
 			{:else}
@@ -510,7 +518,7 @@
 						data-slot="column-picker-field"
 						data-path={row.path}
 						data-chosen={value.includes(row.path) ? 'true' : undefined}
-						class={cn('gap-2', ROW[size])}
+						class={TEXT[size]}
 					>
 						<Checkbox
 							checked={value.includes(row.path)}
@@ -519,7 +527,7 @@
 							aria-hidden="true"
 							class="pointer-events-none"
 						/>
-						<Glyph aria-hidden="true" class="size-4 shrink-0 opacity-70" />
+						<Glyph aria-hidden="true" class={cn('shrink-0 opacity-70', GLYPH[size])} />
 						<span class="min-w-0 flex-1 truncate" title={row.displayName}>{row.displayName}</span>
 						{#if row.name !== row.displayName}
 							<span class="text-muted-foreground shrink-0 font-mono text-xs">{row.name}</span>
@@ -536,9 +544,9 @@
 									event.stopPropagation();
 									descendInto(row);
 								}}
-								class="hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring focus-visible:ring-offset-background shrink-0 rounded-sm p-0.5 opacity-70 outline-none transition-colors duration-150 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-2 motion-safe:active:scale-[0.98]"
+								class={PICKER_ICON_BUTTON}
 							>
-								<ChevronRight aria-hidden="true" class="size-4" />
+								<ChevronRight aria-hidden="true" class={GLYPH[size]} />
 							</button>
 						{/if}
 					</Command.Item>
@@ -554,7 +562,7 @@
 	{:else}
 		<ol
 			data-slot="column-picker-list"
-			class="flex max-h-72 min-w-0 flex-col gap-2 overflow-y-auto"
+			class="flex max-h-72 min-w-0 flex-col overflow-y-auto"
 			{@attach sortable.attach}
 		>
 			{#each value as path, index (path)}
@@ -564,10 +572,12 @@
 					data-index={index}
 					data-path={path}
 					class={cn(
-						'bg-background flex min-w-0 items-center gap-2 rounded-md px-2 py-1.5',
+						'bg-background flex min-w-0 items-center gap-2 rounded-md px-2',
+						// The buttons set the row's height; a text-only row keeps the list row inset.
+						readonly ? 'py-1.5' : 'py-0.5',
 						'data-[dragging]:z-10 data-[dragging]:opacity-90 data-[dragging]:shadow-md',
 						'data-[drop-target]:bg-accent/40',
-						ROW[size]
+						TEXT[size]
 					)}
 				>
 					{#if !readonly}
@@ -580,7 +590,7 @@
 							onkeydown={(event) => onRowKeys(event, index)}
 							aria-label={`Reorder ${labelOf(path) ?? path}`}
 							title="Drag to reorder, or press Space and use the arrow keys"
-							class="cursor-grab touch-none active:cursor-grabbing"
+							class="cursor-grab touch-none rounded-sm active:cursor-grabbing"
 						>
 							<GripVertical aria-hidden="true" />
 						</Button>
@@ -588,7 +598,7 @@
 					{#if labelOf(path) === undefined}
 						<Skeleton class="h-4 w-32" />
 					{:else}
-						<span class="min-w-0 flex-1 truncate text-sm" title={path}>{labelOf(path)}</span>
+						<span class="min-w-0 flex-1 truncate" title={path}>{labelOf(path)}</span>
 					{/if}
 					{#if !readonly}
 						<Button
@@ -599,6 +609,7 @@
 							onkeydown={(event) => onRowKeys(event, index)}
 							aria-label={`Remove ${labelOf(path) ?? path}`}
 							title="Remove (Delete)"
+							class="rounded-sm"
 							onclick={() => remove(index)}
 						>
 							<X aria-hidden="true" />

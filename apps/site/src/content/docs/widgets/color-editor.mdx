@@ -4,6 +4,7 @@ description: A color field as a picker swatch and a text input.
 ---
 
 import Demo from '../../../components/Demo.astro';
+import Props from '../../../components/Props.astro';
 
 Edits a color field and emits the decimal triple it stores.
 
@@ -33,20 +34,7 @@ The swatch opens the browser's colour picker and follows what is typed, so a hex
 
 ## Props
 
-| prop | type | default | meaning |
-|---|---|---|---|
-| `value` | `string \| null` | `null` | The stored string. Two-way in Svelte. |
-| `onValueChange` | `(value: string \| null) => void` | — | Called when the input commits. |
-| `field` | `FieldSchema \| null` | `null` | Supplies the accessible label and the required flag. |
-| `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Control height, and the size of the swatch. |
-| `hint` | `boolean` | `true` | Explain the pipeline-step token under the control. |
-| `disabled` | `boolean` | `false` | |
-| `readonly` | `boolean` | `false` | |
-| `invalid` | `boolean` | `false` | Forced invalid state. |
-| `error` | `string \| null` | `null` | A message from the caller, shown in place of the parse error. |
-| `onErrorChange` | `(error: string \| null) => void` | — | Called when the parse error appears or clears. |
-| `placeholder` | `string` | `'255,128,0'` | |
-| `class` / `className` | `string` | — | Merged after the widget's own classes. |
+<Props name="color-editor" />
 
 ## Events
 
@@ -58,11 +46,7 @@ The swatch opens the browser's colour picker and follows what is typed, so a hex
 
 ## Keyboard
 
-| key | does |
-|---|---|
-| `Enter` | Commits. |
-| `Escape` | Restores the stored value. |
-| `Tab` | Commits by leaving the control. |
+<Props name="color-editor" kind="keyboard" />
 
 ## API behaviour
 

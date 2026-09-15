@@ -12,6 +12,7 @@ import type {
 import { editorKindFor, editorNeedsContext, preferencesOf } from '@sg-widgets/core';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { CONTROL_BUTTON } from '@/registry/sg/components/control-classes';
 import { CheckboxEditor } from '@/registry/sg/components/checkbox-editor';
 import { ColorEditor } from '@/registry/sg/components/color-editor';
 import { DateEditor } from '@/registry/sg/components/date-editor';
@@ -524,10 +525,10 @@ export function FieldEditor({
                 ) : null}
                 {control}
                 <div className="flex items-center justify-end gap-2">
-                  <Button data-slot="field-editor-cancel" variant="ghost" size="sm" onClick={cancel}>
+                  <Button data-slot="field-editor-cancel" variant="ghost" size={CONTROL_BUTTON[size]} onClick={cancel}>
                     Cancel
                   </Button>
-                  <Button data-slot="field-editor-save" size="sm" onClick={leave}>
+                  <Button data-slot="field-editor-save" size={CONTROL_BUTTON[size]} onClick={leave}>
                     Save
                   </Button>
                 </div>

@@ -5,7 +5,10 @@
 	export type GlobalSearchSize = ControlSize;
 
 	/** A chip inside a row sits one step down the leaf ladder. */
-	const CHIP: Record<GlobalSearchSize, 'sm' | 'md'> = { sm: 'sm', md: 'sm', lg: 'md' };
+	const CHIP: Record<GlobalSearchSize, 'xs' | 'sm' | 'md'> = { sm: 'xs', md: 'sm', lg: 'md' };
+
+	/** A skeleton stands in for a row, so its leading slot is the row's picture. */
+	const LEAD: Record<GlobalSearchSize, string> = { sm: 'size-6', md: 'size-8', lg: 'size-10' };
 
 	/** Types to search, either bare names or names with a filter each. */
 	export type GlobalSearchTypes = string[] | Record<string, WireCondition[] | null>;
@@ -20,9 +23,6 @@
 	/** Types a stock site searches over. A caller with custom entities passes its own. */
 	export const GLOBAL_SEARCH_TYPES = ['Asset', 'Shot', 'Sequence', 'Task', 'Version', 'HumanUser', 'Project'];
 
-	/** The endpoint's cap and its default (probe 053). */
-	const PAGE_SIZE = 25;
-
 	/** The modifier the hotkey shows, from the platform the page is on. */
 	const META =
 		typeof navigator !== 'undefined' && /Mac|iPhone|iPad/i.test(navigator.platform || navigator.userAgent)
@@ -32,13 +32,17 @@
 	function keyOf(ref: EntityRef): string {
 		return `${ref.type}:${ref.id}`;
 	}
+
+	function hitKey(hit: SearchHit): string {
+		return keyOf(hit.ref);
+	}
 </script>
 
 <script lang="ts">
 	import type { HTMLAttributes } from 'svelte/elements';
 	import type { SgContext } from '@sg-widgets/core';
 	import {
-		errorText,
+		hasMorePage,
 		hydrate,
 		NO_MATCH_LABEL,
 		pathOf,
@@ -46,22 +50,18 @@
 		prependRecent,
 		rowFields,
 		scopeToProject,
-		SEARCH_DEBOUNCE_MS,
-		searchTypeMap,
-		stateLine
+		SEARCH_PAGE_SIZE,
+		searchTypeMap
 	} from '@sg-widgets/core';
 	import type { Snippet } from 'svelte';
-	import { tick } from 'svelte';
 	import Search from '@lucide/svelte/icons/search';
-	import TriangleAlert from '@lucide/svelte/icons/triangle-alert';
 	import * as Command from '$lib/components/ui/command/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Kbd } from '$lib/components/ui/kbd/index.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
-	import SearchSkeleton from '$lib/registry/components/search-skeleton.svelte';
-	import StateLine from '$lib/registry/components/state-line.svelte';
 	import EntityChip from '$lib/registry/components/entity-chip.svelte';
 	import Row from '$lib/registry/components/picker-row.svelte';
+	import SearchControl, { type SearchAnswer, type SearchRequest } from '$lib/registry/components/search-control.svelte';
 
 	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>, HTMLDivElement> & {
 		/** The widget context. Every read goes through it, so widgets on a page share one cache. */
@@ -86,7 +86,8 @@
 		/** Extra fields to request, so a caller's own sub-label or secondary can read them. */
 		fields?: string[];
 		/** Opens the palette on Cmd/Ctrl+K. Ignored on the inline variant. */
-		hotkey?: boolean;
+		/** Opens the palette on Cmd or Ctrl and K; a string names another key. */
+		hotkey?: boolean | string;
 		/** Render as a combobox in the page instead of a dialog behind a trigger. */
 		inline?: boolean;
 		size?: GlobalSearchSize;
@@ -148,16 +149,7 @@
 	const schema = $derived(context.schema);
 
 	let query = $state('');
-	let hits = $state<SearchHit[]>([]);
-	let page = $state(1);
-	let hasMore = $state(false);
-	let loading = $state(false);
-	let failure = $state<string | null>(null);
 	let displayNames = $state<Record<string, string>>({});
-
-	/** An answer whose id is no longer the current one lost the race and is dropped. */
-	let requestId = 0;
-	let timer: ReturnType<typeof setTimeout> | undefined;
 
 	$effect(() => {
 		let live = true;
@@ -175,8 +167,10 @@
 	});
 
 	const order = $derived(Object.keys(searchTypeMap(entityTypes)));
+	const showRecents = $derived(query.trim().length === 0 && recents.length > 0);
 
-	const groups = $derived.by((): GlobalSearchGroup[] => {
+	/** The rows the answer holds, under one heading per type, in the order asked for. */
+	function groupsOf(hits: SearchHit[]): GlobalSearchGroup[] {
 		const byType = new Map<string, SearchHit[]>();
 		for (const hit of hits) {
 			const list = byType.get(hit.ref.type);
@@ -186,83 +180,17 @@
 		return order
 			.filter((type) => byType.has(type))
 			.map((type) => ({ type, label: displayNames[type] ?? type, hits: byType.get(type) as SearchHit[] }));
-	});
-
-	const showRecents = $derived(query.trim().length === 0 && recents.length > 0);
-	/**
-	 * The row the cursor sits on. cmdk moves it to the first row whenever the list
-	 * changes and bits-ui leaves it where it was, so it is set here and the two
-	 * frameworks answer Down and Enter the same way.
-	 */
-	let cursor = $state('');
-	let listEl = $state<HTMLElement | null>(null);
-	const firstRow = $derived(
-		showRecents
-			? recents[0]
-				? `recent:${recents[0].type}:${recents[0].id}`
-				: ''
-			: hits[0]
-				? `${hits[0].ref.type}:${hits[0].ref.id}`
-				: ''
-	);
-	$effect(() => {
-		cursor = firstRow;
-	});
-	const empty = $derived(!loading && failure === null && groups.length === 0 && query.trim().length > 0);
-
-	async function run(text: string, nextPage: number): Promise<void> {
-		const id = (requestId += 1);
-		loading = true;
-		failure = null;
-		try {
-			let types = searchTypeMap(entityTypes);
-			if (projectId !== null && projectId !== undefined) types = await scopeToProject(schema, types, projectId);
-			const rows = await context.client.textSearch(text, types, { size: PAGE_SIZE, number: nextPage });
-			const found = await hydrate(context.client, rows, {
-				fields: rowFields({ thumbnail, labelField, subLabelField, secondaryField, showCode, fields }),
-				labelField
-			});
-			if (id !== requestId) return;
-			hits = nextPage === 1 ? found : [...hits, ...found];
-			page = nextPage;
-			// A page lands under the row that asked for it: the highlight moves to its first
-			// row, so the list stays where the reader was instead of returning to the top.
-			if (nextPage > 1 && found[0]) {
-				// The rows must be in the list, and registered with the primitive, before it
-				// takes one of them as its value; registration runs after the flush.
-				await tick();
-				await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-				cursor = `${found[0].ref.type}:${found[0].ref.id}`;
-				// The primitive scrolls for the keys, not for a value written to it.
-				await tick();
-				listEl?.querySelector('[data-selected]')?.scrollIntoView({ block: 'nearest' });
-			}
-			// The answer carries no `links`, so a full page is the only sign of another one (probe 006).
-			hasMore = rows.length === PAGE_SIZE;
-		} catch (error) {
-			if (id !== requestId) return;
-			failure = errorText(error);
-			hits = [];
-			hasMore = false;
-		} finally {
-			if (id === requestId) loading = false;
-		}
 	}
 
-	function setQuery(text: string): void {
-		query = text;
-		clearTimeout(timer);
-		// Bumping the id here is the cancellation: a request already in flight for the
-		// text just replaced can no longer write its answer.
-		requestId += 1;
-		hits = [];
-		hasMore = false;
-		if (text.trim().length === 0) {
-			loading = false;
-			return;
-		}
-		loading = true;
-		timer = setTimeout(() => void run(text, 1), SEARCH_DEBOUNCE_MS);
+	async function load({ query: text, page }: SearchRequest): Promise<SearchAnswer<SearchHit>> {
+		let types = searchTypeMap(entityTypes);
+		if (projectId !== null && projectId !== undefined) types = await scopeToProject(schema, types, projectId);
+		const found = await context.client.textSearch(text, types, { size: SEARCH_PAGE_SIZE, number: page });
+		const hits = await hydrate(context.client, found, {
+			fields: rowFields({ thumbnail, labelField, subLabelField, secondaryField, showCode, fields }),
+			labelField
+		});
+		return { items: hits, hasMore: hasMorePage(found.length, SEARCH_PAGE_SIZE) };
 	}
 
 	function setOpen(next: boolean): void {
@@ -275,12 +203,14 @@
 		onRecentsChange?.(prependRecent(recents, entity, recentLimit, keyOf));
 		onSelect?.(entity);
 		if (!inline) setOpen(false);
-		setQuery('');
+		query = '';
 	}
+
+	const hotkeyKey = $derived(typeof hotkey === 'string' ? hotkey : 'k');
 
 	function onKeydown(event: KeyboardEvent): void {
 		if (!hotkey || inline) return;
-		if (event.key.toLowerCase() !== 'k' || !(event.metaKey || event.ctrlKey)) return;
+		if (event.key.toLowerCase() !== hotkeyKey.toLowerCase() || !(event.metaKey || event.ctrlKey)) return;
 		event.preventDefault();
 		setOpen(!open);
 	}
@@ -335,62 +265,53 @@
 	/>
 {/snippet}
 
-{#snippet body()}
-	<Command.Input value={query} {placeholder} oninput={(e) => setQuery(e.currentTarget.value)} />
-	<Command.List bind:ref={listEl} data-sg-search-list>
-		{#if failure !== null}
-			<StateLine
-				state="error"
-				slotName="search-error"
-				icon={TriangleAlert}
-				label={stateLine('error', { errorLabel }, failure)}
-			/>
-		{:else if loading && hits.length === 0}
-			<SearchSkeleton slotName="search-loading" label={stateLine('loading', { loadingLabel })} />
-		{:else if empty}
-			<StateLine state="empty" slotName="search-empty" icon={Search} label={emptyLabel} />
-		{:else if showRecents}
-			<Command.Group heading="Recent">
-				{#each recents as entity (`${entity.type}:${entity.id}`)}
+{#snippet rows({ items }: { items: SearchHit[]; query: string; loading: boolean })}
+	{#if showRecents}
+		<Command.Group heading="Recent">
+			{#each recents as entity (keyOf(entity))}
+				<Command.Item value={`recent:${keyOf(entity)}`} onSelect={() => choose(entity)}>
+					<EntityChip {entity} size={CHIP[size]} {context} />
+					<span class="text-muted-foreground truncate text-xs">
+						{displayNames[entity.type] ?? entity.type}
+					</span>
+				</Command.Item>
+			{/each}
+		</Command.Group>
+	{:else}
+		{#each groupsOf(items) as group (group.type)}
+			<Command.Group heading={group.label}>
+				{#each group.hits as hit (hitKey(hit))}
 					<Command.Item
-						value={`recent:${entity.type}:${entity.id}`}
-						onSelect={() => choose(entity)}
+						value={hitKey(hit)}
+						data-entity-type={hit.ref.type}
+						data-entity-id={hit.ref.id}
+						onSelect={() => choose(hit.ref)}
 					>
-						<EntityChip {entity} size={CHIP[size]} {context} />
-						<span class="text-muted-foreground truncate text-xs">
-							{displayNames[entity.type] ?? entity.type}
-						</span>
+						{@render row(hit)}
 					</Command.Item>
 				{/each}
 			</Command.Group>
-		{:else}
-			{#each groups as group (group.type)}
-				<Command.Group heading={group.label}>
-					{#each group.hits as hit (`${hit.ref.type}:${hit.ref.id}`)}
-						<Command.Item
-							value={`${hit.ref.type}:${hit.ref.id}`}
-							data-entity-type={hit.ref.type}
-							data-entity-id={hit.ref.id}
-							onSelect={() => choose(hit.ref)}
-						>
-							{@render row(hit)}
-						</Command.Item>
-					{/each}
-				</Command.Group>
-			{/each}
-			{#if hasMore}
-				<Command.Item
-					value="load-more"
-					data-slot="search-load-more"
-					onSelect={() => void run(query, page + 1)}
-				>
-					<span class="text-muted-foreground flex-1 text-center text-sm">
-						{loading ? 'Loading…' : 'Load more'}
-					</span>
-				</Command.Item>
-			{/if}
-		{/if}
-	</Command.List>
+		{/each}
+	{/if}
+{/snippet}
+
+{#snippet control()}
+	<SearchControl
+		{load}
+		bind:query
+		shell={inline ? 'command' : 'dialog'}
+		commandClass="border-border rounded-lg border"
+		bind:open={() => open, setOpen}
+		title="Search"
+		description="Search across the site by name."
+		{placeholder}
+		{emptyLabel}
+		{loadingLabel}
+		{errorLabel}
+		skeletonLead={cn('shrink-0', LEAD[size])}
+		paging
+		{rows}
+	/>
 {/snippet}
 
 {#if inline}
@@ -401,10 +322,7 @@
 		class={cn('w-full', className)}
 		{...rest}
 	>
-		<!-- Server-side matching only, so the list never filters what came back. -->
-		<Command.Root shouldFilter={false} bind:value={cursor} class="border-border rounded-lg border">
-			{@render body()}
-		</Command.Root>
+		{@render control()}
 	</div>
 {:else}
 	<div
@@ -428,17 +346,9 @@
 					<Search aria-hidden="true" class={cn('opacity-70', CONTROL_GLYPH[size])} />
 					<span class="truncate">{label}</span>
 				</span>
-				{#if hotkey}<Kbd>{META}K</Kbd>{/if}
+				{#if hotkey}<Kbd>{META}{hotkeyKey.toUpperCase()}</Kbd>{/if}
 			</Button>
 		{/if}
-		<Command.Dialog
-			bind:open={() => open, setOpen}
-			bind:value={cursor}
-			shouldFilter={false}
-			title="Search"
-			description="Search across the site by name."
-		>
-			{@render body()}
-		</Command.Dialog>
+		{@render control()}
 	</div>
 {/if}

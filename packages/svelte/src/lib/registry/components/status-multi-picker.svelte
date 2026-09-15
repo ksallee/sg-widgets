@@ -266,6 +266,7 @@
 		onClear={() => setSelected([])}
 		loading={query.loading}
 		error={query.error}
+		count={shown.length}
 		empty={shown.length === 0}
 		{emptyLabel}
 		{loadingLabel}
@@ -281,7 +282,7 @@
 				data-chip=""
 				data-armed={armed ? 'true' : undefined}
 				{hidden}
-				class={cn('flex min-w-0 shrink-0 items-center', armed && cn(PICKER_ARMED, 'rounded-sm'))}
+				class={cn('flex min-w-0 shrink-0 items-center', armed && cn(PICKER_ARMED, 'rounded-md'))}
 			>
 				<StatusBadge
 					{code}
@@ -309,9 +310,6 @@
 					label={option.label}
 					class={PICKER_ROW}
 				>
-					<span data-slot="status-multi-picker-check" class="flex h-5 shrink-0 items-center">
-						<Checkbox checked={chosen} tabindex={-1} aria-hidden="true" class="pointer-events-none" />
-					</span>
 					<Row
 						row={rowOf(option)}
 						query={search}
@@ -319,7 +317,11 @@
 						secondary={secondaryOf(option)}
 						{size}
 						{context}
+						indicatorSlot="status-multi-picker-check"
 					>
+						{#snippet indicator()}
+							<Checkbox checked={chosen} tabindex={-1} aria-hidden="true" class="pointer-events-none" />
+						{/snippet}
 						{#snippet glyph()}
 							<StatusBadge
 								code={option.code}

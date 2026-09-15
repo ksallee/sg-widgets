@@ -170,6 +170,74 @@ export function mergeFilters(...parts: Array<FilterNode | null | undefined>): Fi
 }
 
 /* -------------------------------------------------------------------------- */
+/* people and projects                                                        */
+/* -------------------------------------------------------------------------- */
+
+/** What a caller narrows a person search with. */
+export interface UserPickerOptions {
+  /** Search script accounts alongside people. */
+  includeApiUsers?: boolean;
+  /** Offer people whose status is `dis`. */
+  includeInactive?: boolean;
+}
+
+/** Login and email are searched and shown, so they have to be read (entity_types/HumanUser). */
+export const USER_PICKER_FIELDS = ['login', 'email', 'sg_status_list'];
+
+/** People and script accounts, in that order. */
+export function userPickerTypes(includeApiUsers: boolean): string[] {
+  return includeApiUsers ? ['HumanUser', 'ApiUser'] : ['HumanUser'];
+}
+
+/**
+ * The active condition, unless inactive people are wanted. `sg_status_list` on
+ * HumanUser is two codes, `act` and `dis`, and `act` is the default
+ * (entity_types/HumanUser). ApiUser has no status field, so a picker drops the
+ * condition on that type rather than sending a filter that would 400.
+ */
+export function userPickerFilters(
+  includeInactive: boolean,
+  extra: FilterGroup | WireGroup | null | undefined,
+): FilterGroup {
+  return mergeFilters(asFilterGroup(extra), includeInactive ? null : condition('sg_status_list', 'is', 'act'));
+}
+
+/** `API user` for a script account, the email for a person, nothing without one. */
+export function userPickerSubLabel(row: PickerRow): string {
+  if (row.type === 'ApiUser') return 'API user';
+  const email = row.values['email'];
+  return typeof email === 'string' ? email : '';
+}
+
+/** The caller's own search fields, on top of the ones a person is searched by. */
+export function userPickerSearchFields(
+  extra: SearchFieldSpec[] | ((query: string) => SearchFieldSpec[]),
+): (query: string) => SearchFieldSpec[] {
+  return (query: string) => [...userSearchFields(query), ...(typeof extra === 'function' ? extra(query) : extra)];
+}
+
+/** What a caller narrows a project search with. */
+export interface ProjectPickerOptions {
+  /** Offer projects whose `archived` checkbox is set. */
+  includeArchived?: boolean;
+}
+
+/** Project's status field is `sg_status`, a plain list, not `sg_status_list`. */
+export const PROJECT_PICKER_FIELDS = ['sg_status', 'archived'];
+
+/**
+ * Archived projects are hidden unless asked for. `sg_status` is not a liveness
+ * filter and is null on most projects; `archived`, `is_template` and `is_demo`
+ * are the discriminators (018_project_listing).
+ */
+export function projectPickerFilters(
+  includeArchived: boolean,
+  extra: FilterGroup | WireGroup | null | undefined,
+): FilterGroup {
+  return mergeFilters(asFilterGroup(extra), includeArchived ? null : condition('archived', 'is', false));
+}
+
+/* -------------------------------------------------------------------------- */
 /* highlighting                                                               */
 /* -------------------------------------------------------------------------- */
 

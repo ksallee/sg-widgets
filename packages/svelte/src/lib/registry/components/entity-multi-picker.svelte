@@ -235,7 +235,6 @@
 	// whatever the query, and even when a search returns nothing at all.
 	const options = $derived(withSelectedPinned(snap.rows, value, search.known));
 	const polymorphic = $derived(entityTypes.length > 1);
-	const hasSubLabel = $derived(Boolean(subLabelField || subLabel));
 	const interactive = $derived(!disabled && !readonly);
 
 	/** The caller's own sub-label. Absent, the row reads `subLabelField` itself. */
@@ -339,6 +338,7 @@
 		onClear={() => emit([])}
 		loading={snap.loading && options.length === 0}
 		error={snap.error?.message ?? null}
+		count={options.length}
 		empty={options.length === 0}
 		{emptyLabel}
 		{loadingLabel}
@@ -374,11 +374,8 @@
 					data-selected-entity={chosen ? 'true' : undefined}
 					value={entityKey(row)}
 					label={row.name}
-					class={cn(PICKER_ROW, hasSubLabel && 'items-start')}
+					class={PICKER_ROW}
 				>
-					<span data-slot="entity-picker-check" class="flex h-5 shrink-0 items-center">
-						<Checkbox checked={chosen} tabindex={-1} aria-hidden="true" class="pointer-events-none" />
-					</span>
 					<Row
 						{row}
 						query={snap.query}
@@ -392,7 +389,12 @@
 						{size}
 						{context}
 						siteUrl={site}
-					/>
+						indicatorSlot="entity-picker-check"
+					>
+						{#snippet indicator()}
+							<Checkbox checked={chosen} tabindex={-1} aria-hidden="true" class="pointer-events-none" />
+						{/snippet}
+					</Row>
 				</Combobox.Item>
 			{/each}
 		{/snippet}

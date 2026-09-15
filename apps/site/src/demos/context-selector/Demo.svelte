@@ -10,24 +10,39 @@
 	/* The mock's first person, as the app would pass the signed-in user. */
 	const currentUser: EntityRef = { type: 'HumanUser', id: 20, name: 'Ada Lovelace' };
 
-	let workContext = $state<WorkContext>({
-		project: { type: 'Project', id: 70, name: 'Blue Moon Rising' },
-		entity: { type: 'Shot', id: 862, name: 'sh010_0010' },
-		task: { type: 'Task', id: 5700, name: 'Comp' }
-	});
+	/*
+	 * On a real site the context starts on the project the Connect panel picked, and
+	 * the widget's own reads fill the rest. The fixtures below are the mock's rows.
+	 */
+	const start: WorkContext = context.live
+		? {
+				project: { type: 'Project', id: context.projectId, name: context.projectName },
+				entity: null,
+				task: null
+			}
+		: {
+				project: { type: 'Project', id: 70, name: 'Blue Moon Rising' },
+				entity: { type: 'Shot', id: 862, name: 'sh010_0010' },
+				task: { type: 'Task', id: 5700, name: 'Comp' }
+			};
 
-	let recents = $state<WorkContext[]>([
-		{
-			project: { type: 'Project', id: 70, name: 'Blue Moon Rising' },
-			entity: { type: 'Asset', id: 1226, name: 'charAda' },
-			task: { type: 'Task', id: 5730, name: 'Model' }
-		},
-		{
-			project: { type: 'Project', id: 71, name: 'Harbour Lights' },
-			entity: { type: 'Shot', id: 889, name: 'hb010_0010' },
-			task: null
-		}
-	]);
+	const startRecents: WorkContext[] = context.live
+		? []
+		: [
+				{
+					project: { type: 'Project', id: 70, name: 'Blue Moon Rising' },
+					entity: { type: 'Asset', id: 1226, name: 'charAda' },
+					task: { type: 'Task', id: 5730, name: 'Model' }
+				},
+				{
+					project: { type: 'Project', id: 71, name: 'Harbour Lights' },
+					entity: { type: 'Shot', id: 889, name: 'hb010_0010' },
+					task: null
+				}
+			];
+
+	let workContext = $state<WorkContext>(start);
+	let recents = $state<WorkContext[]>(startRecents);
 </script>
 
 <div class="flex flex-col gap-4">

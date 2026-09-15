@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import type { FieldSchema, StatusOption } from '@sg-widgets/core';
 import { matchesTokens, NO_ROWS_LABEL, statusLabel, usableStatuses } from '@sg-widgets/core';
 import { Combobox as ComboboxPrimitive } from '@base-ui/react';
+import { Check } from 'lucide-react';
 import { PICKER_ROW } from '@/registry/sg/components/picker-classes';
 import { PickerControl } from '@/registry/sg/components/picker-control';
 import { PickerRow } from '@/registry/sg/components/picker-row';
@@ -179,6 +180,8 @@ export function ListPicker({
         className={PICKER_ROW}
       >
         <PickerRow
+          indicator={code === value ? <Check aria-hidden="true" className="size-4" /> : null}
+          indicatorAt="end"
           row={{ type: LIST_ROW_TYPE, id: 0, name: option.label, values: {} }}
           query={searchable ? search : ''}
           thumbnail={mark ? 'image' : false}

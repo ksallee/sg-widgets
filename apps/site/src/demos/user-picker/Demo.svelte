@@ -1,18 +1,16 @@
 <script lang="ts">
 	import type { EntityRef } from '@sg-widgets/core';
 	import UserPicker from '$lib/registry/components/user-picker.svelte';
-	import UserMultiPicker from '$lib/registry/components/user-multi-picker.svelte';
 	import { getDemoContext } from '../_shared/client';
 
 	const context = getDemoContext();
 
 	let one = $state<EntityRef | null>(null);
-	let people = $state<EntityRef[]>([]);
 	let byAddress = $state<EntityRef | null>(null);
 	let peopleOnly = $state<EntityRef | null>(null);
 	let withInactive = $state<EntityRef | null>(null);
 	// A bare reference: type and id, no name. Resolved on mount.
-	let bare = $state<EntityRef[]>([{ type: 'HumanUser', id: 22 }]);
+	let bare = $state<EntityRef | null>({ type: 'HumanUser', id: 22 });
 	const preset: EntityRef = { type: 'HumanUser', id: 20, name: 'Ada Lovelace' };
 	const SIZES = [
 		{ size: 'sm', caption: 'Small' },
@@ -34,14 +32,6 @@
 		<div class={field}>
 			<span class={caption}>One person or script, clearable</span>
 			<UserPicker {context} bind:value={one} clearable />
-		</div>
-	</section>
-
-	<section class={group} data-demo-case="multi">
-		<h4 class={label}>Several, with checkbox rows</h4>
-		<div class={field}>
-			<span class={caption}>Several people at once</span>
-			<UserMultiPicker {context} bind:value={people} clearable />
 		</div>
 	</section>
 
@@ -77,7 +67,7 @@
 		<h4 class={label}>Bare reference, resolved on mount</h4>
 		<div class={field}>
 			<span class={caption}>Type and id in, name resolved on mount</span>
-			<UserMultiPicker {context} bind:value={bare} clearable />
+			<UserPicker {context} bind:value={bare} clearable />
 		</div>
 	</section>
 

@@ -2,18 +2,21 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { PointerEvent as ReactPointerEvent, ReactNode, RefObject } from 'react';
 import type { ChipRow, PickerSummary } from '@sg-widgets/core';
 import {
-  holdsArmed,
+  focusChip,
+  listStatus,
   NO_MATCH_LABEL,
   pickerKeyIntent,
-  scrollHighlightedIntoView,
   stateLine,
   summariseSelection,
+  watchHighlight,
+  watchOverflow,
 } from '@sg-widgets/core';
 import { Combobox as ComboboxPrimitive } from '@base-ui/react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ChevronDown, Search, SearchX, TriangleAlert, X } from 'lucide-react';
 import {
   CHIP_GAP,
+  LIST_STATUS,
   OVERFLOW_RESERVE,
   PICKER_ANCHORED_POPUP,
   PICKER_BOX,
@@ -124,7 +127,7 @@ export interface PickerControlProps {
   items: string[];
   /** One row of the list. */
   renderItem: (key: string) => ReactNode;
-  /** One chip: its index, whether Backspace has armed it, whether the row hides it. */
+  /** One chip: its index, whether the caret is on it, whether the row hides it. */
   renderChip?: (index: number, armed: boolean, hidden: boolean) => ReactNode;
   /** What the control shows for the selection. */
   summary?: PickerSummary;
@@ -242,10 +245,12 @@ export function PickerControl({
   controlProps,
 }: PickerControlProps) {
   const controlRef = useRef<HTMLDivElement | null>(null);
-  const listRef = useRef<HTMLDivElement | null>(null);
+  const [listEl, setListEl] = useState<HTMLDivElement | null>(null);
+  // The list writes the overflow variables the fade reads, which are Base UI's own.
+  useEffect(() => watchOverflow(listEl), [listEl]);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const chipsRef = useRef<HTMLSpanElement | null>(null);
-  /** The chip a Backspace has highlighted. The next one removes it. */
+  /** The chip holding the caret. Backspace and Delete take it. */
   const [armedChip, setArmedChip] = useState<number | null>(null);
   /** A press on the load-more row is not a selection, and must not close the popup. */
   const pagingRef = useRef(false);
@@ -258,20 +263,33 @@ export function PickerControl({
   const row = useChipRow(fitted, rowKey ?? `${size}|${summary}|${labels.join(', ')}`, controlRef, chipsRef);
   const plan = summariseSelection(labels, (label) => label, { summary, max, fit: row.fit });
   const counted = summary === 'count' && chipRow && multiple;
-  // A chip removed from under the highlight takes it with it.
+  // A chip removed from under the caret takes it with it.
   const armed = armedChip !== null && armedChip < labels.length ? armedChip : null;
-  // A chip removed from under the highlight takes it with it; a chip added later must
+  // A chip removed from under the caret takes it with it; a chip added later must
   // not inherit an index that outlived its chip.
   useEffect(() => {
     if (armedChip !== null && armedChip >= labels.length) setArmedChip(null);
   }, [armedChip, labels.length]);
 
+  // The caret sits on one chip of the row at a time, and the row keeps it out of the
+  // tab order, so Tab still leaves the control. Before paint, so a removed chip hands
+  // the caret straight to its neighbour.
+  useLayoutEffect(() => {
+    focusChip(chipsRef.current, armed);
+  }, [armed, labels.length]);
+
+  /** The caret leaves the chips when it leaves the widget, and not before. */
+  function releaseChips(): void {
+    setTimeout(() => {
+      const active = document.activeElement;
+      if (active === inputRef.current || controlRef.current?.contains(active)) return;
+      setArmedChip(null);
+    }, 0);
+  }
+
   function setOpen(next: boolean): void {
     const wanted = interactive ? next : false;
-    if (!wanted) {
-      setArmedChip(null);
-      onQueryChange('');
-    }
+    if (!wanted) onQueryChange('');
     onOpenChange(wanted);
   }
 
@@ -282,6 +300,7 @@ export function PickerControl({
     // The chip's remove control, the clear control and the chevron own their own press.
     if (target?.closest('button')) return;
     const onCaret = target === inputRef.current;
+    setArmedChip(null);
     if (inline && !onCaret) {
       event.preventDefault();
       inputRef.current?.focus({ preventScroll: true });
@@ -298,46 +317,71 @@ export function PickerControl({
 
   // A load-more page appends rows under the highlighted one, and a new query
   // replaces them all; either way the list follows the highlight.
-  useEffect(() => {
-    if (!open) return;
-    scrollHighlightedIntoView(listRef.current);
-  }, [open, items.length]);
+  useEffect(() => watchHighlight(listEl), [listEl, items.length]);
+
+  /** The caret back in the input, and the chip row released. */
+  function toInput(): void {
+    setArmedChip(null);
+    inputRef.current?.focus({ preventScroll: true });
+  }
 
   /**
-   * Backspace, Escape and the arrows. The primitive's own handler runs after this
-   * one, so a key this picker owns is prevented rather than shared.
+   * The chip keys, Escape and the arrows, from the input or from a chip. The primitive's
+   * own handler runs after this one, so a key this picker owns is prevented rather than
+   * shared.
    */
-  function onKey(event: React.KeyboardEvent<HTMLInputElement>): void {
+  function onKey(event: React.KeyboardEvent): void {
+    // A link or a remove control inside a chip owns its own keys.
+    if ((event.target as HTMLElement | null)?.closest('a,button')) return;
     const intent = pickerKeyIntent(event.key, {
       open,
       query,
       count: labels.length,
-      armed,
+      focused: armed,
       editable: interactive,
       multiple,
     });
-    if (!holdsArmed(event.key)) setArmedChip(null);
+    /** The primitive reads a chip key as its own and would close the popup over it. */
+    const keepKey = (): void => (event as { preventBaseUIHandler?: () => void }).preventBaseUIHandler?.();
+    if (intent.kind === 'focus' || intent.kind === 'remove' || intent.kind === 'type' || intent.kind === 'open') {
+      keepKey();
+    }
     switch (intent.kind) {
       case 'dismiss':
+        if (armed !== null) toInput();
         setOpen(false);
         return;
-      case 'arm':
+      case 'focus':
         event.preventDefault();
-        setArmedChip(intent.index);
+        if (intent.index === null) toInput();
+        else setArmedChip(intent.index);
         return;
       case 'remove':
         event.preventDefault();
+        // The caret moves before the chip goes: focus leaving a removed chip would read
+        // to the primitive as leaving the picker, and it would close the popup.
+        if (intent.then === null) inputRef.current?.focus({ preventScroll: true });
+        else focusChip(chipsRef.current, intent.then);
+        setArmedChip(intent.then);
         onRemoveAt?.(intent.index);
         return;
+      case 'type':
+        event.preventDefault();
+        toInput();
+        onQueryChange(query + intent.key);
+        if (interactive && !open) setOpen(true);
+        return;
+      case 'open':
+        event.preventDefault();
+        toInput();
+        setOpen(true);
+        return;
       case 'follow':
-        // The highlight moves after this handler, so the list follows it a frame later.
-        requestAnimationFrame(() => scrollHighlightedIntoView(listRef.current));
+        // The key belongs to the list, and the list's own watcher follows the highlight.
         return;
       default:
         // A closed picker leaves Escape alone: the primitive would clear the value.
-        if (event.key === 'Escape') {
-          (event as { preventBaseUIHandler?: () => void }).preventBaseUIHandler?.();
-        }
+        if (event.key === 'Escape') keepKey();
     }
   }
 
@@ -348,6 +392,11 @@ export function PickerControl({
       return;
     }
     onSelect(next);
+    // A press on a row leaves the caret in the list; the next key belongs to the
+    // control, so the input takes it back and the chip row is released. A pick made
+    // with a chip armed would otherwise keep that chip, and the next Backspace would
+    // take it rather than the one just added.
+    toInput();
   }
 
   function closing(next: boolean, details: { reason?: string; event?: unknown; cancel: () => void }): void {
@@ -357,6 +406,15 @@ export function PickerControl({
       pagingRef.current = false;
       details.cancel();
       return;
+    }
+    // The caret moving between the chips and the input stays inside the picker; the
+    // primitive reads it as focus leaving, since the chips are drawn here.
+    if (!next && details.reason === 'focus-out') {
+      const to = ((details.event as FocusEvent | undefined)?.relatedTarget ?? document.activeElement) as Node | null;
+      if (to && controlRef.current?.contains(to)) {
+        details.cancel();
+        return;
+      }
     }
     // A summary control holds no input, so the click that opened it lands outside the
     // popup a moment later; a press on the control is never a dismissal.
@@ -388,6 +446,7 @@ export function PickerControl({
       ref={controlRef}
       data-slot={`${slot}-control`}
       onPointerDown={openFromControl}
+      onBlur={releaseChips}
       role="group"
       aria-disabled={inert ? 'true' : undefined}
       data-multiple={multiple ? 'true' : undefined}
@@ -418,6 +477,7 @@ export function PickerControl({
             <span
               ref={chipsRef}
               data-slot={chipsSlot ?? `${slot}-chips`}
+              onKeyDown={onKey}
               className={cn(
                 'flex min-w-0 items-center gap-1.5 [&>[hidden]]:hidden',
                 plan.oneLine ? 'flex-nowrap overflow-hidden' : 'flex-wrap',
@@ -467,12 +527,14 @@ export function PickerControl({
     note = (
       <div
         data-slot={`${slot}-loading`}
-        className="flex flex-col gap-2"
+        className="flex flex-col"
         aria-busy="true"
         aria-label={loadingText}
       >
         {[0, 1, 2].map((one) => (
-          <Skeleton key={one} className="h-8 w-full" />
+          <div key={one} className="flex items-center px-2 py-1.5">
+            <Skeleton className="h-5 w-full" />
+          </div>
         ))}
       </div>
     );
@@ -534,7 +596,19 @@ export function PickerControl({
               className="sr-only"
             />
           )}
-          <ComboboxPrimitive.List ref={listRef} data-slot={`${slot}-list`} className={PICKER_LIST}>
+          <div
+            data-slot={`${slot}-status`}
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+            className={LIST_STATUS}
+          >
+            {listStatus(
+              { loading, count: items.length, error, asked: true },
+              { emptyLabel, loadingLabel, errorLabel },
+            )}
+          </div>
+          <ComboboxPrimitive.List ref={setListEl} data-slot={`${slot}-list`} className={PICKER_LIST}>
             {note ?? ((key: string) => drawRow(key))}
           </ComboboxPrimitive.List>
         </ComboboxPrimitive.Popup>

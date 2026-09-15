@@ -6,6 +6,8 @@
  * `docs/design-rules.md`; nothing here is a colour of its own.
  */
 
+import { CHIP_BOX, CHIP_CROSS, CHIP_PAD, CHIP_SPACING, type ChipSize } from '@/registry/sg/components/leaf-classes';
+
 /** The control ladder: the three heights of the design rules. */
 export type PickerSize = 'sm' | 'md' | 'lg';
 
@@ -53,7 +55,7 @@ export const PICKER_TRAILING: Record<PickerSize, string> = {
 export const PICKER_GLYPH: Record<PickerSize, string> = { sm: 'size-4', md: 'size-4', lg: 'size-5' };
 
 /** A chip or a badge sits inside the control, so it takes the step below it. */
-export const PICKER_CHIP: Record<PickerSize, 'sm' | 'md'> = { sm: 'sm', md: 'sm', lg: 'md' };
+export const PICKER_CHIP: Record<PickerSize, ChipSize> = { sm: 'xs', md: 'sm', lg: 'md' };
 
 /** The bordered field the chips and the query input sit in. */
 export const PICKER_CONTROL =
@@ -90,28 +92,74 @@ export const PICKER_POPUP =
 export const PICKER_ANCHORED_POPUP =
   'bg-popover text-popover-foreground data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 ring-foreground/10 z-50 w-(--anchor-width) min-w-56 origin-(--transform-origin) overflow-hidden rounded-lg shadow-md ring-1 outline-hidden duration-100';
 
-/** The scrolling list inside the popup. */
+/**
+ * The fade on a scrolling list's edges, and the gutter its scrollbar sits in.
+ *
+ * An edge is faded by the smaller of the fade's own width and the room past it, so an
+ * edge with nothing beyond it is not faded at all. The two distances are the variables
+ * core's `watchOverflow` writes, which are Base UI's own, so one class string serves
+ * both registries.
+ */
+export const LIST_FADE =
+  '[scrollbar-gutter:stable] [--fade-size:1.5rem] mask-t-from-[calc(100%-min(var(--fade-size),var(--scroll-area-overflow-y-start,0px)))] mask-b-from-[calc(100%-min(var(--fade-size),var(--scroll-area-overflow-y-end,0px)))]';
+
+/** The scrolling list inside the popup, fading at whichever edge has more past it. */
 export const PICKER_LIST =
-  'no-scrollbar max-h-72 scroll-py-1 overflow-x-hidden overflow-y-auto p-1 outline-none';
+  `no-scrollbar max-h-72 scroll-py-1 overflow-x-hidden overflow-y-auto p-1 outline-none ${LIST_FADE}`;
 
-/** One row. Highlight and selection share one colour, per `docs/design-rules.md`. */
+/**
+ * The list's live region. It says what the visible block says and nothing more: the
+ * state line stays the thing a reader sees, this row is the thing a reader hears.
+ */
+export const LIST_STATUS = 'sr-only';
+
+/**
+ * The row's indicator column, drawn whether or not the row is ticked, so a label sits
+ * at one x down the whole list. Beside a picture it takes the picture's height, so a
+ * checkbox centres on it.
+ */
+export const PICKER_ROW_INDICATOR = 'flex h-5 w-4 shrink-0 items-center justify-center';
+
+/**
+ * One row. Highlight and selection share one colour, per `docs/design-rules.md`. A row with a
+ * sub-label stays centred and takes `py-1`, so its two lines stand as tall as a picture.
+ */
 export const PICKER_ROW =
-  'data-highlighted:bg-accent data-highlighted:text-accent-foreground relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0';
+  'data-highlighted:bg-accent data-highlighted:text-accent-foreground relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 has-[[data-slot=picker-row-sub-label]]:py-1 text-sm outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0';
 
-/** The clear control, shared by every picker in this registry. */
+/**
+ * The clear control and the chevron, shared by every picker in this registry.
+ *
+ * A coarse pointer gets a 44px box centred on the glyph, drawn as a pseudo-element so
+ * the control keeps its own size and nothing around it moves.
+ */
 export const PICKER_ICON_BUTTON =
-  'hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring focus-visible:ring-offset-background pointer-events-auto shrink-0 rounded-sm p-0.5 opacity-70 outline-none transition-colors duration-150 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-2 motion-safe:active:scale-[0.98]';
+  "hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring focus-visible:ring-offset-background pointer-events-auto shrink-0 rounded-sm p-0.5 opacity-70 outline-none transition-colors duration-150 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-2 motion-safe:active:scale-[0.98] pointer-coarse:relative pointer-coarse:before:absolute pointer-coarse:before:top-1/2 pointer-coarse:before:left-1/2 pointer-coarse:before:size-11 pointer-coarse:before:-translate-x-1/2 pointer-coarse:before:-translate-y-1/2 pointer-coarse:before:content-['']";
 
-/** The chip a Backspace has armed: the focus ring, inset so the chip row's clipping and the control's edge never cut it. */
-export const PICKER_ARMED = 'ring-ring ring-2 ring-inset';
+/**
+ * The chip the caret is on: the focus ring, drawn as an overlay so a chip's own fill never
+ * covers it, inset so the chip row's clipping and the control's edge never cut it, and the
+ * browser's outline off, since the ring is the focus mark.
+ */
+export const PICKER_ARMED =
+  "relative outline-none after:pointer-events-none after:absolute after:inset-0 after:rounded-[inherit] after:ring-2 after:ring-ring after:ring-inset after:content-['']";
 
-/** A chosen code in the control. A code is not a row, so it has no thumbnail. */
+/**
+ * A chosen code in the control. It wears the entity chip's surface, border and text, so
+ * the two read as one chip; a code is not a row, so it has no thumbnail.
+ */
 export const PICKER_TEXT_CHIP =
-  'bg-muted text-foreground flex min-w-0 shrink-0 items-center gap-1.5 rounded-md px-1.5';
+  'bg-secondary text-secondary-foreground flex min-w-0 shrink-0 items-center rounded-md border';
 
-/** A code wears the leaf ladder an entity chip wears, so a control insets either alike. */
+/**
+ * A code wears the chip step and the padding an entity chip wears in the same control, and a
+ * cross takes the same trailing edge. The `has-` classes are spelled out for Tailwind.
+ */
 export const PICKER_TEXT_CHIP_BOX: Record<PickerSize, string> = {
-  sm: 'h-6 text-xs',
-  md: 'h-6 text-xs',
-  lg: 'h-8 text-sm'
+  sm: `${CHIP_BOX.xs} ${CHIP_PAD.xs.text} ${CHIP_SPACING.xs.cross} has-[>button]:pr-px`,
+  md: `${CHIP_BOX.sm} ${CHIP_PAD.sm.text} ${CHIP_SPACING.sm.cross} has-[>button]:pr-0.5`,
+  lg: `${CHIP_BOX.md} ${CHIP_PAD.md.text} ${CHIP_SPACING.md.cross} has-[>button]:pr-[5px]`
 };
+
+/** The cross inside a code's chip, on the chip step the control gives it. */
+export const PICKER_TEXT_CHIP_CROSS: Record<PickerSize, string> = { sm: CHIP_CROSS.xs, md: CHIP_CROSS.sm, lg: CHIP_CROSS.md };

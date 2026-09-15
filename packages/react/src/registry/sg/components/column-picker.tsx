@@ -58,16 +58,22 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { StateLine } from '@/registry/sg/components/state-line';
 import { FieldPicker } from '@/registry/sg/components/field-picker';
+import { PICKER_ICON_BUTTON } from '@/registry/sg/components/picker-classes';
 import { useSortable } from '@/registry/sg/components/sortable';
 
 export type ColumnPickerSize = 'sm' | 'md' | 'lg';
 export type ColumnPickerLayout = 'list' | 'dual';
 
-/** Rows follow the control ladder of `docs/design-rules.md`. */
-const ROW: Record<ColumnPickerSize, string> = {
-  sm: 'min-h-8',
-  md: 'min-h-9',
-  lg: 'min-h-10',
+/** A row's height follows its content; `size` moves its text and its glyphs. */
+const TEXT: Record<ColumnPickerSize, string> = {
+  sm: 'text-xs',
+  md: 'text-sm',
+  lg: 'text-base',
+};
+const GLYPH: Record<ColumnPickerSize, string> = {
+  sm: 'size-3.5',
+  md: 'size-4',
+  lg: 'size-5',
 };
 const ACTION: Record<ColumnPickerSize, 'icon-xs' | 'icon-sm' | 'icon'> = {
   sm: 'icon-xs',
@@ -422,7 +428,7 @@ export function ColumnPicker({
             aria-label="Go back one level"
             title="Back (Left arrow)"
             onClick={back}
-            className="hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring focus-visible:ring-offset-background shrink-0 rounded-sm p-0.5 opacity-70 outline-none transition-colors duration-150 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-2 motion-safe:active:scale-[0.98]"
+            className={PICKER_ICON_BUTTON}
           >
             <ChevronLeft aria-hidden="true" className="size-4" />
           </button>
@@ -450,7 +456,7 @@ export function ColumnPicker({
             aria-label="Back to the root type"
             title="Reset"
             onClick={reset}
-            className="hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring focus-visible:ring-offset-background shrink-0 rounded-sm p-0.5 opacity-70 outline-none transition-colors duration-150 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-2 motion-safe:active:scale-[0.98]"
+            className={PICKER_ICON_BUTTON}
           >
             <RotateCcw aria-hidden="true" className="size-4" />
           </button>
@@ -460,16 +466,14 @@ export function ColumnPicker({
       <Command
         shouldFilter={false}
         loop
-        value={cursor}
-        onValueChange={setHighlighted}
+        items={values}
+        query={search}
+        onQueryChange={setSearch}
+        onItemHighlighted={(next) => setHighlighted(typeof next === 'string' ? next : '')}
         onKeyDown={onListKeys}
         className="gap-2 bg-transparent p-0"
       >
-        <CommandInput
-          value={search}
-          onValueChange={setSearch}
-          placeholder={choosing ? 'Which type?' : searchPlaceholder}
-        />
+        <CommandInput placeholder={choosing ? 'Which type?' : searchPlaceholder} />
         <CommandList>
           {failure ? (
             <StateLine
@@ -488,24 +492,26 @@ export function ColumnPicker({
                   key={target}
                   value={target}
                   onSelect={() => descend(choosing, target)}
-                  className={cn('gap-2', ROW[size])}
+                  className={TEXT[size]}
                 >
-                  <Link aria-hidden="true" className="size-4 shrink-0 opacity-70" />
+                  <Link aria-hidden="true" className={cn('shrink-0 opacity-70', GLYPH[size])} />
                   <span className="min-w-0 flex-1 truncate">{target}</span>
                   <span className="text-muted-foreground shrink-0 text-xs">entity type</span>
-                  <ChevronRight aria-hidden="true" className="size-4 shrink-0 opacity-50" />
+                  <ChevronRight aria-hidden="true" className={cn('shrink-0 opacity-50', GLYPH[size])} />
                 </CommandItem>
               ))}
             </>
           ) : fields === null ? (
             <div
               data-slot="column-picker-loading"
-              className="flex flex-col gap-2 p-1"
+              className="flex flex-col"
               aria-busy="true"
               aria-label={stateLine('loading', { loadingLabel })}
             >
               {[0, 1, 2].map((row) => (
-                <Skeleton key={row} className="h-8 w-full" />
+                <div key={row} className="flex items-center px-2 py-1.5">
+                  <Skeleton className="h-5 w-full" />
+                </div>
               ))}
             </div>
           ) : (
@@ -523,7 +529,7 @@ export function ColumnPicker({
                     data-slot="column-picker-field"
                     data-path={row.path}
                     data-chosen={value.includes(row.path) ? 'true' : undefined}
-                    className={cn('gap-2', ROW[size])}
+                    className={TEXT[size]}
                   >
                     <Checkbox
                       checked={value.includes(row.path)}
@@ -532,7 +538,7 @@ export function ColumnPicker({
                       aria-hidden="true"
                       className="pointer-events-none"
                     />
-                    <Glyph aria-hidden="true" className="size-4 shrink-0 opacity-70" />
+                    <Glyph aria-hidden="true" className={cn('shrink-0 opacity-70', GLYPH[size])} />
                     <span className="min-w-0 flex-1 truncate" title={row.displayName}>
                       {row.displayName}
                     </span>
@@ -553,9 +559,9 @@ export function ColumnPicker({
                           event.stopPropagation();
                           descendInto(row);
                         }}
-                        className="hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring focus-visible:ring-offset-background shrink-0 rounded-sm p-0.5 opacity-70 outline-none transition-colors duration-150 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-2 motion-safe:active:scale-[0.98]"
+                        className={PICKER_ICON_BUTTON}
                       >
-                        <ChevronRight aria-hidden="true" className="size-4" />
+                        <ChevronRight aria-hidden="true" className={GLYPH[size]} />
                       </button>
                     ) : null}
                   </CommandItem>
@@ -582,7 +588,7 @@ export function ColumnPicker({
           <ol
             ref={sortableRef}
             data-slot="column-picker-list"
-            className="flex max-h-72 min-w-0 flex-col gap-2 overflow-y-auto"
+            className="flex max-h-72 min-w-0 flex-col overflow-y-auto"
           >
             {value.map((path, index) => (
               <li
@@ -592,10 +598,12 @@ export function ColumnPicker({
                 data-index={index}
                 data-path={path}
                 className={cn(
-                  'bg-background flex min-w-0 items-center gap-2 rounded-md px-2 py-1.5',
+                  'bg-background flex min-w-0 items-center gap-2 rounded-md px-2',
+                  // The buttons set the row's height; a text-only row keeps the list row inset.
+                  readonly ? 'py-1.5' : 'py-0.5',
                   'data-[dragging]:z-10 data-[dragging]:opacity-90 data-[dragging]:shadow-md',
                   'data-[drop-target]:bg-accent/40',
-                  ROW[size],
+                  TEXT[size],
                 )}
               >
                 {!readonly ? (
@@ -608,7 +616,7 @@ export function ColumnPicker({
                     onKeyDown={(event) => onRowKeys(event, index)}
                     aria-label={`Reorder ${labelOf(path) ?? path}`}
                     title="Drag to reorder, or press Space and use the arrow keys"
-                    className="cursor-grab touch-none active:cursor-grabbing"
+                    className="cursor-grab touch-none rounded-sm active:cursor-grabbing"
                   >
                     <GripVertical aria-hidden="true" />
                   </Button>
@@ -616,7 +624,7 @@ export function ColumnPicker({
                 {labelOf(path) === undefined ? (
                   <Skeleton className="h-4 w-32" />
                 ) : (
-                  <span className="min-w-0 flex-1 truncate text-sm" title={path}>
+                  <span className="min-w-0 flex-1 truncate" title={path}>
                     {labelOf(path)}
                   </span>
                 )}
@@ -629,6 +637,7 @@ export function ColumnPicker({
                     onKeyDown={(event) => onRowKeys(event, index)}
                     aria-label={`Remove ${labelOf(path) ?? path}`}
                     title="Remove (Delete)"
+                    className="rounded-sm"
                     onClick={() => remove(index)}
                   >
                     <X aria-hidden="true" />

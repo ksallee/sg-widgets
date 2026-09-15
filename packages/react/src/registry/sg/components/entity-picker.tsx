@@ -19,6 +19,7 @@ import {
   withSelectedPinned,
 } from '@sg-widgets/core';
 import { Combobox as ComboboxPrimitive } from '@base-ui/react';
+import { Check } from 'lucide-react';
 import { EntityChip } from '@/registry/sg/components/entity-chip';
 import { PICKER_ARMED, PICKER_CHIP, PICKER_ROW } from '@/registry/sg/components/picker-classes';
 import { PickerControl } from '@/registry/sg/components/picker-control';
@@ -247,7 +248,6 @@ export function EntityPicker({
     : null;
   const options = withSelectedPinned(state.rows, value ? [value] : [], search.known);
   const polymorphic = entityTypes.length > 1;
-  const hasSubLabel = Boolean(subLabelField || subLabel);
   const selectedKey = value ? entityKey(value) : '';
 
   /** The caller's own sub-label. Absent, the row reads `subLabelField` itself. */
@@ -286,9 +286,11 @@ export function EntityPicker({
         data-entity-id={row.id}
         data-checked={chosen ? 'true' : undefined}
         value={key}
-        className={cn(PICKER_ROW, hasSubLabel && 'items-start')}
+        className={PICKER_ROW}
       >
         <PickerRow
+          indicator={chosen ? <Check aria-hidden="true" className="size-4" /> : null}
+          indicatorAt="end"
           row={row}
           query={state.query}
           thumbnail={thumbnail}

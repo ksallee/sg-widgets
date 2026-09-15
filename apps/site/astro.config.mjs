@@ -14,6 +14,8 @@ const svelteLib = fileURLToPath(new URL('svelte/src/lib', packages));
 const coreSrc = fileURLToPath(new URL('core/src/index.ts', packages));
 const baseUi = fileURLToPath(new URL('react/node_modules/@base-ui/react', packages));
 const bitsUi = fileURLToPath(new URL('svelte/node_modules/bits-ui', packages));
+const lucideReact = fileURLToPath(new URL('react/node_modules/lucide-react', packages));
+const lucideSvelte = fileURLToPath(new URL('svelte/node_modules/@lucide/svelte', packages));
 const repoRoot = fileURLToPath(new URL('../../', import.meta.url));
 
 // Inlined in the head, so the stored palette is on `:root` before the first paint. Read
@@ -71,7 +73,7 @@ export default defineConfig({
             { label: 'Overview', slug: 'widgets' },
             {
               label: 'Foundations',
-              items: ['thumbnail', 'user-avatar', 'text-editor', 'number-editor', 'checkbox-editor', 'date-editor', 'date-time-editor', 'url-editor', 'color-editor', 'picker-control'].map((n) => ({ slug: `widgets/${n}` })),
+              items: ['thumbnail', 'user-avatar', 'text-editor', 'number-editor', 'checkbox-editor', 'date-editor', 'date-time-editor', 'url-editor', 'color-editor', 'picker-control', 'search-control', 'collection-control', 'value-editor', 'state-line'].map((n) => ({ slug: `widgets/${n}` })),
             },
             {
               label: 'Display',
@@ -79,7 +81,7 @@ export default defineConfig({
             },
             {
               label: 'Pickers',
-              items: ['entity-picker', 'entity-multi-picker', 'user-picker', 'project-picker', 'status-picker', 'status-multi-picker', 'list-picker', 'list-multi-picker', 'entity-type-picker', 'field-picker', 'column-picker', 'field-editor', 'global-search', 'hierarchical-search', 'context-selector'].map((n) => ({ slug: `widgets/${n}` })),
+              items: ['entity-picker', 'entity-multi-picker', 'user-picker', 'user-multi-picker', 'project-picker', 'project-multi-picker', 'status-picker', 'status-multi-picker', 'list-picker', 'list-multi-picker', 'entity-type-picker', 'entity-type-multi-picker', 'field-picker', 'column-picker', 'field-editor', 'global-search', 'hierarchical-search', 'context-selector'].map((n) => ({ slug: `widgets/${n}` })),
             },
             {
               label: 'Queries and collections',
@@ -137,6 +139,12 @@ export default defineConfig({
         // one instance of each primitive on the page, and one combobox context.
         { find: '@base-ui/react', replacement: baseUi },
         { find: 'bits-ui', replacement: bitsUi },
+        // The icons every registry item carries, so a demo of a part draws the same
+        // glyphs the widgets do. The subpath entry comes first: the Svelte package
+        // serves `@lucide/svelte/icons/<name>` out of its own `dist`.
+        { find: '@lucide/svelte/icons', replacement: `${lucideSvelte}/dist/icons` },
+        { find: '@lucide/svelte', replacement: lucideSvelte },
+        { find: 'lucide-react', replacement: lucideReact },
         { find: '@', replacement: reactSrc },
         { find: '$lib', replacement: svelteLib },
       ],

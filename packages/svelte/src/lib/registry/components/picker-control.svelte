@@ -64,6 +64,8 @@
 		/** The popup is as wide as the control it hangs off. */
 		anchored?: boolean;
 		loading?: boolean;
+		/** Rows the list offers, which is what the live row counts. */
+		count?: number;
 		error?: string | null;
 		empty?: boolean;
 		emptyLabel?: string;
@@ -81,14 +83,16 @@
 </script>
 
 <script lang="ts">
-	import { tick, type Snippet } from 'svelte';
+	import type { Snippet } from 'svelte';
 	import {
-		holdsArmed,
+		focusChip,
+		listStatus,
 		NO_MATCH_LABEL,
 		pickerKeyIntent,
-		scrollHighlightedIntoView,
 		stateLine,
-		summariseSelection
+		summariseSelection,
+		watchHighlight,
+		watchOverflow
 	} from '@sg-widgets/core';
 	import { Combobox } from 'bits-ui';
 	import ChevronDown from '@lucide/svelte/icons/chevron-down';
@@ -100,6 +104,7 @@
 	import StateLine from '$lib/registry/components/state-line.svelte';
 	import {
 		CHIP_GAP,
+		LIST_STATUS,
 		OVERFLOW_RESERVE,
 		PICKER_ANCHORED_POPUP,
 		PICKER_BOX,
@@ -120,7 +125,7 @@
 	import { cn } from '$lib/utils.js';
 
 	type Props = PickerControlProps & {
-		/** One chip: its index, whether Backspace has armed it, whether the row hides it. */
+		/** One chip: its index, whether the caret is on it, whether the row hides it. */
 		chip?: Snippet<[number, boolean, boolean]>;
 		/** The rows of the list, as items of the primitive. */
 		rows?: Snippet;
@@ -160,6 +165,7 @@
 		onClear,
 		anchored = false,
 		loading = false,
+		count = 0,
 		error = null,
 		empty = false,
 		emptyLabel = NO_MATCH_LABEL,
@@ -177,9 +183,11 @@
 
 	let controlEl = $state<HTMLElement | null>(null);
 	let listEl = $state<HTMLElement | null>(null);
+	// The list writes the overflow variables the fade reads, which are Base UI's own.
+	$effect(() => watchOverflow(listEl));
 	let inputEl = $state<HTMLInputElement | null>(null);
 	let chipsEl = $state<HTMLElement | null>(null);
-	/** The chip a Backspace has highlighted. The next one removes it. */
+	/** The chip holding the caret. Backspace and Delete take it. */
 	let armed = $state<number | null>(null);
 	/** A press on the load-more row is not a selection, and must not close the popup. */
 	let paging = false;
@@ -263,6 +271,7 @@
 		// takes it: the field's, or the popup's once the effect below focuses it.
 		const onCaret = target === inputEl;
 		if (!onCaret) event.preventDefault();
+		armed = null;
 		if (inline && !onCaret) inputEl?.focus({ preventScroll: true });
 		// A press anywhere on the control toggles the list, the caret included; typing opens it again.
 		setOpen(!open);
@@ -282,48 +291,92 @@
 			return;
 		}
 		const wanted = interactive ? next : false;
-		if (!wanted) {
-			query = '';
-			armed = null;
-		}
+		if (!wanted) query = '';
 		if (wanted === open) return;
 		open = wanted;
 		onOpenChange?.(open);
 	}
 
-	// A chip removed from under the highlight takes it with it.
+	// A chip removed from under the caret takes it with it.
 	$effect(() => {
 		if (armed !== null && armed >= labels.length) armed = null;
 	});
 
+	// The caret sits on one chip of the row at a time, and the row keeps it out of the
+	// tab order, so Tab still leaves the control.
+	$effect(() => {
+		void labels.length;
+		focusChip(chipsEl, armed);
+	});
+
+	// A chip is not a control, so its keys reach this handler through the row rather
+	// than through markup a reader would have to read as interactive.
+	$effect(() => {
+		const row = chipsEl;
+		if (!row) return;
+		row.addEventListener('keydown', onKey);
+		return () => row.removeEventListener('keydown', onKey);
+	});
+
+	/** The caret leaves the chips when it leaves the widget, and not before. */
+	function releaseChips(): void {
+		setTimeout(() => {
+			const active = document.activeElement;
+			if (active === inputEl || controlEl?.contains(active)) return;
+			armed = null;
+		}, 0);
+	}
+
+	/** The caret back in the input, and the chip row released. */
+	function toInput(): void {
+		armed = null;
+		inputEl?.focus({ preventScroll: true });
+	}
+
 	/**
-	 * Backspace, Escape and the arrows. The primitive's own handler runs after this
-	 * one, so a key this picker owns is prevented rather than shared.
+	 * The chip keys, Escape and the arrows, from the input or from a chip. The
+	 * primitive's own handler runs after this one, so a key this picker owns is
+	 * prevented rather than shared.
 	 */
 	function onKey(event: KeyboardEvent): void {
+		// A link or a remove control inside a chip owns its own keys.
+		if ((event.target as HTMLElement | null)?.closest('a,button')) return;
 		const intent = pickerKeyIntent(event.key, {
 			open,
 			query,
 			count: labels.length,
-			armed,
+			focused: armed,
 			editable: interactive,
 			multiple
 		});
-		if (!holdsArmed(event.key)) armed = null;
 		switch (intent.kind) {
 			case 'dismiss':
+				if (armed !== null) toInput();
 				setOpen(false);
 				return;
-			case 'arm':
+			case 'focus':
 				event.preventDefault();
-				armed = intent.index;
+				if (intent.index === null) toInput();
+				else armed = intent.index;
 				return;
 			case 'remove':
 				event.preventDefault();
+				armed = intent.then;
 				onRemoveAt?.(intent.index);
+				if (intent.then === null) inputEl?.focus({ preventScroll: true });
+				return;
+			case 'type':
+				event.preventDefault();
+				toInput();
+				typed(query + intent.key);
+				return;
+			case 'open':
+				event.preventDefault();
+				toInput();
+				setOpen(true);
 				return;
 			case 'follow':
-				void tick().then(() => scrollHighlightedIntoView(listEl));
+				// The key belongs to the list, and the list's own watcher follows the highlight.
 				return;
 			default:
 				return;
@@ -334,8 +387,7 @@
 	// replaces them all; either way the list follows the highlight.
 	$effect(() => {
 		void rowCount;
-		if (!open) return;
-		void tick().then(() => scrollHighlightedIntoView(listEl));
+		return watchHighlight(listEl);
 	});
 
 	function choose(next: string[]): void {
@@ -345,6 +397,11 @@
 			return;
 		}
 		onSelect(next);
+		// A press on a row leaves the caret in the list; the next key belongs to the
+		// control, so the input takes it back and the chip row is released. A pick made
+		// with a chip armed would otherwise keep that chip, and the next Backspace would
+		// take it rather than the one just added.
+		toInput();
 	}
 
 	function clear(): void {
@@ -372,6 +429,7 @@
 		bind:this={controlEl}
 		data-slot={`${slot}-control`}
 		onpointerdown={openFromControl}
+		onfocusout={releaseChips}
 		role="group"
 		aria-disabled={inert ? 'true' : undefined}
 		data-multiple={multiple ? 'true' : undefined}
@@ -473,6 +531,15 @@
 					class="sr-only"
 				/>
 			{/if}
+			<div
+				data-slot={`${slot}-status`}
+				role="status"
+				aria-live="polite"
+				aria-atomic="true"
+				class={LIST_STATUS}
+			>
+				{listStatus({ loading, count, error, asked: true }, { emptyLabel, loadingLabel, errorLabel })}
+			</div>
 			<div bind:this={listEl} data-slot={`${slot}-list`} class={PICKER_LIST}>
 				{#if error !== null && error !== ''}
 					<StateLine
@@ -484,12 +551,14 @@
 				{:else if loading}
 					<div
 						data-slot={`${slot}-loading`}
-						class="flex flex-col gap-2"
+						class="flex flex-col"
 						aria-busy="true"
 						aria-label={loadingText}
 					>
 						{#each [0, 1, 2] as row (row)}
-							<Skeleton class="h-8 w-full" />
+							<div class="flex items-center px-2 py-1.5">
+								<Skeleton class="h-5 w-full" />
+							</div>
 						{/each}
 					</div>
 				{:else if empty}

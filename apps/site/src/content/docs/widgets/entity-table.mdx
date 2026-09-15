@@ -4,6 +4,7 @@ description: A page of Flow Production Tracking rows as a sortable, selectable, 
 ---
 
 import Demo from '../../../components/Demo.astro';
+import Props from '../../../components/Props.astro';
 
 Renders rows from an entity source as a table whose columns come from the schema, with server-side
 sorting and paging, a toolbar, a pagination footer, row selection, column sizing, resizing, ordering,
@@ -53,59 +54,15 @@ rows and puts one error line under them with a retry.
 
 ## Props
 
-| prop | type | default | meaning |
-|---|---|---|---|
-| `source` | `EntitySource` | — | The rows, the filter, the sort and the page behind them. |
-| `columns` | `CollectionColumn[]` | — | Columns in display order, from `resolveColumns`. Two-way: hiding one writes the shorter list back. |
-| `statuses` | `Record<string, StatusRecord> \| null` | `null` | Status rows by code, for status cells. |
-| `context` | `SgContext` | — | The widget context. Cells render with its preferences, a cell editor reads through it, and an entity cell links to the row's page when it carries a site. |
-| `projectId` | `number` | — | The project the columns were resolved with. Scopes a status, list or entity cell editor. |
-| `precision` | `number` | — | Decimals a float cell keeps. |
-| `symbol` | `string` | `'$'` | Shown before the value in a currency cell. |
-| `density` | `'compact' \| 'default'` | `'default'` | Compact halves the vertical cell padding. |
-| `selectable` | `boolean` | `false` | Draws a checkbox column. |
-| `selection` | `EntityRef[]` | `[]` | The selected rows, two-way. Names loaded rows only. |
-| `getRowId` | `(row) => string` | — | How a row is keyed, in the DOM and in the selection. Default `Type:id`. |
-| `isRowDisabled` | `(row) => boolean` | — | True for a row that cannot be selected or edited. |
-| `groupBy` | `string \| null` | `null` | Collapses rows under headers of a shared value at this path. |
-| `collapsed` | `string[]` | `[]` | Ids of the group headers that are shut, two-way. |
-| `sort` | `SortSpec[]` | — | The source's sort, two-way. |
-| `filters` | `FilterNode \| WireGroup \| null` | — | The source's filter, two-way. |
-| `editable` | `boolean` | `false` | Lets an editable cell open an editor. |
-| `editorFor` | `(dataType) => Component \| null` | — | The editor a cell opens, by data type. A type it does not answer for opens FieldEditor. |
-| `editorPlacement` | `'inline' \| 'popover'` | per data type | Where every cell editor opens. A column's own `editorPlacement` wins over it. |
-| `showCode` | `boolean` | `false` | Show the programmatic field path beside the header's display name. |
-| `columnMenu` | `boolean` | `false` | A menu on every header: sort, hide and pin left. |
-| `paging` | `'pages' \| 'more' \| 'scroll'` | `'pages'` | How the set is walked: a page number, a load-more row, or the scroller. |
-| `pageSizes` | `number[]` | `[25, 50, 100]` | Rows per page offered in the footer. `pages` only. |
-| `maxHeight` | `string` | `'28rem'` | Height of the scrolling body. |
-| `virtualizeAfter` | `number` | `100` | Rows above which the body is virtualised. |
-| `emptyLabel` | `string` | `'No rows'` | Shown when the read returned nothing. |
-| `loadingLabel` | `string` | `'Loading…'` | Names the skeletons a read stands behind, for a screen reader. |
-| `errorLabel` | `string` | — | Shown in place of what the failed read said. |
-| `size` | `'sm' \| 'md' \| 'lg'` | `'md'` | Row text and header height: `text-xs`/`h-9`, `text-sm`/`h-10`, `text-base`/`h-11`. |
-| `class` / `className` | `string` | — | Merged after the widget's own classes. |
+<Props name="entity-table" />
 
 ## Events
 
-| event | payload | when |
-|---|---|---|
-| `onColumnsChange` | `CollectionColumn[]` | A column was hidden from its header menu. |
-| `onSelectionChange` | `EntityRef[]` | The selection changed. |
-| `onCollapsedChange` | `string[]` | A group header was opened or shut. |
-| `onSortChange` | `SortSpec[]` | The source's sort changed, from a header or from the prop. |
-| `onFiltersChange` | `FilterNode \| WireGroup \| null` | The source's filter changed. |
+<Props name="entity-table" kind="events" />
 
 ## Slots
 
-| slot | receives | meaning |
-|---|---|---|
-| `toolbarStart` | — | Left region of the toolbar above the table. |
-| `toolbarEnd` | — | Right region of the toolbar above the table. |
-| `row` | `{ row, id, index, selected, disabled, columns }` | Draws the cells of one row. The table keeps the row's box. |
-| `cell` | `{ row, id, column, value, disabled }` | Draws one cell's contents. Ignored where `row` is given. |
-| `groupHeader` | `{ value, column, count, expanded, id }` | Draws a group header's contents, after its chevron. |
-| `editorFor` | `dataType` | The component a cell opens for that data type. |
+<Props name="entity-table" kind="slots" />
 
 `sort` and `filters` mirror the source, so a SortPicker, a FilterBar and a ColumnPicker drop into
 the toolbar and none of them reaches into `source`.
@@ -154,10 +111,6 @@ Cancel and Save, so a cell's width never squeezes it. A checkbox is one press an
 `editorPlacement` on the table forces one or the other everywhere, and `editorPlacement` on a column
 spec forces it for that column.
 
-| data type | opens |
-|---|---|
-| `checkbox`, `status_list`, `list`, `entity` | in the cell |
-| `text`, `number`, `float`, `percent`, `currency`, `duration`, `timecode`, `date`, `date_time`, `color`, `url`, `multi_entity` | in a popover |
 
 ## Column menu
 
@@ -169,20 +122,7 @@ column list back through `columns`. Pinning sticks the column to the start of th
 
 ## Keyboard
 
-| key | does |
-|---|---|
-| Tab | Moves through toolbar, header buttons, column menus, checkboxes, editable cells and the footer. |
-| Enter, Space on a header | Sorts by that column, ascending, then descending, then unsorted. |
-| Enter, Space on a column menu | Opens it; arrows walk it, Escape closes it. |
-| Enter on an editable cell | Opens the editor. |
-| Enter in an editor | Commits the value. In a textarea it adds a line, and Cmd or Ctrl with Enter commits. |
-| Escape in an editor | Cancels and restores the value. |
-| a press outside an editor | Commits the value. |
-| Enter, Escape, Save, Cancel in a popover editor | The same: Enter and Save commit, Escape and Cancel restore. |
-| Space on a checkbox | Toggles the row, or every loaded row from the header. |
-| ArrowDown, ArrowUp in the body | Moves the cursor down or up the same column, over the rows it can land on. |
-| ArrowDown on the last loaded row | In `more` and `scroll`, asks for the next page. The cursor stays where it is until the rows arrive, then lands on the first of them. |
-| Enter in the page number | Goes to that page. |
+<Props name="entity-table" kind="keyboard" />
 
 An editable cell says so: it washes to `bg-accent/50` under the pointer and under the keyboard
 cursor, and its tooltip reads "Double-click or press Enter to edit". A double-click opens the editor

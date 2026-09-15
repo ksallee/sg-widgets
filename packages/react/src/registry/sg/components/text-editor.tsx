@@ -3,7 +3,7 @@ import type { FieldSchema } from '@sg-widgets/core';
 import { parseTextInput } from '@sg-widgets/core';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { CONTROL_BOX, type ControlSize } from '@/registry/sg/components/control-classes';
+import { CONTROL_BOX, CONTROL_PAD, type ControlSize } from '@/registry/sg/components/control-classes';
 import { ValueEditor, useValueSession } from '@/registry/sg/components/value-editor';
 
 export type TextEditorSize = ControlSize;
@@ -68,6 +68,7 @@ export function TextEditor({
 
   return (
     <ValueEditor
+      // oxlint-disable-next-line shadcn/no-raw-colors -- a slot name, not a class
       slotName="text-editor"
       size={size}
       message={session.message}
@@ -82,6 +83,7 @@ export function TextEditor({
           disabled={disabled}
           readOnly={readonly}
           placeholder={placeholder}
+          className={CONTROL_PAD[size]}
           aria-invalid={session.invalid}
           aria-label={field?.displayName}
           aria-required={field?.mandatory}

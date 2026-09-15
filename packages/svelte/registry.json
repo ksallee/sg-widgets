@@ -11,6 +11,78 @@
   },
   "items": [
     {
+      "name": "sg-widgets",
+      "type": "registry:component",
+      "title": "sg-widgets",
+      "description": "Every item of this registry in one install.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte"
+      ],
+      "registryDependencies": [
+        "local:status-glyph",
+        "local:status-badge",
+        "local:entity-chip",
+        "local:entity-card",
+        "local:thumbnail",
+        "local:user-avatar",
+        "local:field-value",
+        "local:picker-row",
+        "local:state-line",
+        "local:search-skeleton",
+        "local:picker-classes",
+        "local:picker-control",
+        "local:search-control",
+        "local:leaf-classes",
+        "local:entity-glyphs",
+        "local:control-classes",
+        "local:field-error",
+        "local:editor-calendar",
+        "local:value-editor",
+        "local:entity-type-picker",
+        "local:entity-type-multi-picker",
+        "local:field-picker",
+        "local:sortable",
+        "local:column-picker",
+        "local:text-editor",
+        "local:number-editor",
+        "local:checkbox-editor",
+        "local:date-editor",
+        "local:date-time-editor",
+        "local:list-picker",
+        "local:list-select",
+        "local:list-multi-picker",
+        "local:list-multi-select",
+        "local:url-editor",
+        "local:color-editor",
+        "local:field-editor",
+        "local:entity-fields",
+        "local:filter-editor",
+        "local:filter-dialog",
+        "local:filter-bar",
+        "local:sort-picker",
+        "local:status-picker",
+        "local:status-multi-picker",
+        "local:collection-source",
+        "local:collection-control",
+        "local:collection-footer",
+        "local:entity-table",
+        "local:entity-grid",
+        "local:grouped-list",
+        "local:entity-tree",
+        "local:entity-picker",
+        "local:entity-multi-picker",
+        "local:user-picker",
+        "local:user-multi-picker",
+        "local:project-picker",
+        "local:project-multi-picker",
+        "local:global-search",
+        "local:hierarchical-search",
+        "local:context-selector"
+      ],
+      "files": []
+    },
+    {
       "name": "status-glyph",
       "type": "registry:component",
       "title": "Status Glyph",
@@ -139,6 +211,7 @@
       ],
       "registryDependencies": [
         "local:entity-chip",
+        "local:leaf-classes",
         "local:status-badge",
         "local:thumbnail",
         "switch"
@@ -159,6 +232,7 @@
         "@sg-widgets/core"
       ],
       "registryDependencies": [
+        "local:picker-classes",
         "local:field-value",
         "local:thumbnail",
         "local:user-avatar"
@@ -244,6 +318,33 @@
       "files": [
         {
           "path": "src/lib/registry/components/picker-control.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "search-control",
+      "type": "registry:component",
+      "title": "Search Control",
+      "description": "The query lifecycle and the list every search widget in this registry is built on.",
+      "categories": [
+        "flow-production-tracking",
+        "atom"
+      ],
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte"
+      ],
+      "registryDependencies": [
+        "local:search-skeleton",
+        "local:state-line",
+        "command",
+        "skeleton"
+      ],
+      "docs": "The debounce, the ticket that drops a stale answer, the page and its load-more row, and the list with its error, loading and empty blocks.",
+      "files": [
+        {
+          "path": "src/lib/registry/components/search-control.svelte",
           "type": "registry:component"
         }
       ]
@@ -357,7 +458,27 @@
       "name": "entity-type-picker",
       "type": "registry:component",
       "title": "Entity Type Picker",
-      "description": "One entity type of a Flow Production Tracking site, or several, as a searchable combobox.",
+      "description": "One entity type of a Flow Production Tracking site, as a searchable combobox.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "bits-ui"
+      ],
+      "registryDependencies": [
+        "local:picker-control",
+        "local:picker-classes"
+      ],
+      "files": [
+        {
+          "path": "src/lib/registry/components/entity-type-picker.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "entity-type-multi-picker",
+      "type": "registry:component",
+      "title": "Entity Type Multi Picker",
+      "description": "Several entity types of a Flow Production Tracking site, as a searchable combobox with checkbox rows.",
       "dependencies": [
         "@sg-widgets/core",
         "@lucide/svelte",
@@ -370,7 +491,7 @@
       ],
       "files": [
         {
-          "path": "src/lib/registry/components/entity-type-picker.svelte",
+          "path": "src/lib/registry/components/entity-type-multi-picker.svelte",
           "type": "registry:component"
         }
       ]
@@ -424,6 +545,7 @@
       ],
       "registryDependencies": [
         "local:state-line",
+        "local:picker-classes",
         "button",
         "checkbox",
         "command",
@@ -688,6 +810,7 @@
         "@lucide/svelte"
       ],
       "registryDependencies": [
+        "local:control-classes",
         "local:field-value",
         "local:text-editor",
         "local:number-editor",
@@ -736,7 +859,9 @@
         "@lucide/svelte"
       ],
       "registryDependencies": [
+        "local:control-classes",
         "local:entity-fields",
+        "local:leaf-classes",
         "local:state-line",
         "button",
         "select",
@@ -775,7 +900,7 @@
       ],
       "registryDependencies": [
         "local:control-classes",
-        "badge",
+        "local:leaf-classes",
         "button",
         "dialog",
         "local:filter-editor"
@@ -799,6 +924,8 @@
       "registryDependencies": [
         "local:entity-fields",
         "local:control-classes",
+        "local:leaf-classes",
+        "local:state-line",
         "badge",
         "button",
         "checkbox",
@@ -824,7 +951,8 @@
         "@lucide/svelte"
       ],
       "registryDependencies": [
-        "badge",
+        "local:leaf-classes",
+        "local:state-line",
         "button",
         "popover",
         "separator",
@@ -955,6 +1083,7 @@
         "local:state-line",
         "local:field-value",
         "local:field-editor",
+        "local:picker-classes",
         "table",
         "checkbox",
         "skeleton",
@@ -1104,14 +1233,28 @@
         "@lucide/svelte"
       ],
       "registryDependencies": [
-        "local:entity-picker",
-        "local:entity-multi-picker"
+        "local:entity-picker"
       ],
       "files": [
         {
           "path": "src/lib/registry/components/user-picker.svelte",
           "type": "registry:component"
-        },
+        }
+      ]
+    },
+    {
+      "name": "user-multi-picker",
+      "type": "registry:component",
+      "title": "User Multi Picker",
+      "description": "Several people and script accounts, chosen by server-side search across name, login and email.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte"
+      ],
+      "registryDependencies": [
+        "local:entity-multi-picker"
+      ],
+      "files": [
         {
           "path": "src/lib/registry/components/user-multi-picker.svelte",
           "type": "registry:component"
@@ -1128,14 +1271,28 @@
         "@lucide/svelte"
       ],
       "registryDependencies": [
-        "local:entity-picker",
-        "local:entity-multi-picker"
+        "local:entity-picker"
       ],
       "files": [
         {
           "path": "src/lib/registry/components/project-picker.svelte",
           "type": "registry:component"
-        },
+        }
+      ]
+    },
+    {
+      "name": "project-multi-picker",
+      "type": "registry:component",
+      "title": "Project Multi Picker",
+      "description": "Several projects, chosen by server-side search, with the project thumbnail and its status.",
+      "dependencies": [
+        "@sg-widgets/core",
+        "@lucide/svelte"
+      ],
+      "registryDependencies": [
+        "local:entity-multi-picker"
+      ],
+      "files": [
         {
           "path": "src/lib/registry/components/project-multi-picker.svelte",
           "type": "registry:component"
@@ -1152,16 +1309,14 @@
         "@lucide/svelte"
       ],
       "registryDependencies": [
-        "local:search-skeleton",
+        "local:search-control",
         "local:control-classes",
-        "local:state-line",
         "local:entity-chip",
         "local:picker-row",
         "command",
         "dialog",
         "button",
-        "kbd",
-        "skeleton"
+        "kbd"
       ],
       "files": [
         {
@@ -1180,12 +1335,11 @@
         "@lucide/svelte"
       ],
       "registryDependencies": [
-        "local:search-skeleton",
+        "local:search-control",
         "local:entity-glyphs",
-        "local:state-line",
+        "local:picker-classes",
         "local:picker-row",
-        "command",
-        "skeleton"
+        "command"
       ],
       "files": [
         {
@@ -1204,14 +1358,14 @@
         "@lucide/svelte"
       ],
       "registryDependencies": [
-        "local:search-skeleton",
+        "local:search-control",
         "local:control-classes",
-        "local:state-line",
         "local:entity-chip",
+        "local:picker-classes",
         "local:picker-row",
         "local:hierarchical-search",
-        "popover",
-        "skeleton"
+        "local:state-line",
+        "popover"
       ],
       "files": [
         {

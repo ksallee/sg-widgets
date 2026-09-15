@@ -1083,6 +1083,7 @@
         "local:state-line",
         "local:field-value",
         "local:field-editor",
+        "local:picker-classes",
         "table",
         "checkbox",
         "skeleton",

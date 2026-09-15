@@ -1325,6 +1325,7 @@
         "https://sg-widgets.dev/r/react/state-line.json",
         "https://sg-widgets.dev/r/react/field-value.json",
         "https://sg-widgets.dev/r/react/field-editor.json",
+        "https://sg-widgets.dev/r/react/picker-classes.json",
         "table",
         "checkbox",
         "skeleton",

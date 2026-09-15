@@ -3,8 +3,8 @@
 
 	export type HierarchicalSearchSize = 'sm' | 'md' | 'lg';
 
-	/** A row's leading slot and its glyph, on the leaf ladder of `docs/design-rules.md`. */
-	const LEAD: Record<HierarchicalSearchSize, string> = { sm: 'size-5', md: 'size-6', lg: 'size-8' };
+	/** A row's leading slot and its glyph, on the thumbnail ladder `picker-row` draws on. */
+	const LEAD: Record<HierarchicalSearchSize, string> = { sm: 'size-6', md: 'size-8', lg: 'size-10' };
 	const GLYPH: Record<HierarchicalSearchSize, string> = {
 		sm: 'size-3.5',
 		md: 'size-4',
@@ -68,6 +68,7 @@
 	import * as Command from '$lib/components/ui/command/index.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
 	import { entityGlyph } from '$lib/registry/components/entity-glyphs.js';
+	import { PICKER_ICON_BUTTON } from '$lib/registry/components/picker-classes.js';
 	import Row from '$lib/registry/components/picker-row.svelte';
 	import SearchControl, { type SearchAnswer, type SearchRequest } from '$lib/registry/components/search-control.svelte';
 
@@ -335,7 +336,7 @@
 						type="button"
 						data-slot="search-drill"
 						aria-label={`Open ${item.label}`}
-						class="hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring focus-visible:ring-offset-background shrink-0 rounded-sm p-0.5 opacity-70 outline-none transition-colors duration-150 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-2"
+						class={PICKER_ICON_BUTTON}
 						onclick={(e) => {
 							e.stopPropagation();
 							drill(item);

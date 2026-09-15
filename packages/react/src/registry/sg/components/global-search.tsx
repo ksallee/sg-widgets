@@ -57,7 +57,10 @@ function hitKey(hit: SearchHit): string {
 export type GlobalSearchSize = ControlSize;
 
 /** A chip inside a row sits one step down the leaf ladder. */
-const CHIP: Record<GlobalSearchSize, 'sm' | 'md'> = { sm: 'sm', md: 'sm', lg: 'md' };
+const CHIP: Record<GlobalSearchSize, 'xs' | 'sm' | 'md'> = { sm: 'xs', md: 'sm', lg: 'md' };
+
+/** A skeleton stands in for a row, so its leading slot is the row's picture. */
+const LEAD: Record<GlobalSearchSize, string> = { sm: 'size-6', md: 'size-8', lg: 'size-10' };
 
 export interface GlobalSearchProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onSelect'> {
   /** The root element. */
@@ -321,6 +324,7 @@ export function GlobalSearch({
       emptyLabel={emptyLabel}
       loadingLabel={loadingLabel}
       errorLabel={errorLabel}
+      skeletonLead={cn('shrink-0', LEAD[size])}
       paging
       rows={rows}
     />

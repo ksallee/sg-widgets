@@ -1626,6 +1626,7 @@
       "registryDependencies": [
         "https://sg-widgets.dev/r/react/search-control.json",
         "https://sg-widgets.dev/r/react/entity-glyphs.json",
+        "https://sg-widgets.dev/r/react/picker-classes.json",
         "https://sg-widgets.dev/r/react/picker-row.json",
         "https://sg-widgets.dev/r/react/command.json"
       ],
@@ -1654,8 +1655,10 @@
         "https://sg-widgets.dev/r/react/search-control.json",
         "https://sg-widgets.dev/r/react/control-classes.json",
         "https://sg-widgets.dev/r/react/entity-chip.json",
+        "https://sg-widgets.dev/r/react/picker-classes.json",
         "https://sg-widgets.dev/r/react/picker-row.json",
         "https://sg-widgets.dev/r/react/hierarchical-search.json",
+        "https://sg-widgets.dev/r/react/state-line.json",
         "popover"
       ],
       "docs": "Installs HierarchicalSearch alongside it. Assigned tasks are one search on Task filtered by task_assignees.",

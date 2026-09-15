@@ -1328,6 +1328,7 @@
       "registryDependencies": [
         "local:search-control",
         "local:entity-glyphs",
+        "local:picker-classes",
         "local:picker-row",
         "command"
       ],
@@ -1351,8 +1352,10 @@
         "local:search-control",
         "local:control-classes",
         "local:entity-chip",
+        "local:picker-classes",
         "local:picker-row",
         "local:hierarchical-search",
+        "local:state-line",
         "popover"
       ],
       "files": [

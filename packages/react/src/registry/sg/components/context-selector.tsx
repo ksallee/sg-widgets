@@ -1,15 +1,17 @@
-import { Fragment, useCallback, useState } from 'react';
+import { Fragment, useCallback, useEffect, useState } from 'react';
 import type { EntityRef, FieldSpec, PickerRow as PickerRowData, SgContext } from '@sg-widgets/core';
-import { NO_ROWS_LABEL, pathOf, prependRecent, rowFields } from '@sg-widgets/core';
-import { ChevronDown, ListChecks } from 'lucide-react';
+import { NO_ROWS_LABEL, pathOf, prependRecent, rowFields, watchOverflow } from '@sg-widgets/core';
+import { ChevronDown, History, ListChecks } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import { CONTROL_GLYPH, type ControlSize } from '@/registry/sg/components/control-classes';
 import { EntityChip } from '@/registry/sg/components/entity-chip';
 import { HierarchicalSearch } from '@/registry/sg/components/hierarchical-search';
+import { LIST_FADE } from '@/registry/sg/components/picker-classes';
 import { PickerRow } from '@/registry/sg/components/picker-row';
 import type { SearchAnswer } from '@/registry/sg/components/search-control';
 import { SearchControl } from '@/registry/sg/components/search-control';
+import { StateLine } from '@/registry/sg/components/state-line';
 
 /** What a widget or a publish needs to know about where the user is working. */
 export interface WorkContext {
@@ -80,6 +82,8 @@ const BOX: Record<ContextSelectorSize, string> = {
 };
 /** A chip inside a control sits one step down the leaf ladder. */
 const CHIP: Record<ContextSelectorSize, 'xs' | 'sm' | 'md'> = { sm: 'xs', md: 'sm', lg: 'md' };
+/** A skeleton stands in for a row, so its leading slot is the row's picture. */
+const LEAD: Record<ContextSelectorSize, string> = { sm: 'size-6', md: 'size-8', lg: 'size-10' };
 
 export interface ContextSelectorProps extends React.HTMLAttributes<HTMLDivElement> {
   /** The root element. */
@@ -163,6 +167,12 @@ export function ContextSelector({
     setUncontrolledOpen(next);
     onOpenChange?.(next);
   };
+
+  // Each section fades at whichever edge has more past it, per rule 9 of the design rules.
+  const [recentsEl, setRecentsEl] = useState<HTMLDivElement | null>(null);
+  const [tasksEl, setTasksEl] = useState<HTMLDivElement | null>(null);
+  useEffect(() => watchOverflow(recentsEl), [recentsEl]);
+  useEffect(() => watchOverflow(tasksEl), [tasksEl]);
 
   const rootPath = workContext.project ? `/Project/${workContext.project.id}` : '/';
   const chips = [workContext.project, workContext.entity, workContext.task].filter(
@@ -303,46 +313,58 @@ export function ContextSelector({
         </PopoverTrigger>
 
         <PopoverContent className="flex w-96 max-w-[calc(100vw-2rem)] flex-col gap-3 p-3" align="start">
-          <section data-slot="context-recents" className="flex max-h-28 flex-col overflow-y-auto">
+          <section data-slot="context-recents" className="flex min-h-0 flex-col">
             <h4 className={heading}>Recent</h4>
-            {recents.length === 0 ? (
-              <p className="text-muted-foreground px-2 py-1.5 text-sm">Nothing yet.</p>
-            ) : (
-              recents.map((recent) => (
-                <button key={keyOf(recent)} type="button" className={recentClass} onClick={() => apply(recent)}>
-                  <span className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-                    {[recent.project, recent.entity, recent.task]
-                      .filter((r): r is EntityRef => r !== null)
-                      .map((chip) => (
-                        <EntityChip key={`${chip.type}:${chip.id}`} entity={chip} size={CHIP[size]} context={context} />
-                      ))}
-                  </span>
-                </button>
-              ))
-            )}
+            <div ref={setRecentsEl} className={cn('flex max-h-28 flex-col overflow-y-auto', LIST_FADE)}>
+              {recents.length === 0 ? (
+                <StateLine state="empty" slotName="context-recents-empty" icon={History} label="Nothing yet." />
+              ) : (
+                recents.map((recent) => (
+                  <button key={keyOf(recent)} type="button" className={recentClass} onClick={() => apply(recent)}>
+                    <span className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+                      {[recent.project, recent.entity, recent.task]
+                        .filter((r): r is EntityRef => r !== null)
+                        .map((chip) => (
+                          <EntityChip
+                            key={`${chip.type}:${chip.id}`}
+                            entity={chip}
+                            size={CHIP[size]}
+                            context={context}
+                          />
+                        ))}
+                    </span>
+                  </button>
+                ))
+              )}
+            </div>
           </section>
 
-          <section data-slot="context-my-tasks" className="flex max-h-52 flex-col overflow-y-auto">
+          <section data-slot="context-my-tasks" className="flex min-h-0 flex-col">
             <h4 className={heading}>My tasks</h4>
-            <SearchControl<MyTask>
-              load={loadTasks}
-              shell="bare"
-              readsEmpty
-              enabled={currentUser !== null}
-              request={currentUser ? `${currentUser.type}:${currentUser.id}` : ''}
-              errorSlot="context-tasks-error"
-              loadingSlot={null}
-              skeletonLines={2}
-              skeletonLead="size-4 shrink-0"
-              loadingLabel={loadingLabel}
-              errorLabel={errorLabel}
-              rows={taskRows}
-              empty={
-                <p data-slot="context-tasks-empty" className="text-muted-foreground px-2 py-1.5 text-sm">
-                  {emptyLabel}
-                </p>
-              }
-            />
+            <div ref={setTasksEl} className={cn('flex max-h-52 flex-col overflow-y-auto', LIST_FADE)}>
+              <SearchControl<MyTask>
+                load={loadTasks}
+                shell="bare"
+                readsEmpty
+                enabled={currentUser !== null}
+                request={currentUser ? `${currentUser.type}:${currentUser.id}` : ''}
+                errorSlot="context-tasks-error"
+                loadingSlot={null}
+                skeletonLines={2}
+                skeletonLead={cn('shrink-0', LEAD[size])}
+                loadingLabel={loadingLabel}
+                errorLabel={errorLabel}
+                rows={taskRows}
+                empty={
+                  <StateLine
+                    state="empty"
+                    slotName="context-tasks-empty"
+                    icon={ListChecks}
+                    label={emptyLabel}
+                  />
+                }
+              />
+            </div>
           </section>
 
           <section data-slot="context-hierarchy" className="flex flex-col">

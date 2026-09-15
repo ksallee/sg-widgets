@@ -47,7 +47,6 @@
 		hierarchyLoader,
 		hierarchySearcher,
 		isEmptyValue,
-		matchRuns,
 		NO_MATCH_LABEL,
 		NO_ROWS_LABEL,
 		pathOf,
@@ -66,6 +65,7 @@
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
 	import FieldValue from '$lib/registry/components/field-value.svelte';
+	import MatchText from '$lib/registry/components/match-text.svelte';
 	import StateLine from '$lib/registry/components/state-line.svelte';
 	import StatusBadge from '$lib/registry/components/status-badge.svelte';
 	import Thumbnail from '$lib/registry/components/thumbnail.svelte';
@@ -600,11 +600,13 @@
 
 								<span class="flex min-w-0 flex-1 flex-col">
 									<span class="flex min-w-0 items-center gap-1.5">
-										<span data-slot="entity-tree-label" class="truncate" title={name}>
-											{#each matchRuns(name, snap.search) as part, i (i)}
-												{#if part.match}<span class="font-semibold">{part.text}</span>{:else}{part.text}{/if}
-											{/each}
-										</span>
+										<MatchText
+											data-slot="entity-tree-label"
+											text={name}
+											query={snap.search}
+											class="truncate"
+											title={name}
+										/>
 										{#if code}
 											<span data-slot="entity-tree-code" class="text-muted-foreground shrink-0 font-mono text-xs"
 												>{code}</span

@@ -150,6 +150,28 @@ for (const token of SHARED) {
   else if (page !== stage) fails.push(`${token} is ${page} on the page and ${stage} on the stage`);
 }
 
+/*
+ * The tokens nothing writes text in, read against the page they are drawn on. A focus
+ * mark is held to 3:1; the rest are reported, since what a divider or a selected row owes
+ * the eye is a design reading and not a standard's number.
+ */
+const ground = rgba(rootStyle.getPropertyValue('--background').trim());
+out.nonText = {};
+for (const token of ['--ring', '--border', '--input', '--accent']) {
+  const raw = rgba(rootStyle.getPropertyValue(token).trim());
+  if (!raw) {
+    fails.push(`${token} is not a colour`);
+    continue;
+  }
+  const laid = overlay(raw, ground);
+  const a = luminance(laid);
+  const b = luminance(ground);
+  out.nonText[token] = Number((((Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05))).toFixed(2));
+}
+if (out.nonText['--ring'] < 3) {
+  fails.push(`the ring reads ${out.nonText['--ring']}:1 against the page, wanted 3`);
+}
+
 // The demo frame is drawn on the page's own tokens, not the stage's copy, so it is the
 // one place the two scopes have to meet.
 const frame = $('[data-sg-demo]');
@@ -157,7 +179,8 @@ out.frameBorder = frame ? getComputedStyle(frame).borderTopColor : null;
 if (!frame) fails.push('the demo frame is not on the page');
 
 const weakest = Object.entries(out.contrast).sort((a, b) => a[1] - b[1])[0];
+const nonText = Object.entries(out.nonText).map(([token, r]) => `${token} ${r}:1`).join(', ');
 out.verdict = fails.length
   ? `FAIL ${palette} ${theme}: ${fails.join('; ')}`
-  : `PASS ${palette} ${theme}: every text colour at AA, weakest ${weakest[0]} at ${weakest[1]}:1, chrome and demo on the same ${SHARED.length} tokens`;
+  : `PASS ${palette} ${theme}: every text colour at AA, weakest ${weakest[0]} at ${weakest[1]}:1, against the page ${nonText}, chrome and demo on the same ${SHARED.length} tokens`;
 return out;

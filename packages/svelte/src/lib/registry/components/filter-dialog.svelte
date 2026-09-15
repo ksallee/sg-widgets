@@ -1,5 +1,6 @@
 <script lang="ts" module>
 	import type { ControlSize } from '$lib/registry/components/control-classes.js';
+	import { CHIP_BOX, CHIP_PAD, type ChipSize } from '$lib/registry/components/leaf-classes.js';
 
 	export type FilterDialogSize = ControlSize;
 
@@ -9,6 +10,11 @@
 		md: 'icon',
 		lg: 'icon-lg'
 	};
+	/** The count beside the label is a chip, so it takes the step under the control. */
+	const COUNT: Record<FilterDialogSize, ChipSize> = { sm: 'xs', md: 'sm', lg: 'md' };
+	/** A text chip wears the entity chip's surface, as a picker's code chip does. */
+	const COUNT_CHIP =
+		'bg-secondary text-secondary-foreground inline-flex shrink-0 items-center rounded-md border tabular-nums';
 </script>
 
 <script lang="ts">
@@ -19,7 +25,6 @@
 	import Trash2Icon from '@lucide/svelte/icons/trash-2';
 	import type { FilterGroup, SgContext } from '@sg-widgets/core';
 	import { countActiveConditions, emptyFilter, isEmptyFilter } from '@sg-widgets/core';
-	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
@@ -126,7 +131,10 @@
 			{#if active > 0}
 				<PencilIcon class={CONTROL_GLYPH[size]} />
 				{label ?? 'Edit filters'}
-				<Badge variant="secondary" data-slot="filter-count">{active}</Badge>
+				<span
+					data-slot="filter-count"
+					class={cn(COUNT_CHIP, CHIP_BOX[COUNT[size]], CHIP_PAD[COUNT[size]].text)}
+				>{active}</span>
 			{:else}
 				<FilterIcon class={CONTROL_GLYPH[size]} />
 				{label ?? 'Add filters'}

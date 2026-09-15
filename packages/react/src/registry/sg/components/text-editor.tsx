@@ -68,6 +68,7 @@ export function TextEditor({
 
   return (
     <ValueEditor
+      // oxlint-disable-next-line shadcn/no-raw-colors -- a slot name, not a class
       slotName="text-editor"
       size={size}
       message={session.message}

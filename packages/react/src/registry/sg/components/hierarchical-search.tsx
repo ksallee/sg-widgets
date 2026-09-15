@@ -26,6 +26,7 @@ import { ChevronRight, Folder } from 'lucide-react';
 import { CommandGroup, CommandItem } from '@/components/ui/command';
 import { cn } from '@/lib/utils';
 import { entityGlyph } from '@/registry/sg/components/entity-glyphs';
+import { PICKER_ICON_BUTTON } from '@/registry/sg/components/picker-classes';
 import { PickerRow } from '@/registry/sg/components/picker-row';
 import type { SearchAnswer, SearchRequest } from '@/registry/sg/components/search-control';
 import { SearchControl } from '@/registry/sg/components/search-control';
@@ -70,8 +71,8 @@ function glyphFor(row: HierarchicalSearchRow) {
 
 export type HierarchicalSearchSize = 'sm' | 'md' | 'lg';
 
-/** A row's leading slot and its glyph, on the leaf ladder of `docs/design-rules.md`. */
-const LEAD: Record<HierarchicalSearchSize, string> = { sm: 'size-5', md: 'size-6', lg: 'size-8' };
+/** A row's leading slot and its glyph, on the thumbnail ladder `picker-row` draws on. */
+const LEAD: Record<HierarchicalSearchSize, string> = { sm: 'size-6', md: 'size-8', lg: 'size-10' };
 const GLYPH: Record<HierarchicalSearchSize, string> = {
   sm: 'size-3.5',
   md: 'size-4',
@@ -365,7 +366,7 @@ export function HierarchicalSearch({
                   type="button"
                   data-slot="search-drill"
                   aria-label={`Open ${item.label}`}
-                  className="hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring focus-visible:ring-offset-background shrink-0 rounded-sm p-0.5 opacity-70 outline-none transition-colors duration-150 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-2"
+                  className={PICKER_ICON_BUTTON}
                   onClick={(e) => {
                     e.stopPropagation();
                     drill(item);

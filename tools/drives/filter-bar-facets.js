@@ -63,15 +63,25 @@ for (const framework of drawn) {
     return { verdict: `FAIL ${framework} drew ${rows.length - badged.length} status values as plain text`, notes };
   }
 
-  // Tick every one of them, which is the widest a pill can get.
-  for (const row of rows) {
+  // Tick every one of them, which is the widest a pill can get. A tick rewrites the tree
+  // and the counts are read again, so the rows are drawn afresh and each one is found by
+  // its key rather than held from before.
+  const keys = rows.map((row) => row.dataset.option);
+  for (let i = 0; i < keys.length; i += 1) {
+    const row = await until(() => document.querySelector(`[data-option="${CSS.escape(keys[i])}"]`), 15000);
+    if (!row) return { verdict: `FAIL ${framework} lost the row for "${keys[i]}" before it was ticked`, notes };
     press(row);
-    await wait(80);
+    const title = await until(() => {
+      const values = pill(framework, 'sg_status_list')?.querySelector('[data-slot="filter-pill-values"]');
+      const held = values?.getAttribute('title') ?? '';
+      return held.split(', ').filter(Boolean).length === i + 1 ? held : null;
+    }, 15000);
+    if (!title) return { verdict: `FAIL ${framework} did not take tick ${i + 1} of ${keys.length}`, notes };
   }
   const filled = await until(() => {
     const values = pill(framework, 'sg_status_list')?.querySelector('[data-slot="filter-pill-values"]');
     return values?.querySelector('[data-slot="filter-pill-overflow"]') ? values : null;
-  });
+  }, 20000);
   if (!filled) return { verdict: `FAIL ${framework} never summarised the ticked values`, notes };
 
   const width = Math.round(filled.getBoundingClientRect().width);

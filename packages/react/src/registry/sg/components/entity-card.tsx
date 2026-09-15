@@ -328,6 +328,7 @@ export function EntityCard({
             src={model.thumbnail}
             size={THUMB[size]}
             alt=""
+            entityType={model.entity.type}
             playable={model.entity.type === 'Version' && imageState(model.thumbnail) === 'ready'}
             className="h-auto w-full rounded-none border-0"
           />
@@ -481,7 +482,7 @@ export function EntityCard({
       ) : (
         <>
           <div className={cn('flex min-w-0 items-start', HEADER[size])}>
-            <Thumbnail src={card.thumbnail} size={THUMB[size]} alt="" />
+            <Thumbnail src={card.thumbnail} size={THUMB[size]} alt="" entityType={card.entity.type} />
             <div className="flex min-w-0 flex-1 flex-col gap-1.5">
               {url ? (
                 <a

@@ -317,6 +317,7 @@
 					src={card.thumbnail}
 					size={THUMB[size]}
 					alt=""
+					entityType={card.entity.type}
 					playable={card.entity.type === 'Version' && imageState(card.thumbnail) === 'ready'}
 					class="h-auto w-full rounded-none border-0"
 				/>
@@ -430,7 +431,7 @@
 			{@const Glyph = entityGlyph(card.entity.type)}
 			{@const url = entityDetailUrl(site, card.entity)}
 			<div class={cn('flex min-w-0 items-start', HEADER[size])}>
-				<Thumbnail src={card.thumbnail} size={THUMB[size]} alt="" />
+				<Thumbnail src={card.thumbnail} size={THUMB[size]} alt="" entityType={card.entity.type} />
 				<div class="flex min-w-0 flex-1 flex-col gap-1.5">
 					{#if url}
 						<a

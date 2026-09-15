@@ -511,6 +511,7 @@
 												src={cellValue(row, thumbnail) as string | null}
 												alt=""
 												size={THUMB[size][density]}
+												entityType={row.type}
 												class="shrink-0"
 											/>
 										{:else if leading}

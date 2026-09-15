@@ -6,10 +6,11 @@ import { EntityPicker } from '@/registry/sg/components/entity-picker';
 import { createDemoContext, type DemoContext } from '../_shared/client';
 
 /**
- * Three paths, the first dotted through a link that accepts several types, so its
- * label names the type it travels through.
+ * Four paths. The first dotted through a link that accepts several types, so its
+ * label names the type it travels through, and the last the row's own status, which
+ * the header draws and the grid therefore does not.
  */
-const FIELDS = ['entity.Shot.sg_sequence', 'user', 'description'];
+const FIELDS = ['entity.Shot.sg_sequence', 'user', 'description', 'sg_status_list'];
 const SIZES = ['sm', 'md', 'lg'] as const;
 
 const group = 'flex flex-col gap-2';

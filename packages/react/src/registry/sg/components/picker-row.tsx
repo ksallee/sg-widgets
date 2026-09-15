@@ -198,6 +198,7 @@ export function PickerRow({
               src={picture}
               aspect="square"
               size={size}
+              entityType={row.type}
               className={roundThumbnail ? 'rounded-full' : undefined}
             />
           )}

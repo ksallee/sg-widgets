@@ -42,6 +42,7 @@ export interface EntityCardModel {
   thumbnail: string | null;
   /** The type's status field and the row's code, when the type has one. */
   status: { code: string; field: FieldSchema } | null;
+  /** The caller's paths, less the one naming the type's own status field. */
   columns: EntityCardColumn[];
 }
 
@@ -85,6 +86,7 @@ export async function describeEntityCard(
     Promise.all(paths.map((path) => describeColumn(context, row, path))),
   ]);
   const status = statusFieldFor(row.type, schema);
+  const statusName = typeof status === 'string' ? status : status.name;
   const code = typeof status === 'string' ? null : row.attributes[status.name];
   const image = options.imagePath ?? DEFAULT_IMAGE_PATH;
   const thumbnail = row.attributes[image];
@@ -95,7 +97,10 @@ export async function describeEntityCard(
     typeLabel: types.find((t) => t.name === row.type)?.displayName ?? row.type,
     thumbnail: typeof thumbnail === 'string' ? thumbnail : null,
     status: typeof status === 'string' || typeof code !== 'string' ? null : { code, field: status },
-    columns,
+    // The header already draws this row's own status, so the same field asked for by
+    // name is one value with one badge. A path that ends at a linked row's status is a
+    // different row's and stays.
+    columns: columns.filter((column) => column.path !== statusName),
   };
 }
 

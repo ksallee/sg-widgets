@@ -338,14 +338,16 @@
       "name": "thumbnail",
       "type": "registry:component",
       "title": "Thumbnail",
-      "description": "A row's thumbnail, with aspect ratio, an explicit no-image placeholder and a play overlay.",
+      "description": "A row's thumbnail, with aspect ratio, the entity's own glyph where there is no picture, and a play overlay.",
       "dependencies": [
         "@sg-widgets/core",
         "@lucide/svelte",
         "clsx",
         "tailwind-merge"
       ],
-      "registryDependencies": [],
+      "registryDependencies": [
+        "local:entity-glyphs"
+      ],
       "files": [
         {
           "path": "src/lib/registry/components/thumbnail.svelte",

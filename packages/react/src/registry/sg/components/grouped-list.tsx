@@ -17,6 +17,7 @@ import type {
 import {
   cellValue,
   displayNameOf,
+  groupKeyText,
   groupRowsKeyed,
   nextEnabledIndex,
   NO_ROWS_LABEL,
@@ -74,7 +75,8 @@ export interface GroupedListRowContext {
 export interface GroupedListGroupContext {
   /** The value the run shares. */
   value: unknown;
-  column: CollectionColumn;
+  /** The column the value was read from. `null` when the key is derived. */
+  column: CollectionColumn | null;
   /** Rows loaded under this header. */
   count: number;
   collapsed: boolean;
@@ -85,8 +87,18 @@ export interface GroupedListGroupContext {
 export interface GroupedListProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'children' | 'onSelect'> {
   /** The rows and the order behind them. Created with core's `createEntitySource`. */
   source: EntitySource;
-  /** Path the rows are grouped on. The source is sorted on it. */
-  groupBy: CollectionColumn;
+  /** Column the rows are grouped on. The source is sorted on it. Not read when `groupKey` is set. */
+  groupBy?: CollectionColumn;
+  /**
+   * The value a row groups under, derived rather than read from a column: a
+   * multi-entity field no site sorts on, or a value that comes from one field on one
+   * type and another on another. The source's sort is left as the caller set it, so the
+   * caller orders the rows so the runs come out whole. One of `groupBy` and this is
+   * required.
+   */
+  groupKey?: (row: EntityRow) => unknown;
+  /** The header's text for a derived key. Without it the key reads as its own display name. */
+  groupLabel?: (value: unknown) => string;
   /** Field holding the thumbnail URL. `false` leaves the leading slot to `leading`. */
   thumbnail?: string | false;
   /** Field shown as the row's label. Defaults to the type's own display name. */
@@ -171,6 +183,8 @@ export interface GroupedListProps extends Omit<React.HTMLAttributes<HTMLDivEleme
 export function GroupedList({
   source,
   groupBy,
+  groupKey,
+  groupLabel,
   thumbnail = false,
   labelField = null,
   subLabelField = null,
@@ -226,16 +240,18 @@ export function GroupedList({
     onSelectionChange,
   });
   const snapshot = control.snapshot;
+  // A derived key has no path to sort on, and the order is then the caller's to set.
+  const groupPath = groupKey ? undefined : groupBy?.path;
   useEffect(() => {
     // A group is only whole when the server put its rows together, so the group path
     // leads the sort. Setting it reads the first page again.
-    if (snapshot.sort[0]?.path !== groupBy.path) {
+    if (groupPath !== undefined && snapshot.sort[0]?.path !== groupPath) {
       void source.setSort([
-        { path: groupBy.path, descending: false },
-        ...snapshot.sort.filter((key) => key.path !== groupBy.path),
+        { path: groupPath, descending: false },
+        ...snapshot.sort.filter((key) => key.path !== groupPath),
       ]);
     }
-  }, [source, groupBy.path, snapshot.sort]);
+  }, [source, groupPath, snapshot.sort]);
 
   const rows = control.rows;
   const view = control.view(rows.length);
@@ -246,7 +262,10 @@ export function GroupedList({
 
   // A page whose first rows carry the value the last group carries grows that group
   // rather than opening a second one, and the key it is collapsed under stands.
-  const groups = useMemo(() => groupRowsKeyed(rows, groupBy.path), [rows, groupBy.path]);
+  const groups = useMemo(
+    () => groupRowsKeyed(rows, groupKey ?? groupPath ?? ''),
+    [rows, groupKey, groupPath],
+  );
 
   const [ownCollapsed, setOwnCollapsed] = useState<string[]>([]);
   const collapsed = collapsedProp ?? ownCollapsed;
@@ -395,7 +414,7 @@ export function GroupedList({
                     {groupHeader ? (
                       groupHeader({
                         value: group.value,
-                        column: groupBy,
+                        column: groupKey ? null : (groupBy ?? null),
                         count: group.rows.length,
                         collapsed: shut,
                         id: group.key,
@@ -403,14 +422,20 @@ export function GroupedList({
                     ) : (
                       <>
                         <span className="min-w-0 truncate">
-                          <FieldValue
-                            value={group.value}
-                            dataType={groupBy.dataType}
-                            field={groupBy.field}
-                            statuses={statuses}
-                            context={context}
-                            density={density}
-                          />
+                          {groupBy && !groupKey ? (
+                            <FieldValue
+                              value={group.value}
+                              dataType={groupBy.dataType}
+                              field={groupBy.field}
+                              statuses={statuses}
+                              context={context}
+                              density={density}
+                            />
+                          ) : groupLabel ? (
+                            groupLabel(group.value)
+                          ) : (
+                            groupKeyText(group.value)
+                          )}
                         </span>
                         <span className="text-muted-foreground font-mono text-xs tabular-nums">
                           {group.rows.length}

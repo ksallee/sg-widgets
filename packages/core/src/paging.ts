@@ -11,7 +11,7 @@
  * set is a short page and nothing else (006_pagination).
  */
 import type { EntityRow } from './client.js';
-import type { EntitySourceState, RowGroup, SourceMode } from './collection.js';
+import type { EntitySourceState, GroupBy, RowGroup, SourceMode } from './collection.js';
 import { groupRows } from './collection.js';
 
 /** How a collection walks a set: a page number, a load-more row, or the scroller. */
@@ -85,8 +85,8 @@ export interface KeyedRowGroup extends RowGroup {
  * the value the last run carries grows that run rather than opening a second one,
  * and a group shut before the page arrived is still shut after it.
  */
-export function groupRowsKeyed(rows: readonly EntityRow[], path: string): KeyedRowGroup[] {
-  return groupRows(rows, path).map((bucket, at) => ({
+export function groupRowsKeyed(rows: readonly EntityRow[], by: GroupBy): KeyedRowGroup[] {
+  return groupRows(rows, by).map((bucket, at) => ({
     ...bucket,
     key: `group:${at}:${JSON.stringify(bucket.value ?? null)}`,
   }));

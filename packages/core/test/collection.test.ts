@@ -4,6 +4,7 @@ import {
   createEntitySource,
   cellValue,
   describePaging,
+  groupKeyText,
   groupRows,
   resolveColumns,
   rowKey,
@@ -12,6 +13,7 @@ import {
 import { createSchemaService } from '../src/schema-service.js';
 import { condition, group } from '../src/filter.js';
 import type { EntitySource } from '../src/collection.js';
+import type { EntityRow } from '../src/client.js';
 
 function source(over: Partial<Parameters<typeof createEntitySource>[0]> = {}): EntitySource {
   return createEntitySource({
@@ -237,6 +239,35 @@ describe('groupRows', () => {
       relationships: {},
     }));
     expect(groupRows(rows, 'sg_status_list').map((g) => g.value)).toEqual(['a', 'b', 'a']);
+  });
+
+  it('groups on a key derived from the row, in the order the rows came in', () => {
+    const note = (id: number, link: { type: string; id: number; name: string } | null) => ({
+      type: 'Note',
+      id,
+      attributes: { subject: `n${id}` },
+      relationships: { note_links: { data: link ? [link] : [] } },
+    });
+    const shot = { type: 'Shot', id: 7, name: 'sh010' };
+    const asset = { type: 'Asset', id: 9, name: 'Tree' };
+    const recordOf = (row: EntityRow) =>
+      ((row.relationships?.['note_links'] as { data?: unknown[] } | undefined)?.data?.[0] ?? null);
+    const groups = groupRows([note(1, shot), note(2, shot), note(3, asset), note(4, shot)], recordOf);
+    expect(groups.map((g) => groupKeyText(g.value))).toEqual(['sh010', 'Tree', 'sh010']);
+    expect(groups.map((g) => g.rows.length)).toEqual([2, 1, 1]);
+    expect(groupRows([note(5, null)], recordOf).map((g) => g.value)).toEqual([null]);
+  });
+});
+
+describe('groupKeyText', () => {
+  it('reads a row as its display name and anything else as its own text', () => {
+    expect(groupKeyText({ type: 'Shot', id: 7, name: 'sh010' })).toBe('sh010');
+    expect(groupKeyText({ type: 'Shot', id: 7, code: 'sh020', name: 'x' })).toBe('sh020');
+    expect(groupKeyText('ip')).toBe('ip');
+    expect(groupKeyText(12)).toBe('12');
+    expect(groupKeyText(null)).toBe('');
+    expect(groupKeyText(undefined)).toBe('');
+    expect(groupKeyText({ type: 'Shot', id: 7 })).toBe('');
   });
 });
 

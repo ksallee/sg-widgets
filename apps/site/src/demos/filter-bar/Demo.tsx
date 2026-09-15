@@ -82,6 +82,7 @@ export default function FilterBarDemo() {
           entityType="Shot"
           context={context}
           facets={['sg_status_list', 'sg_sequence', 'sg_shot_type']}
+          labels={{ sg_shot_type: 'Kind' }}
           baseFilter={context.live ? group('and', [condition('project', 'is', { type: 'Project', id: context.projectId })]) : null}
           value={value}
           onChange={setValue}

@@ -415,6 +415,42 @@ export function conditionParts(condition: FilterCondition, field?: FieldSchema |
   };
 }
 
+/** A condition's values, as much of them as a pill has room to name. */
+export interface ConditionValues {
+  /** The values the pill names, in order. */
+  shown: string[];
+  /** Values past `shown`, which the pill reads as `+n`. */
+  overflow: number;
+  /** Every value, comma-joined, for the `title` a truncated pill carries. */
+  title: string;
+  /** The scalar behind each shown value, for a pill that draws its values rather than spelling them. */
+  values: Scalar[];
+}
+
+/**
+ * A condition's values as a pill reads them: the first `max`, a count of the rest,
+ * and the whole list for the title. A condition on any other shape than a list has
+ * one value and no overflow, so a pill draws it whole.
+ */
+export function conditionValues(
+  condition: FilterCondition,
+  field?: FieldSchema | null,
+  max = 2,
+): ConditionValues {
+  const title = valueSummary(condition, field);
+  if (VALUE_SHAPE[condition.operator] !== 'list' || !Array.isArray(condition.value)) {
+    return { shown: title ? [title] : [], overflow: 0, title, values: [] };
+  }
+  const all = condition.value as Scalar[];
+  const limit = max > 0 ? Math.min(max, all.length) : all.length;
+  return {
+    shown: all.slice(0, limit).map((v) => scalarLabel(v, field)),
+    overflow: all.length - limit,
+    title,
+    values: all.slice(0, limit),
+  };
+}
+
 /**
  * One line naming what a condition matches, such as
  * `Status is any of Approved, Final`. Without a schema the field's dotted path

@@ -6,6 +6,8 @@ export default {
     { name: 'entityType', type: '`string`', default: 'required', meaning: 'Type the pills and the counts read on.' },
     { name: 'context', type: '`SgContext`', default: 'required', meaning: 'The widget context. Every read goes through it, so widgets on a page share one cache.' },
     { name: 'facets', type: '`string[]`', default: 'required', meaning: 'Field names to offer as pills, in order.' },
+    { name: 'labels', type: '`Record<string, string>`', default: '`{}`', meaning: 'A name per facet, for a field whose schema label is not what the page calls it.' },
+    { name: 'maxValues', type: '`number`', default: '`2`', meaning: 'Values a pill names before the rest reads as `+n`. `0` names every one.' },
     { name: 'value', type: '`FilterGroup`', default: '`emptyFilter()`', meaning: 'The tree the pills write into. Two-way in Svelte through `bind:value`.' },
     { name: 'counts', type: '`(field, filters) => Promise<Record<string, number>>`', default: '—', meaning: 'Counts per value for one facet. Wire it to a `_summarize` grouping call.' },
     { name: 'sampleSize', type: '`number`', default: '`200`', meaning: 'Rows read for the tally when `counts` is not given.' },

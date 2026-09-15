@@ -19,11 +19,21 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/filter-bar.jso
 <Demo name="filter-bar" title="FilterBar: status, sequence and shot type over Shot" />
 
 An untouched facet is a quiet dashed pill naming its field. Ticking a value turns it into a pill
-reading the field and the values ticked, with a count once there are several, and opening the pill
-again reopens the checklist. A control at the end of the pill removes it, and once any pill is
-active a Clear all control drops every condition the pills contribute, leaving anything built in
-the dialog alone. Other operators on a facet field, is none of and is empty among them, are set in
-the dialog; a pill holding one reads its condition as text.
+reading the field and the values ticked, and opening the pill again reopens the checklist. A control
+at the end of the pill removes it, and once any pill is active a Clear all control drops every
+condition the pills contribute, leaving anything built in the dialog alone. Other operators on a
+facet field, is none of and is empty among them, are set in the dialog; a pill holding one reads its
+condition as text.
+
+A pill names `maxValues` of what is ticked and reads the rest as `+n`, and its value is capped and
+truncated with the whole list in its `title`, so a facet with everything ticked never stretches the
+bar past the width it was given.
+
+A facet over a status field draws a status badge for each value, in the checklist and in the pill,
+in the site's own colour and with the site's own icon, so the bar reads as the lists beside it do.
+
+A pill is named from the field's schema. `labels` names one differently, keyed by field name, for a
+field whose schema label is written for an admin rather than for the page.
 
 ## Props
 
@@ -58,6 +68,9 @@ does not empty its neighbours.
 A status or list value is the raw code, never the display label, and a code outside `valid_values`
 matches nothing rather than erroring (field_types/status_list). An entity value is a `{type, id}`
 hash (field_types/entity).
+
+A badge's colour and icon come from the `Status` rows, which are one read per site and are keyed by
+code (probe 010). A code with no row of its own still draws, as itself.
 
 Every negating operator, `not_in` included, also matches rows where the field is unset
 (017_filter_operators), so is none of on a facet returns the blanks as well.

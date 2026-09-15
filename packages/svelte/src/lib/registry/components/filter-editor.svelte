@@ -7,7 +7,6 @@
 	/** A condition row is a control inside a control, so its ladder sits one step down. */
 	const BOX: Record<FilterEditorSize, string> = { sm: 'h-7', md: 'h-8', lg: 'h-9' };
 	const INNER: Record<FilterEditorSize, 'sm' | 'md'> = { sm: 'sm', md: 'sm', lg: 'md' };
-	const BTN: Record<FilterEditorSize, 'xs' | 'sm' | 'default'> = { sm: 'xs', md: 'sm', lg: 'default' };
 	/** A cross sits one step under the row's own control on the chip ladder. */
 	const CROSS: Record<FilterEditorSize, ChipSize> = { sm: 'xs', md: 'xs', lg: 'sm' };
 	const TOGGLE: Record<FilterEditorSize, 'sm' | 'default'> = { sm: 'sm', md: 'sm', lg: 'default' };
@@ -120,6 +119,7 @@
 		withRelativeWindow
 	} from '@sg-widgets/core';
 	import { Button } from '$lib/components/ui/button/index.js';
+	import { CONTROL_BUTTON } from '$lib/registry/components/control-classes.js';
 	import * as Select from '$lib/components/ui/select/index.js';
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
 	import * as ToggleGroup from '$lib/components/ui/toggle-group/index.js';
@@ -411,7 +411,7 @@
 		{/each}
 		<Button
 			variant="ghost"
-			size={BTN[size]}
+			size={CONTROL_BUTTON[size]}
 			class="text-muted-foreground hover:text-foreground shrink-0"
 			{disabled}
 			data-slot="filter-list-add"
@@ -673,7 +673,7 @@
 		<div class="flex min-w-0 flex-wrap items-center gap-1 pl-3" data-slot="filter-foot">
 			<Button
 				variant="ghost"
-				size={BTN[size]}
+				size={CONTROL_BUTTON[size]}
 				class="text-muted-foreground hover:text-foreground"
 				{disabled}
 				data-slot="filter-add-condition"
@@ -685,7 +685,7 @@
 			</Button>
 			<Button
 				variant="ghost"
-				size={BTN[size]}
+				size={CONTROL_BUTTON[size]}
 				class="text-muted-foreground hover:text-foreground"
 				{disabled}
 				data-slot="filter-add-group"

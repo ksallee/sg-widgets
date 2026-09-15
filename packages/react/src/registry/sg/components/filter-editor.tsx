@@ -48,6 +48,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { cn } from '@/lib/utils';
+import { CONTROL_BUTTON } from '@/registry/sg/components/control-classes';
 import { CheckboxEditor } from '@/registry/sg/components/checkbox-editor';
 import { ColorEditor } from '@/registry/sg/components/color-editor';
 import { DateEditor } from '@/registry/sg/components/date-editor';
@@ -139,7 +140,6 @@ export type FilterEditorSize = 'sm' | 'md' | 'lg';
 /** A condition row is a control inside a control, so its ladder sits one step down. */
 const BOX: Record<FilterEditorSize, string> = { sm: 'h-7', md: 'h-8', lg: 'h-9' };
 const INNER: Record<FilterEditorSize, 'sm' | 'md'> = { sm: 'sm', md: 'sm', lg: 'md' };
-const BTN: Record<FilterEditorSize, 'xs' | 'sm' | 'default'> = { sm: 'xs', md: 'sm', lg: 'default' };
 /** A cross sits one step under the row's own control on the chip ladder. */
 const CROSS: Record<FilterEditorSize, ChipSize> = { sm: 'xs', md: 'xs', lg: 'sm' };
 const TOGGLE: Record<FilterEditorSize, 'sm' | 'default'> = { sm: 'sm', md: 'sm', lg: 'default' };
@@ -380,7 +380,7 @@ function GroupNode({ ctx, path, node }: { ctx: EditorContext; path: NodePath; no
       <div className="flex min-w-0 flex-wrap items-center gap-1 pl-3" data-slot="filter-foot">
         <Button
           variant="ghost"
-          size={BTN[ctx.size]}
+          size={CONTROL_BUTTON[ctx.size]}
           className="text-muted-foreground hover:text-foreground"
           disabled={ctx.disabled}
           data-slot="filter-add-condition"
@@ -392,7 +392,7 @@ function GroupNode({ ctx, path, node }: { ctx: EditorContext; path: NodePath; no
         </Button>
         <Button
           variant="ghost"
-          size={BTN[ctx.size]}
+          size={CONTROL_BUTTON[ctx.size]}
           className="text-muted-foreground hover:text-foreground"
           disabled={ctx.disabled}
           data-slot="filter-add-group"
@@ -765,7 +765,7 @@ function ListValues({
       ))}
       <Button
         variant="ghost"
-        size={BTN[size]}
+        size={CONTROL_BUTTON[size]}
         className="text-muted-foreground hover:text-foreground shrink-0"
         disabled={disabled}
         data-slot="filter-list-add"

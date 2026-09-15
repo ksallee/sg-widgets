@@ -810,6 +810,7 @@
         "@lucide/svelte"
       ],
       "registryDependencies": [
+        "local:control-classes",
         "local:field-value",
         "local:text-editor",
         "local:number-editor",
@@ -858,6 +859,7 @@
         "@lucide/svelte"
       ],
       "registryDependencies": [
+        "local:control-classes",
         "local:entity-fields",
         "local:leaf-classes",
         "local:state-line",

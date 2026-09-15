@@ -1,5 +1,6 @@
 <script lang="ts" module>
 	import {
+		CONTROL_BUTTON,
 		CONTROL_GLYPH,
 		CONTROL_HEIGHT,
 		CONTROL_PAD,
@@ -17,7 +18,6 @@
 	 */
 	const CROSS_PAD: Record<FilterBarSize, string> = { sm: 'pr-[7px]', md: 'pr-2', lg: 'pr-[9px]' };
 	/** The button step beside a pill of each height. */
-	const BTN: Record<FilterBarSize, 'sm' | 'default' | 'lg'> = { sm: 'sm', md: 'default', lg: 'lg' };
 </script>
 
 <script lang="ts">
@@ -232,7 +232,7 @@
 			<div class="border-border border-t p-1">
 				<Button
 					variant="ghost"
-					size={BTN[size]}
+					size={CONTROL_BUTTON[size]}
 					class="w-full"
 					data-slot="filter-pill-clear"
 					onclick={() => commit(setFacet(value, name, []))}
@@ -346,7 +346,7 @@
 	{#if activeCount > 0}
 		<Button
 			variant="ghost"
-			size={BTN[size]}
+			size={CONTROL_BUTTON[size]}
 			{disabled}
 			class="text-muted-foreground hover:text-foreground"
 			data-slot="filter-clear-all"

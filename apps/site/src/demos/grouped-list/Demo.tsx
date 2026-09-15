@@ -1,6 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { CollectionColumn, EntityRef, EntityRow, StatusRecord } from '@sg-widgets/core';
-import { cellValue, condition, createEntitySource, displayNameOf, resolveColumns } from '@sg-widgets/core';
+import type { CollapseState, CollectionColumn, EntityRef, EntityRow, StatusRecord } from '@sg-widgets/core';
+import {
+  cellValue,
+  collapseAll,
+  condition,
+  createEntitySource,
+  displayNameOf,
+  expandAll,
+  resolveColumns,
+} from '@sg-widgets/core';
 import { GroupedList } from '@/registry/sg/components/grouped-list';
 import { StatusBadge } from '@/registry/sg/components/status-badge';
 import { createDemoClient, createDemoContext } from '../_shared/client';
@@ -88,6 +96,7 @@ export default function GroupedListDemo() {
   const [data, setData] = useState<Loaded | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [compact, setCompact] = useState(false);
+  const [collapsed, setCollapsed] = useState<CollapseState>(expandAll);
   const [selected, setSelected] = useState<EntityRef[]>([]);
 
   useEffect(() => {
@@ -140,6 +149,14 @@ export default function GroupedListDemo() {
 
         <section className="flex w-full min-w-0 flex-col gap-3" data-demo-case="derived">
           <h4 className="text-muted-foreground text-xs font-medium">Grouped on a derived key</h4>
+          <div className="flex flex-wrap items-center gap-2">
+            <button type="button" className={toggle} data-demo="collapse-all" onClick={() => setCollapsed(collapseAll())}>
+              Collapse all
+            </button>
+            <button type="button" className={toggle} data-demo="expand-all" onClick={() => setCollapsed(expandAll())}>
+              Expand all
+            </button>
+          </div>
           <GroupedList
             source={recordSource}
             context={context}
@@ -149,6 +166,8 @@ export default function GroupedListDemo() {
             labelField="code"
             subLabelField="description"
             statuses={data.statuses}
+            collapsed={collapsed}
+            onCollapsedChange={setCollapsed}
             maxHeight="16rem"
           />
         </section>

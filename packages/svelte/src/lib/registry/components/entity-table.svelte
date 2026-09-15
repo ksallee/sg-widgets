@@ -75,6 +75,7 @@
 	import { untrack, type Snippet } from 'svelte';
 	import type { HTMLAttributes } from 'svelte/elements';
 	import type {
+		CollapseState,
 		EntityRef,
 		EntitySource,
 		PagingMode,
@@ -93,7 +94,11 @@
 		isEditableType,
 		nextEnabledIndex,
 		preferencesOf,
-		sameIds,
+		asCollapseState,
+		collapseStateFrom,
+		expandAll,
+		isCollapsed,
+		sameCollapse,
 		stateLine
 	} from '@sg-widgets/core';
 	import {
@@ -165,9 +170,12 @@
 		isRowDisabled?: RowDisabledFn;
 		/** Collapse rows under headers of a shared value at this path. */
 		groupBy?: string | null;
-		/** Ids of the group headers that are shut, two-way. */
-		collapsed?: string[];
-		onCollapsedChange?: (ids: string[]) => void;
+		/**
+		 * Which group headers are shut, two-way. A bare id list reads as the open mode with
+		 * those ids shut; `collapseAll()` shuts the headers a later page brings too.
+		 */
+		collapsed?: string[] | CollapseState;
+		onCollapsedChange?: (state: CollapseState) => void;
 		/** The source's sort, two-way, so a SortPicker drops into the toolbar. */
 		sort?: SortSpec[];
 		onSortChange?: (sort: SortSpec[]) => void;
@@ -229,7 +237,7 @@
 		getRowId,
 		isRowDisabled,
 		groupBy = null,
-		collapsed = $bindable([]),
+		collapsed = $bindable(expandAll()),
 		onCollapsedChange,
 		sort = $bindable(),
 		onSortChange,
@@ -375,15 +383,24 @@
 		return table.getRowModel().flatRows.filter((row) => row.getIsGrouped());
 	});
 	$effect(() => {
+		// The table answers which headers are shut, not which one was pressed, so the state
+		// is read back under the mode in force and a later page still follows it.
+		const drawn = groupHeaders.map((row) => row.id);
 		const shut = groupHeaders.filter((row) => !row.getIsExpanded()).map((row) => row.id);
-		if (sameIds(shut, untrack(() => collapsed ?? []))) return;
-		collapsed = shut;
-		onCollapsedChange?.(shut);
+		const held = untrack(() => asCollapseState(collapsed));
+		const next = collapseStateFrom(held, shut, drawn);
+		if (sameCollapse(next, held)) return;
+		collapsed = next;
+		onCollapsedChange?.(next);
 	});
 	$effect(() => {
-		const shut = new Set(collapsed ?? []);
+		const state = asCollapseState(collapsed);
+		void groupHeaders.length;
 		untrack(() => {
-			for (const row of groupHeaders) if (row.getIsExpanded() === shut.has(row.id)) row.toggleExpanded(!shut.has(row.id));
+			for (const row of groupHeaders) {
+				const closed = isCollapsed(state, row.id);
+				if (row.getIsExpanded() === closed) row.toggleExpanded(!closed);
+			}
 		});
 	});
 

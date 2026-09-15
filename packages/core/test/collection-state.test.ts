@@ -1,8 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import type { EntityRow } from '../src/client.js';
 import {
+  asCollapseState,
+  collapseAll,
+  collapsedKeys,
+  collapseStateFrom,
+  expandAll,
   firstEnabledIndex,
   idsForRefs,
+  isCollapsed,
   nextEnabledIndex,
   refsForIds,
   rowIdOf,
@@ -10,9 +16,11 @@ import {
   sameFilters,
   selectableRefs,
   selectionState,
+  sameCollapse,
   sameIds,
   sameRefs,
   sameSort,
+  toggleCollapsed,
   toggleId,
   toggleRef,
   toSortKeys,
@@ -155,5 +163,57 @@ describe('a selection over loaded rows', () => {
     expect(selectionState(rows, open, locked)).toEqual({ all: true, some: true });
     expect(selectableRefs(rows, locked)).toEqual(open);
     expect(selectionState([rows[1] as EntityRow], [], locked)).toEqual({ all: false, some: false });
+  });
+});
+
+describe('collapse state', () => {
+  it('holds a mode, so a group that arrives later follows it', () => {
+    const shut = collapseAll();
+    expect(isCollapsed(shut, 'group:0:"apr"')).toBe(true);
+    // The key the next page brings was never named, and is shut all the same.
+    expect(isCollapsed(shut, 'group:9:"new"')).toBe(true);
+    expect(isCollapsed(expandAll(), 'group:9:"new"')).toBe(false);
+  });
+
+  it('toggles one group against the mode and back out of the exceptions', () => {
+    const opened = toggleCollapsed(collapseAll(), 'a');
+    expect(opened).toEqual({ all: true, except: ['a'] });
+    expect(isCollapsed(opened, 'a')).toBe(false);
+    expect(isCollapsed(opened, 'b')).toBe(true);
+    // Shutting it again leaves no exception behind.
+    expect(toggleCollapsed(opened, 'a')).toEqual({ all: true, except: [] });
+    // `on` is whether the group ends up shut, and asking for what already holds changes nothing.
+    expect(toggleCollapsed(opened, 'a', true)).toEqual({ all: true, except: [] });
+    expect(toggleCollapsed(opened, 'a', false)).toEqual({ all: true, except: ['a'] });
+    expect(toggleCollapsed(opened, 'b', true)).toEqual({ all: true, except: ['a'] });
+  });
+
+  it('reads a bare key list as the open mode with those keys shut', () => {
+    expect(asCollapseState(['a', 'b'])).toEqual({ all: false, except: ['a', 'b'] });
+    expect(asCollapseState(undefined)).toEqual({ all: false, except: [] });
+    expect(isCollapsed(asCollapseState(['a']), 'a')).toBe(true);
+    expect(isCollapsed(asCollapseState(['a']), 'b')).toBe(false);
+  });
+
+  it('answers which of the drawn keys are shut', () => {
+    expect(collapsedKeys(collapseAll(), ['a', 'b'])).toEqual(['a', 'b']);
+    expect(collapsedKeys(toggleCollapsed(collapseAll(), 'a'), ['a', 'b'])).toEqual(['b']);
+    expect(collapsedKeys(asCollapseState(['b']), ['a', 'b', 'c'])).toEqual(['b']);
+  });
+
+  it('reads a set of shut headers back under the mode in force', () => {
+    const keys = ['a', 'b', 'c'];
+    // Under collapse-all, an open header is the exception and the mode survives.
+    expect(collapseStateFrom(collapseAll(), ['a', 'c'], keys)).toEqual({ all: true, except: ['b'] });
+    // Under expand-all it is the other way.
+    expect(collapseStateFrom(expandAll(), ['a', 'c'], keys)).toEqual({ all: false, except: ['a', 'c'] });
+    // An exception for a key no longer drawn is dropped.
+    expect(collapseStateFrom({ all: true, except: ['gone'] }, keys, keys)).toEqual({ all: true, except: [] });
+  });
+
+  it('compares two states by what they shut', () => {
+    expect(sameCollapse(collapseAll(), { all: true, except: [] })).toBe(true);
+    expect(sameCollapse({ all: true, except: ['a', 'b'] }, { all: true, except: ['b', 'a'] })).toBe(true);
+    expect(sameCollapse(collapseAll(), expandAll())).toBe(false);
   });
 });

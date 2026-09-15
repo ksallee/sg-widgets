@@ -20,7 +20,7 @@ export default {
     { name: 'density', type: '`\'compact\' | \'default\'`', default: '`\'default\'`', meaning: 'Compact halves the vertical row padding and draws a row chip and badge a step smaller.' },
     { name: 'selectable', type: '`boolean`', default: '`false`', meaning: 'Draws a checkbox on each row.' },
     { name: 'isRowDisabled', type: '`(row) => boolean`', default: '—', meaning: 'True for a row that cannot be selected or reached by Tab.' },
-    { name: 'collapsed', type: '`string[]`', default: '`[]`', meaning: 'Keys of the groups that are shut, two-way.' },
+    { name: 'collapsed', type: '`string[] | CollapseState`', default: '`expandAll()`', meaning: 'Which groups are shut, two-way. A bare key list is the open mode with those keys shut.' },
     { name: 'sort', type: '`SortSpec[]`', default: '—', meaning: 'The source\'s sort, two-way, so a SortPicker drops into `header`.' },
     { name: 'filters', type: '`FilterNode | WireGroup | null`', default: '—', meaning: 'The source\'s filter, two-way, so a FilterBar drops into `header`.' },
     { name: 'paging', type: '`\'pages\' | \'more\' | \'scroll\'`', default: '`\'more\'`', meaning: 'How the set is walked: a page number, a load-more row, or the scroller.' },
@@ -35,7 +35,7 @@ export default {
   events: [
     { name: 'onSelectionChange', payload: '`EntityRef[]`', when: 'The selection changed.' },
     { name: 'onSelect', payload: '`EntityRow`', when: 'A row was activated, when `selectable` is off.' },
-    { name: 'onCollapsedChange', payload: '`string[]`', when: 'A group was opened or shut.' },
+    { name: 'onCollapsedChange', payload: '`CollapseState`', when: 'A group was opened or shut.' },
     { name: 'onSortChange', payload: '`SortSpec[]`', when: 'The source\'s sort changed.' },
     { name: 'onFiltersChange', payload: '`FilterNode | WireGroup | null`', when: 'The source\'s filter changed.' },
   ],

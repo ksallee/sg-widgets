@@ -1,6 +1,20 @@
 <script lang="ts">
-	import type { CollectionColumn, EntityRef, EntityRow, StatusRecord } from '@sg-widgets/core';
-	import { cellValue, condition, createEntitySource, displayNameOf, resolveColumns } from '@sg-widgets/core';
+	import type {
+		CollapseState,
+		CollectionColumn,
+		EntityRef,
+		EntityRow,
+		StatusRecord
+	} from '@sg-widgets/core';
+	import {
+		cellValue,
+		collapseAll,
+		condition,
+		createEntitySource,
+		displayNameOf,
+		expandAll,
+		resolveColumns
+	} from '@sg-widgets/core';
 	import GroupedList from '$lib/registry/components/grouped-list.svelte';
 	import StatusBadge from '$lib/registry/components/status-badge.svelte';
 	import { createDemoClient, createDemoContext } from '../_shared/client';
@@ -69,6 +83,7 @@
 
 	let statusTable = $state<Record<string, StatusRecord>>({});
 	let compact = $state(false);
+	let collapsed = $state<CollapseState>(expandAll());
 	let selected = $state<EntityRef[]>([]);
 
 	async function load(): Promise<{
@@ -125,6 +140,14 @@
 
 		<section class="flex w-full min-w-0 flex-col gap-3" data-demo-case="derived">
 			<h4 class="text-muted-foreground text-xs font-medium">Grouped on a derived key</h4>
+			<div class="flex flex-wrap items-center gap-2">
+				<button type="button" class={toggle} data-demo="collapse-all" onclick={() => (collapsed = collapseAll())}>
+					Collapse all
+				</button>
+				<button type="button" class={toggle} data-demo="expand-all" onclick={() => (collapsed = expandAll())}>
+					Expand all
+				</button>
+			</div>
 			<GroupedList
 				source={recordSource}
 				{context}
@@ -134,6 +157,7 @@
 				labelField="code"
 				subLabelField="description"
 				{statuses}
+				bind:collapsed
 				maxHeight="16rem"
 			/>
 		</section>

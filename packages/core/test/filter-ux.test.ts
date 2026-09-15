@@ -9,6 +9,7 @@ import {
   defaultCondition,
   defaultValueFor,
   conditionParts,
+  conditionValues,
   describeCondition,
   emptyValueFor,
   facetPresets,
@@ -539,6 +540,30 @@ describe('conditionParts', () => {
 
   it('falls back to the dotted path with no schema', () => {
     expect(conditionParts(condition('entity.Shot.code', 'contains', '010')).field).toBe('entity.Shot.code');
+  });
+});
+
+describe('conditionValues', () => {
+  it('names the first values and counts the rest, with the whole list in the title', () => {
+    const ticked = condition('sg_status_list', 'in', ['apr', 'fin', 'ip', 'rev']);
+    expect(conditionValues(ticked, status, 2)).toEqual({
+      shown: ['Approved', 'Final'],
+      overflow: 2,
+      title: 'Approved, Final, In Progress, rev',
+      values: ['apr', 'fin'],
+    });
+    // `max` of 0 is every value, and a list shorter than `max` never overflows.
+    expect(conditionValues(ticked, status, 0).overflow).toBe(0);
+    expect(conditionValues(condition('sg_status_list', 'in', ['apr']), status, 2).overflow).toBe(0);
+  });
+
+  it('gives a condition on any other shape its one value and no overflow', () => {
+    const one = conditionValues(condition('code', 'contains', '010'));
+    expect(one.shown).toEqual(['010']);
+    expect(one.overflow).toBe(0);
+    expect(one.values).toEqual([]);
+    // An operator that pins its own value has nothing to name.
+    expect(conditionValues(condition('sg_status_list', 'is', null), status).shown).toEqual([]);
   });
 });
 

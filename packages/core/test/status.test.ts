@@ -8,7 +8,7 @@ import {
   usableStatuses,
 } from '../src/status.js';
 import { STOCK_ICON_CELLS } from '../src/status-icons.js';
-import { displayNameOf, fieldSchemaOverride, normalizeField, statusFieldFor } from '../src/schema.js';
+import { displayNameOf, fieldSchemaOverride, normalizeField, normalizeFields, statusFieldFor } from '../src/schema.js';
 
 describe('usableStatuses', () => {
   const field = {
@@ -117,5 +117,51 @@ describe('the fields the schema types wrongly', () => {
     expect(field.dataType).toBe('list');
     expect(field.validValues).toEqual(['unread', 'read']);
     expect(fieldSchemaOverride('Shot', 'sg_status_list')).toBeUndefined();
+  });
+
+  it('answers Note.read_by_current_user from a schema that does not declare it', () => {
+    const fields = normalizeFields({
+      data: {
+        subject: {
+          name: { value: 'Subject', editable: true },
+          entity_type: { value: 'Note', editable: false },
+          data_type: { value: 'text', editable: false },
+          editable: { value: true, editable: false },
+          mandatory: { value: true, editable: false },
+          unique: { value: false, editable: false },
+          properties: {},
+        },
+      },
+    });
+    const read = fields['read_by_current_user'];
+    expect(read).toEqual({
+      name: 'read_by_current_user',
+      displayName: 'Read by Current User',
+      entityType: 'Note',
+      dataType: 'list',
+      validValues: ['unread', 'read'],
+      editable: false,
+      mandatory: false,
+      unique: false,
+    });
+  });
+
+  it('leaves the field the schema did declare alone, and adds nothing to another type', () => {
+    const raw = (entityType: string, dataType: string) => ({
+      name: { value: 'Read by Current User', editable: true },
+      entity_type: { value: entityType, editable: false },
+      data_type: { value: dataType, editable: false },
+      editable: { value: true, editable: false },
+      mandatory: { value: false, editable: false },
+      unique: { value: false, editable: false },
+      properties: {},
+    });
+    const notes = normalizeFields({ data: { read_by_current_user: raw('Note', 'checkbox') } });
+    expect(Object.keys(notes)).toEqual(['read_by_current_user']);
+    expect(notes['read_by_current_user']?.dataType).toBe('list');
+    const shots = normalizeFields({ data: { read_by_current_user: raw('Shot', 'checkbox') } });
+    expect(shots['read_by_current_user']?.dataType).toBe('checkbox');
+    expect(Object.keys(normalizeFields({ data: {} }, 'Note'))).toEqual(['read_by_current_user']);
+    expect(Object.keys(normalizeFields({ data: {} }))).toEqual([]);
   });
 });

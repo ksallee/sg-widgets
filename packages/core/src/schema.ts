@@ -53,9 +53,21 @@ export interface FieldSchema {
  * `<Type>.<field>`. `Note.read_by_current_user` holds the codes `unread` and
  * `read`, never a boolean, so every control derived from it is a list and not a
  * checkbox (067_notes_in_the_stream, entity_types/Note).
+ *
+ * An entry carries the whole field, because a site may leave it out of the schema
+ * and still answer it on the row: `GET /schema/Note/fields` returned 33 fields and
+ * no `read_by_current_user` among them (measured on the operator's site,
+ * 2026-09-15). `normalizeFields` adds what the schema left out.
  */
 export const FIELD_SCHEMA_OVERRIDES: Readonly<Record<string, Readonly<Partial<FieldSchema>>>> = {
-  'Note.read_by_current_user': { dataType: 'list', validValues: ['unread', 'read'] },
+  'Note.read_by_current_user': {
+    displayName: 'Read by Current User',
+    dataType: 'list',
+    validValues: ['unread', 'read'],
+    editable: false,
+    mandatory: false,
+    unique: false,
+  },
 };
 
 /** What a field's schema has to be corrected to, when it is one of those. */
@@ -94,9 +106,32 @@ export function normalizeField(name: string, raw: RawFieldSchema): FieldSchema {
   return { ...field, ...fieldSchemaOverride(field.entityType, name) };
 }
 
-export function normalizeFields(response: RawFieldsResponse): Record<string, FieldSchema> {
+/**
+ * Every field of a type, with the fields an override declares and the schema omitted.
+ *
+ * `entityType` is only needed for a response with no fields at all; otherwise the
+ * fields name their own type.
+ */
+export function normalizeFields(response: RawFieldsResponse, entityType?: string): Record<string, FieldSchema> {
   const out: Record<string, FieldSchema> = {};
   for (const [name, raw] of Object.entries(response.data)) out[name] = normalizeField(name, raw);
+  const type = entityType ?? Object.values(out)[0]?.entityType;
+  if (!type) return out;
+  for (const [key, patch] of Object.entries(FIELD_SCHEMA_OVERRIDES)) {
+    const at = key.indexOf('.');
+    const name = key.slice(at + 1);
+    if (key.slice(0, at) !== type || out[name]) continue;
+    out[name] = {
+      name,
+      displayName: name,
+      entityType: type,
+      dataType: 'text',
+      editable: false,
+      mandatory: false,
+      unique: false,
+      ...patch,
+    };
+  }
   return out;
 }
 

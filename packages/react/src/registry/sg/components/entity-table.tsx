@@ -790,7 +790,7 @@ export function EntityTable({
                 <TableRow key={index}>
                   {leafColumns.map((column) => (
                     <TableCell key={column.id} className={cellClass}>
-                      {/* A skeleton costs what a row costs: the chip step a cell holds, inside the cell's own inset. */}
+                      {/* A skeleton costs what a row costs: the 24px a cell's tallest value stands at. */}
                       <Skeleton className="h-6 w-full" />
                     </TableCell>
                   ))}
@@ -860,6 +860,7 @@ export function EntityTable({
                                     field={groupColumn?.field}
                                     statuses={statuses}
                                     context={context}
+                                    density={density}
                                   />
                                 </span>
                                 <span className="text-muted-foreground font-mono text-xs tabular-nums">
@@ -986,6 +987,7 @@ export function EntityTable({
                                     field={column.field}
                                     statuses={statuses}
                                     context={context}
+                                    density={density}
                                   />
                                   {cellError && cellError.key === key && cellError.path === column.path ? (
                                     <span className="text-destructive block truncate text-xs" title={cellError.message}>

@@ -643,6 +643,7 @@
 											statuses={plan.statuses}
 											siteUrl={site}
 											{context}
+											{density}
 											class="w-auto justify-end text-xs"
 										/>
 									</span>

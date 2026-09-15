@@ -835,7 +835,7 @@
 					{#each { length: 8 } as _, index (index)}
 						<Table.Row>
 							{#each layout as entry (entry.id)}
-								<!-- A skeleton costs what a row costs: the chip step a cell holds, inside the cell's own inset. -->
+								<!-- A skeleton costs what a row costs: the 24px a cell's tallest value stands at. -->
 								<Table.Cell class={cellClass}><Skeleton class="h-6 w-full" /></Table.Cell>
 							{/each}
 						</Table.Row>
@@ -902,6 +902,7 @@
 													field={groupColumn?.field}
 													{statuses}
 													{context}
+													{density}
 												/>
 											</span>
 											<span class="text-muted-foreground font-mono text-xs tabular-nums">{item.count}</span>
@@ -1024,6 +1025,7 @@
 															field={column.field}
 															{statuses}
 															{context}
+															{density}
 														/>
 														{#if cellError && cellError.key === key && cellError.path === column.path}
 															<span class="text-destructive block truncate text-xs" title={cellError.message}>

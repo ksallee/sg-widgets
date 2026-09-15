@@ -409,6 +409,7 @@ export function GroupedList({
                             field={groupBy.field}
                             statuses={statuses}
                             context={context}
+                            density={density}
                           />
                         </span>
                         <span className="text-muted-foreground font-mono text-xs tabular-nums">
@@ -494,6 +495,7 @@ export function GroupedList({
                                     field={subColumn.field}
                                     statuses={statuses}
                                     context={context}
+                                    density={density}
                                     className="text-muted-foreground text-xs"
                                   />
                                 </span>
@@ -507,6 +509,7 @@ export function GroupedList({
                                     field={column.field}
                                     statuses={statuses}
                                     context={context}
+                                    density={density}
                                     className="min-w-0 text-xs"
                                   />
                                 </span>
@@ -522,6 +525,7 @@ export function GroupedList({
                                   field={secondaryColumn.field}
                                   statuses={statuses}
                                   context={context}
+                                  density={density}
                                   className="text-muted-foreground w-auto text-xs"
                                 />
                               </span>

@@ -665,6 +665,7 @@ export function EntityTree({
                           statuses={plan.statuses}
                           siteUrl={site}
                           context={context}
+                          density={density}
                           className="w-auto justify-end text-xs"
                         />
                       </span>

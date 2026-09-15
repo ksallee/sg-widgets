@@ -437,7 +437,14 @@
 								})}
 							{:else}
 								<span class="min-w-0 truncate">
-									<FieldValue value={group.value} dataType={groupBy.dataType} field={groupBy.field} {statuses} {context} />
+									<FieldValue
+										value={group.value}
+										dataType={groupBy.dataType}
+										field={groupBy.field}
+										{statuses}
+										{context}
+										{density}
+									/>
 								</span>
 								<span class="text-muted-foreground font-mono text-xs tabular-nums">{group.rows.length}</span>
 							{/if}
@@ -512,6 +519,7 @@
 														field={subColumn.field}
 														{statuses}
 														{context}
+														{density}
 														class="text-muted-foreground text-xs"
 													/>
 												</span>
@@ -525,6 +533,7 @@
 														field={column.field}
 														{statuses}
 														{context}
+														{density}
 														class="min-w-0 text-xs"
 													/>
 												</span>
@@ -540,6 +549,7 @@
 													field={secondaryColumn.field}
 													{statuses}
 													{context}
+													{density}
 													class="text-muted-foreground w-auto text-xs"
 												/>
 											</span>

@@ -381,7 +381,7 @@ function GroupNode({ ctx, path, node }: { ctx: EditorContext; path: NodePath; no
         <Button
           variant="ghost"
           size={CONTROL_BUTTON[ctx.size]}
-          className="text-muted-foreground hover:text-foreground"
+          className="text-muted-foreground"
           disabled={ctx.disabled}
           data-slot="filter-add-condition"
           data-path={path.join('.')}
@@ -393,7 +393,7 @@ function GroupNode({ ctx, path, node }: { ctx: EditorContext; path: NodePath; no
         <Button
           variant="ghost"
           size={CONTROL_BUTTON[ctx.size]}
-          className="text-muted-foreground hover:text-foreground"
+          className="text-muted-foreground"
           disabled={ctx.disabled}
           data-slot="filter-add-group"
           data-path={path.join('.')}
@@ -766,7 +766,7 @@ function ListValues({
       <Button
         variant="ghost"
         size={CONTROL_BUTTON[size]}
-        className="text-muted-foreground hover:text-foreground shrink-0"
+        className="text-muted-foreground shrink-0"
         disabled={disabled}
         data-slot="filter-list-add"
         onClick={() => onChange(withAddedListValue(value) as ConditionValue)}

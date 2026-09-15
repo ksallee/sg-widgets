@@ -348,7 +348,7 @@
 			variant="ghost"
 			size={CONTROL_BUTTON[size]}
 			{disabled}
-			class="text-muted-foreground hover:text-foreground"
+			class="text-muted-foreground"
 			data-slot="filter-clear-all"
 			onclick={() => commit(withoutPaths(value, facets))}
 		>

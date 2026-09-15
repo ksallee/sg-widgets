@@ -1,20 +1,16 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
+  "plugins": ["typescript", "oxc"],
   "jsPlugins": ["@shadcn/lint"],
   "settings": {
     "shadcn": {
-      "ui": "@/components/ui",
+      "ui": "$lib/components/ui",
       "note": "docs/design-rules.md rule 1 holds the approved exceptions."
     }
   },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  },
   "overrides": [
     {
-      "files": ["src/registry/**"],
+      "files": ["src/lib/registry/components/*.ts"],
       "rules": {
         "shadcn/no-restyle": ["warn", { "allow": ["layout"] }],
         "shadcn/no-raw-colors": ["warn", { "scanAllStrings": true }],
@@ -28,17 +24,6 @@
         "shadcn/no-inline-styles": "warn",
         "shadcn/no-unknown-classes": "warn",
         "shadcn/require-static-classes": "warn"
-      }
-    },
-    {
-      "files": ["src/components/ui/**"],
-      "rules": {
-        "shadcn/no-restyle": "off",
-        "shadcn/no-raw-colors": "off",
-        "shadcn/no-arbitrary-values": "off",
-        "shadcn/no-inline-styles": "off",
-        "shadcn/no-unknown-classes": "off",
-        "shadcn/require-static-classes": "off"
       }
     }
   ]

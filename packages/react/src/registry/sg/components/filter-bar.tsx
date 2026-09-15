@@ -365,7 +365,7 @@ export function FilterBar({
           variant="ghost"
           size={CONTROL_BUTTON[size]}
           disabled={disabled}
-          className="text-muted-foreground hover:text-foreground"
+          className="text-muted-foreground"
           data-slot="filter-clear-all"
           onClick={() => onChange?.(withoutPaths(value, facets))}
         >

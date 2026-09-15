@@ -412,7 +412,7 @@
 		<Button
 			variant="ghost"
 			size={CONTROL_BUTTON[size]}
-			class="text-muted-foreground hover:text-foreground shrink-0"
+			class="text-muted-foreground shrink-0"
 			{disabled}
 			data-slot="filter-list-add"
 			onclick={() => set(withAddedListValue(current) as ConditionValue)}
@@ -674,7 +674,7 @@
 			<Button
 				variant="ghost"
 				size={CONTROL_BUTTON[size]}
-				class="text-muted-foreground hover:text-foreground"
+				class="text-muted-foreground"
 				{disabled}
 				data-slot="filter-add-condition"
 				data-path={path.join('.')}
@@ -686,7 +686,7 @@
 			<Button
 				variant="ghost"
 				size={CONTROL_BUTTON[size]}
-				class="text-muted-foreground hover:text-foreground"
+				class="text-muted-foreground"
 				{disabled}
 				data-slot="filter-add-group"
 				data-path={path.join('.')}

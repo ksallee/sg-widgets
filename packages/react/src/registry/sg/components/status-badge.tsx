@@ -80,6 +80,8 @@ export function StatusBadge({
   const text = label === 'code' ? code : name;
   const other = label === 'code' ? name : code;
   const paint = color ? statusPaint(status) : null;
+  // Status colour is data, not a token, so it is applied inline (design rule 1).
+  // oxlint-disable-next-line shadcn/no-inline-styles
   const style = paint ? { backgroundColor: paint.background, color: paint.foreground } : undefined;
   // An `html` icon carries the label itself, so it replaces the text rather than
   // preceding it, and such a status has no image to show in icon-only mode

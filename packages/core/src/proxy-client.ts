@@ -17,6 +17,9 @@
 import type {
   EntityRow,
   EntityTypeInfo,
+  EventLogOptions,
+  EventLogResult,
+  FollowingOptions,
   HierarchyNode,
   HierarchyPath,
   SummarizeOptions,
@@ -25,6 +28,7 @@ import type {
   SearchResult,
   SgClient,
   TextSearchRow,
+  ThreadRow,
 } from './client.js';
 import { SgApiError } from './client.js';
 import type { EntityRef, TextSearchFilter } from './filter.js';
@@ -121,5 +125,17 @@ export class ProxyClient implements SgClient {
 
   summarize(entityType: string, options: SummarizeOptions = {}): Promise<SummarizeResult> {
     return this.post('summarize', { entityType, options });
+  }
+
+  threadContents(noteId: number, entityFields?: Record<string, string[]>): Promise<ThreadRow[]> {
+    return this.post('threadContents', { noteId, entityFields: entityFields ?? null });
+  }
+
+  eventLog(options: EventLogOptions = {}): Promise<EventLogResult> {
+    return this.post('eventLog', { options });
+  }
+
+  following(userId: number, options: FollowingOptions = {}): Promise<EntityRef[]> {
+    return this.post('following', { userId, options });
   }
 }

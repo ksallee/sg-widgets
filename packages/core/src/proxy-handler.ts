@@ -28,12 +28,12 @@
  * };
  * ```
  */
-import type { SearchOptions, SgClient, SummarizeOptions } from './client.js';
+import type { EventLogOptions, FollowingOptions, SearchOptions, SgClient, SummarizeOptions } from './client.js';
 import { SgApiError } from './client.js';
 import type { EntityRef, TextSearchFilter } from './filter.js';
 
 /** The methods the protocol carries, one POST each. */
-export const PROXY_METHODS = ['entityTypes', 'fields', 'fieldWithProject', 'search', 'textSearch', 'statuses', 'update', 'hierarchyExpand', 'hierarchySearch', 'summarize'] as const;
+export const PROXY_METHODS = ['entityTypes', 'fields', 'fieldWithProject', 'search', 'textSearch', 'statuses', 'update', 'hierarchyExpand', 'hierarchySearch', 'summarize', 'threadContents', 'eventLog', 'following'] as const;
 
 export type ProxyMethod = (typeof PROXY_METHODS)[number];
 
@@ -71,6 +71,9 @@ interface Params {
   path?: unknown;
   rootPath?: unknown;
   entity?: unknown;
+  noteId?: unknown;
+  entityFields?: unknown;
+  userId?: unknown;
 }
 
 class BadRequest extends Error {}
@@ -147,5 +150,14 @@ function call(client: SgClient, method: ProxyMethod, p: Params): Promise<unknown
       return client.hierarchyExpand(str(p.path, 'path'));
     case 'summarize':
       return client.summarize(str(p.entityType, 'entityType'), (p.options ?? {}) as SummarizeOptions);
+    case 'threadContents':
+      return client.threadContents(
+        num(p.noteId, 'noteId'),
+        (p.entityFields ?? undefined) as Record<string, string[]> | undefined,
+      );
+    case 'eventLog':
+      return client.eventLog((p.options ?? {}) as EventLogOptions);
+    case 'following':
+      return client.following(num(p.userId, 'userId'), (p.options ?? {}) as FollowingOptions);
   }
 }

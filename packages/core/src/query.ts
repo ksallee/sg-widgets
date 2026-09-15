@@ -17,6 +17,9 @@
 import type {
   EntityRow,
   EntityTypeInfo,
+  EventLogOptions,
+  EventLogResult,
+  FollowingOptions,
   HierarchyNode,
   HierarchyPath,
   SearchOptions,
@@ -25,6 +28,7 @@ import type {
   SummarizeOptions,
   SummarizeResult,
   TextSearchRow,
+  ThreadRow,
 } from './client.js';
 import type { EntityRef, TextSearchFilter } from './filter.js';
 import type { FieldSchema } from './schema.js';
@@ -149,6 +153,16 @@ export function createQueryCache(client: SgClient, options: QueryCacheOptions = 
       // One level per call, so a tree that walks a project is one cached entry per node
       // (post_hierarchy_expand).
       return run('hierarchyExpand', [path], () => client.hierarchyExpand(path));
+    },
+    threadContents(noteId: number, entityFields?: Record<string, string[]>): Promise<ThreadRow[]> {
+      return run('threadContents', [noteId, entityFields ?? null], () => client.threadContents(noteId, entityFields));
+    },
+    eventLog(eventOptions?: EventLogOptions): Promise<EventLogResult> {
+      // Never cached: a change feed answered from a cache reports that nothing changed.
+      return client.eventLog(eventOptions);
+    },
+    following(userId: number, followingOptions?: FollowingOptions): Promise<EntityRef[]> {
+      return run('following', [userId, followingOptions ?? null], () => client.following(userId, followingOptions));
     },
     async update(entityType: string, id: number, patch: Record<string, unknown>): Promise<EntityRow> {
       const row = await client.update(entityType, id, patch);

@@ -48,6 +48,21 @@ export interface FieldSchema {
   description?: string;
 }
 
+/**
+ * Fields the schema types one way and the API answers another, keyed
+ * `<Type>.<field>`. `Note.read_by_current_user` holds the codes `unread` and
+ * `read`, never a boolean, so every control derived from it is a list and not a
+ * checkbox (067_notes_in_the_stream, entity_types/Note).
+ */
+export const FIELD_SCHEMA_OVERRIDES: Readonly<Record<string, Readonly<Partial<FieldSchema>>>> = {
+  'Note.read_by_current_user': { dataType: 'list', validValues: ['unread', 'read'] },
+};
+
+/** What a field's schema has to be corrected to, when it is one of those. */
+export function fieldSchemaOverride(entityType: string, name: string): Readonly<Partial<FieldSchema>> | undefined {
+  return FIELD_SCHEMA_OVERRIDES[`${entityType}.${name}`];
+}
+
 function prop<T>(props: Record<string, RawProperty<unknown>> | undefined, key: string): T | undefined {
   const p = props?.[key];
   return p ? (p.value as T) : undefined;
@@ -76,7 +91,7 @@ export function normalizeField(name: string, raw: RawFieldSchema): FieldSchema {
   if (defaultValue !== undefined) field.defaultValue = defaultValue;
   const description = prop<string>(props, 'description');
   if (description) field.description = description;
-  return field;
+  return { ...field, ...fieldSchemaOverride(field.entityType, name) };
 }
 
 export function normalizeFields(response: RawFieldsResponse): Record<string, FieldSchema> {

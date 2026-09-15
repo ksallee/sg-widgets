@@ -136,6 +136,107 @@ export interface EntityTypeInfo {
   displayName: string;
 }
 
+/**
+ * Who wrote a thread row. A Reply's hash carries a fourth key, `image`, a
+ * presigned avatar re-signed on every read; the `created_by` hash on a Note and
+ * an Attachment has none (get_entity_notes_id_thread_contents).
+ */
+export interface ThreadAuthor extends EntityRef {
+  image?: string | null;
+}
+
+/** One row of a note thread, flat and not the `_search` shape. */
+export interface ThreadRow {
+  /** `Note`, `Attachment` or `Reply`. */
+  type: string;
+  id: number;
+  createdAt: string | null;
+  /** The body. An Attachment row has none. */
+  content: string | null;
+  author: ThreadAuthor | null;
+  /** The row as it arrived, including whatever `entityFields` widened it by. */
+  fields: Record<string, unknown>;
+}
+
+/**
+ * Which rows the event log answers. `meta` holds what changed and takes neither a
+ * filter nor a sort, so the cut is made on these and `meta` is read off the row
+ * (025_event_log).
+ */
+export interface EventLogOptions {
+  projectId?: number;
+  /**
+   * The row the events are about. It is null on an event whose target has been
+   * deleted, so a deleted row's history is reachable by `eventType` and dates alone.
+   */
+  entity?: EntityRef;
+  /** One event type or several, e.g. `Shotgun_Shot_Change`. */
+  eventType?: string | string[];
+  /** The field that changed. Site-wide on its own, so pair it with `entity` or `eventType`. */
+  attributeName?: string;
+  /** Keep events after this `date_time`, as `created_at greater_than`. */
+  since?: string;
+  /** Keep events before this `date_time`, as `created_at less_than`. */
+  until?: string;
+  page?: { size?: number; number?: number };
+}
+
+/**
+ * The cut the event log takes, as the `and` group `_search` wants. Nothing here
+ * touches `meta`: it takes no filter (025_event_log).
+ */
+export function eventLogFilters(options: EventLogOptions = {}): WireGroup {
+  const conditions: WireCondition[] = [];
+  if (options.projectId !== undefined) conditions.push(['project', 'is', { type: 'Project', id: options.projectId }]);
+  if (options.entity) conditions.push(['entity', 'is', { type: options.entity.type, id: options.entity.id }]);
+  if (options.eventType !== undefined) {
+    conditions.push(Array.isArray(options.eventType) ? ['event_type', 'in', options.eventType] : ['event_type', 'is', options.eventType]);
+  }
+  if (options.attributeName !== undefined) conditions.push(['attribute_name', 'is', options.attributeName]);
+  if (options.since !== undefined) conditions.push(['created_at', 'greater_than', options.since]);
+  if (options.until !== undefined) conditions.push(['created_at', 'less_than', options.until]);
+  return { logical_operator: 'and', conditions };
+}
+
+/**
+ * What an event is read with. `audit_trail` is never returned even when it is
+ * named, so it is not asked for (025_event_log).
+ */
+export const EVENT_LOG_FIELDS = ['event_type', 'attribute_name', 'description', 'created_at', 'meta', 'entity', 'project', 'user'] as const;
+
+/** One event, `meta` decoded, with the two values an attribute change carries lifted out. */
+export interface EventLogEntry {
+  id: number;
+  eventType: string | null;
+  attributeName: string | null;
+  /** The rendered English sentence the server writes. */
+  description: string | null;
+  createdAt: string | null;
+  /** Null once the row the event is about is deleted; `meta` still names it. */
+  entity: EntityRef | null;
+  project: EntityRef | null;
+  user: EntityRef | null;
+  /** The whole decoded `meta`. Its keys follow `meta.type`. */
+  meta: Record<string, unknown> | null;
+  /** `meta.old_value`, present on an `attribute_change` and nowhere else. */
+  oldValue: unknown;
+  /** `meta.new_value`, present on an `attribute_change` and nowhere else. */
+  newValue: unknown;
+}
+
+export interface EventLogResult {
+  data: EventLogEntry[];
+  /** True when another page exists. Read from the row count, as on `search` (probe 006). */
+  hasMore: boolean;
+}
+
+/** The two cuts `following` takes. Both are made server-side. */
+export interface FollowingOptions {
+  /** One type to keep. The schema name and the snake_case plural both work. */
+  entity?: string;
+  projectId?: number;
+}
+
 export interface SgClient {
   /** Enabled entity types on the site with their display names. */
   entityTypes(): Promise<EntityTypeInfo[]>;
@@ -185,6 +286,34 @@ export interface SgClient {
    * values and their counts (020_summarize).
    */
   summarize(entityType: string, options?: SummarizeOptions): Promise<SummarizeResult>;
+  /**
+   * A Note, its Attachments and its Replies as one list in time order.
+   *
+   * It replaces a `_search` on each of the three types and orders them together.
+   * `entityFields` widens a row type, one entry per type; it is accepted and
+   * changes nothing for Reply, whose extra fields need a `_search` on replies
+   * (get_entity_notes_id_thread_contents).
+   */
+  threadContents(noteId: number, entityFields?: Record<string, string[]>): Promise<ThreadRow[]>;
+  /**
+   * What changed, newest first.
+   *
+   * This is the change log, not the activity stream: a status change written over
+   * the API was on no stream 430s later (067_notes_in_the_stream). Rows are sorted
+   * `-id`, the only order the type answers, and ids at the head are sparse and
+   * fill in later, so a cursor on `max(id)` drops events: re-scan behind the head
+   * or drive the feed from `created_at` and deduplicate on `id` (025_event_log).
+   */
+  eventLog(options?: EventLogOptions): Promise<EventLogResult>;
+  /**
+   * Everything one person follows, in one unpaged body.
+   *
+   * Each row is a type and an id: neither the record's name nor the date the
+   * follow started is returned, so a display list costs a `_search` on the ids.
+   * The user must be a HumanUser; a script cannot ask what it follows
+   * (get_entity_human_users_id_following).
+   */
+  following(userId: number, options?: FollowingOptions): Promise<EntityRef[]>;
 }
 
 /** The node shape `/hierarchy/_expand` answers, before normalising. */
@@ -374,6 +503,41 @@ export class RestClient implements SgClient {
     return normalizeSummarize(res);
   }
 
+  async threadContents(noteId: number, entityFields?: Record<string, string[]>): Promise<ThreadRow[]> {
+    // One query parameter per row type, `entity_fields[Note]=subject,sg_status_list`. The
+    // Reply entry is accepted and changes nothing (get_entity_notes_id_thread_contents).
+    const params: Record<string, string> = {};
+    for (const [type, names] of Object.entries(entityFields ?? {})) params[`entity_fields[${type}]`] = names.join(',');
+    const res = await this.request<{ data: ThreadWire[] }>('GET', `/entity/notes/${noteId}/thread_contents`, undefined, params);
+    return res.data.map(toThreadRow);
+  }
+
+  async eventLog(options: EventLogOptions = {}): Promise<EventLogResult> {
+    const size = options.page?.size ?? 50;
+    const body = {
+      filters: eventLogFilters(options),
+      fields: EVENT_LOG_FIELDS.join(','),
+      // The only order the type answers: a sort on anything else falls back to ascending `id`
+      // at 200, so an ignored sort cannot be told from a satisfied one (025_event_log).
+      sort: '-id',
+      page: { size, number: options.page?.number ?? 1 },
+    };
+    const res = await this.request<{ data: EntityRow[] }>('POST', '/entity/event_log_entries/_search', body);
+    return { data: res.data.map(normalizeEventLogEntry), hasMore: res.data.length === size };
+  }
+
+  async following(userId: number, options: FollowingOptions = {}): Promise<EntityRef[]> {
+    // Unpaged, and it takes no `fields` and no `sort`: `entity` and `project_id` are the whole
+    // vocabulary, and each row is an id, a type and a link (get_entity_human_users_id_following).
+    const res = await this.request<{ data: Array<{ id: number; type: string }> }>(
+      'GET',
+      `/entity/human_users/${userId}/following`,
+      undefined,
+      { entity: options.entity, project_id: options.projectId },
+    );
+    return res.data.map((row) => ({ type: String(row.type), id: Number(row.id) }));
+  }
+
   async hierarchyExpand(path: string): Promise<HierarchyNode> {
     // `/hierarchy/*` is the one POST family that refuses the vendor content types and
     // demands plain JSON. `seed_entity_field` is documented and ignored, so it is not
@@ -460,6 +624,60 @@ function toTextSearchRow(row: TextSearchWire): TextSearchRow {
     name: String(row.attributes?.name ?? ''),
     links: pair,
     status: row.attributes?.status ?? null,
+  };
+}
+
+/** A thread row: `type`, `id`, a timestamp, an author under one of two keys, and whatever else was asked for. */
+type ThreadWire = Record<string, unknown> & { type: string; id: number };
+
+function toThreadAuthor(value: unknown): ThreadAuthor | null {
+  if (value === null || typeof value !== 'object') return null;
+  const hash = value as { type?: unknown; id?: unknown; name?: unknown; image?: unknown };
+  if (typeof hash.type !== 'string' || typeof hash.id !== 'number') return null;
+  const author: ThreadAuthor = { type: hash.type, id: hash.id };
+  if (typeof hash.name === 'string') author.name = hash.name;
+  if (hash.image !== undefined) author.image = (hash.image as string | null) ?? null;
+  return author;
+}
+
+/**
+ * The author key follows the row type: `created_by` on a Note and an Attachment,
+ * `user` on a Reply (get_entity_notes_id_thread_contents).
+ */
+function toThreadRow(row: ThreadWire): ThreadRow {
+  const author = toThreadAuthor(row['user'] ?? row['created_by'] ?? null);
+  return {
+    type: String(row.type),
+    id: Number(row.id),
+    createdAt: (row['created_at'] as string | null | undefined) ?? null,
+    content: (row['content'] as string | null | undefined) ?? null,
+    author,
+    fields: row,
+  };
+}
+
+function entityRefOf(value: unknown): EntityRef | null {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) return null;
+  const ref = value as EntityRef;
+  return typeof ref.name === 'string' ? { type: ref.type, id: ref.id, name: ref.name } : { type: ref.type, id: ref.id };
+}
+
+/** One `_search` row of `EventLogEntry`, with `meta` decoded as the API returns it. */
+export function normalizeEventLogEntry(row: EntityRow): EventLogEntry {
+  const a = row.attributes;
+  const meta = (a['meta'] ?? null) as Record<string, unknown> | null;
+  return {
+    id: row.id,
+    eventType: (a['event_type'] as string | null | undefined) ?? null,
+    attributeName: (a['attribute_name'] as string | null | undefined) ?? null,
+    description: (a['description'] as string | null | undefined) ?? null,
+    createdAt: (a['created_at'] as string | null | undefined) ?? null,
+    entity: entityRefOf(row.relationships['entity']?.data),
+    project: entityRefOf(row.relationships['project']?.data),
+    user: entityRefOf(row.relationships['user']?.data),
+    meta,
+    oldValue: meta?.['old_value'] ?? null,
+    newValue: meta?.['new_value'] ?? null,
   };
 }
 

@@ -75,6 +75,19 @@ describe('round trip', () => {
     await expect(client.hierarchySearch('/Project/70', null as never)).rejects.toThrow(/must be a \{type, id\} object/);
   });
 
+  it('carries a note thread, the event log and a follow list', async () => {
+    const direct = new MockClient();
+    const client = proxy(new MockClient());
+    expect(await client.threadContents(11030)).toEqual(await direct.threadContents(11030));
+    expect(await client.threadContents(11030, { Note: ['subject'] })).toEqual(
+      await direct.threadContents(11030, { Note: ['subject'] }),
+    );
+    const options = { entity: { type: 'Shot' as const, id: 862 }, page: { size: 5 } };
+    expect(await client.eventLog(options)).toEqual(await direct.eventLog(options));
+    expect(await client.eventLog()).toEqual(await direct.eventLog());
+    expect(await client.following(20, { entity: 'notes' })).toEqual(await direct.following(20, { entity: 'notes' }));
+  });
+
   it('sends the headers the caller supplies, per request', async () => {
     const inner = new MockClient();
     const { fetch, seen } = wired(inner);
@@ -115,6 +128,8 @@ describe('errors', () => {
     expect((await handle('fields', {})).status).toBe(400);
     expect((await handle('fields', 'nope')).status).toBe(400);
     expect((await handle('fieldWithProject', { entityType: 'Shot', field: 'sg_status_list' })).status).toBe(400);
+    expect((await handle('threadContents', {})).status).toBe(400);
+    expect((await handle('following', {})).status).toBe(400);
   });
 
   it('reports a non-JSON answer from anything between the two halves', async () => {

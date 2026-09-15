@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createQueryCache } from '../src/query.js';
 import { MockClient } from '../src/mock.js';
 import { SgApiError } from '../src/client.js';
-import type { EntityRow, EntityTypeInfo, HierarchyNode, HierarchyPath, SummarizeOptions, SummarizeResult, SearchOptions, SearchResult, SgClient, TextSearchRow } from '../src/client.js';
+import type { EntityRow, EntityTypeInfo, EventLogOptions, EventLogResult, FollowingOptions, HierarchyNode, HierarchyPath, SummarizeOptions, SummarizeResult, SearchOptions, SearchResult, SgClient, TextSearchRow, ThreadRow } from '../src/client.js';
 import type { EntityRef, TextSearchFilter } from '../src/filter.js';
 import type { FieldSchema } from '../src/schema.js';
 import type { StatusRecord } from '../src/status.js';
@@ -38,6 +38,18 @@ function counting(inner: SgClient): { client: SgClient; calls: string[] } {
     update(entityType: string, id: number, patch: Record<string, unknown>): Promise<EntityRow> {
       calls.push(`update ${entityType} ${id}`);
       return inner.update(entityType, id, patch);
+    },
+    threadContents(noteId: number, entityFields?: Record<string, string[]>): Promise<ThreadRow[]> {
+      calls.push(`threadContents ${noteId}`);
+      return inner.threadContents(noteId, entityFields);
+    },
+    eventLog(eventOptions?: EventLogOptions): Promise<EventLogResult> {
+      calls.push('eventLog');
+      return inner.eventLog(eventOptions);
+    },
+    following(userId: number, followingOptions?: FollowingOptions): Promise<EntityRef[]> {
+      calls.push(`following ${userId}`);
+      return inner.following(userId, followingOptions);
     },
     hierarchySearch(rootPath: string, entity: EntityRef): Promise<HierarchyPath[]> {
       calls.push(`hierarchySearch ${rootPath} ${entity.type}:${entity.id}`);
@@ -90,6 +102,22 @@ describe('caching', () => {
     await cache.search('Shot', { fields: ['code'], sort: 'code', page: { size: 5 } });
     await cache.search('Shot', { page: { size: 5 }, sort: 'code', fields: ['code'] });
     expect(calls).toEqual(['search Shot']);
+  });
+});
+
+describe('the reads a notes app makes', () => {
+  it('caches a thread and a follow list, and never caches the event log', async () => {
+    const { client, calls } = counting(new MockClient());
+    const cache = createQueryCache(client);
+    await cache.threadContents(11030);
+    await cache.threadContents(11030);
+    await cache.threadContents(11030, { Note: ['subject'] });
+    await cache.following(20);
+    await cache.following(20);
+    // A change feed answered from a cache reports that nothing changed.
+    await cache.eventLog({ page: { size: 2 } });
+    await cache.eventLog({ page: { size: 2 } });
+    expect(calls).toEqual(['threadContents 11030', 'threadContents 11030', 'following 20', 'eventLog', 'eventLog']);
   });
 });
 

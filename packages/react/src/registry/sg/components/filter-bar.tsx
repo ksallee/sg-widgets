@@ -31,6 +31,7 @@ import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from '@
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import {
+  CONTROL_BUTTON,
   CONTROL_GLYPH,
   CONTROL_HEIGHT,
   CONTROL_PAD,
@@ -51,7 +52,6 @@ const CROSS: Record<FilterBarSize, ChipSize> = { sm: 'xs', md: 'sm', lg: 'md' };
  */
 const CROSS_PAD: Record<FilterBarSize, string> = { sm: 'pr-[7px]', md: 'pr-2', lg: 'pr-[9px]' };
 /** The button step beside a pill of each height. */
-const BTN: Record<FilterBarSize, 'sm' | 'default' | 'lg'> = { sm: 'sm', md: 'default', lg: 'lg' };
 
 export interface FilterBarProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange'> {
   /** The root element. */
@@ -234,7 +234,7 @@ export function FilterBar({
           <div className="border-border border-t p-1">
             <Button
               variant="ghost"
-              size={BTN[size]}
+              size={CONTROL_BUTTON[size]}
               className="w-full"
               data-slot="filter-pill-clear"
               onClick={() => onChange?.(setFacet(value, name, []))}
@@ -363,7 +363,7 @@ export function FilterBar({
       {activeCount > 0 ? (
         <Button
           variant="ghost"
-          size={BTN[size]}
+          size={CONTROL_BUTTON[size]}
           disabled={disabled}
           className="text-muted-foreground hover:text-foreground"
           data-slot="filter-clear-all"

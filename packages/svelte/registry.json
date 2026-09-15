@@ -232,6 +232,7 @@
         "@sg-widgets/core"
       ],
       "registryDependencies": [
+        "local:picker-classes",
         "local:field-value",
         "local:thumbnail",
         "local:user-avatar"
@@ -809,6 +810,7 @@
         "@lucide/svelte"
       ],
       "registryDependencies": [
+        "local:control-classes",
         "local:field-value",
         "local:text-editor",
         "local:number-editor",
@@ -857,6 +859,7 @@
         "@lucide/svelte"
       ],
       "registryDependencies": [
+        "local:control-classes",
         "local:entity-fields",
         "local:leaf-classes",
         "local:state-line",

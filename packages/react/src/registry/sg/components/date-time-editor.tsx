@@ -156,7 +156,7 @@ export function DateTimeEditor({
           <CalendarIcon aria-hidden="true" className={cn(CONTROL_GLYPH[size], 'shrink-0')} />
           <span className="truncate">{label ?? placeholder}</span>
         </PopoverTrigger>
-        <PopoverContent align="start" className="flex w-auto flex-col gap-3 p-3" initialFocus={dateInput}>
+        <PopoverContent positionMethod="fixed" align="start" className="flex w-auto flex-col gap-3 p-3" initialFocus={dateInput}>
           <Input
             ref={dateInput}
             value={session.draft.date}

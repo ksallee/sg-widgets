@@ -128,7 +128,7 @@ export function DateEditor({
           <CalendarIcon aria-hidden="true" className={cn(CONTROL_GLYPH[size], 'shrink-0')} />
           <span className="truncate">{value ?? placeholder}</span>
         </PopoverTrigger>
-        <PopoverContent align="start" className="flex w-auto flex-col gap-3 p-3" initialFocus={dayInput}>
+        <PopoverContent positionMethod="fixed" align="start" className="flex w-auto flex-col gap-3 p-3" initialFocus={dayInput}>
           <Input
             ref={dayInput}
             value={session.draft}

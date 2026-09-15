@@ -295,6 +295,7 @@
         "@sg-widgets/core"
       ],
       "registryDependencies": [
+        "https://sg-widgets.dev/r/react/picker-classes.json",
         "https://sg-widgets.dev/r/react/field-value.json",
         "https://sg-widgets.dev/r/react/thumbnail.json",
         "https://sg-widgets.dev/r/react/user-avatar.json"
@@ -996,6 +997,7 @@
         "@base-ui/react"
       ],
       "registryDependencies": [
+        "https://sg-widgets.dev/r/react/control-classes.json",
         "https://sg-widgets.dev/r/react/field-value.json",
         "https://sg-widgets.dev/r/react/text-editor.json",
         "https://sg-widgets.dev/r/react/number-editor.json",
@@ -1054,6 +1056,7 @@
         "lucide-react"
       ],
       "registryDependencies": [
+        "https://sg-widgets.dev/r/react/control-classes.json",
         "https://sg-widgets.dev/r/react/entity-fields.json",
         "https://sg-widgets.dev/r/react/leaf-classes.json",
         "https://sg-widgets.dev/r/react/state-line.json",

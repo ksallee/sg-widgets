@@ -51,8 +51,11 @@ The goal is one system: a page mixing ten of our widgets must read as one hand.
 
 ## 3. Sizes
 
-- Controls come in `sm`, `md` (default), `lg`, matching shadcn's button and input heights (`h-8`, `h-9`,
-  `h-10`). Icons inside controls are `size-4` for sm/md and `size-5` for lg. Thumbnails in list rows are
+- Controls come in `sm`, `md` (default), `lg`, matching the shadcn button's own steps as this repo
+  vendors them: `h-7`, `h-8`, `h-9`, which is 28, 32 and 36. The button reads `sm`, `default` and
+  `lg` for those three, `Input` and the select trigger stand at `h-8`, and rule 2's icon-button row
+  is the same ladder, so a page mixing a widget and a shadcn button has one set of heights.
+  Icons inside controls are `size-4` for sm/md and `size-5` for lg. Thumbnails in list rows are
   `size-6` (sm), `size-8` (md), `size-10` (lg); cards and detail panes use `xl` (h-16) and `2xl` (h-24).
   Avatars follow the first three sizes.
 - A chip or a badge sits one step under the control it is in: `xs` (h-5) in sm, `sm` (h-6) in md and `md`
@@ -64,7 +67,7 @@ The goal is one system: a page mixing ten of our widgets must read as one hand.
   cross grows with the chip, `size-3` at `xs` to `size-4.5` at `lg`.
 - A picker control insets its leading edge to match the room above and below the chip or badge it
   holds, so a value sits evenly inside the border. It carries `data-empty`, which
-  gives that reading inset back and takes the vertical inset down one step (md: `pl-2 py-0.5`), so an
+  gives that reading inset back and takes the vertical inset down one step (md: `pl-2 py-0`), so an
   empty control reads as a plain input. A control whose filled value is plain text, `FieldPicker`
   among them, keeps the reading inset in both states. `min-h` never changes, so the height holds
   across the two states; the trailing inset is reserve for the clear and open controls and stays put.

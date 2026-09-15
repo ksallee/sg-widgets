@@ -10,11 +10,11 @@
 /** The control ladder: the three heights of the design rules. */
 export type ControlSize = 'sm' | 'md' | 'lg';
 
-/** The control ladder of `docs/design-rules.md`: 8 / 9 / 10. */
+/** The control ladder of `docs/design-rules.md`: 7 / 8 / 9, the shadcn button's own steps. */
 export const CONTROL_HEIGHT: Record<ControlSize, string> = {
-  sm: 'h-8',
-  md: 'h-9',
-  lg: 'h-10',
+  sm: 'h-7',
+  md: 'h-8',
+  lg: 'h-9',
 };
 
 /** The leading inset of a control whose value is plain text. */
@@ -39,11 +39,11 @@ export const CONTROL_GLYPH: Record<ControlSize, string> = {
 };
 
 /**
- * The button size a control's step takes. A button is a control, so it stands at least 32
- * (rule 3); the button ladder stops at `lg` (36), so the lg step takes that.
+ * The button size a control's step takes. The ladder is the button's own, so each step
+ * maps to the button variant of the same height: 28, 32 and 36.
  */
-export const CONTROL_BUTTON: Record<ControlSize, 'default' | 'lg'> = {
-  sm: 'default',
-  md: 'lg',
+export const CONTROL_BUTTON: Record<ControlSize, 'sm' | 'default' | 'lg'> = {
+  sm: 'sm',
+  md: 'default',
   lg: 'lg',
 };

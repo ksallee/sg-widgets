@@ -13,7 +13,7 @@ export default {
     { name: 'sampleSize', type: '`number`', default: '`200`', meaning: 'Rows read for the tally when `counts` is not given.' },
     { name: 'hidePaths', type: '`string[]`', default: '`[]`', meaning: 'Passed through to the dialog.' },
     { name: 'disabled', type: '`boolean`', default: '`false`', meaning: 'Blocks every pill.' },
-    { name: 'size', type: '`\'sm\' | \'md\' | \'lg\'`', default: '`\'md\'`', meaning: 'Pill heights 8, 9 and 10.' },
+    { name: 'size', type: '`\'sm\' | \'md\' | \'lg\'`', default: '`\'md\'`', meaning: 'Pill heights 7, 8 and 9.' },
     { name: 'class / className', type: '`string`', default: '—', meaning: 'Merged after the widget\'s own classes.' },
   ],
   events: [

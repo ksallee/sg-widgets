@@ -22,6 +22,7 @@ import { isNumericType } from './field-types.js';
 import type { EntityRef, FilterNode, WireGroup } from './filter.js';
 import { toApi3Hash } from './filter.js';
 import type { SchemaService } from './schema-service.js';
+import { displayNameOf } from './schema.js';
 import type { FieldSchema } from './schema.js';
 
 /** One sort key. Serialised as `path` or `-path` (026_result_order). */
@@ -529,11 +530,25 @@ export interface RowGroup {
   rows: EntityRow[];
 }
 
-export function groupRows(rows: readonly EntityRow[], path: string): RowGroup[] {
+/**
+ * The value a row groups under, derived rather than read from a column.
+ *
+ * For a group a column cannot name: a multi-entity field no site sorts on, or a
+ * value that comes from one field on one type and another on another. The order
+ * the runs are walked in is the caller's, so a caller passing this sorts the
+ * source itself.
+ */
+export type GroupKeyFn = (row: EntityRow) => unknown;
+
+/** What the rows are grouped on: a path they are sorted by, or a key derived from each row. */
+export type GroupBy = string | GroupKeyFn;
+
+export function groupRows(rows: readonly EntityRow[], by: GroupBy): RowGroup[] {
+  const valueOf: GroupKeyFn = typeof by === 'function' ? by : (row) => cellValue(row, by);
   const groups: RowGroup[] = [];
   let key: string | null = null;
   for (const row of rows) {
-    const value = cellValue(row, path);
+    const value = valueOf(row);
     const next = JSON.stringify(value ?? null);
     const last = groups[groups.length - 1];
     if (last && next === key) last.rows.push(row);
@@ -541,4 +556,16 @@ export function groupRows(rows: readonly EntityRow[], path: string): RowGroup[] 
     key = next;
   }
   return groups;
+}
+
+/**
+ * The text a group key reads as when there is no column to render it by.
+ *
+ * A row reads as its display name, anything else as its own text, and a key that
+ * is nothing at all as the empty string.
+ */
+export function groupKeyText(value: unknown): string {
+  if (value === null || value === undefined) return '';
+  if (typeof value === 'object') return displayNameOf(value as Record<string, unknown>, '');
+  return String(value);
 }

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { CollectionColumn, EntityRef, EntityRow, StatusRecord } from '@sg-widgets/core';
-import { cellValue, condition, createEntitySource, resolveColumns } from '@sg-widgets/core';
+import { cellValue, condition, createEntitySource, displayNameOf, resolveColumns } from '@sg-widgets/core';
 import { GroupedList } from '@/registry/sg/components/grouped-list';
 import { StatusBadge } from '@/registry/sg/components/status-badge';
 import { createDemoClient, createDemoContext } from '../_shared/client';
@@ -47,6 +47,25 @@ export default function GroupedListDemo() {
         fields: FIELDS,
         filters: condition('content', 'is', 'no such task'),
         mode: 'pages',
+        pageSize: 25,
+      }),
+    [context],
+  );
+
+  /**
+   * Versions under the Shot or Asset each is of. The record is `entity`, which the list
+   * does not sort on: the caller's own sort on `code` is what puts the versions of one
+   * record together.
+   */
+  const recordSource = useMemo(
+    () =>
+      createEntitySource({
+        client: context.client,
+        entityType: 'Version',
+        fields: ['code', 'sg_status_list', 'entity', 'description'],
+        filters: context.live ? condition('project', 'is', { type: 'Project', id: context.projectId }) : null,
+        sort: [{ path: 'code', descending: false }],
+        mode: 'infinite',
         pageSize: 25,
       }),
     [context],
@@ -118,6 +137,21 @@ export default function GroupedListDemo() {
           density={compact ? 'compact' : 'default'}
           onSelectionChange={setSelected}
         />
+
+        <section className="flex w-full min-w-0 flex-col gap-3" data-demo-case="derived">
+          <h4 className="text-muted-foreground text-xs font-medium">Grouped on a derived key</h4>
+          <GroupedList
+            source={recordSource}
+            context={context}
+            paging="more"
+            groupKey={(row) => cellValue(row, 'entity')}
+            groupLabel={(record) => displayNameOf(record as Record<string, unknown>)}
+            labelField="code"
+            subLabelField="description"
+            statuses={data.statuses}
+            maxHeight="16rem"
+          />
+        </section>
 
         <section className="flex w-full min-w-0 flex-col gap-3" data-demo-case="states">
           <h4 className="text-muted-foreground text-xs font-medium">Empty and error</h4>

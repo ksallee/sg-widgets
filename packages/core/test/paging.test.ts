@@ -170,6 +170,22 @@ describe('groups across a page boundary', () => {
     expect(grown[2]?.rows.length).toBe(4);
   });
 
+  it('keys a derived group the same way, so a shut group survives the next page', () => {
+    const note = (id: number, record: string) => ({
+      type: 'Note',
+      id,
+      attributes: { subject: `n${id}` },
+      relationships: { note_links: { data: [{ type: 'Shot', id: record.length, name: record }] } },
+    });
+    const recordOf = (row: EntityRow) =>
+      (row.relationships?.['note_links'] as { data?: { name?: string }[] } | undefined)?.data?.[0]?.name ?? null;
+    const first = groupRowsKeyed([note(1, 'sh010'), note(2, 'sh010'), note(3, 'tree')], recordOf);
+    expect(first.map((g) => g.key)).toEqual(['group:0:"sh010"', 'group:1:"tree"']);
+    const second = groupRowsKeyed([note(1, 'sh010'), note(2, 'sh010'), note(3, 'tree'), note(4, 'tree')], recordOf);
+    expect(second[1]?.key).toBe('group:1:"tree"');
+    expect(second[1]?.rows.length).toBe(2);
+  });
+
   it('keys an empty value and reads no rows as no groups', () => {
     expect(groupRowsKeyed([], 'sg_status_list')).toEqual([]);
     const none = groupRowsKeyed(

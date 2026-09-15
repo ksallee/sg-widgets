@@ -4,7 +4,9 @@ export default {
   extends: { name: 'collection-control' },
   props: [
     { name: 'source', type: '`EntitySource`', default: '—', meaning: 'The rows and the order behind them.' },
-    { name: 'groupBy', type: '`CollectionColumn`', default: '—', meaning: 'Path the rows are grouped on. The source is sorted on it.' },
+    { name: 'groupBy', type: '`CollectionColumn`', default: '—', meaning: 'Column the rows are grouped on. The source is sorted on it. Not read with `groupKey`.' },
+    { name: 'groupKey', type: '`(row) => unknown`', default: '—', meaning: 'The value a row groups under, derived from the row. The source\'s sort is left as the caller set it.' },
+    { name: 'groupLabel', type: '`(value) => string`', default: '—', meaning: 'The header\'s text for a derived key. Without it the key reads as its own display name.' },
     { name: 'thumbnail', type: '`string | false`', default: '`false`', meaning: 'Field holding the thumbnail URL.' },
     { name: 'labelField', type: '`string | null`', default: '`null`', meaning: 'Field shown as the row\'s label. Defaults to the type\'s display name.' },
     { name: 'subLabelField', type: '`string | CollectionColumn | null`', default: '`null`', meaning: 'The muted line under the label. A resolved column renders it by type.' },
@@ -40,7 +42,7 @@ export default {
   slots: [
     { name: 'leading', receives: '`EntityRow`', draws: 'Fixed-size slot at the start of the row, when `thumbnail` is not the one wanted: an avatar, a status glyph.' },
     { name: 'row', receives: '`{ row, id, index, selected, disabled }`', draws: 'Draws a row\'s contents. The list keeps the row\'s box.' },
-    { name: 'groupHeader', receives: '`{ value, column, count, collapsed, id }`', draws: 'Draws a group header\'s contents, after its chevron.' },
+    { name: 'groupHeader', receives: '`{ value, column, count, collapsed, id }`', draws: 'Draws a group header\'s contents, after its chevron. `column` is `null` for a derived key.' },
     { name: 'header', receives: '—', draws: 'Region above the list.' },
     { name: 'footer', receives: '—', draws: 'Region below the footer.' },
   ],

@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createQueryCache } from '../src/query.js';
 import { MockClient } from '../src/mock.js';
 import { SgApiError } from '../src/client.js';
-import type { EntityRow, EntityTypeInfo, EventLogOptions, EventLogResult, FollowingOptions, HierarchyNode, HierarchyPath, SummarizeOptions, SummarizeResult, SearchOptions, SearchResult, SgClient, TextSearchRow, ThreadRow } from '../src/client.js';
+import type { EntityRow, EntityTypeInfo, EventLogOptions, EventLogResult, FollowingOptions, HierarchyNode, HierarchyPath, SummarizeOptions, SummarizeResult, SearchOptions, SearchResult, SgClient, TextSearchRow, ThreadRow, UploadFile, UploadResult } from '../src/client.js';
 import type { EntityRef, TextSearchFilter } from '../src/filter.js';
 import type { FieldSchema } from '../src/schema.js';
 import type { StatusRecord } from '../src/status.js';
@@ -34,6 +34,14 @@ function counting(inner: SgClient): { client: SgClient; calls: string[] } {
     statuses(): Promise<StatusRecord[]> {
       calls.push('statuses');
       return inner.statuses();
+    },
+    create(entityType: string, body: Record<string, unknown>): Promise<EntityRow> {
+      calls.push(`create ${entityType}`);
+      return inner.create(entityType, body);
+    },
+    upload(entityType: string, id: number, file: UploadFile): Promise<UploadResult> {
+      calls.push(`upload ${entityType} ${id}`);
+      return inner.upload(entityType, id, file);
     },
     update(entityType: string, id: number, patch: Record<string, unknown>): Promise<EntityRow> {
       calls.push(`update ${entityType} ${id}`);
@@ -118,6 +126,19 @@ describe('the reads a notes app makes', () => {
     await cache.eventLog({ page: { size: 2 } });
     await cache.eventLog({ page: { size: 2 } });
     expect(calls).toEqual(['threadContents 11030', 'threadContents 11030', 'following 20', 'eventLog', 'eventLog']);
+  });
+});
+
+describe('the writes', () => {
+  it('drops every cached page of a type after a create and after an upload', async () => {
+    const { client, calls } = counting(new MockClient());
+    const cache = createQueryCache(client);
+    await cache.search('Note', { fields: ['subject'] });
+    await cache.create('Note', { project: { type: 'Project', id: 70 }, subject: 'Fresh' });
+    await cache.search('Note', { fields: ['subject'] });
+    await cache.upload('Note', 11030, { filename: 'a.png', data: new Uint8Array([1]), field: 'attachments' });
+    await cache.search('Note', { fields: ['subject'] });
+    expect(calls).toEqual(['search Note', 'create Note', 'search Note', 'upload Note 11030', 'search Note']);
   });
 });
 

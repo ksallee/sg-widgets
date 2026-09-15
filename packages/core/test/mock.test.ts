@@ -982,3 +982,93 @@ describe('what a person follows', () => {
     await expect(c.following(20, { entity: 'nonsense' })).rejects.toMatchObject({ status: 400 });
   });
 });
+
+describe('create', () => {
+  it('refuses a project-scoped create with no project, and echoes the body', async () => {
+    const c = client();
+    await expect(c.create('Note', { subject: 'No project' })).rejects.toMatchObject({
+      status: 400,
+      message: 'API create() missing \'project\' attribute: {"subject":"No project"}',
+    });
+  });
+
+  it('fills the identity field the server generates, and leaves a Note titleless', async () => {
+    const c = client();
+    const shot = await c.create('Shot', { project: { type: 'Project', id: 70 } });
+    expect(shot.attributes['code']).toBe(`New Shot ${shot.id}`);
+    // A Note's subject is optional and is not auto-filled (entity_types/Note).
+    const note = await c.create('Note', { project: { type: 'Project', id: 70 } });
+    expect(note.attributes['subject']).toBeNull();
+    expect(note.attributes['cached_display_name']).toBe('');
+    // The defaults come back on the answer, so they are read off it.
+    expect(note.attributes['sg_status_list']).toBe('opn');
+    expect(note.attributes['read_by_current_user']).toBeNull();
+  });
+
+  it('puts a Reply in the thread it names, and keeps one that names nothing', async () => {
+    const c = client();
+    const reply = await c.create('Reply', { entity: { type: 'Note', id: 11030 }, content: 'On it.' });
+    expect(reply.relationships['entity']?.data).toMatchObject({ type: 'Note', id: 11030 });
+    const thread = await c.threadContents(11030);
+    expect(thread[thread.length - 1]?.id).toBe(reply.id);
+    // A Reply created without `entity` is legal and is permanent litter (entity_types/Reply).
+    const orphan = await c.create('Reply', { content: 'Nowhere.' });
+    expect(orphan.relationships['entity']?.data).toBeNull();
+  });
+
+  it('refuses an unknown field, a read-only one and an empty identity', async () => {
+    const c = client();
+    const project = { type: 'Project', id: 70 };
+    await expect(c.create('Note', { project, nope: 1 })).rejects.toMatchObject({ message: "API create() Note.nope doesn't exist." });
+    await expect(c.create('Attachment', { project, filename: 'probe.png' })).rejects.toMatchObject({
+      message: 'API create() Attachment.filename is read only.',
+    });
+    await expect(c.create('Shot', { project, code: '' })).rejects.toMatchObject({
+      message: 'Create failed for [Shot]: Cannot set identifier field to empty. (Shot)',
+    });
+  });
+});
+
+describe('upload', () => {
+  const bytes = new Uint8Array([137, 80, 78, 71]);
+
+  it('puts an Attachment on the row and names the kind after the field', async () => {
+    const c = client();
+    const before = c.rowsOf('Attachment').length;
+    const result = await c.upload('Note', 11030, { filename: 'screenshot.png', data: bytes, field: 'attachments' });
+    expect(result.uploadType).toBe('Attachment');
+    expect(result.uploadInfo['original_filename']).toBe('screenshot.png');
+    expect(c.rowsOf('Attachment')).toHaveLength(before + 1);
+    const thread = await c.threadContents(11030);
+    expect(thread.filter((row) => row.type === 'Attachment').map((row) => row.fields['id'])).toContain(
+      c.rowsOf('Attachment')[before]?.['id'],
+    );
+  });
+
+  it('is a Thumbnail on image, and the field reads a placeholder until the transcode lands', async () => {
+    const c = client();
+    const result = await c.upload('Shot', 862, { filename: 'frame.png', data: bytes, field: 'image' });
+    expect(result.uploadType).toBe('Thumbnail');
+    const shot = (await c.search('Shot', { filters: only('id', 'is', 862), fields: ['image'] })).data[0];
+    expect(String(shot?.attributes['image'])).toMatch(/^\/images\/status\/transient\//);
+  });
+
+  it('leaves the size and the extension unset, as an uploaded row reads them', async () => {
+    const c = client();
+    await c.upload('Version', 17055, { filename: 'workflow.json', data: bytes });
+    const attachment = c.rowsOf('Attachment').at(-1);
+    expect(attachment?.['file_size']).toBeNull();
+    expect(attachment?.['file_extension']).toBeNull();
+    // Not one of the four values its own `valid_values` declares (entity_types/Attachment).
+    expect(attachment?.['processing_status']).toBe('thumbnail_pending_us');
+  });
+
+  it('404s on a field the type does not have and on a row that is not there', async () => {
+    const c = client();
+    await expect(c.upload('Shot', 862, { filename: 'x.png', data: bytes, field: 'attachments' })).rejects.toMatchObject({
+      status: 404,
+      message: "Field 'Shot.attachments' does not exist.",
+    });
+    await expect(c.upload('Shot', 999999, { filename: 'x.png', data: bytes })).rejects.toMatchObject({ status: 404 });
+  });
+});

@@ -29,10 +29,13 @@ import type {
   SgClient,
   TextSearchRow,
   ThreadRow,
+  UploadFile,
+  UploadResult,
 } from './client.js';
 import { SgApiError } from './client.js';
 import type { EntityRef, TextSearchFilter } from './filter.js';
 import type { ProxyError, ProxyMethod } from './proxy-handler.js';
+import { bytesToBase64 } from './proxy-handler.js';
 import type { FieldSchema } from './schema.js';
 import type { StatusRecord } from './status.js';
 
@@ -109,6 +112,19 @@ export class ProxyClient implements SgClient {
 
   statuses(): Promise<StatusRecord[]> {
     return this.post('statuses', {});
+  }
+
+  create(entityType: string, body: Record<string, unknown>): Promise<EntityRow> {
+    return this.post('create', { entityType, body });
+  }
+
+  /** The bytes cross the protocol base64-encoded; the handler runs the three calls. */
+  upload(entityType: string, id: number, file: UploadFile): Promise<UploadResult> {
+    return this.post('upload', {
+      entityType,
+      id,
+      file: { filename: file.filename, data: bytesToBase64(file.data), field: file.field ?? null },
+    });
   }
 
   update(entityType: string, id: number, patch: Record<string, unknown>): Promise<EntityRow> {

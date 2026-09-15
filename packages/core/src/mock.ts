@@ -27,6 +27,8 @@ import type {
   TextSearchRow,
   ThreadAuthor,
   ThreadRow,
+  UploadFile,
+  UploadResult,
 } from './client.js';
 import { EVENT_LOG_FIELDS, eventLogFilters, normalizeEventLogEntry, pluralPath, SgApiError } from './client.js';
 import type { EntityRef, TextSearchFilter, WireCondition, WireGroup } from './filter.js';
@@ -412,6 +414,18 @@ const SPECS: Record<string, Record<string, FieldSpec>> = {
     html: { displayName: 'HTML', dataType: 'text' },
   },
 };
+
+/**
+ * The identity field per type. It is flagged `mandatory` and is optional on a
+ * create; the server fills it with `New <display name> <id>` on the types below,
+ * and a Note is left titleless (012_create_version, entity_types/Note).
+ */
+const IDENTITY_FIELD: Record<string, string> = {
+  Project: 'name', Sequence: 'code', Shot: 'code', Asset: 'code', Version: 'code',
+  Task: 'content', Note: 'subject', Reply: 'content', Attachment: 'display_name',
+};
+
+const GENERATED_IDENTITY: ReadonlySet<string> = new Set(['Sequence', 'Shot', 'Asset', 'Version', 'Task']);
 
 const DISPLAY_NAMES: Record<string, string> = {
   Project: 'Project', Sequence: 'Sequence', Shot: 'Shot', Asset: 'Asset', Version: 'Version',
@@ -1650,6 +1664,158 @@ export class MockClient implements SgClient {
         icon: icon ? toStatusIcon(icon.values) : null,
       };
     });
+  }
+
+  /**
+   * Create one row and answer it.
+   *
+   * `project` is the whole contract on a project-scoped type, and the schema's
+   * `mandatory` flags are not it: the identity field is optional and the server
+   * fills it, except on a Note, which stays titleless (012_create_version,
+   * entity_types/Note). Nothing is unique, so two identical creates make two rows.
+   */
+  async create(entityType: string, body: Record<string, unknown>): Promise<EntityRow> {
+    await this.gate();
+    const spec = this.schemaOf(entityType);
+    // `{}` and the identity field alone both answer this, with the body echoed.
+    if (spec['project'] && body['project'] === undefined) {
+      throw new SgApiError(400, null, `API create() missing 'project' attribute: ${JSON.stringify(body)}`);
+    }
+    const identity = IDENTITY_FIELD[entityType];
+    for (const [name, value] of Object.entries(body)) {
+      const field = spec[name];
+      if (!field) throw new SgApiError(400, null, `API create() ${entityType}.${name} doesn't exist.`);
+      if (field.editable === false) throw new SgApiError(400, null, `API create() ${entityType}.${name} is read only.`);
+      // Omitting the identity field and sending an empty one are different (entity_types/Shot).
+      if (name === identity && value === '') {
+        throw new SgApiError(400, null, `Create failed for [${entityType}]: Cannot set identifier field to empty. (${entityType})`);
+      }
+    }
+    const id = this.nextId(entityType);
+    const values: Record<string, unknown> = {};
+    for (const [name, field] of Object.entries(spec)) {
+      // `default_value` applies when the key is omitted, so a status is never unset.
+      values[name] = field.dataType === 'multi_entity' ? [] : (field.defaultValue ?? null);
+    }
+    // `user` and `created_by` hold the authenticating user (entity_types/Note).
+    const author = this.fixtures.rows.get('ApiUser')?.[0];
+    const authored = author ? ref(author) : null;
+    if (spec['created_by']) values['created_by'] = authored;
+    if (spec['updated_by']) values['updated_by'] = authored;
+    if (spec['user']) values['user'] = authored;
+    values['created_at'] = isoDateTime(0);
+    values['updated_at'] = isoDateTime(0);
+    Object.assign(values, body, { id });
+    if (identity && values[identity] === null && GENERATED_IDENTITY.has(entityType)) {
+      values[identity] = `New ${DISPLAY_NAMES[entityType] ?? entityType} ${id}`;
+    }
+    values['cached_display_name'] =
+      entityType === 'Note'
+        ? [values['subject'], values['content']].filter(Boolean).join(' - ')
+        : displayNameOf({ ...values, cached_display_name: null }, '');
+    const row: Row = { type: entityType, id, values };
+    const rows = this.fixtures.rows.get(entityType);
+    if (rows) rows.push(row);
+    else this.fixtures.rows.set(entityType, [row]);
+    this.fixtures.index.set(`${entityType}:${id}`, row);
+    this.linkBack(row);
+    return this.project(row, spec);
+  }
+
+  /**
+   * Put a file on a row, as the three-call handshake leaves the site.
+   *
+   * The field in the path picks the kind: `image` a Thumbnail, another field an
+   * Attachment on it, no field a generic Attachment on `attachment_links`
+   * (recipes/001). The mock moves no bytes, so there is no `ETag` to give back.
+   */
+  async upload(entityType: string, id: number, file: UploadFile): Promise<UploadResult> {
+    await this.gate();
+    const spec = this.schemaOf(entityType);
+    const target = this.fixtures.index.get(`${entityType}:${id}`);
+    if (!target) throw new SgApiError(404, null, `Entity of type [${entityType}] with id=${id} does not exist.`);
+    // `filename` is a required query parameter on the ticket call.
+    if (!file.filename) throw new SgApiError(400, { filename: ['filename is missing'] }, 'Request Parameters invalid.');
+    // The 404 for a field the type does not have is worded as a missing field.
+    if (file.field !== undefined && !spec[file.field]) {
+      throw new SgApiError(404, null, `Field '${entityType}.${file.field}' does not exist.`);
+    }
+    const attachmentId = this.nextId('Attachment');
+    const author = this.fixtures.rows.get('ApiUser')?.[0];
+    const attachment: Row = {
+      type: 'Attachment',
+      id: attachmentId,
+      values: {
+        id: attachmentId,
+        display_name: file.filename,
+        cached_display_name: file.filename,
+        description: null,
+        original_fname: file.filename,
+        filename: file.filename,
+        // Neither fills in, then or later (entity_types/Attachment).
+        file_extension: null,
+        file_size: null,
+        this_file: { url: `https://media.example.studio/${file.filename}`, name: file.filename, content_type: 'application/octet-stream', link_type: 'upload' },
+        // The token the field answers straight after an upload, which is not one of the
+        // four its own `valid_values` declares (entity_types/Attachment).
+        processing_status: 'thumbnail_pending_us',
+        sg_status_list: 'na',
+        project: (target.values['project'] as EntityRef | undefined) ?? null,
+        attachment_links: [{ type: entityType, id }],
+        created_at: isoDateTime(0),
+        updated_at: isoDateTime(0),
+        created_by: author ? ref(author) : null,
+        updated_by: author ? ref(author) : null,
+      },
+    };
+    const attachments = this.fixtures.rows.get('Attachment');
+    if (attachments) attachments.push(attachment);
+    else this.fixtures.rows.set('Attachment', [attachment]);
+    this.fixtures.index.set(`Attachment:${attachmentId}`, attachment);
+
+    const linkField = file.field ?? (spec['attachments'] ? 'attachments' : undefined);
+    const field = linkField === undefined ? undefined : spec[linkField];
+    if (linkField !== undefined && field) {
+      if (field.dataType === 'multi_entity') (target.values[linkField] as EntityRef[]).push(ref(attachment));
+      else if (linkField === 'image') {
+        // A media field is not readable yet: it answers a placeholder under
+        // `/images/status/transient/` until the transcode lands (recipes/001).
+        target.values[linkField] = `/images/status/transient/${file.filename}`;
+      } else target.values[linkField] = String((attachment.values['this_file'] as { url: string }).url);
+    }
+    const uploadType = file.field === 'image' ? 'Thumbnail' : 'Attachment';
+    return {
+      uploadType,
+      uploadInfo: {
+        timestamp: isoDateTime(0),
+        upload_type: uploadType,
+        upload_id: null,
+        storage_service: 's3',
+        original_filename: file.filename,
+        multipart_upload: false,
+      },
+      // No bytes were moved, so there is no md5 receipt.
+      etag: null,
+    };
+  }
+
+  /** The next free id of a type, which is what a create takes. */
+  private nextId(entityType: string): number {
+    return (this.fixtures.rows.get(entityType) ?? []).reduce((max, row) => Math.max(max, row.id), 0) + 1;
+  }
+
+  /** The reverse view of a link the server fills in: a Reply lands in `Note.replies`. */
+  private linkBack(row: Row): void {
+    const push = (owner: EntityRef | null | undefined, field: string): void => {
+      if (!owner) return;
+      const target = this.fixtures.index.get(`${owner.type}:${owner.id}`);
+      const list = target?.values[field];
+      if (Array.isArray(list)) (list as EntityRef[]).push(ref(row));
+    };
+    if (row.type === 'Reply') push(row.values['entity'] as EntityRef | null, 'replies');
+    if (row.type === 'Attachment') {
+      for (const link of (row.values['attachment_links'] as EntityRef[] | undefined) ?? []) push(link, 'attachments');
+    }
   }
 
   /**

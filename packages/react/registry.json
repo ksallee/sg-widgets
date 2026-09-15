@@ -295,6 +295,7 @@
         "@sg-widgets/core"
       ],
       "registryDependencies": [
+        "https://sg-widgets.dev/r/react/picker-classes.json",
         "https://sg-widgets.dev/r/react/field-value.json",
         "https://sg-widgets.dev/r/react/thumbnail.json",
         "https://sg-widgets.dev/r/react/user-avatar.json"

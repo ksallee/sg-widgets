@@ -70,6 +70,7 @@
 	import { editorKindFor, preferencesOf } from '@sg-widgets/core';
 	import { cn, type WithElementRef } from '$lib/utils.js';
 	import { Button } from '$lib/components/ui/button/index.js';
+	import { CONTROL_BUTTON } from '$lib/registry/components/control-classes.js';
 	import * as Popover from '$lib/components/ui/popover/index.js';
 	import CheckboxEditor from '$lib/registry/components/checkbox-editor.svelte';
 	import ColorEditor from '$lib/registry/components/color-editor.svelte';
@@ -394,8 +395,8 @@
 				{/if}
 				{@render control()}
 				<div class="flex items-center justify-end gap-2">
-					<Button data-slot="field-editor-cancel" variant="ghost" size="sm" onclick={cancel}>Cancel</Button>
-					<Button data-slot="field-editor-save" size="sm" onclick={leave}>Save</Button>
+					<Button data-slot="field-editor-cancel" variant="ghost" size={CONTROL_BUTTON[size]} onclick={cancel}>Cancel</Button>
+					<Button data-slot="field-editor-save" size={CONTROL_BUTTON[size]} onclick={leave}>Save</Button>
 				</div>
 			</Popover.Content>
 		</Popover.Root>

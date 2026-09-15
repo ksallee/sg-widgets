@@ -232,6 +232,7 @@
         "@sg-widgets/core"
       ],
       "registryDependencies": [
+        "local:picker-classes",
         "local:field-value",
         "local:thumbnail",
         "local:user-avatar"

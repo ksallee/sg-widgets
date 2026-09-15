@@ -37,3 +37,13 @@ export const CONTROL_GLYPH: Record<ControlSize, string> = {
   md: 'size-4',
   lg: 'size-5',
 };
+
+/**
+ * The button size a control's step takes. A button is a control, so it stands at least 32
+ * (rule 3); the button ladder stops at `lg` (36), so the lg step takes that.
+ */
+export const CONTROL_BUTTON: Record<ControlSize, 'default' | 'lg'> = {
+  sm: 'default',
+  md: 'lg',
+  lg: 'lg',
+};

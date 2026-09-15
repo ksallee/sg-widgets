@@ -6,7 +6,7 @@
 // frameworks are then compared value by value, so a widget that is wrong in the same way
 // twice still reads as one deviation per framework and none across them.
 //
-// Four readings, where the rules leave room. Each takes what most widgets already do.
+// Seven readings, where the rules leave room. Each takes what most widgets already do.
 //
 //   Control radius is `--radius` (`rounded-lg`), the step every shadcn primitive and
 //   twelve of the twenty-two widget controls wear, rather than the `rounded-md` of the
@@ -28,7 +28,23 @@
 //   list is read off the DOM: a box whose visible children carry one `data-slot`, stack
 //   down the page, fill its width and are wider than they are tall. A section stack names
 //   its parts differently, a chip row runs across and a card is not wide, so none of the
-//   three is measured as a list.
+//   three is measured as a list. A filter group's body stacks rows of controls rather than
+//   rows of content, and whether rule 2's list is the same thing is unsettled, so it is
+//   left out of that reading.
+//
+//   A cross is read wherever a `-remove` slot is drawn: its glyph on the `CHIP_CROSS`
+//   ladder and its box that glyph plus the shared control's 2px padding. The wash it
+//   hovers with is not a measurement, so it is not read. A `-remove` that sits in a row
+//   beside a grip is that row's own icon control rather than rule 5's cross inside a chip,
+//   so it is read for its glyph on the control ladder alone.
+//
+//   A `-count` that draws a surface is a chip and takes the chip ladder at the step under
+//   its control (20 / 24 / 32). A `-count` that draws none is metadata, and takes rule 6's
+//   second size.
+//
+//   The filter bar's pill stands on the control ladder and its cross sits as far from the
+//   right as from the top, which is what the ladder leaves once the cross's box is taken
+//   out of the pill's height: 7, 8 and 9 at the three steps.
 
 const LADDER = { sm: 32, md: 36, lg: 40 };
 const INSET = { sm: 8, md: 12, lg: 12 };
@@ -66,6 +82,7 @@ const CONTROL = {
   'date-editor': '[data-slot="date-editor-trigger"]',
   'date-time-editor': '[data-slot="date-time-editor-trigger"]',
   'list-picker': '[data-slot="list-picker-control"]',
+  'list-multi-picker': '[data-slot="list-multi-picker-control"]',
   'color-editor': '[data-slot="input"]',
   'url-editor': '[data-slot="url-editor-url"]',
 };
@@ -80,6 +97,19 @@ const CHIP = '[data-slot="entity-chip"],[data-slot="status-badge"]:not([data-var
 const TEXT_CHIP = '[data-slot$="-chip"]';
 /** The icon buttons a control reserves its trailing inset for. */
 const ICON_BUTTON = '[data-slot$="-clear"],[data-slot$="-remove"]';
+/** Every cross the registry draws. */
+const REMOVE = '[data-slot$="-remove"]';
+/** Every count a widget draws beside a label. */
+const COUNT = '[data-slot$="-count"]';
+/** The `CHIP_CROSS` ladder, and the padding the shared remove control adds around it. */
+const CROSS_LADDER = [12, 14, 16, 18];
+const CROSS_PAD = 2;
+/** A glyph inside a control, for a remove that is a row's own icon button. */
+const CONTROL_GLYPH = [16, 20];
+/** A count drawn as a chip: the chip ladder at the step under its control. */
+const COUNT_BOX = { sm: 20, md: 24, lg: 32 };
+/** The room the pill's ladder leaves around its cross, above it and beside it. */
+const PILL_CROSS = { sm: 7, md: 8, lg: 9 };
 /** Sub-labels, codes and counts: rule 6's second size. */
 const META_TEXT =
   '[data-slot$="-sub-label"],[data-slot$="-code"],[data-slot$="-zone"],[data-slot$="-overflow"],[data-slot$="-count"]';
@@ -140,6 +170,23 @@ function rowLists(root) {
   return lists;
 }
 
+/** The first drawn element of each distinct `data-slot` under `root`. */
+function bySlot(selector, root) {
+  const found = new Map();
+  for (const el of $$(selector, root)) {
+    if (el.getBoundingClientRect().height <= 0) continue;
+    if (!found.has(el.dataset.slot)) found.set(el.dataset.slot, el);
+  }
+  return found;
+}
+
+/** True when the box draws a surface of its own: a chip, rather than a run of text. */
+function draws(style) {
+  const fill = style.backgroundColor;
+  const bare = fill === 'transparent' || fill === 'rgba(0, 0, 0, 0)' || fill.endsWith(' / 0)');
+  return px(style.borderTopWidth) > 0 || !bare;
+}
+
 function inlineGap(box) {
   const style = getComputedStyle(box);
   return style.columnGap === 'normal' ? null : px(style.columnGap);
@@ -157,7 +204,7 @@ function check(widget, framework, part, property, expected, actual, tolerance = 
 }
 
 /** Rows, chips, meta text and radius, wherever they appear under `root`. */
-function measureParts(widget, framework, root, R, scope) {
+function measureParts(widget, framework, root, R, scope, size) {
   const rows = $$(ROW, root).filter((el) => el.getBoundingClientRect().height > 0);
   if (rows[0]) {
     const s = getComputedStyle(rows[0]);
@@ -195,7 +242,31 @@ function measureParts(widget, framework, root, R, scope) {
     check(widget, framework, `${scope}icon-button`, 'radius', R.row, px(getComputedStyle(button).borderTopLeftRadius));
   }
 
+  // Every cross: the shared remove control of rule 5, one reading per slot name.
+  for (const [slot, cross] of bySlot(REMOVE, root)) {
+    const glyph = cross.querySelector('svg');
+    if (!glyph) continue;
+    const drawn = Math.round(glyph.getBoundingClientRect().height);
+    const paired = cross.parentElement?.querySelector('[data-slot$="-grip"]');
+    check(widget, framework, `${scope}${slot}`, 'glyph', paired ? CONTROL_GLYPH : CROSS_LADDER, drawn);
+    if (paired) continue;
+    check(widget, framework, `${scope}${slot}`, 'box', drawn + 2 * CROSS_PAD, Math.round(cross.getBoundingClientRect().height));
+    check(widget, framework, `${scope}${slot}`, 'radius', R.row, px(getComputedStyle(cross).borderTopLeftRadius));
+  }
+
+  // Every count: a chip under its control where it draws a surface, metadata where it does not.
+  for (const [slot, count] of bySlot(COUNT, root)) {
+    const s = getComputedStyle(count);
+    if (draws(s)) {
+      check(widget, framework, `${scope}${slot}`, 'height', COUNT_BOX[size ?? 'md'], Math.round(count.getBoundingClientRect().height));
+      check(widget, framework, `${scope}${slot}`, 'radius', R.chip, px(s.borderTopLeftRadius));
+    } else {
+      check(widget, framework, `${scope}${slot}`, 'font-size', META.size, px(s.fontSize));
+    }
+  }
+
   for (const { box, slot, row } of rowLists(root)) {
+    if (box.dataset.slot === 'filter-group-body') continue;
     const gap = getComputedStyle(box).rowGap;
     check(widget, framework, `${scope}list ${slot}`, 'row-gap', 0, gap === 'normal' ? 0 : px(gap));
     const min = getComputedStyle(row).minHeight;
@@ -257,7 +328,20 @@ for (const pane of $$('[data-pane]')) {
       }
     }
 
-    if (size === 'md') measureParts(widget, framework, cell, R, '');
+    if (size === 'md') measureParts(widget, framework, cell, R, '', size);
+
+    // The filter bar's pill: the control ladder, with its cross as far from the right as
+    // from the top.
+    const pill = $('[data-slot="filter-pill"][data-active]', cell);
+    const pillCross = pill?.querySelector('[data-slot="filter-pill-remove"]');
+    if (pill && pillCross) {
+      const s = getComputedStyle(pill);
+      const b = pill.getBoundingClientRect();
+      const c = pillCross.getBoundingClientRect();
+      check(widget, framework, 'pill', 'height', LADDER[size], Math.round(b.height));
+      check(widget, framework, 'pill', 'cross-top', PILL_CROSS[size], c.top - b.top - px(s.borderTopWidth));
+      check(widget, framework, 'pill', 'cross-right', PILL_CROSS[size], b.right - c.right - px(s.borderRightWidth));
+    }
 
     // The table draws cells, not rows: rule 2 gives them their own inset.
     const tableCell = $$('[data-slot="table-cell"]', cell).find((el) => el.getBoundingClientRect().height > 0);
@@ -306,9 +390,10 @@ for (const pane of $$('[data-pane]')) {
     }
     opener.click();
     await wait(1200);
-    // The outermost surface that appeared: a popup inside a popup is its content.
+    // The outermost surface that appeared: a popup inside a popup is its content. A popup
+    // hangs off the body, so anything still inside a pane is a widget's own part.
     const open = $$('[data-slot="popover-content"],[data-slot$="-content"]').filter(
-      (el) => el.getBoundingClientRect().height > 0 && !pane.contains(el),
+      (el) => el.getBoundingClientRect().height > 0 && !el.closest('[data-pane]'),
     );
     const popup = open.find((el) => !open.some((other) => other !== el && other.contains(el)));
     if (popup) {
@@ -332,7 +417,7 @@ for (const pane of $$('[data-pane]')) {
       if (!item && popup.childElementCount > 1 && s.rowGap !== 'normal') {
         check(widget, framework, 'popup', 'section-gap', SECTION_GAP, px(s.rowGap));
       }
-      measureParts(widget, framework, popup, R, 'popup ');
+      measureParts(widget, framework, popup, R, 'popup ', cell.dataset.qaSize ?? 'md');
     } else {
       deviations.push({ widget, framework, part: 'popup', property: 'open', expected: 'a popup', actual: 'none' });
     }

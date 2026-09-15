@@ -155,6 +155,7 @@ export function EntityChip({
       {removable ? (
         <button
           type="button"
+          data-slot="entity-chip-remove"
           aria-label={removeLabel ?? `Remove ${label}`}
           onClick={() => onRemove?.(entity)}
           className={REMOVE_CONTROL}

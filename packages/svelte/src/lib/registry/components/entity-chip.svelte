@@ -165,6 +165,7 @@
 		{#if removable}
 			<button
 				type="button"
+				data-slot="entity-chip-remove"
 				aria-label={removeLabel ?? `Remove ${label}`}
 				onclick={() => onRemove?.(entity)}
 				class={REMOVE_CONTROL}

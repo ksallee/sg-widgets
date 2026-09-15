@@ -62,7 +62,13 @@ export default defineConfig({
         SiteTitle: './src/components/overrides/SiteTitle.astro',
       },
       sidebar: [
-        { label: 'Start', items: [{ label: 'Introduction', slug: 'start/introduction' }] },
+        {
+          label: 'Start',
+          items: [
+            { label: 'Introduction', slug: 'start/introduction' },
+            { label: 'Install', slug: 'start/install' },
+          ],
+        },
         {
           label: 'Core',
           items: [{ autogenerate: { directory: 'core' } }],

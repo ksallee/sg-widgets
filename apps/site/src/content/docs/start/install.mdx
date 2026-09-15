@@ -1,0 +1,32 @@
+---
+title: Install
+description: How a host app installs the widgets, and the two things it has to do by hand.
+---
+
+One command installs every item of a registry.
+
+```sh
+pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/sg-widgets.json
+pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/sg-widgets.json
+```
+
+A widget page names its own item, for a host that wants one widget rather than the set.
+
+Run `init` first. It writes `components.json`, the stylesheet and `lib/utils`, which every item
+imports. A host that copies those three from somewhere else instead gets them without their
+packages; the items name `clsx`, `tailwind-merge` and `tw-animate-css` so the CLI adds them either
+way, but nothing generates `lib/utils` itself.
+
+## The core package
+
+`@sg-widgets/core` is not on npm yet. Every item names it as a dependency, so `add` writes it into
+`package.json` and the install that follows fails to resolve it. Point the spec at a local checkout
+and install again.
+
+```sh
+pnpm add @sg-widgets/core@link:../sg-widgets/packages/core
+```
+
+`add` writes `"latest"` over that spec every time it runs, so the line is put back after each
+install. The widgets import core by its bare name and nothing else in an item reaches into this
+repository, so a published package will drop straight in.

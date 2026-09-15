@@ -116,7 +116,9 @@
         "atom"
       ],
       "dependencies": [
-        "@sg-widgets/core"
+        "@sg-widgets/core",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [],
       "docs": "The icon alone, at whatever size the caller draws it. Pass siteUrl for a stock cell the package does not bundle.",
@@ -138,7 +140,9 @@
       ],
       "dependencies": [
         "@sg-widgets/core",
-        "lucide-react"
+        "lucide-react",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [
         "https://sg-widgets.dev/r/react/leaf-classes.json",
@@ -163,7 +167,9 @@
       ],
       "dependencies": [
         "@sg-widgets/core",
-        "lucide-react"
+        "lucide-react",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [
         "https://sg-widgets.dev/r/react/entity-glyphs.json",
@@ -190,7 +196,9 @@
       ],
       "dependencies": [
         "@sg-widgets/core",
-        "lucide-react"
+        "lucide-react",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [
         "https://sg-widgets.dev/r/react/entity-glyphs.json",
@@ -219,7 +227,9 @@
       ],
       "dependencies": [
         "@sg-widgets/core",
-        "lucide-react"
+        "lucide-react",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [],
       "docs": "The value of an image field is the only state marker there is: null, still transcoding, or ready. All three render.",
@@ -241,7 +251,9 @@
       ],
       "dependencies": [
         "@sg-widgets/core",
-        "lucide-react"
+        "lucide-react",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [
         "https://sg-widgets.dev/r/react/leaf-classes.json"
@@ -265,7 +277,9 @@
       ],
       "dependencies": [
         "@sg-widgets/core",
-        "lucide-react"
+        "lucide-react",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [
         "https://sg-widgets.dev/r/react/entity-chip.json",
@@ -292,7 +306,9 @@
         "atom"
       ],
       "dependencies": [
-        "@sg-widgets/core"
+        "@sg-widgets/core",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [
         "https://sg-widgets.dev/r/react/picker-classes.json",
@@ -319,7 +335,9 @@
       ],
       "dependencies": [
         "@sg-widgets/core",
-        "lucide-react"
+        "lucide-react",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [],
       "docs": "Rule 5 of docs/design-rules.md, in one place. Loading stays with the widget: skeletons are shaped like the rows they replace.",
@@ -340,7 +358,9 @@
         "search"
       ],
       "dependencies": [
-        "@sg-widgets/core"
+        "@sg-widgets/core",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [
         "skeleton"
@@ -363,7 +383,8 @@
         "atom"
       ],
       "dependencies": [
-        "@sg-widgets/core"
+        "@sg-widgets/core",
+        "tw-animate-css"
       ],
       "registryDependencies": [],
       "docs": "Class strings only. Import what a control needs; the ladder and the states are the design rules'.",
@@ -490,7 +511,9 @@
         "editor"
       ],
       "dependencies": [
-        "@sg-widgets/core"
+        "@sg-widgets/core",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [
         "https://sg-widgets.dev/r/react/field-error.json",
@@ -516,7 +539,9 @@
       "dependencies": [
         "@sg-widgets/core",
         "lucide-react",
-        "@base-ui/react"
+        "@base-ui/react",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [
         "https://sg-widgets.dev/r/react/picker-classes.json",
@@ -569,7 +594,9 @@
       ],
       "dependencies": [
         "@sg-widgets/core",
-        "@base-ui/react"
+        "@base-ui/react",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [
         "https://sg-widgets.dev/r/react/picker-control.json",
@@ -595,7 +622,9 @@
       "dependencies": [
         "@sg-widgets/core",
         "lucide-react",
-        "@base-ui/react"
+        "@base-ui/react",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [
         "https://sg-widgets.dev/r/react/picker-control.json",
@@ -621,7 +650,9 @@
       ],
       "dependencies": [
         "@sg-widgets/core",
-        "lucide-react"
+        "lucide-react",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [
         "https://sg-widgets.dev/r/react/state-line.json",
@@ -669,7 +700,9 @@
       ],
       "dependencies": [
         "@sg-widgets/core",
-        "lucide-react"
+        "lucide-react",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [
         "https://sg-widgets.dev/r/react/state-line.json",
@@ -727,7 +760,9 @@
       ],
       "dependencies": [
         "@sg-widgets/core",
-        "lucide-react"
+        "lucide-react",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [
         "https://sg-widgets.dev/r/react/value-editor.json",
@@ -754,7 +789,9 @@
       ],
       "dependencies": [
         "@sg-widgets/core",
-        "lucide-react"
+        "lucide-react",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [
         "https://sg-widgets.dev/r/react/field-error.json",
@@ -780,7 +817,9 @@
       ],
       "dependencies": [
         "@sg-widgets/core",
-        "lucide-react"
+        "lucide-react",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [
         "https://sg-widgets.dev/r/react/value-editor.json",
@@ -810,7 +849,9 @@
       ],
       "dependencies": [
         "@sg-widgets/core",
-        "lucide-react"
+        "lucide-react",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [
         "https://sg-widgets.dev/r/react/value-editor.json",
@@ -841,7 +882,9 @@
       "dependencies": [
         "@sg-widgets/core",
         "lucide-react",
-        "@base-ui/react"
+        "@base-ui/react",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [
         "https://sg-widgets.dev/r/react/picker-control.json",
@@ -891,7 +934,9 @@
       "dependencies": [
         "@sg-widgets/core",
         "lucide-react",
-        "@base-ui/react"
+        "@base-ui/react",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [
         "https://sg-widgets.dev/r/react/picker-control.json",
@@ -967,7 +1012,9 @@
       ],
       "dependencies": [
         "@sg-widgets/core",
-        "lucide-react"
+        "lucide-react",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [
         "https://sg-widgets.dev/r/react/value-editor.json",
@@ -994,7 +1041,10 @@
       "dependencies": [
         "@sg-widgets/core",
         "lucide-react",
-        "@base-ui/react"
+        "@base-ui/react",
+        "clsx",
+        "tailwind-merge",
+        "tw-animate-css"
       ],
       "registryDependencies": [
         "https://sg-widgets.dev/r/react/control-classes.json",
@@ -1053,7 +1103,9 @@
       ],
       "dependencies": [
         "@sg-widgets/core",
-        "lucide-react"
+        "lucide-react",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [
         "https://sg-widgets.dev/r/react/control-classes.json",
@@ -1098,7 +1150,9 @@
       ],
       "dependencies": [
         "@sg-widgets/core",
-        "lucide-react"
+        "lucide-react",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [
         "https://sg-widgets.dev/r/react/control-classes.json",
@@ -1126,7 +1180,9 @@
       ],
       "dependencies": [
         "@sg-widgets/core",
-        "lucide-react"
+        "lucide-react",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [
         "https://sg-widgets.dev/r/react/entity-fields.json",
@@ -1160,7 +1216,9 @@
       ],
       "dependencies": [
         "@sg-widgets/core",
-        "lucide-react"
+        "lucide-react",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [
         "https://sg-widgets.dev/r/react/leaf-classes.json",
@@ -1217,7 +1275,9 @@
       ],
       "dependencies": [
         "@sg-widgets/core",
-        "@base-ui/react"
+        "@base-ui/react",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [
         "https://sg-widgets.dev/r/react/picker-control.json",
@@ -1317,7 +1377,9 @@
       "dependencies": [
         "@sg-widgets/core",
         "lucide-react",
-        "@tanstack/react-table"
+        "@tanstack/react-table",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [
         "https://sg-widgets.dev/r/react/collection-control.json",
@@ -1353,7 +1415,9 @@
       ],
       "dependencies": [
         "@sg-widgets/core",
-        "lucide-react"
+        "lucide-react",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [
         "https://sg-widgets.dev/r/react/collection-control.json",
@@ -1384,7 +1448,9 @@
       ],
       "dependencies": [
         "@sg-widgets/core",
-        "lucide-react"
+        "lucide-react",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [
         "https://sg-widgets.dev/r/react/collection-control.json",
@@ -1417,7 +1483,9 @@
       ],
       "dependencies": [
         "@sg-widgets/core",
-        "lucide-react"
+        "lucide-react",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [
         "https://sg-widgets.dev/r/react/collection-source.json",
@@ -1448,7 +1516,9 @@
       ],
       "dependencies": [
         "@sg-widgets/core",
-        "@base-ui/react"
+        "@base-ui/react",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [
         "https://sg-widgets.dev/r/react/picker-control.json",
@@ -1475,7 +1545,9 @@
       ],
       "dependencies": [
         "@sg-widgets/core",
-        "@base-ui/react"
+        "@base-ui/react",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [
         "https://sg-widgets.dev/r/react/picker-control.json",
@@ -1599,7 +1671,9 @@
       ],
       "dependencies": [
         "@sg-widgets/core",
-        "lucide-react"
+        "lucide-react",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [
         "https://sg-widgets.dev/r/react/search-control.json",
@@ -1630,7 +1704,9 @@
       ],
       "dependencies": [
         "@sg-widgets/core",
-        "lucide-react"
+        "lucide-react",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [
         "https://sg-widgets.dev/r/react/search-control.json",
@@ -1658,7 +1734,9 @@
       ],
       "dependencies": [
         "@sg-widgets/core",
-        "lucide-react"
+        "lucide-react",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [
         "https://sg-widgets.dev/r/react/search-control.json",

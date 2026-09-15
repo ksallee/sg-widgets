@@ -93,7 +93,9 @@
       "dependencies": [
         "@sg-widgets/core",
         "@lucide/svelte",
-        "bits-ui"
+        "bits-ui",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [
         "dialog",
@@ -162,7 +164,10 @@
       "description": "A select whose list is padded inside its popup and whose scroll buttons sit over it.",
       "dependencies": [
         "@lucide/svelte",
-        "bits-ui"
+        "bits-ui",
+        "clsx",
+        "tailwind-merge",
+        "tw-animate-css"
       ],
       "registryDependencies": [],
       "files": [
@@ -223,7 +228,9 @@
       "description": "A checkbox with an indeterminate box, the radius of the theme and a stroke-3 mark.",
       "dependencies": [
         "@lucide/svelte",
-        "bits-ui"
+        "bits-ui",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [],
       "files": [
@@ -243,7 +250,9 @@
       "title": "Status Glyph",
       "description": "One Flow Production Tracking status icon, from the site's own image or a cell of the stock sprite.",
       "dependencies": [
-        "@sg-widgets/core"
+        "@sg-widgets/core",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [],
       "files": [
@@ -260,7 +269,9 @@
       "description": "One Flow Production Tracking status as a coloured badge, using the site's own bg_color and icon.",
       "dependencies": [
         "@sg-widgets/core",
-        "@lucide/svelte"
+        "@lucide/svelte",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [
         "local:leaf-classes",
@@ -280,7 +291,9 @@
       "description": "A linked Flow Production Tracking row as a chip, with a per-type glyph, optional thumbnail and a remove control.",
       "dependencies": [
         "@sg-widgets/core",
-        "@lucide/svelte"
+        "@lucide/svelte",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [
         "local:entity-glyphs",
@@ -302,7 +315,9 @@
       "description": "One Flow Production Tracking row as a card, or as a thumbnail-first tile: thumbnail, name, status and its field values.",
       "dependencies": [
         "@sg-widgets/core",
-        "@lucide/svelte"
+        "@lucide/svelte",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [
         "local:entity-glyphs",
@@ -326,7 +341,9 @@
       "description": "A row's thumbnail, with aspect ratio, an explicit no-image placeholder and a play overlay.",
       "dependencies": [
         "@sg-widgets/core",
-        "@lucide/svelte"
+        "@lucide/svelte",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [],
       "files": [
@@ -343,7 +360,9 @@
       "description": "A person as a round avatar, with an initials fallback, inactive styling and an API-user badge.",
       "dependencies": [
         "@sg-widgets/core",
-        "@lucide/svelte"
+        "@lucide/svelte",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [
         "local:leaf-classes"
@@ -362,7 +381,9 @@
       "description": "Any Flow Production Tracking attribute value, rendered for display by its data type.",
       "dependencies": [
         "@sg-widgets/core",
-        "@lucide/svelte"
+        "@lucide/svelte",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [
         "local:entity-chip",
@@ -384,7 +405,9 @@
       "title": "Picker Row",
       "description": "The row every picker, search and tree draws: a picture, a highlighted label, a sub-label and a typed secondary.",
       "dependencies": [
-        "@sg-widgets/core"
+        "@sg-widgets/core",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [
         "local:picker-classes",
@@ -406,7 +429,9 @@
       "description": "The centred empty and error line every data widget draws, with its glyph and its inset.",
       "dependencies": [
         "@sg-widgets/core",
-        "@lucide/svelte"
+        "@lucide/svelte",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [],
       "files": [
@@ -422,7 +447,9 @@
       "title": "Search Skeleton",
       "description": "The rows a search widget draws while its read is in flight.",
       "dependencies": [
-        "@sg-widgets/core"
+        "@sg-widgets/core",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [
         "skeleton"
@@ -440,7 +467,8 @@
       "title": "Picker Classes",
       "description": "The control, popup, list and row classes every picker in this registry wears.",
       "dependencies": [
-        "@sg-widgets/core"
+        "@sg-widgets/core",
+        "tw-animate-css"
       ],
       "registryDependencies": [],
       "files": [
@@ -462,7 +490,9 @@
       "dependencies": [
         "@sg-widgets/core",
         "@lucide/svelte",
-        "bits-ui"
+        "bits-ui",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [
         "local:picker-classes",
@@ -592,7 +622,9 @@
       "title": "Value Editor",
       "description": "The draft, the commit, the Escape and the error line every leaf value editor runs on.",
       "dependencies": [
-        "@sg-widgets/core"
+        "@sg-widgets/core",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [
         "local:field-error",
@@ -616,7 +648,9 @@
       "description": "One entity type of a Flow Production Tracking site, as a searchable combobox.",
       "dependencies": [
         "@sg-widgets/core",
-        "bits-ui"
+        "bits-ui",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [
         "local:picker-control",
@@ -637,7 +671,9 @@
       "dependencies": [
         "@sg-widgets/core",
         "@lucide/svelte",
-        "bits-ui"
+        "bits-ui",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [
         "local:picker-control",
@@ -658,7 +694,9 @@
       "description": "One field of an entity type as a searchable combobox, descending through linked types into a dotted path.",
       "dependencies": [
         "@sg-widgets/core",
-        "@lucide/svelte"
+        "@lucide/svelte",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [
         "local:state-line",
@@ -696,7 +734,9 @@
       "description": "The columns of a grid as a field picker over the ordered list it fills, dragged into place.",
       "dependencies": [
         "@sg-widgets/core",
-        "@lucide/svelte"
+        "@lucide/svelte",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [
         "local:state-line",
@@ -722,7 +762,9 @@
       "description": "A text field as an input, or a textarea when the field is multi-line.",
       "dependencies": [
         "@sg-widgets/core",
-        "@lucide/svelte"
+        "@lucide/svelte",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [
         "local:value-editor",
@@ -744,7 +786,9 @@
       "description": "The numeric family as one input: number, float, percent, currency, duration and timecode.",
       "dependencies": [
         "@sg-widgets/core",
-        "@lucide/svelte"
+        "@lucide/svelte",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [
         "local:value-editor",
@@ -766,7 +810,9 @@
       "description": "A checkbox field as an editable switch.",
       "dependencies": [
         "@sg-widgets/core",
-        "@lucide/svelte"
+        "@lucide/svelte",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [
         "local:control-classes",
@@ -788,7 +834,9 @@
       "dependencies": [
         "@sg-widgets/core",
         "@lucide/svelte",
-        "@internationalized/date"
+        "@internationalized/date",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [
         "local:value-editor",
@@ -814,7 +862,9 @@
       "dependencies": [
         "@sg-widgets/core",
         "@lucide/svelte",
-        "@internationalized/date"
+        "@internationalized/date",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [
         "local:value-editor",
@@ -840,7 +890,9 @@
       "dependencies": [
         "@sg-widgets/core",
         "@lucide/svelte",
-        "bits-ui"
+        "bits-ui",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [
         "local:picker-control",
@@ -880,7 +932,9 @@
       "dependencies": [
         "@sg-widgets/core",
         "@lucide/svelte",
-        "bits-ui"
+        "bits-ui",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [
         "local:picker-control",
@@ -920,7 +974,9 @@
       "description": "A url field as a web link: address and name.",
       "dependencies": [
         "@sg-widgets/core",
-        "@lucide/svelte"
+        "@lucide/svelte",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [
         "local:value-editor",
@@ -941,7 +997,9 @@
       "description": "A color field as a swatch and a text input.",
       "dependencies": [
         "@sg-widgets/core",
-        "@lucide/svelte"
+        "@lucide/svelte",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [
         "local:value-editor",
@@ -962,7 +1020,9 @@
       "description": "One field, displayed or edited: the data type picks the editor and a toggle switches between the two.",
       "dependencies": [
         "@sg-widgets/core",
-        "@lucide/svelte"
+        "@lucide/svelte",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [
         "local:control-classes",
@@ -1011,7 +1071,9 @@
       "description": "A Flow Production Tracking filter tree edited as rows and nested groups, with the operator menu and the value editor chosen by the field data type.",
       "dependencies": [
         "@sg-widgets/core",
-        "@lucide/svelte"
+        "@lucide/svelte",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [
         "local:control-classes",
@@ -1051,7 +1113,9 @@
       "description": "The launcher pair from the legacy filter panel: Add filters, Edit filters with a count, and a clear control, opening the editor in a dialog.",
       "dependencies": [
         "@sg-widgets/core",
-        "@lucide/svelte"
+        "@lucide/svelte",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [
         "local:control-classes",
@@ -1074,7 +1138,9 @@
       "description": "Quick facet pills over one entity type, each a segmented pill of field, operator and values writing a condition into a bound filter tree.",
       "dependencies": [
         "@sg-widgets/core",
-        "@lucide/svelte"
+        "@lucide/svelte",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [
         "local:entity-fields",
@@ -1103,7 +1169,9 @@
       "description": "The ordered sort keys of a query, with add, remove and reorder, emitting the sort string the REST API takes.",
       "dependencies": [
         "@sg-widgets/core",
-        "@lucide/svelte"
+        "@lucide/svelte",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [
         "local:leaf-classes",
@@ -1129,7 +1197,9 @@
       "description": "One Flow Production Tracking status, picked from the codes a project offers.",
       "dependencies": [
         "@sg-widgets/core",
-        "@lucide/svelte"
+        "@lucide/svelte",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [
         "local:list-picker",
@@ -1150,7 +1220,9 @@
       "description": "Several Flow Production Tracking statuses, picked from the codes a project offers.",
       "dependencies": [
         "@sg-widgets/core",
-        "bits-ui"
+        "bits-ui",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [
         "local:picker-control",
@@ -1230,7 +1302,9 @@
       "dependencies": [
         "@sg-widgets/core",
         "@lucide/svelte",
-        "@tanstack/svelte-table"
+        "@tanstack/svelte-table",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [
         "local:collection-control",
@@ -1261,7 +1335,9 @@
       "description": "Flow Production Tracking rows as EntityCard tiles, with selection, keyboard navigation and infinite scroll.",
       "dependencies": [
         "@sg-widgets/core",
-        "@lucide/svelte"
+        "@lucide/svelte",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [
         "local:collection-control",
@@ -1287,7 +1363,9 @@
       "description": "Dense Flow Production Tracking rows grouped under collapsible headers with counts.",
       "dependencies": [
         "@sg-widgets/core",
-        "@lucide/svelte"
+        "@lucide/svelte",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [
         "local:collection-control",
@@ -1315,7 +1393,9 @@
       "description": "A lazy tree over a project's navigation hierarchy, with a keyboard model, tri-state checkboxes and a filter.",
       "dependencies": [
         "@sg-widgets/core",
-        "@lucide/svelte"
+        "@lucide/svelte",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [
         "local:state-line",
@@ -1340,7 +1420,9 @@
       "description": "One Flow Production Tracking entity, chosen by server-side search across one or more types.",
       "dependencies": [
         "@sg-widgets/core",
-        "bits-ui"
+        "bits-ui",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [
         "local:picker-control",
@@ -1362,7 +1444,9 @@
       "description": "Several Flow Production Tracking entities, chosen by server-side search, with checkbox rows and removable chips.",
       "dependencies": [
         "@sg-widgets/core",
-        "bits-ui"
+        "bits-ui",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [
         "local:picker-control",
@@ -1385,7 +1469,9 @@
       "description": "People and script accounts, chosen by server-side search across name, login and email.",
       "dependencies": [
         "@sg-widgets/core",
-        "@lucide/svelte"
+        "@lucide/svelte",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [
         "local:entity-picker"
@@ -1404,7 +1490,9 @@
       "description": "Several people and script accounts, chosen by server-side search across name, login and email.",
       "dependencies": [
         "@sg-widgets/core",
-        "@lucide/svelte"
+        "@lucide/svelte",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [
         "local:entity-multi-picker"
@@ -1423,7 +1511,9 @@
       "description": "Projects, chosen by server-side search, with the project thumbnail and its status.",
       "dependencies": [
         "@sg-widgets/core",
-        "@lucide/svelte"
+        "@lucide/svelte",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [
         "local:entity-picker"
@@ -1442,7 +1532,9 @@
       "description": "Several projects, chosen by server-side search, with the project thumbnail and its status.",
       "dependencies": [
         "@sg-widgets/core",
-        "@lucide/svelte"
+        "@lucide/svelte",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [
         "local:entity-multi-picker"
@@ -1461,7 +1553,9 @@
       "description": "A command palette that searches Flow Production Tracking by name across several entity types.",
       "dependencies": [
         "@sg-widgets/core",
-        "@lucide/svelte"
+        "@lucide/svelte",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [
         "local:search-control",
@@ -1487,7 +1581,9 @@
       "description": "A drill-down over the Flow Production Tracking navigation tree, with breadcrumb results.",
       "dependencies": [
         "@sg-widgets/core",
-        "@lucide/svelte"
+        "@lucide/svelte",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [
         "local:search-control",
@@ -1510,7 +1606,9 @@
       "description": "The project, row and task a user is working on, changed from recents, assigned tasks or the tree.",
       "dependencies": [
         "@sg-widgets/core",
-        "@lucide/svelte"
+        "@lucide/svelte",
+        "clsx",
+        "tailwind-merge"
       ],
       "registryDependencies": [
         "local:search-control",

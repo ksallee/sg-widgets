@@ -17,7 +17,7 @@ import type {
   UrlValue,
   UrlWriteValue,
 } from '@sg-widgets/core';
-import { createEntitySource, emptyFilter, resolveColumns, toSortSpecs } from '@sg-widgets/core';
+import { condition, createEntitySource, group, resolveColumns, toSortSpecs } from '@sg-widgets/core';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CheckboxEditor } from '@/registry/sg/components/checkbox-editor';
@@ -36,7 +36,9 @@ import { EntityTypeMultiPicker } from '@/registry/sg/components/entity-type-mult
 import { EntityTypePicker } from '@/registry/sg/components/entity-type-picker';
 import { FieldPicker } from '@/registry/sg/components/field-picker';
 import { FilterBar } from '@/registry/sg/components/filter-bar';
+import { FilterEditor } from '@/registry/sg/components/filter-editor';
 import { GlobalSearch } from '@/registry/sg/components/global-search';
+import { ListMultiPicker } from '@/registry/sg/components/list-multi-picker';
 import { ListPicker } from '@/registry/sg/components/list-picker';
 import { NumberEditor } from '@/registry/sg/components/number-editor';
 import { ProjectPicker } from '@/registry/sg/components/project-picker';
@@ -116,8 +118,16 @@ export default function CompositionDemo() {
   const [statuses, setStatuses] = useState<Record<string, StatusRecord> | null>(null);
   const [statusField, setStatusField] = useState<FieldSchema | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState<FilterGroup>(emptyFilter());
-  const [sortKeys, setSortKeys] = useState<SortKey[]>([]);
+  // A ticked pill, a count beside More filters and two sort keys, so the crosses and the
+  // count chips the consistency drive reads are drawn.
+  const [filter, setFilter] = useState<FilterGroup>(() => group('and', [condition('sg_status_list', 'in', ['ip', 'apr'])]));
+  const [sortKeys, setSortKeys] = useState<SortKey[]>([
+    { field: 'code', direction: 'asc' },
+    { field: 'created_at', direction: 'desc' },
+  ]);
+  const [editorFilter, setEditorFilter] = useState<FilterGroup>(() =>
+    group('and', [condition('sg_status_list', 'in', ['ip', 'apr']), condition('sg_first_frame', 'in', [1001, 1101])]),
+  );
   const [paths, setPaths] = useState<string[]>([...SHOWN]);
 
   const [note, setNote] = useState<string | null>('Plate handed over with the cut change.');
@@ -126,6 +136,7 @@ export default function CompositionDemo() {
   const [approvedAt, setApprovedAt] = useState<string | null>('2026-03-04T13:06:07Z');
   const [flagged, setFlagged] = useState<boolean | undefined>(true);
   const [listValue, setListValue] = useState<string | null>('Type A');
+  const [listValues, setListValues] = useState<string[]>(['Type A', 'Type B']);
   const [colour, setColour] = useState<string | null>('0,126,174');
   const [movie, setMovie] = useState<UrlValue | null>({
     url: 'https://example.com/plate.mov',
@@ -206,6 +217,7 @@ export default function CompositionDemo() {
                 <ColumnPicker
                   context={context}
                   entityType="Version"
+                  showCount
                   deepLinks={false}
                   filter={(_field, path) => SHOWN.includes(path)}
                   value={paths}
@@ -236,6 +248,7 @@ export default function CompositionDemo() {
               statuses={statuses}
               context={context}
               editable
+              selectable
               paging="pages"
               maxHeight="22rem"
             />
@@ -287,6 +300,10 @@ export default function CompositionDemo() {
               <span className={fieldLabel}>Version type</span>
               <ListPicker value={listValue} onValueChange={setListValue} field={VERSION_TYPE} />
             </div>
+            <div className={field} data-qa-widget="list-multi-picker" data-qa-size="md">
+              <span className={fieldLabel}>Version types</span>
+              <ListMultiPicker value={listValues} onValueChange={setListValues} field={VERSION_TYPE} />
+            </div>
             <div className={field} data-qa-widget="color-editor" data-qa-size="md">
               <span className={fieldLabel}>Colour</span>
               <ColorEditor value={colour} onValueChange={setColour} field={{ displayName: 'Color', mandatory: false }} />
@@ -320,6 +337,17 @@ export default function CompositionDemo() {
               ))}
             </div>
           ))}
+        </section>
+
+        <section className={section} data-qa-widget="filter-editor" data-qa-size="md">
+          <h4 className={heading}>Filter tree</h4>
+          <FilterEditor
+            entityType="Version"
+            context={context}
+            value={editorFilter}
+            hidePaths={['sg_task']}
+            onChange={setEditorFilter}
+          />
         </section>
 
         <p className="text-sm" data-qa-widget="inline-atoms">

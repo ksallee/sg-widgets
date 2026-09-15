@@ -1,9 +1,16 @@
 <script lang="ts" module>
+	import { CHIP_BOX, CHIP_PAD, type ChipSize } from '$lib/registry/components/leaf-classes.js';
+
 	export type SortPickerSize = 'sm' | 'md' | 'lg';
 
 	/** Controls follow the input ladder of `docs/design-rules.md`. */
 	const BOX: Record<SortPickerSize, string> = { sm: 'h-8 px-2', md: 'h-9 px-3', lg: 'h-10 px-3' };
 	const GLYPH: Record<SortPickerSize, string> = { sm: 'size-4', md: 'size-4', lg: 'size-5' };
+	/** The count beside the label is a chip, so it takes the step under the control. */
+	const COUNT: Record<SortPickerSize, ChipSize> = { sm: 'xs', md: 'sm', lg: 'md' };
+	/** A text chip wears the entity chip's surface, as a picker's code chip does. */
+	const COUNT_CHIP =
+		'bg-secondary text-secondary-foreground inline-flex shrink-0 items-center rounded-md border tabular-nums';
 </script>
 
 <script lang="ts">
@@ -15,7 +22,6 @@
 	import type { HTMLAttributes } from 'svelte/elements';
 	import type { SgContext, SortKey } from '@sg-widgets/core';
 	import { friendlyFieldPath, isSortable, toSortString } from '@sg-widgets/core';
-	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import * as Popover from '$lib/components/ui/popover/index.js';
 	import { Separator } from '$lib/components/ui/separator/index.js';
@@ -23,6 +29,7 @@
 	import { cn, type WithElementRef } from '$lib/utils.js';
 	import FieldPicker from '$lib/registry/components/field-picker.svelte';
 	import { createSortable } from '$lib/registry/components/sortable.svelte.js';
+	import StateLine from '$lib/registry/components/state-line.svelte';
 
 	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>, HTMLDivElement> & {
 		entityType: string;
@@ -174,7 +181,10 @@
 			<ArrowUpDownIcon class={cn('shrink-0', GLYPH[size])} />
 			<span class="min-w-0 truncate" title={label}>{label}</span>
 			{#if value.length > 1}
-				<Badge variant="secondary" class="shrink-0" data-slot="sort-count">{value.length}</Badge>
+				<span
+					data-slot="sort-count"
+					class={cn(COUNT_CHIP, CHIP_BOX[COUNT[size]], CHIP_PAD[COUNT[size]].text)}
+				>{value.length}</span>
 			{/if}
 		</Popover.Trigger>
 		<Popover.Content
@@ -187,7 +197,7 @@
 				{#each value as key, i (key.field)}
 					<div
 						class={cn(
-							'bg-popover flex min-w-0 items-center gap-2 rounded-md py-0.5',
+							'bg-popover flex min-w-0 items-center gap-2 rounded-md px-2 py-0.5',
 							'data-[dragging]:z-10 data-[dragging]:opacity-90 data-[dragging]:shadow-md',
 							'data-[drop-target]:bg-accent/40'
 						)}
@@ -240,9 +250,12 @@
 					</div>
 				{/each}
 				{#if value.length === 0}
-					<p class="text-muted-foreground py-6 text-center text-sm">
-						No sort. Rows come back id ascending.
-					</p>
+					<StateLine
+						state="empty"
+						slotName="sort-empty"
+						icon={ArrowUpDownIcon}
+						label="No sort. Rows come back id ascending."
+					/>
 				{/if}
 			</div>
 			<div

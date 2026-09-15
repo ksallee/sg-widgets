@@ -56,6 +56,7 @@ import { useEntityFields } from '@/registry/sg/components/entity-fields';
 import { EntityMultiPicker } from '@/registry/sg/components/entity-multi-picker';
 import { EntityPicker } from '@/registry/sg/components/entity-picker';
 import { FieldPicker } from '@/registry/sg/components/field-picker';
+import { CHIP_CROSS, REMOVE_CONTROL, type ChipSize } from '@/registry/sg/components/leaf-classes';
 import { ListMultiPicker } from '@/registry/sg/components/list-multi-picker';
 import { ListPicker } from '@/registry/sg/components/list-picker';
 import { NumberEditor } from '@/registry/sg/components/number-editor';
@@ -139,11 +140,8 @@ export type FilterEditorSize = 'sm' | 'md' | 'lg';
 const BOX: Record<FilterEditorSize, string> = { sm: 'h-7', md: 'h-8', lg: 'h-9' };
 const INNER: Record<FilterEditorSize, 'sm' | 'md'> = { sm: 'sm', md: 'sm', lg: 'md' };
 const BTN: Record<FilterEditorSize, 'xs' | 'sm' | 'default'> = { sm: 'xs', md: 'sm', lg: 'default' };
-const ICON: Record<FilterEditorSize, 'icon-xs' | 'icon-sm' | 'icon'> = {
-  sm: 'icon-xs',
-  md: 'icon-sm',
-  lg: 'icon',
-};
+/** A cross sits one step under the row's own control on the chip ladder. */
+const CROSS: Record<FilterEditorSize, ChipSize> = { sm: 'xs', md: 'xs', lg: 'sm' };
 const TOGGLE: Record<FilterEditorSize, 'sm' | 'default'> = { sm: 'sm', md: 'sm', lg: 'default' };
 
 interface EditorContext {
@@ -353,17 +351,18 @@ function GroupNode({ ctx, path, node }: { ctx: EditorContext; path: NodePath; no
         </ToggleGroup>
         <span className="text-muted-foreground min-w-0 flex-1 truncate text-xs">of these match</span>
         {depth > 0 ? (
-          <Button
-            variant="ghost"
-            size={ICON[ctx.size]}
-            className="text-muted-foreground hover:text-foreground mt-1 shrink-0 self-start"
-            disabled={ctx.disabled}
-            aria-label="Remove group"
-            data-slot="filter-remove"
-            onClick={() => ctx.remove(path)}
-          >
-            <XIcon />
-          </Button>
+          <div className="flex h-9 shrink-0 items-center self-start">
+            <button
+              type="button"
+              className={cn(REMOVE_CONTROL, 'disabled:pointer-events-none disabled:opacity-50')}
+              disabled={ctx.disabled}
+              aria-label="Remove group"
+              data-slot="filter-remove"
+              onClick={() => ctx.remove(path)}
+            >
+              <XIcon aria-hidden="true" className={CHIP_CROSS[CROSS[ctx.size]]} />
+            </button>
+          </div>
         ) : null}
       </div>
       <div className="border-border flex min-w-0 flex-col gap-2 border-l pl-3" data-slot="filter-group-body">
@@ -421,17 +420,18 @@ function ConditionRow({ ctx, path, node }: { ctx: EditorContext; path: NodePath;
         <OperatorSlot ctx={ctx} path={path} node={node} />
         <ValueSlot ctx={ctx} path={path} node={node} />
       </div>
-      <Button
-        variant="ghost"
-        size={ICON[ctx.size]}
-        className="text-muted-foreground hover:text-foreground mt-1 shrink-0 self-start"
-        disabled={ctx.disabled}
-        aria-label="Remove condition"
-        data-slot="filter-remove"
-        onClick={() => ctx.remove(path)}
-      >
-        <XIcon />
-      </Button>
+      <div className="flex h-9 shrink-0 items-center self-start">
+        <button
+          type="button"
+          className={cn(REMOVE_CONTROL, 'disabled:pointer-events-none disabled:opacity-50')}
+          disabled={ctx.disabled}
+          aria-label="Remove condition"
+          data-slot="filter-remove"
+          onClick={() => ctx.remove(path)}
+        >
+          <XIcon aria-hidden="true" className={CHIP_CROSS[CROSS[ctx.size]]} />
+        </button>
+      </div>
     </div>
   );
 }
@@ -751,17 +751,16 @@ function ListValues({
             size={size}
             onChange={(v) => onChange(withListValue(value, i, v) as ConditionValue)}
           />
-          <Button
-            variant="ghost"
-            size={ICON[size]}
-            className="text-muted-foreground hover:text-foreground shrink-0"
+          <button
+            type="button"
+            className={cn(REMOVE_CONTROL, 'disabled:pointer-events-none disabled:opacity-50')}
             disabled={disabled}
             aria-label="Remove value"
             data-slot="filter-list-remove"
             onClick={() => onChange(withoutListValue(value, i) as ConditionValue)}
           >
-            <XIcon />
-          </Button>
+            <XIcon aria-hidden="true" className={CHIP_CROSS[CROSS[size]]} />
+          </button>
         </div>
       ))}
       <Button

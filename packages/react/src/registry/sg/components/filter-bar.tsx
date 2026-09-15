@@ -23,7 +23,7 @@ import {
   matchesTokens,
   withoutPaths,
 } from '@sg-widgets/core';
-import { PlusIcon, XIcon } from 'lucide-react';
+import { PlusIcon, SearchX, TriangleAlert, XIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -38,11 +38,18 @@ import {
 } from '@/registry/sg/components/control-classes';
 import { useEntityFields } from '@/registry/sg/components/entity-fields';
 import { FilterDialog } from '@/registry/sg/components/filter-dialog';
+import { CHIP_CROSS, REMOVE_CONTROL, type ChipSize } from '@/registry/sg/components/leaf-classes';
+import { StateLine } from '@/registry/sg/components/state-line';
 
 export type FilterBarSize = ControlSize;
 
-/** The remove control sits inside the pill, so it takes the tighter padding. */
-const REMOVE_PAD: Record<FilterBarSize, string> = { sm: 'px-1.5', md: 'px-2', lg: 'px-2' };
+/** A cross inside the pill sits one step under it on the chip ladder. */
+const CROSS: Record<FilterBarSize, ChipSize> = { sm: 'xs', md: 'sm', lg: 'md' };
+/**
+ * The pill's trailing edge: the room above the cross, so its box sits as far from the
+ * right as from the top (`docs/design-rules.md` rule 3).
+ */
+const CROSS_PAD: Record<FilterBarSize, string> = { sm: 'pr-[7px]', md: 'pr-2', lg: 'pr-[9px]' };
 /** The button step beside a pill of each height. */
 const BTN: Record<FilterBarSize, 'sm' | 'default' | 'lg'> = { sm: 'sm', md: 'default', lg: 'lg' };
 
@@ -76,10 +83,10 @@ export interface FilterBarProps extends Omit<React.HTMLAttributes<HTMLDivElement
  * Quick facets over one entity type.
  *
  * An untouched facet is a quiet pill naming its field; ticking a value turns it into
- * a segmented pill reading field, operator and values, where the operator segment is
- * a menu of the operators that field's facet can take and the values segment is the
+ * a pill reading the field and the values ticked, and opening it again reopens the
  * checklist. The pill adds its condition to the bound tree, and More filters opens
- * the same tree in the full editor, so the two edit one value.
+ * the same tree in the full editor, so the two edit one value: a condition the editor
+ * wrote on an operator the checklist cannot hold reads as text in its pill.
  *
  * Counts come from a `_summarize` grouping call when one is wired to `counts`, and
  * otherwise from tallying one page of rows, which makes them as complete as the page
@@ -106,6 +113,8 @@ export function FilterBar({
   /** What the open facet's search box holds. */
   const [facetQuery, setFacetQuery] = useState('');
   const [counting, setCounting] = useState(true);
+  /** What a failed tally said, shown in place of the values. */
+  const [failure, setFailure] = useState<string | null>(null);
 
   // Counts are read against the filter with every facet's own condition stripped, so
   // ticking one value does not empty its neighbours. One read serves every pill.
@@ -117,6 +126,7 @@ export function FilterBar({
     if (present.length === 0) return;
     let live = true;
     setCounting(true);
+    setFailure(null);
     const filters = JSON.parse(scope) as WireGroup | null;
     const load = async (): Promise<Record<string, FacetValue[]>> => {
       const out: Record<string, FacetValue[]> = {};
@@ -138,6 +148,9 @@ export function FilterBar({
     void load()
       .then((found) => {
         if (live) setTally(found);
+      })
+      .catch((error: unknown) => {
+        if (live) setFailure(error instanceof Error ? error.message : String(error));
       })
       .finally(() => {
         if (live) setCounting(false);
@@ -188,9 +201,13 @@ export function FilterBar({
           <CommandList>
             {counting ? (
               <p className="text-muted-foreground py-6 text-center text-sm">Counting…</p>
+            ) : failure ? (
+              <StateLine state="error" slotName="filter-bar-error" icon={TriangleAlert} label={failure} />
             ) : (
               <>
-                <CommandEmpty>No value.</CommandEmpty>
+                <CommandEmpty>
+                  <StateLine state="empty" icon={SearchX} label="No value." pad="none" />
+                </CommandEmpty>
                 {shown.map((option) => (
                   <CommandItem
                     key={option.key}
@@ -250,14 +267,10 @@ export function FilterBar({
             disabled={disabled}
             data-slot="filter-pill-remove"
             aria-label={`Remove ${label} filter`}
-            className={cn(
-              'border-border text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring/50 inline-flex shrink-0 items-center border-l outline-none focus-visible:ring-3 disabled:pointer-events-none disabled:opacity-50',
-              CONTROL_HEIGHT[size],
-              REMOVE_PAD[size],
-            )}
+            className={cn(REMOVE_CONTROL, 'disabled:pointer-events-none disabled:opacity-50')}
             onClick={() => onChange?.(withoutPaths(value, [name]))}
           >
-            <XIcon className={CONTROL_GLYPH[size]} />
+            <XIcon aria-hidden="true" className={CHIP_CROSS[CROSS[size]]} />
           </button>
         );
         if (!found || !parts || conditionArity(found, field?.dataType ?? '') === 'many') {
@@ -274,6 +287,7 @@ export function FilterBar({
                 className={cn(
                   'border-border inline-flex max-w-full min-w-0 items-center overflow-hidden rounded-lg border text-sm',
                   CONTROL_HEIGHT[size],
+                  found && parts && CROSS_PAD[size],
                   found ? 'bg-background' : 'text-muted-foreground max-w-72 border-dashed',
                 )}
               >
@@ -327,6 +341,7 @@ export function FilterBar({
             className={cn(
               'border-border bg-background inline-flex max-w-full min-w-0 items-center overflow-hidden rounded-lg border text-sm',
               CONTROL_HEIGHT[size],
+              CROSS_PAD[size],
             )}
           >
             <span

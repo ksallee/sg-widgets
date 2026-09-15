@@ -2,7 +2,6 @@ import { useState, type ReactNode } from 'react';
 import type { FilterGroup, SgContext } from '@sg-widgets/core';
 import { countActiveConditions, emptyFilter, isEmptyFilter } from '@sg-widgets/core';
 import { ListFilterIcon, PencilIcon, Trash2Icon } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -15,6 +14,7 @@ import {
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { CONTROL_BOX, CONTROL_GLYPH, type ControlSize } from '@/registry/sg/components/control-classes';
+import { CHIP_BOX, CHIP_PAD, type ChipSize } from '@/registry/sg/components/leaf-classes';
 import {
   FilterEditor,
   type FieldChooserArgs,
@@ -29,6 +29,11 @@ const ICON: Record<FilterDialogSize, 'icon-sm' | 'icon' | 'icon-lg'> = {
   md: 'icon',
   lg: 'icon-lg',
 };
+/** The count beside the label is a chip, so it takes the step under the control. */
+const COUNT: Record<FilterDialogSize, ChipSize> = { sm: 'xs', md: 'sm', lg: 'md' };
+/** A text chip wears the entity chip's surface, as a picker's code chip does. */
+const COUNT_CHIP =
+  'bg-secondary text-secondary-foreground inline-flex shrink-0 items-center rounded-md border tabular-nums';
 
 export interface FilterDialogProps
   extends Omit<React.HTMLAttributes<HTMLDivElement>, 'title' | 'onChange'> {
@@ -130,9 +135,12 @@ export function FilterDialog({
             <>
               <PencilIcon className={CONTROL_GLYPH[size]} />
               {label ?? 'Edit filters'}
-              <Badge variant="secondary" data-slot="filter-count">
+              <span
+                data-slot="filter-count"
+                className={cn(COUNT_CHIP, CHIP_BOX[COUNT[size]], CHIP_PAD[COUNT[size]].text)}
+              >
                 {active}
-              </Badge>
+              </span>
             </>
           ) : (
             <>

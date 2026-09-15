@@ -544,6 +544,7 @@
       ],
       "registryDependencies": [
         "local:state-line",
+        "local:picker-classes",
         "button",
         "checkbox",
         "command",
@@ -857,6 +858,7 @@
       ],
       "registryDependencies": [
         "local:entity-fields",
+        "local:leaf-classes",
         "local:state-line",
         "button",
         "select",
@@ -895,7 +897,7 @@
       ],
       "registryDependencies": [
         "local:control-classes",
-        "badge",
+        "local:leaf-classes",
         "button",
         "dialog",
         "local:filter-editor"
@@ -919,6 +921,8 @@
       "registryDependencies": [
         "local:entity-fields",
         "local:control-classes",
+        "local:leaf-classes",
+        "local:state-line",
         "badge",
         "button",
         "checkbox",
@@ -944,7 +948,8 @@
         "@lucide/svelte"
       ],
       "registryDependencies": [
-        "badge",
+        "local:leaf-classes",
+        "local:state-line",
         "button",
         "popover",
         "separator",

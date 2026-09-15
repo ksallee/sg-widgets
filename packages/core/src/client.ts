@@ -487,7 +487,7 @@ export class RestClient implements SgClient {
 
   async fields(entityType: string, projectId?: number): Promise<Record<string, FieldSchema>> {
     const res = await this.request<RawFieldsResponse>('GET', `/schema/${entityType}/fields`, undefined, { project_id: projectId });
-    return normalizeFields(res);
+    return normalizeFields(res, entityType);
   }
 
   async fieldWithProject(entityType: string, field: string, projectId: number): Promise<FieldSchema> {

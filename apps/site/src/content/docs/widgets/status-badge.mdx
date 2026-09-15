@@ -25,9 +25,13 @@ The name resolves in one order: the Status row's name, then the field's display 
 code. A code unknown to both renders as itself in the label and in the tooltip.
 
 `glyph` is the icon alone, in its own colour, with no pill around it: no border, no background and no
-inset, at the size a list row draws a glyph (4 at sm and md, 5 at lg). It is what a leading slot
-takes, where a bordered pill reads as a second surface. The label stays as the accessible name and
-the tooltip, `color` has nothing to paint, and a status with no icon to draw takes a neutral dot.
+inset, at the size a list row draws a glyph (4 at sm and md, 5 at lg). It is the leading mark of a row
+whose label is an entity's name, where a bordered pill reads as a second surface; a status listed as
+an option of its own is the badge instead. The label stays as the accessible name and the tooltip,
+`color` has nothing to paint, and a status with no icon to draw takes a neutral dot.
+
+`query` draws the label's matched runs bold, so a badge standing as a row in a searched list reads as
+the rows beside it do.
 
 The root carries the status code, the variant and whether it was resolved, as data attributes. An
 image-map icon carries its key on the glyph, as a data attribute. A removable badge draws its cross inside the pill

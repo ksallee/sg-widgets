@@ -232,10 +232,10 @@
 	it: the vocabulary is read once and the query input narrows it in the browser
 	(field_types/status_list).
 
-	A row is the shared picker row of rule 9, after its checkbox: the status icon as the
-	leading glyph, the display label with the matched runs bold, and the code
-	right-aligned. The badge stays in the control, where a status is a value rather than
-	a row.
+	A row is the shared picker row of rule 9, after its checkbox, with the status as its
+	label: a status offered as an option is the badge the filter bar's facets draw, one
+	step under the control, with the matched runs bold and the code right-aligned after
+	it. The control keeps its own badges for the selection.
 -->
 <div
 	bind:this={ref}
@@ -325,6 +325,7 @@
 					<Row
 						row={rowOf(option)}
 						query={search}
+						thumbnail={false}
 						subLabel={subLabel?.(option)}
 						secondary={secondaryOf(option)}
 						{size}
@@ -334,13 +335,13 @@
 						{#snippet indicator()}
 							<Checkbox checked={chosen} tabindex={-1} aria-hidden="true" class="pointer-events-none" />
 						{/snippet}
-						{#snippet glyph()}
+						{#snippet label()}
 							<StatusBadge
 								code={option.code}
 								status={query.statuses.get(option.code) ?? null}
 								field={badgeField}
-								variant="glyph"
-								{size}
+								size={BADGE[size]}
+								query={search}
 								siteUrl={site}
 							/>
 						{/snippet}

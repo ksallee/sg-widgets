@@ -1,7 +1,7 @@
 import type { PropsFile } from './_types';
 
 export default {
-  extends: { name: 'list-picker', omit: ['loadError', 'loading', 'loadingLabel', 'errorLabel', 'mark', 'valueChip'] },
+  extends: { name: 'list-picker', omit: ['loadError', 'loading', 'loadingLabel', 'errorLabel', 'mark', 'optionLabel', 'valueChip'] },
   props: [
     { name: 'value', type: '`string[]`', default: '`[]`', meaning: 'The chosen values. Two-way in Svelte.' },
     { name: 'onValueChange', type: '`(value: string[]) => void`', default: '—', meaning: 'Called on every change, with the whole list.' },

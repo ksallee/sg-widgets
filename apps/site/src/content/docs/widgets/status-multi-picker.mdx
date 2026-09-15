@@ -36,10 +36,13 @@ search box at the top of the popup; `count` is the same trigger reading `3 selec
 `badge` says what one status is drawn as: `both` is the icon and the label, `icon` drops the label
 and the per-badge remove, so removal happens in the list and twice as many fit, and `text` is the
 label alone.
-A row is the row anatomy of the design rules, after its checkbox: the status icon as the leading
-glyph, the display label with the matched runs bold, and the code right-aligned. A status has one
-display name and one icon, so the row's `labelField` and `thumbnail` are fixed, and it has no fields
-of its own, so its secondary is a function rather than a field name. The control keeps the badges.
+A row is the row anatomy of the design rules, after its checkbox, and a status offered as an option is
+a badge: the icon and the display name in their pill, one step under the control, with the matched
+runs bold and the code right-aligned after it. It is what the [filter bar](/widgets/filter-bar/) draws
+for a status facet, so a page listing statuses twice lists them the same way. A status has one display
+name and one icon, so the row's `labelField` and `thumbnail` are fixed, and it has no fields of its
+own, so its secondary is a function rather than a field name. The control keeps its own badges for the
+selection.
 
 A press on `+n` opens the list, where the hidden codes are. Without a project the options are the site
 vocabulary, which hides nothing. `projectIds` offers the intersection of what each project allows,

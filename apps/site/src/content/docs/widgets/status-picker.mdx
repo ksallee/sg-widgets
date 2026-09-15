@@ -29,10 +29,12 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/status-picker.
 Every other attribute is spread onto the root: `id`, `aria-*`, `data-*`, key handlers and a
 `ref` to the root element.
 
-A row is the row anatomy of the design rules: the status icon as the leading glyph, the display label
-as the main text, and the code right-aligned. A status has one display name and one icon, so the row's
-`labelField` and `thumbnail` are fixed, and it has no fields of its own, so its secondary is a
-function rather than a field name. The control keeps the badge.
+A row is the row anatomy of the design rules, and a status offered as an option is a badge: the icon
+and the display name in their pill, one step under the control, with the code right-aligned after it.
+It is what the [filter bar](/widgets/filter-bar/) draws for a status facet, so a page listing statuses
+twice lists them the same way. A status has one display name and one icon, so the row's `labelField`
+and `thumbnail` are fixed, and it has no fields of its own, so its secondary is a function rather
+than a field name. The control keeps its own badge for the value.
 
 Without a project the options are the site vocabulary, which hides nothing. `projectIds` offers the
 intersection of what each project allows, in the first project's order.

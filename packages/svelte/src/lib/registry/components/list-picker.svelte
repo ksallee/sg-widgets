@@ -86,6 +86,8 @@
 		errorMessage?: Snippet<[string]>;
 		/** A row's leading mark. Given, every row carries one. */
 		mark?: Snippet<[ListOption]>;
+		/** A row's main text, where an option is not text: a status is a badge. */
+		optionLabel?: Snippet<[ListOption]>;
 		/** The control's value. Drawn as plain text when the caller passes none. */
 		valueChip?: Snippet<[string]>;
 	};
@@ -122,6 +124,7 @@
 		onOpenChange,
 		errorMessage,
 		mark,
+		optionLabel,
 		valueChip,
 		class: className,
 		ref = $bindable(null),
@@ -240,6 +243,9 @@
 
 			{#snippet rows()}
 				{#each shown as option (option.code)}
+					{#snippet rowLabel()}
+						{@render optionLabel?.(option)}
+					{/snippet}
 					<Combobox.Item
 						data-slot={`${slot}-option`}
 						data-option={option.code}
@@ -256,6 +262,7 @@
 							secondary={secondaryOf(option)}
 							{size}
 							indicatorAt="end"
+							label={optionLabel ? rowLabel : undefined}
 						>
 							{#snippet indicator()}
 								{#if option.code === value}<Check aria-hidden="true" class="size-4" />{/if}

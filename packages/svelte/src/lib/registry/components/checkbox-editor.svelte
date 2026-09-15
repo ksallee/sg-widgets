@@ -83,6 +83,7 @@
 	{...rest}
 >
 	<div class={cn('flex w-full min-w-0 items-center gap-2', CONTROL_HEIGHT[size])}>
+		<!-- Disabled wins over readonly, so a control that is both still reads inert. -->
 		<Switch
 			size={SWITCH[size]}
 			{checked}
@@ -91,7 +92,7 @@
 			aria-invalid={invalid}
 			aria-label={field?.displayName ?? placeholder ?? label}
 			onCheckedChange={toggle}
-			class={readonly ? 'data-disabled:cursor-default data-disabled:opacity-100' : undefined}
+			class={readonly && !disabled ? 'data-disabled:cursor-default data-disabled:opacity-100' : undefined}
 		/>
 		<span aria-hidden="true" class="truncate text-sm select-none">{label}</span>
 	</div>

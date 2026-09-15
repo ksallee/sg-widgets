@@ -12,7 +12,7 @@
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Textarea } from '$lib/components/ui/textarea/index.js';
 	import type { WithElementRef } from '$lib/utils.js';
-	import { CONTROL_BOX } from '$lib/registry/components/control-classes.js';
+	import { CONTROL_BOX, CONTROL_PAD } from '$lib/registry/components/control-classes.js';
 	import ValueEditor from '$lib/registry/components/value-editor.svelte';
 	import { createValueSession } from '$lib/registry/components/value-editor.svelte.js';
 
@@ -96,6 +96,7 @@
 			{disabled}
 			{readonly}
 			{placeholder}
+			class={CONTROL_PAD[size]}
 			aria-invalid={session.invalid}
 			aria-label={field?.displayName}
 			aria-required={field?.mandatory}

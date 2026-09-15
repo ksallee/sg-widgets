@@ -2,6 +2,7 @@ import type * as React from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type {
   CollectionColumn,
+  CollapseState,
   EditorPlacement,
   EntityRef,
   EntityRow,
@@ -16,13 +17,17 @@ import type {
   StatusRecord,
 } from '@sg-widgets/core';
 import {
+  asCollapseState,
   cellValue,
+  collapseStateFrom,
   editorPlacementFor,
+  expandAll,
+  isCollapsed,
   isEditableType,
   nextEnabledIndex,
   NO_ROWS_LABEL,
   preferencesOf,
-  sameIds,
+  sameCollapse,
   stateLine,
 } from '@sg-widgets/core';
 import {
@@ -171,9 +176,13 @@ export interface EntityTableProps extends Omit<React.HTMLAttributes<HTMLDivEleme
   isRowDisabled?: RowDisabledFn;
   /** Collapse rows under headers of a shared value at this path. */
   groupBy?: string | null;
-  /** Ids of the group headers that are shut. Controlled, with the table's own as the fallback. */
-  collapsed?: string[];
-  onCollapsedChange?: (ids: string[]) => void;
+  /**
+   * Which group headers are shut. Controlled, with the table's own as the fallback. A bare
+   * id list reads as the open mode with those ids shut; `collapseAll()` shuts the headers
+   * a later page brings too.
+   */
+  collapsed?: string[] | CollapseState;
+  onCollapsedChange?: (state: CollapseState) => void;
   /** The source's sort, so a SortPicker drops into the toolbar. */
   sort?: SortSpec[];
   onSortChange?: (sort: SortSpec[]) => void;
@@ -378,26 +387,30 @@ export function EntityTable({
    * out of the table and one into it, each reading the other side off a ref, so a change
    * travels once and the two never write to each other.
    */
-  const [ownCollapsed, setOwnCollapsed] = useState<string[]>([]);
-  const collapsed = collapsedProp ?? ownCollapsed;
+  const [ownCollapsed, setOwnCollapsed] = useState<CollapseState>(expandAll);
+  const collapsed = collapsedProp === undefined ? ownCollapsed : asCollapseState(collapsedProp);
   const collapsedLatest = useLatest(collapsed);
   const expansion = table.state.expanded;
   const groupHeaders = table.getRowModel().flatRows.filter((row) => row.getIsGrouped());
   const groupHeadersLatest = useLatest(groupHeaders);
   useEffect(() => {
+    // The table answers which headers are shut, not which one was pressed, so the state
+    // is read back under the mode in force and a later page still follows it.
+    const drawn = groupHeadersLatest.current.map((row) => row.id);
     const shut = groupHeadersLatest.current.filter((row) => !row.getIsExpanded()).map((row) => row.id);
-    if (sameIds(shut, collapsedLatest.current)) return;
-    setOwnCollapsed(shut);
-    onCollapsedChange?.(shut);
+    const next = collapseStateFrom(collapsedLatest.current, shut, drawn);
+    if (sameCollapse(next, collapsedLatest.current)) return;
+    setOwnCollapsed(next);
+    onCollapsedChange?.(next);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [expansion]);
+  }, [expansion, groupHeaders.length]);
   useEffect(() => {
-    const shut = new Set(collapsed);
     for (const row of groupHeadersLatest.current) {
-      if (row.getIsExpanded() === shut.has(row.id)) row.toggleExpanded(!shut.has(row.id));
+      const shut = isCollapsed(collapsed, row.id);
+      if (row.getIsExpanded() === shut) row.toggleExpanded(!shut);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [collapsed]);
+  }, [collapsed, groupHeaders.length]);
 
   /** Leaf columns in render order: pinned to the start first, the rest as ordered. */
   const rank = (id: string, pinned: false | 'start' | 'end'): number =>

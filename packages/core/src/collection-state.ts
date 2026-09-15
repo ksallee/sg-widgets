@@ -167,3 +167,77 @@ export function selectionState(
 export function selectableRefs(rows: readonly EntityRow[], isRowDisabled?: RowDisabledFn | null): EntityRef[] {
   return rows.filter((row) => !rowIsDisabled(row, isRowDisabled)).map((row) => ({ type: row.type, id: row.id }));
 }
+
+/* -------------------------------------------------------------------------- */
+/* collapsed groups                                                           */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Which groups are shut.
+ *
+ * A mode with exceptions rather than a set of keys, because the keys a list holds
+ * are only the ones loaded so far: Collapse all written as a list says nothing
+ * about the groups the next page brings, and they arrive open under a header that
+ * said everything was shut. `all` is what a group does unless `except` names it.
+ */
+export interface CollapseState {
+  /** True when every group is shut but the ones `except` names. */
+  all: boolean;
+  /** The keys that go the other way from `all`. */
+  except: string[];
+}
+
+/** Every group shut, including the ones not loaded yet. */
+export function collapseAll(): CollapseState {
+  return { all: true, except: [] };
+}
+
+/** Every group open. */
+export function expandAll(): CollapseState {
+  return { all: false, except: [] };
+}
+
+/** A caller's value as a state. A bare key list is the open mode with those keys shut. */
+export function asCollapseState(value: readonly string[] | CollapseState | null | undefined): CollapseState {
+  if (!value) return expandAll();
+  if (Array.isArray(value)) return { all: false, except: [...value] };
+  const state = value as CollapseState;
+  return { all: state.all, except: [...state.except] };
+}
+
+/** True when the group under `key` is shut. */
+export function isCollapsed(state: CollapseState, key: string): boolean {
+  return state.except.includes(key) ? !state.all : state.all;
+}
+
+/** `state` with the group under `key` shut or open. `on` forces the direction. */
+export function toggleCollapsed(state: CollapseState, key: string, on?: boolean): CollapseState {
+  const wanted = on ?? !isCollapsed(state, key);
+  return { all: state.all, except: toggleId(state.except, key, wanted !== state.all) };
+}
+
+/** The keys of `keys` that are shut, in the order given. */
+export function collapsedKeys(state: CollapseState, keys: readonly string[]): string[] {
+  return keys.filter((key) => isCollapsed(state, key));
+}
+
+/**
+ * The state a set of shut keys reads as, under the mode already in force.
+ *
+ * For a widget whose own machinery answers which headers are shut rather than which
+ * key was pressed. The mode is kept, so the groups the next page brings still follow
+ * it, and an exception for a key no longer drawn is dropped.
+ */
+export function collapseStateFrom(
+  state: CollapseState,
+  shut: readonly string[],
+  keys: readonly string[],
+): CollapseState {
+  const isShut = new Set(shut);
+  return { all: state.all, except: keys.filter((key) => isShut.has(key) !== state.all) };
+}
+
+/** True when two collapse states shut the same groups. */
+export function sameCollapse(a: CollapseState, b: CollapseState): boolean {
+  return a.all === b.all && sameIds(a.except, b.except);
+}

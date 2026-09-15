@@ -18,6 +18,18 @@ A page whose first rows carry the value the last header carries grows that group
 a second one, and a group shut before the page arrived is still shut after it. A page that fails
 leaves its rows and puts one error line under them with a retry.
 
+`collapsed` is a mode with exceptions rather than a list of keys, so Collapse all covers the groups
+the next page brings as well as the ones already loaded. A bare key list still works and reads as the
+open mode with those keys shut.
+
+```ts
+import { collapseAll, expandAll, isCollapsed, toggleCollapsed } from '@sg-widgets/core';
+
+collapseAll();                              // { all: true, except: [] }
+toggleCollapsed(collapseAll(), 'group:2');  // every group shut but that one
+isCollapsed(collapseAll(), 'a group nothing has loaded yet'); // true
+```
+
 `groupKey` groups on a value derived from the row instead of read from a column: the record a note
 is about, which is a multi-entity field no site sorts on, or a value that comes from one field on one
 type and another on another. The list then leaves the source's sort as the caller set it, so the

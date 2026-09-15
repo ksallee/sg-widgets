@@ -2,6 +2,7 @@ import type * as React from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type {
   CollectionColumn,
+  CollapseState,
   EntityRef,
   EntityRow,
   EntitySource,
@@ -15,15 +16,18 @@ import type {
   StatusRecord,
 } from '@sg-widgets/core';
 import {
+  asCollapseState,
   cellValue,
   displayNameOf,
+  expandAll,
   groupKeyText,
   groupRowsKeyed,
+  isCollapsed,
   nextEnabledIndex,
   NO_ROWS_LABEL,
   stateLine,
   toColumn,
-  toggleId,
+  toggleCollapsed,
 } from '@sg-widgets/core';
 import { ChevronRight, CircleAlert, Inbox } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -130,9 +134,13 @@ export interface GroupedListProps extends Omit<React.HTMLAttributes<HTMLDivEleme
   getRowId?: RowIdFn;
   /** True for a row that cannot be selected or reached by the keyboard. */
   isRowDisabled?: RowDisabledFn;
-  /** Keys of the groups that are shut. Controlled, with the list's own as the fallback. */
-  collapsed?: string[];
-  onCollapsedChange?: (keys: string[]) => void;
+  /**
+   * Which groups are shut. Controlled, with the list's own as the fallback. A bare key
+   * list reads as the open mode with those keys shut; `collapseAll()` shuts the groups
+   * a later page brings too.
+   */
+  collapsed?: string[] | CollapseState;
+  onCollapsedChange?: (state: CollapseState) => void;
   /** The source's sort, so a SortPicker drops into the header. */
   sort?: SortSpec[];
   onSortChange?: (sort: SortSpec[]) => void;
@@ -267,11 +275,11 @@ export function GroupedList({
     [rows, groupKey, groupPath],
   );
 
-  const [ownCollapsed, setOwnCollapsed] = useState<string[]>([]);
-  const collapsed = collapsedProp ?? ownCollapsed;
+  const [ownCollapsed, setOwnCollapsed] = useState<CollapseState>(expandAll);
+  const collapsed = collapsedProp === undefined ? ownCollapsed : asCollapseState(collapsedProp);
 
   function toggleGroup(key: string): void {
-    const next = toggleId(collapsed, key);
+    const next = toggleCollapsed(collapsed, key);
     setOwnCollapsed(next);
     onCollapsedChange?.(next);
   }
@@ -292,11 +300,10 @@ export function GroupedList({
 
   /** Headers and rows as one stream, which is what a virtualised list walks. */
   const flat = useMemo(() => {
-    const shut = new Set(collapsed);
     const out: Array<{ group: (typeof groups)[number]; row: EntityRow | null }> = [];
     for (const group of groups) {
       out.push({ group, row: null });
-      if (!shut.has(group.key)) for (const row of group.rows) out.push({ group, row });
+      if (!isCollapsed(collapsed, group.key)) for (const row of group.rows) out.push({ group, row });
     }
     return out;
   }, [groups, collapsed]);
@@ -390,7 +397,7 @@ export function GroupedList({
             {window_.before > 0 ? <div aria-hidden="true" style={{ height: `${window_.before}px` }} /> : null}
             {blocks.map((block) => {
               const group = block.group;
-              const shut = collapsed.includes(group.key);
+              const shut = isCollapsed(collapsed, group.key);
               return (
                 <div key={group.key} data-slot="grouped-list-group" data-group-key={group.key}>
                   {block.header ? (

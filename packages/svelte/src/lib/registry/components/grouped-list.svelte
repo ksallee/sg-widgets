@@ -46,6 +46,7 @@
 	import { untrack, type Snippet } from 'svelte';
 	import type { HTMLAttributes } from 'svelte/elements';
 	import type {
+		CollapseState,
 		EntityRef,
 		EntitySource,
 		FieldSpec,
@@ -58,16 +59,19 @@
 		StatusRecord
 	} from '@sg-widgets/core';
 	import {
+		asCollapseState,
 		cellValue,
 		displayNameOf,
+		expandAll,
 		groupKeyText,
 		groupRowsKeyed,
+		isCollapsed,
 		nextEnabledIndex,
 		NO_ROWS_LABEL,
-		sameIds,
+		sameCollapse,
 		stateLine,
 		toColumn,
-		toggleId
+		toggleCollapsed
 	} from '@sg-widgets/core';
 	import ChevronRight from '@lucide/svelte/icons/chevron-right';
 	import CircleAlert from '@lucide/svelte/icons/circle-alert';
@@ -133,9 +137,12 @@
 		getRowId?: RowIdFn;
 		/** True for a row that cannot be selected or reached by the keyboard. */
 		isRowDisabled?: RowDisabledFn;
-		/** Keys of the groups that are shut, two-way. */
-		collapsed?: string[];
-		onCollapsedChange?: (keys: string[]) => void;
+		/**
+		 * Which groups are shut, two-way. A bare key list reads as the open mode with those
+		 * keys shut; `collapseAll()` shuts the groups a later page brings too.
+		 */
+		collapsed?: string[] | CollapseState;
+		onCollapsedChange?: (state: CollapseState) => void;
 		/** The source's sort, two-way, so a SortPicker drops into the header. */
 		sort?: SortSpec[];
 		onSortChange?: (sort: SortSpec[]) => void;
@@ -190,7 +197,7 @@
 		onSelect,
 		getRowId,
 		isRowDisabled,
-		collapsed = $bindable([]),
+		collapsed = $bindable(expandAll()),
 		onCollapsedChange,
 		sort = $bindable(),
 		onSortChange,
@@ -260,8 +267,8 @@
 	const subColumn = $derived(subLabelField ? toColumn(subLabelField) : null);
 	const secondaryColumn = $derived(secondaryField ? toColumn(secondaryField) : null);
 
-	/** The keys of the shut groups. The `collapsed` prop holds the same list. */
-	let shutKeys = $state<string[]>([]);
+	/** Which groups are shut. The `collapsed` prop holds the same state. */
+	let shut = $state<CollapseState>(expandAll());
 
 	// A page whose first rows carry the value the last group carries grows that group
 	// rather than opening a second one, and the key it is collapsed under stands.
@@ -272,26 +279,25 @@
 	 * side untracked, so a change travels once and the two never write to each other.
 	 */
 	$effect(() => {
-		const keys = shutKeys;
-		if (sameIds(keys, untrack(() => collapsed ?? []))) return;
-		collapsed = [...keys];
-		onCollapsedChange?.(collapsed);
+		const state = shut;
+		if (sameCollapse(state, untrack(() => asCollapseState(collapsed)))) return;
+		collapsed = state;
+		onCollapsedChange?.(state);
 	});
 	$effect(() => {
-		const keys = collapsed ?? [];
-		if (sameIds(keys, untrack(() => shutKeys))) return;
-		shutKeys = [...keys];
+		const state = asCollapseState(collapsed);
+		if (sameCollapse(state, untrack(() => shut))) return;
+		shut = state;
 	});
 
 	/* the lines ------------------------------------------------------------ */
 
 	/** Headers and rows as one stream, which is what a virtualised list walks. */
 	const flat = $derived.by(() => {
-		const shut = new Set(shutKeys);
 		const out: Array<{ group: (typeof groups)[number]; row: EntityRow | null }> = [];
 		for (const group of groups) {
 			out.push({ group, row: null });
-			if (!shut.has(group.key)) for (const row of group.rows) out.push({ group, row });
+			if (!isCollapsed(shut, group.key)) for (const row of group.rows) out.push({ group, row });
 		}
 		return out;
 	});
@@ -423,13 +429,13 @@
 			{/if}
 			{#each blocks as block (block.group.key)}
 				{@const group = block.group}
-				{@const shut = shutKeys.includes(group.key)}
+				{@const closed = isCollapsed(shut, group.key)}
 				<div data-slot="grouped-list-group" data-group-key={group.key}>
 					{#if block.header}
 						<button
 							type="button"
-							aria-expanded={!shut}
-							onclick={() => (shutKeys = toggleId(shutKeys, group.key))}
+							aria-expanded={!closed}
+							onclick={() => (shut = toggleCollapsed(shut, group.key))}
 							class={cn(
 								'bg-muted/50 focus-visible:ring-ring focus-visible:ring-offset-background border-border sticky top-0 z-10 flex w-full items-center gap-1.5 border-b px-2 py-1.5 text-left font-medium outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
 								TEXT[size]
@@ -440,7 +446,7 @@
 								class={cn(
 									'shrink-0 transition-transform duration-150 ease-out',
 									GLYPH[size],
-									!shut && 'rotate-90'
+									!closed && 'rotate-90'
 								)}
 							/>
 							{#if groupHeader}
@@ -448,7 +454,7 @@
 									value: group.value,
 									column: groupKey ? null : (groupBy ?? null),
 									count: group.rows.length,
-									collapsed: shut,
+									collapsed: closed,
 									id: group.key
 								})}
 							{:else if groupKey || !groupBy}

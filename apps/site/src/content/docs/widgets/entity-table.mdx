@@ -153,6 +153,11 @@ Grouping collapses the loaded rows under headers, and the group path leads the s
 group is not split across pages. A count is the rows loaded under that header, and a page that
 opens on the value the last header carries grows that group rather than opening a second one.
 
+`collapsed` is a mode with exceptions rather than a list of ids, so Collapse all covers the headers
+the next page brings as well as the ones already loaded. A bare id list still works and reads as the
+open mode with those ids shut. `collapseAll`, `expandAll`, `isCollapsed` and `toggleCollapsed` in
+core are the readings over it, and a host holding the same state for a list of its own imports them.
+
 An edit writes one field with `PUT /entity/<type>/<id>`, which changes only the keys it is given and
 leaves the rest alone (put_entity_type_id). The write answers the whole record but resolves no dotted
 path, so the row is read again afterwards (024_read_after_write). A dotted path is never editable: a

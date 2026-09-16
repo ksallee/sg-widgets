@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { CollectionColumn, EditorPlacement, EntityRef, FilterGroup, PagingMode, SortKey, StatusRecord } from '@sg-widgets/core';
-import { condition, createEntitySource, emptyFilter, group, resolveColumns, toSortSpecs } from '@sg-widgets/core';
+import type { CollapseState, CollectionColumn, EditorPlacement, EntityRef, FilterGroup, PagingMode, SortKey, StatusRecord } from '@sg-widgets/core';
+import { collapseAll, condition, createEntitySource, emptyFilter, expandAll, group, resolveColumns, toSortSpecs } from '@sg-widgets/core';
 import { ColumnPicker } from '@/registry/sg/components/column-picker';
 import { EntityTable } from '@/registry/sg/components/entity-table';
 import { FilterBar } from '@/registry/sg/components/filter-bar';
@@ -66,6 +66,7 @@ export default function EntityTableDemo() {
   const [error, setError] = useState<string | null>(null);
   const [picking, setPicking] = useState(false);
   const [grouped, setGrouped] = useState(false);
+  const [collapsed, setCollapsed] = useState<CollapseState>(expandAll);
   const [compact, setCompact] = useState(false);
   const [paging, setPaging] = useState<PagingMode>('pages');
   const [placement, setPlacement] = useState<EditorPlacement>('popover');
@@ -109,10 +110,16 @@ export default function EntityTableDemo() {
 
   return (
     <DemoContextProvider context={context}>
-      <div className="flex w-full min-w-0 flex-col gap-3">
+      <div className="flex w-full min-w-0 flex-col gap-3" data-collapsed={JSON.stringify(collapsed)}>
         <div className="flex flex-wrap items-center gap-2">
           <button type="button" className={toggle} aria-pressed={grouped} onClick={() => setGrouped(!grouped)}>
             Group by status
+          </button>
+          <button type="button" className={`${toggle} disabled:pointer-events-none disabled:opacity-50`} data-demo="collapse-all" disabled={!grouped} onClick={() => setCollapsed(collapseAll())}>
+            Collapse all
+          </button>
+          <button type="button" className={`${toggle} disabled:pointer-events-none disabled:opacity-50`} data-demo="expand-all" disabled={!grouped} onClick={() => setCollapsed(expandAll())}>
+            Expand all
           </button>
           <button type="button" className={toggle} aria-pressed={compact} onClick={() => setCompact(!compact)}>
             Compact
@@ -163,6 +170,8 @@ export default function EntityTableDemo() {
           editorPlacement={placement}
           density={compact ? 'compact' : 'default'}
           groupBy={grouped ? 'sg_status_list' : null}
+          collapsed={collapsed}
+          onCollapsedChange={setCollapsed}
           toolbarStart={
             <>
               <FilterBar

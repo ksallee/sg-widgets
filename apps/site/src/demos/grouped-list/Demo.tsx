@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { CollapseState, CollectionColumn, EntityRef, EntityRow, StatusRecord } from '@sg-widgets/core';
+import type { CollapseState, CollectionColumn, EntityRef, EntityRow, SortSpec, StatusRecord } from '@sg-widgets/core';
 import {
   cellValue,
   collapseAll,
@@ -96,7 +96,10 @@ export default function GroupedListDemo() {
   const [data, setData] = useState<Loaded | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [compact, setCompact] = useState(false);
+  const [pagedCollapsed, setPagedCollapsed] = useState<CollapseState>(expandAll);
   const [collapsed, setCollapsed] = useState<CollapseState>(expandAll);
+  /** The derived list's sort, as the source holds it. */
+  const [derivedSort, setDerivedSort] = useState<SortSpec[]>([]);
   const [selected, setSelected] = useState<EntityRef[]>([]);
 
   useEffect(() => {
@@ -124,28 +127,38 @@ export default function GroupedListDemo() {
   return (
     <DemoContextProvider context={context}>
       <div className="flex w-full min-w-0 flex-col gap-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <button type="button" className={toggle} aria-pressed={compact} onClick={() => setCompact(!compact)}>
-            Compact
-          </button>
-          <span className="text-muted-foreground text-xs tabular-nums" data-testid="selection-count">
-            {selected.length} selected
-          </span>
-        </div>
-        <GroupedList
-          source={source}
-          context={context}
-          paging="pages"
-          groupBy={data.columns[0]!}
-          labelField="content"
-          subLabelField={data.columns[1]!}
-          secondaryField={data.columns[2]!}
-          statuses={data.statuses}
-          leading={leading}
-          selectable
-          density={compact ? 'compact' : 'default'}
-          onSelectionChange={setSelected}
-        />
+        <section className="flex w-full min-w-0 flex-col gap-3" data-demo-case="pages">
+          <div className="flex flex-wrap items-center gap-2">
+            <button type="button" className={toggle} aria-pressed={compact} onClick={() => setCompact(!compact)}>
+              Compact
+            </button>
+            <button type="button" className={toggle} data-demo="collapse-all" onClick={() => setPagedCollapsed(collapseAll())}>
+              Collapse all
+            </button>
+            <button type="button" className={toggle} data-demo="expand-all" onClick={() => setPagedCollapsed(expandAll())}>
+              Expand all
+            </button>
+            <span className="text-muted-foreground text-xs tabular-nums" data-testid="selection-count">
+              {selected.length} selected
+            </span>
+          </div>
+          <GroupedList
+            source={source}
+            context={context}
+            paging="pages"
+            groupBy={data.columns[0]!}
+            labelField="content"
+            subLabelField={data.columns[1]!}
+            secondaryField={data.columns[2]!}
+            statuses={data.statuses}
+            leading={leading}
+            selectable
+            density={compact ? 'compact' : 'default'}
+            collapsed={pagedCollapsed}
+            onCollapsedChange={setPagedCollapsed}
+            onSelectionChange={setSelected}
+          />
+        </section>
 
         <section className="flex w-full min-w-0 flex-col gap-3" data-demo-case="derived">
           <h4 className="text-muted-foreground text-xs font-medium">Grouped on a derived key</h4>
@@ -156,6 +169,9 @@ export default function GroupedListDemo() {
             <button type="button" className={toggle} data-demo="expand-all" onClick={() => setCollapsed(expandAll())}>
               Expand all
             </button>
+            <span className="text-muted-foreground text-xs" data-testid="derived-sort">
+              Sorted on {derivedSort.map((key) => key.path).join(', ') || 'nothing'}
+            </span>
           </div>
           <GroupedList
             source={recordSource}
@@ -168,6 +184,7 @@ export default function GroupedListDemo() {
             statuses={data.statuses}
             collapsed={collapsed}
             onCollapsedChange={setCollapsed}
+            onSortChange={setDerivedSort}
             maxHeight="16rem"
           />
         </section>

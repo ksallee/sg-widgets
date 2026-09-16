@@ -4,6 +4,7 @@
 		CollectionColumn,
 		EntityRef,
 		EntityRow,
+		SortSpec,
 		StatusRecord
 	} from '@sg-widgets/core';
 	import {
@@ -83,7 +84,10 @@
 
 	let statusTable = $state<Record<string, StatusRecord>>({});
 	let compact = $state(false);
+	let pagedCollapsed = $state<CollapseState>(expandAll());
 	let collapsed = $state<CollapseState>(expandAll());
+	/** The derived list's sort, as the source holds it. */
+	let derivedSort = $state<SortSpec[]>([]);
 	let selected = $state<EntityRef[]>([]);
 
 	async function load(): Promise<{
@@ -115,28 +119,37 @@
 	<p class="text-muted-foreground text-sm">Loading the site…</p>
 {:then { columns, statuses }}
 	<div class="flex w-full min-w-0 flex-col gap-3">
-		<div class="flex flex-wrap items-center gap-2">
-			<button type="button" class={toggle} aria-pressed={compact} onclick={() => (compact = !compact)}>
-				Compact
-			</button>
-			<span class="text-muted-foreground text-xs tabular-nums" data-testid="selection-count">
-				{selected.length} selected
-			</span>
-		</div>
-		<GroupedList
-			{source}
-			{context}
-			paging="pages"
-			groupBy={columns[0]!}
-			labelField="content"
-			subLabelField={columns[1]!}
-			secondaryField={columns[2]!}
-			{statuses}
-			{leading}
-			selectable
-			density={compact ? 'compact' : 'default'}
-			onSelectionChange={(rows) => (selected = rows)}
-		/>
+		<section class="flex w-full min-w-0 flex-col gap-3" data-demo-case="pages">
+			<div class="flex flex-wrap items-center gap-2">
+				<button type="button" class={toggle} aria-pressed={compact} onclick={() => (compact = !compact)}>
+					Compact
+				</button>
+				<button type="button" class={toggle} data-demo="collapse-all" onclick={() => (pagedCollapsed = collapseAll())}>
+					Collapse all
+				</button>
+				<button type="button" class={toggle} data-demo="expand-all" onclick={() => (pagedCollapsed = expandAll())}>
+					Expand all
+				</button>
+				<span class="text-muted-foreground text-xs tabular-nums" data-testid="selection-count">
+					{selected.length} selected
+				</span>
+			</div>
+			<GroupedList
+				{source}
+				{context}
+				paging="pages"
+				groupBy={columns[0]!}
+				labelField="content"
+				subLabelField={columns[1]!}
+				secondaryField={columns[2]!}
+				{statuses}
+				{leading}
+				selectable
+				density={compact ? 'compact' : 'default'}
+				bind:collapsed={pagedCollapsed}
+				onSelectionChange={(rows) => (selected = rows)}
+			/>
+		</section>
 
 		<section class="flex w-full min-w-0 flex-col gap-3" data-demo-case="derived">
 			<h4 class="text-muted-foreground text-xs font-medium">Grouped on a derived key</h4>
@@ -147,6 +160,9 @@
 				<button type="button" class={toggle} data-demo="expand-all" onclick={() => (collapsed = expandAll())}>
 					Expand all
 				</button>
+				<span class="text-muted-foreground text-xs" data-testid="derived-sort">
+					Sorted on {derivedSort.map((key) => key.path).join(', ') || 'nothing'}
+				</span>
 			</div>
 			<GroupedList
 				source={recordSource}
@@ -158,6 +174,7 @@
 				subLabelField="description"
 				{statuses}
 				bind:collapsed
+				bind:sort={derivedSort}
 				maxHeight="16rem"
 			/>
 		</section>

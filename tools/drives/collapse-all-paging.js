@@ -45,7 +45,7 @@ for (const framework of drawn) {
   const before = keysOf(framework);
   notes.push(`${framework}: ${before.length} groups before the next page`);
 
-  press(pane(framework).querySelector('[data-demo="collapse-all"]'));
+  press(pane(framework).querySelector('[data-demo-case="derived"] [data-demo="collapse-all"]'));
   if (!(await until(() => open(framework).length === 0))) {
     return { verdict: `FAIL ${framework} left ${open(framework).length} groups open after Collapse all`, notes };
   }
@@ -85,7 +85,7 @@ for (const framework of drawn) {
   }
 
   // Expand all goes the other way, over everything loaded.
-  press(pane(framework).querySelector('[data-demo="expand-all"]'));
+  press(pane(framework).querySelector('[data-demo-case="derived"] [data-demo="expand-all"]'));
   if (!(await until(() => open(framework).length === grown.length))) {
     return { verdict: `FAIL ${framework} left ${open(framework).length} of ${grown.length} groups open after Expand all`, notes };
   }
@@ -93,7 +93,7 @@ for (const framework of drawn) {
 
   // Left as Collapse all with one group opened by hand, which is what a shot taken with
   // this drive reads.
-  press(pane(framework).querySelector('[data-demo="collapse-all"]'));
+  press(pane(framework).querySelector('[data-demo-case="derived"] [data-demo="collapse-all"]'));
   await until(() => open(framework).length === 0);
   press(groups(framework)[0].querySelector('button'));
   await until(() => open(framework).length === 1);

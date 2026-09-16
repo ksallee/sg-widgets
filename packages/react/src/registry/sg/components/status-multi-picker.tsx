@@ -108,7 +108,7 @@ function statusOptionStore(
       : ids.length === 1
         ? schema.statusOptions(entityType, first, field)
         : schema.statusOptionsForProjects(entityType, ids, field);
-  // The field itself, for its `mandatory` flag.
+  // The field itself, for its display name and its `mandatory` flag.
   const named = field === undefined ? schema.statusField(entityType) : schema.field(entityType, field);
 
   const listeners = new Set<() => void>();
@@ -349,6 +349,7 @@ export function StatusMultiPicker({
         readonly={readonly}
         invalid={invalid}
         clearable={clearableForField(clearable, query.field)}
+        controlProps={{ 'aria-label': query.field?.displayName, 'aria-required': query.field?.mandatory }}
         placeholder={placeholder}
         searchPlaceholder={searchPlaceholder}
         open={open}

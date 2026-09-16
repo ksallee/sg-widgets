@@ -170,9 +170,39 @@ describe('the fields the schema types wrongly', () => {
       dataType: 'list',
       validValues: ['unread', 'read'],
       operators: ['is', 'is_not'],
+      // A person's write is stored (068_note_read_state).
+      editable: true,
+      mandatory: false,
+      unique: false,
+    });
+  });
+
+  it('patches only the type, the values and the operators on a site that declares the field', () => {
+    const declared = normalizeField('read_by_current_user', {
+      name: { value: 'Read State', editable: true },
+      entity_type: { value: 'Note', editable: false },
+      data_type: { value: 'checkbox', editable: false },
+      editable: { value: false, editable: false },
+      mandatory: { value: false, editable: false },
+      unique: { value: false, editable: false },
+      properties: { description: { value: 'Per person.', editable: true } },
+    });
+    expect(declared).toEqual({
+      name: 'read_by_current_user',
+      displayName: 'Read State',
+      entityType: 'Note',
+      dataType: 'list',
+      validValues: ['unread', 'read'],
+      operators: ['is', 'is_not'],
       editable: false,
       mandatory: false,
       unique: false,
+      description: 'Per person.',
+    });
+    expect(fieldSchemaOverride('Note', 'read_by_current_user')).toEqual({
+      dataType: 'list',
+      validValues: ['unread', 'read'],
+      operators: ['is', 'is_not'],
     });
   });
 

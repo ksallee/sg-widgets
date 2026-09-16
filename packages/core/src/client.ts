@@ -9,7 +9,7 @@
 import type { TextSearchFilter, WireCondition, WireGroup } from './filter.js';
 import { toFilterArray } from './filter.js';
 import type { FieldSchema, RawFieldSchema, RawFieldsResponse } from './schema.js';
-import { normalizeField, normalizeFields } from './schema.js';
+import { normalizeField, normalizeFields, undeclaredField } from './schema.js';
 import type { StatusRecord } from './status.js';
 import type { EntityRef } from './filter.js';
 
@@ -250,7 +250,7 @@ export interface UploadResult {
   uploadType: string;
   /** The whole `upload_info` the ticket carried and the third call sent back. */
   uploadInfo: Record<string, unknown>;
-  /** The md5 of what was sent, off the storage reply. Null when storage returned no `ETag`. */
+  /** The storage's `ETag`, when it exposes one; the `PUT` status is the receipt (put_links_upload). */
   etag: string | null;
 }
 
@@ -345,9 +345,10 @@ export interface SgClient {
    *
    * This is the change log, not the activity stream: a status change written over
    * the API was on no stream 430s later (067_notes_in_the_stream). Rows are sorted
-   * `-id`, the only order the type answers, and ids at the head are sparse and
-   * fill in later, so a cursor on `max(id)` drops events: re-scan behind the head
-   * or drive the feed from `created_at` and deduplicate on `id` (025_event_log).
+   * `-id`; `id` and `created_at` are the two orders the type answers, and ids at the
+   * head are sparse and fill in later, so a cursor on `max(id)` drops events: re-scan
+   * behind the head or drive the feed from `created_at` and deduplicate on `id`
+   * (025_event_log).
    */
   eventLog(options?: EventLogOptions): Promise<EventLogResult>;
   /**
@@ -394,7 +395,7 @@ export function normalizeHierarchyNode(raw: RawHierarchyNode, path: string): Hie
 /**
  * Children keyed by path, first occurrence kept. `_expand` repeats the "no <field>"
  * bucket (`.../Sequence/__none__`) once after every group on a grouped level, and the
- * repeats are the same node (measured on the probed site, `/Project/<id>/Shot`).
+ * repeats are the same node (post_hierarchy_expand, 064_hierarchy_expand_buckets).
  */
 function uniqueByPath(nodes: HierarchyNode[]): HierarchyNode[] {
   const seen = new Set<string>();
@@ -491,10 +492,15 @@ export class RestClient implements SgClient {
   }
 
   async fieldWithProject(entityType: string, field: string, projectId: number): Promise<FieldSchema> {
-    const res = await this.request<{ data: RawFieldSchema }>('GET', `/schema/${entityType}/fields/${field}`, undefined, {
+    const res = await this.request<{ data: RawFieldSchema | null }>('GET', `/schema/${entityType}/fields/${field}`, undefined, {
       project_id: projectId,
     });
-    return normalizeField(field, res.data);
+    if (res.data) return normalizeField(field, res.data);
+    // A field the site answers on the row but leaves out of its schema reads
+    // `data: null` at 200; a name that is nothing at all is a 404 (068_note_read_state).
+    const known = undeclaredField(entityType, field);
+    if (known) return known;
+    throw new SgApiError(200, res, `Field '${entityType}.${field}' is not in the schema.`);
   }
 
   async search(entityType: string, options: SearchOptions): Promise<SearchResult> {
@@ -517,9 +523,8 @@ export class RestClient implements SgClient {
   ): Promise<TextSearchRow[]> {
     // `entity_types` keys a filter by the type it applies to, and its shape follows the
     // Content-Type: under `api3_hash` each value is a `{logical_operator, conditions}` group,
-    // an empty group for no filter; an array there is `Query is not an Hash` (measured on
-    // the probed site 2026-09-09; post_entity_text_search records the array form under
-    // `api3_array`).
+    // an empty group for no filter; an array there is `Query is not an Hash`
+    // (post_entity_text_search).
     const types: Record<string, WireGroup> = {};
     for (const [t, f] of Object.entries(entityTypes)) types[t] = toHashGroup(f);
     // 25 is the cap and the default, and the message is off by one: 26 answers
@@ -551,14 +556,14 @@ export class RestClient implements SgClient {
       filename: file.filename,
     });
     // Step two goes to storage and not to Flow PT. The signature covers the request, so
-    // no Authorization header is sent; the `ETag` is the md5 of what went up
-    // (put_links_upload).
+    // no Authorization header is sent (put_links_upload).
     const stored = await this.fetchFn(ticket.links.upload, { method: 'PUT', body: file.data as BodyInit });
     if (!stored.ok) throw new SgApiError(stored.status, await stored.text(), 'The presigned upload refused the bytes');
-    // Step three. `complete_upload` already carries `/api/v1`, and prefixing it again is a
-    // 404 with a null source. `upload_data` is required even when it is empty, and the 201
-    // answers a single space, so this reply is never parsed (post_links_complete_upload).
-    const completed = await this.fetchFn(this.siteRoot + ticket.links.complete_upload, {
+    // Step three. `complete_upload` is resolved against the site root: it already carries
+    // `/api/v1`, and prefixing it again is a 404 with a null source. `upload_data` is
+    // required even when it is empty, and the 201 answers a single space, so this reply
+    // is never parsed (post_links_complete_upload).
+    const completed = await this.fetchFn(new URL(ticket.links.complete_upload, this.siteRoot).toString(), {
       method: 'POST',
       headers: {
         Accept: 'application/json',
@@ -744,10 +749,11 @@ function toThreadAuthor(value: unknown): ThreadAuthor | null {
 
 /**
  * The author key follows the row type: `created_by` on a Note and an Attachment,
- * `user` on a Reply (get_entity_notes_id_thread_contents).
+ * `user` on a Reply (get_entity_notes_id_thread_contents). A Note widened with
+ * `user` still names its author under `created_by`.
  */
 function toThreadRow(row: ThreadWire): ThreadRow {
-  const author = toThreadAuthor(row['user'] ?? row['created_by'] ?? null);
+  const author = toThreadAuthor(row.type === 'Reply' ? row['user'] : row['created_by']);
   return {
     type: String(row.type),
     id: Number(row.id),

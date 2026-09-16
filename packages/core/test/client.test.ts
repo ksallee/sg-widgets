@@ -192,6 +192,41 @@ describe('a note thread on the wire', () => {
     expect(thread[2]?.author).toEqual({ type: 'HumanUser', id: 88, name: 'Anna van der Meer', image: 'https://media.example.com/avatar.png' });
     expect(thread[1]?.content).toBeNull();
   });
+
+  it('keeps the author under created_by on a Note widened with user', async () => {
+    const { client } = rest({
+      data: [
+        {
+          type: 'Note',
+          id: 6376,
+          content: 'the note body',
+          created_at: '2025-05-30T20:39:17Z',
+          created_by: { id: 88, name: 'Anna van der Meer', type: 'HumanUser' },
+          user: { id: 91, name: 'j.doe', type: 'HumanUser' },
+        },
+        { type: 'Reply', id: 477, content: 'the reply body', created_at: '2025-05-30T21:21:50Z', user: { id: 91, name: 'j.doe', type: 'HumanUser', image: null } },
+      ],
+    });
+    const thread = await client.threadContents(6376, { Note: ['user'] });
+    expect(thread[0]?.author).toEqual({ type: 'HumanUser', id: 88, name: 'Anna van der Meer' });
+    expect(thread[0]?.fields['user']).toEqual({ id: 91, name: 'j.doe', type: 'HumanUser' });
+    expect(thread[1]?.author).toEqual({ type: 'HumanUser', id: 91, name: 'j.doe', image: null });
+  });
+});
+
+describe('one field of the schema on the wire', () => {
+  it('answers the override when the site reads the field as data: null', async () => {
+    // An undeclared field the site still answers on the row (068_note_read_state).
+    const { client, sent } = rest({ data: null, links: { self: '/api/v1/schema/Note/fields/read_by_current_user' } });
+    const field = await client.fieldWithProject('Note', 'read_by_current_user', 70);
+    expect(sent[0]?.url).toBe('https://studio.example.com/api/v1/schema/Note/fields/read_by_current_user?project_id=70');
+    expect(field).toMatchObject({ name: 'read_by_current_user', entityType: 'Note', dataType: 'list', editable: true });
+  });
+
+  it('refuses a data: null answer for a field it has no override for', async () => {
+    const { client } = rest({ data: null, links: { self: '/api/v1/schema/Shot/fields/sg_mystery' } });
+    await expect(client.fieldWithProject('Shot', 'sg_mystery', 70)).rejects.toThrow("Field 'Shot.sg_mystery' is not in the schema.");
+  });
 });
 
 describe('the event log on the wire', () => {
@@ -290,7 +325,7 @@ describe('an upload on the wire', () => {
   }
 
   /** A fetch that answers the three calls of the handshake in order. */
-  function uploading(): { client: RestClient; calls: Call[] } {
+  function uploading(completeUpload = '/api/v1/entity/shots/862/image/_upload'): { client: RestClient; calls: Call[] } {
     const calls: Call[] = [];
     const info = {
       timestamp: '2026-09-04T03:53:31Z',
@@ -305,7 +340,7 @@ describe('an upload on the wire', () => {
       calls.push({ url, method: init?.method ?? 'GET', headers: init?.headers as Record<string, string> | undefined, body: init?.body });
       if (url.includes('/_upload') && (init?.method ?? 'GET') === 'GET') {
         return new Response(
-          JSON.stringify({ data: info, links: { upload: 'https://storage.example.com/signed?sig=abc', complete_upload: '/api/v1/entity/shots/862/image/_upload' } }),
+          JSON.stringify({ data: info, links: { upload: 'https://storage.example.com/signed?sig=abc', complete_upload: completeUpload } }),
           { status: 200, headers: { 'content-type': 'application/json' } },
         );
       }
@@ -356,5 +391,11 @@ describe('an upload on the wire', () => {
     const { client, calls } = uploading();
     await client.upload('Version', 17055, { filename: 'workflow.json', data: new Uint8Array([123, 125]) });
     expect(calls[0]?.url).toBe('https://studio.example.com/api/v1/entity/versions/17055/_upload?filename=workflow.json');
+  });
+
+  it('calls an absolute complete_upload link as it is', async () => {
+    const { client, calls } = uploading('https://studio.example.com/api/v1/entity/shots/862/image/_upload');
+    await client.upload('Shot', 862, { filename: 'frame.png', data: new Uint8Array([1]), field: 'image' });
+    expect(calls[2]?.url).toBe('https://studio.example.com/api/v1/entity/shots/862/image/_upload');
   });
 });

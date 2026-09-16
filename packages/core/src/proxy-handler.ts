@@ -99,14 +99,23 @@ export function base64ToBytes(value: string): Uint8Array {
   return bytes;
 }
 
-/** `{filename, data, field}` with the bytes still base64. */
+/** `{filename, data, field}` with the bytes still base64. A zero-byte file is an empty string. */
 function uploadFile(value: unknown, name: string): UploadFile {
   const raw = obj(value, name);
   const field = raw['field'];
   if (field !== undefined && field !== null && typeof field !== 'string') throw new BadRequest(`'${name}.field' must be a string`);
-  const file: UploadFile = { filename: str(raw['filename'], `${name}.filename`), data: base64ToBytes(str(raw['data'], `${name}.data`)) };
+  const file: UploadFile = { filename: str(raw['filename'], `${name}.filename`), data: base64(raw['data'], `${name}.data`) };
   if (typeof field === 'string') file.field = field;
   return file;
+}
+
+function base64(value: unknown, name: string): Uint8Array {
+  if (typeof value !== 'string') throw new BadRequest(`'${name}' must be a base64 string`);
+  try {
+    return base64ToBytes(value);
+  } catch {
+    throw new BadRequest(`'${name}' is not base64`);
+  }
 }
 
 function entityRef(value: unknown, name: string): EntityRef {

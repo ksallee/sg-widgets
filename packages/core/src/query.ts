@@ -9,10 +9,10 @@
  * Reads on this API are expensive in ways worth caching. `/schema/<Type>/fields`
  * is 48KB and ~330ms a type and must never be looped (probe 002), and a picker
  * that re-asks for the same page on every keystroke pays ~270ms a call
- * (probe 053). Nothing here writes, so no invalidation happens by itself: a
- * caller that mutates rows calls `invalidate()`. `update` is the exception: it
- * is a write, so it is never cached and it drops every cached row read of the
- * type it touched before it returns.
+ * (probe 053). A read is invalidated by `invalidate()` or by a write through
+ * this cache: `create`, `update` and `upload` are never cached, and each drops
+ * every cached row read of the type it touched, and every cached thread, before
+ * it returns.
  */
 import type {
   EntityRow,
@@ -119,6 +119,16 @@ export function createQueryCache(client: SgClient, options: QueryCacheOptions = 
     for (const key of [...entries.keys()]) if (key.startsWith(counted)) entries.delete(key);
   }
 
+  /**
+   * A write may land in a thread: a Reply names its Note in `entity`, an Attachment
+   * in `attachment_links`, and a Note's own row is the thread's first line
+   * (get_entity_notes_id_thread_contents). Every cached thread goes.
+   */
+  function invalidateThreads(): void {
+    for (const key of [...entries.keys()]) if (key.startsWith('threadContents')) entries.delete(key);
+    for (const key of [...inFlight.keys()]) if (key.startsWith('threadContents')) inFlight.delete(key);
+  }
+
   return {
     entityTypes(): Promise<EntityTypeInfo[]> {
       return run('entityTypes', [], () => client.entityTypes());
@@ -169,6 +179,7 @@ export function createQueryCache(client: SgClient, options: QueryCacheOptions = 
     async create(entityType: string, body: Record<string, unknown>): Promise<EntityRow> {
       const row = await client.create(entityType, body);
       invalidateSearches(entityType);
+      invalidateThreads();
       return row;
     },
     async upload(entityType: string, id: number, file: UploadFile): Promise<UploadResult> {
@@ -176,6 +187,7 @@ export function createQueryCache(client: SgClient, options: QueryCacheOptions = 
       // The row gained a field value or an Attachment, and the Attachment is a new row.
       invalidateSearches(entityType);
       invalidateSearches('Attachment');
+      invalidateThreads();
       return result;
     },
     async update(entityType: string, id: number, patch: Record<string, unknown>): Promise<EntityRow> {
@@ -183,6 +195,7 @@ export function createQueryCache(client: SgClient, options: QueryCacheOptions = 
       // Every cached page of the type is now stale, including one whose filter or sort
       // the change moved the row out of.
       invalidateSearches(entityType);
+      invalidateThreads();
       return row;
     },
     invalidate(prefix?: string): void {

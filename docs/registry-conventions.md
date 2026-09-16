@@ -24,12 +24,11 @@ upstream does not have, a rule a widget is written against, a measured change ma
 was vendored. Class order is not a change, and neither is upstream's drift since — the icon
 placeholder, a `calc()` written with underscores, a `cn-` hook, a renamed Tailwind variant. Those
 primitives stay upstream's and are named plainly, so a consumer gets the version upstream maintains.
-A primitive item declares the packages its own files import, which for a vendored primitive is not
-`@sg-widgets/core` unless it reaches into core.
 
-Files are `type: "registry:component"` too, and every
-item is a single file. Multi-file items are possible but flatten differently in each CLI (see §6),
-so keep to one file per item until a widget genuinely needs more.
+Files in a component item are `type: "registry:component"` too. A component item is one file, or a
+`.svelte` file with the `.svelte.ts` module it imports beside it (`value-editor`). Both land flat at
+the components alias, so the import between them keeps its alias path and the CLI rewrites it like
+any other. The primitive items are the multi-file ones; §6 says where each kind lands.
 
 A renamed widget keeps its old name as a deprecated item for one release: the old item holds a
 module that re-exports the new one, names the new item as its only `registryDependencies` entry,
@@ -50,8 +49,10 @@ change that adds the item.
 
 | | path on disk | imported in source as | installs to |
 |---|---|---|---|
-| React | `packages/react/src/registry/sg/components/<name>.tsx` | `@/registry/sg/components/<name>` | `<components alias>/<name>.tsx` |
-| Svelte | `packages/svelte/src/lib/registry/components/<name>.svelte` | `$lib/registry/components/<name>.svelte` | `<components alias>/<name>.svelte` |
+| React widget | `packages/react/src/registry/sg/components/<name>.tsx` (or `.ts`) | `@/registry/sg/components/<name>` | `<components alias>/<name>.tsx` |
+| React primitive | `packages/react/src/components/ui/<name>.tsx` | `@/components/ui/<name>` | `<ui alias>/<name>.tsx` |
+| Svelte widget | `packages/svelte/src/lib/registry/components/<name>.svelte` (or `.ts`, `.svelte.ts`) | `$lib/registry/components/<name>.svelte` | `<components alias>/<name>.svelte` |
+| Svelte primitive | `packages/svelte/src/lib/components/ui/<name>/*` | `$lib/components/ui/<name>/index.js` | `<ui alias>/<name>/*` |
 
 React: the `@/` prefix is this package's own tsconfig alias (`@/* → ./src/*`), which is why the
 files sit under `src/`. The CLI rewrites by matching the **import string**, not the disk path:
@@ -61,11 +62,14 @@ are never touched. The `components` segment matters twice over: it is what makes
 rewrite land on `@/components/<name>` *and* what makes the install path collapse to
 `<components>/<name>.tsx`. Drop it and the two disagree.
 
-Svelte: shadcn-svelte does a literal string substitution at **build** time, turning its configured
-source aliases into placeholders (`$lib/registry/components` → `$COMPONENTS$`, `$lib/utils` →
-`$UTILS$`), which `add` then expands into the consumer's aliases. Those source aliases are the
-CLI's defaults and are restated in `registry.json` under `aliases`. `files[].path` is read
-relative to the process cwd, so `registry:build` must run from `packages/svelte`.
+Svelte: shadcn-svelte does a literal string substitution at **build** time, turning the source
+aliases `registry.json` names into placeholders, which `add` then expands into the consumer's
+aliases. The substitution runs in the order `components`, `ui`, `hooks`, `utils`, `lib`, so a
+longer alias is replaced before the `$lib` it starts with. The aliases are where each kind of file
+lives in this package: `components` is `$lib/registry/components`, `ui` is `$lib/components/ui`,
+`utils` is `$lib/utils`, and `hooks` and `lib` are `$lib/hooks` and `$lib`, so an import from either
+is rewritten rather than copied verbatim. `files[].path` is read relative to the process cwd, so
+`registry:build` must run from `packages/svelte`.
 
 `registry.json` lives at each package root and `files[].path` is written relative to that root.
 
@@ -87,17 +91,30 @@ The trade-off is the same in both: a dependency is addressed by URL, so a regist
 different host resolves its own items only if that host is the one baked in. The Svelte form is
 relative and therefore host-independent; React has no relative option that reaches the network.
 
-Anything from the upstream registries is referenced by its plain name (`"button"`) in both. React
-also resolves the `"@shadcn/button"` form, but plain names are what every item here uses.
+An item names the items its own files import, and only those. A dependency reached through another
+item is not restated: `entity-table` names `collection-footer`, and `collection-footer` names
+`select`. Anything from the upstream registries is referenced by its plain name (`"button"`) in
+both; the `@shadcn/button` form is not used. A primitive this registry ships is named as this
+registry's item (`https://sg-widgets.dev/r/react/command.json`, `local:command`), never plainly.
+
+A Svelte widget may import a sibling widget by relative path (`./entity-picker.svelte`). Every
+component item lands flat at the components alias, so the path survives install. The sibling's item
+is still named in `registryDependencies`, which is what makes it install.
 
 ## 4. npm dependencies
 
-`@sg-widgets/core` is a dependency of **every** item, in both registries, plus the icon package:
+An item declares every package its own files import, and nothing else. `@sg-widgets/core` and the
+icon package are named where a file imports them, and not where none does. `react`, `react-dom` and
+`svelte` are never named. Two packages come in through what a file uses rather than what it imports:
 
-```json
-"dependencies": ["@sg-widgets/core", "lucide-react"]     // React
-"dependencies": ["@sg-widgets/core", "@lucide/svelte"]   // Svelte
-```
+- `lib/utils` is `cn` for React and `clsx` plus `tailwind-merge` for Svelte; an item that imports
+  `lib/utils` names those.
+- An item whose classes are `tw-animate-css`'s enter and exit animations names `tw-animate-css`.
+
+`pnpm registry:check` (`tools/registry-check.mjs`) reads each `registry.json` against the files it
+names and fails on any difference, in both directions and for `registryDependencies` as well.
+`pnpm check` and `pnpm registry:build` run it first, so a registry that has drifted from its
+sources neither passes nor builds.
 
 shadcn-svelte auto-detects dependencies from the source imports whenever `dependencies` or
 `devDependencies` is empty, and it classifies them by where they sit in `packages/svelte/package.json`.
@@ -107,7 +124,7 @@ its `devDependencies` — that is why `@lucide/svelte` moved.
 ## 5. Building
 
 ```
-pnpm registry:build          # both packages
+pnpm registry:build          # the check, then both packages
 ```
 
 - React: `shadcn build --output ../../apps/site/public/r/react`, run from `packages/react`.
@@ -115,7 +132,7 @@ pnpm registry:build          # both packages
   React rewrites imports at `add` time.
 - Svelte: `shadcn-svelte registry build --output ../../apps/site/public/r/svelte`, run from
   `packages/svelte`. Emits `<name>.json` per item plus `index.json`. File contents already carry
-  the `$COMPONENTS$` / `$UTILS$` placeholders, and `files[].path` is replaced by `target`.
+  the `$COMPONENTS$`, `$UI$` and `$UTILS$` placeholders, and `files[].path` is replaced by `target`.
 
 The site serves both trees statically at `/r/react/<name>.json` and `/r/svelte/<name>.json`.
 
@@ -127,7 +144,7 @@ The site serves both trees statically at `/r/react/<name>.json` and `/r/svelte/<
 - A Svelte **single-file** `registry:ui` item installs to `<ui>/<file>` while a multi-file one
   installs to `<ui>/<item-name>/<file>`. The three primitive items are multi-file and land where
   `$lib/components/ui/<name>/index.js` expects them; every other item is `registry:component`, which
-  always flattens to the alias root.
+  always flattens to the alias root, two files or one.
 - A source alias only becomes a placeholder if `registry.json` names it. The Svelte `ui` alias is
   `$lib/components/ui`, the folder the primitives live in, so `$UI$` reaches the consumer's own
   alias. Point it anywhere else and the import string survives the build verbatim and only works

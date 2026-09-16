@@ -1,6 +1,6 @@
 ---
 title: Install
-description: How a host app installs the widgets, and the two things it has to do by hand.
+description: How a host app installs the widgets, and the one line it runs by hand.
 ---
 
 One command installs every item of a registry.
@@ -12,17 +12,19 @@ pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/sg-widgets.jso
 
 A widget page names its own item, for a host that wants one widget rather than the set.
 
-Run `init` first. It writes `components.json`, the stylesheet and `lib/utils`, which every item
-imports. A host that copies those three from somewhere else instead gets them without their
-packages; the items name what `lib/utils` and the stylesheet need, so the CLI adds them either way,
-but nothing generates `lib/utils` itself.
+Run `init` first. It writes `components.json`, the stylesheet and `lib/utils`, and installs the
+packages those need. Every item imports `lib/utils`, and no item generates it.
 
-## The core package
+Every item names `@sg-widgets/core`. That package is not on npm. The CLI installs an item's packages
+in one call, and the call fails on that name, so it installs nothing. Run the line for your
+framework before `add`, with core pointed at a local checkout.
 
-`@sg-widgets/core` is not on npm yet. Every item names it as a dependency, and the CLI installs an
-item's packages in one call, which fails on that name and installs none of the others: the files
-land, `package.json` is left as it was, and `"latest"` is written over a `link:` spec already there.
-Install the packages yourself afterwards, with core pointed at a local checkout.
+```sh
+pnpm add @sg-widgets/core@link:../sg-widgets/packages/core \
+  @base-ui/react lucide-react class-variance-authority \
+  @tanstack/react-table @tanstack/react-virtual \
+  cn react-day-picker date-fns tw-animate-css
+```
 
 ```sh
 pnpm add @sg-widgets/core@link:../sg-widgets/packages/core \
@@ -31,16 +33,14 @@ pnpm add @sg-widgets/core@link:../sg-widgets/packages/core \
   clsx tailwind-merge tailwind-variants tw-animate-css
 ```
 
-```sh
-pnpm add @sg-widgets/core@link:../sg-widgets/packages/core \
-  @base-ui/react lucide-react \
-  @tanstack/react-table @tanstack/react-virtual \
-  cn react-day-picker date-fns tw-animate-css
-```
+Each line is the union of what the items name and what the shadcn primitives they pull import. A
+host installing one widget needs less.
 
-Each line is what the items name plus what the shadcn primitives they install name, for the whole
-registry. A host installing one widget needs less.
+With the line in place, `shadcn add` names only the packages `package.json` lacks, so its call
+succeeds and the files land. `shadcn-svelte add` writes the files first and then fails on its
+install call. Either way `package.json` is left as it was, `link:` included.
 
-The `link:` line is put back after each `add`. The widgets import core by its bare name and nothing
-else in an item reaches into this repository, so a published package will drop straight in and the
-CLI's own install will carry the rest.
+This registry ships its own `command` for React, and its own `command`, `select` and `checkbox` for
+Svelte. A host that already has a primitive of that name is asked before it is overwritten. Accept,
+or pass `--overwrite`. A host that keeps its own `command` has no status part, and `search-control`
+fails to compile against it.

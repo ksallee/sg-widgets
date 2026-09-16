@@ -146,6 +146,14 @@ describe('errors', () => {
     expect((await handle('following', {})).status).toBe(400);
   });
 
+  it('carries a zero-byte file, and answers 400 on bytes that are not base64', async () => {
+    const handle = createProxyHandler(new MockClient());
+    const empty = await handle('upload', { entityType: 'Note', id: 11030, file: { filename: 'empty.txt', data: '', field: 'attachments' } });
+    expect(empty.status).toBe(200);
+    const bad = await handle('upload', { entityType: 'Note', id: 11030, file: { filename: 'a.png', data: '%%not base64%%', field: 'attachments' } });
+    expect(bad).toEqual({ status: 400, body: { error: { status: 400, message: "'file.data' is not base64", body: null } } });
+  });
+
   it('reports a non-JSON answer from anything between the two halves', async () => {
     const fetchFn = (async () => new Response('<html>502</html>', { status: 502 })) as typeof fetch;
     const client = new ProxyClient({ basePath: '/sg', fetch: fetchFn });

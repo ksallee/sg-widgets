@@ -823,7 +823,8 @@ function buildFixtures(seed: number, counts: { versions?: number } = {}): Fixtur
         sg_complexity: Math.floor(rng() * 101),
         sg_lens: 24 + Math.round(rng() * 800) / 10,
         sg_omit: false,
-        image: thumb(code),
+        // One Shot with no picture, so a list of them reaches the type glyph.
+        image: shotId === 865 ? null : thumb(code),
         sg_shot_notes_url: null,
         project: seq.values['project'] as EntityRef,
         sg_sequence: ref(seq),
@@ -975,7 +976,8 @@ function buildFixtures(seed: number, counts: { versions?: number } = {}): Fixtur
       sg_path_to_movie: `/mnt/prod/mov/${code}.mov`,
       client_approved: rng() > 0.85,
       client_approved_at: null,
-      image: thumb(code),
+      // Every seventh Version has no picture: 99 of 100 read null on the sample project (field_types/image).
+      image: i % 7 === 3 ? null : thumb(code),
       sg_uploaded_movie: null,
       sg_bar_color: pick(rng, BAR_COLORS),
       project: target.values['project'] as EntityRef,

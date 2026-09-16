@@ -86,8 +86,8 @@
 	let compact = $state(false);
 	let pagedCollapsed = $state<CollapseState>(expandAll());
 	let collapsed = $state<CollapseState>(expandAll());
-	/** The derived list's sort, as the source holds it. */
-	let derivedSort = $state<SortSpec[]>([]);
+	/** The derived list's sort, as the source holds it. Unset until the source says. */
+	let derivedSort = $state<SortSpec[] | undefined>();
 	let selected = $state<EntityRef[]>([]);
 
 	async function load(): Promise<{
@@ -161,7 +161,7 @@
 					Expand all
 				</button>
 				<span class="text-muted-foreground text-xs" data-testid="derived-sort">
-					Sorted on {derivedSort.map((key) => key.path).join(', ') || 'nothing'}
+					Sorted on {(derivedSort ?? []).map((key) => key.path).join(', ') || 'nothing'}
 				</span>
 			</div>
 			<GroupedList

@@ -64,7 +64,9 @@ export interface FieldSchema {
  * no `read_by_current_user` among them, while `GET /schema/Note/fields/read_by_current_user`
  * answers 200 with `data: null`, which is what an undeclared field reads as and a
  * name that is nothing at all answers 404 (068_note_read_state). `normalizeFields`
- * adds what the schema left out.
+ * adds what the schema left out. A site that declares the field keeps its own
+ * display name and editability and is corrected on the data type, the values and
+ * the operators alone.
  *
  * `operators` is the set the API evaluates, which is not always the set it
  * advertises. `read_by_current_user` names `is`, `is_not`, `in` and `not_in` in its
@@ -73,24 +75,38 @@ export interface FieldSchema {
  * whatever the list holds, in `_search` and in `_summarize`, under both body shapes
  * (068_note_read_state).
  *
- * The value is per person and an ApiUser has none: a script's own write answers 200
- * and stores nothing, so it is not editable (068_note_read_state).
+ * The value is per person: a person's `PUT` answers 200 and the re-read follows it,
+ * so the field is editable. A script has no read state, and its own write answers
+ * 200 and stores nothing (068_note_read_state).
  */
-export const FIELD_SCHEMA_OVERRIDES: Readonly<Record<string, Readonly<Partial<FieldSchema>>>> = {
+export const FIELD_SCHEMA_OVERRIDES: Readonly<Record<string, Readonly<Omit<FieldSchema, 'name' | 'entityType'>>>> = {
   'Note.read_by_current_user': {
     displayName: 'Read by Current User',
     dataType: 'list',
     validValues: ['unread', 'read'],
     operators: ['is', 'is_not'],
-    editable: false,
+    editable: true,
     mandatory: false,
     unique: false,
   },
 };
 
-/** What a field's schema has to be corrected to, when it is one of those. */
+/** The part of an override that corrects a declaring site. */
+const PATCHED_KEYS = ['dataType', 'validValues', 'operators'] as const;
+
+/** What a declared field's schema has to be corrected to, when it is one of those. */
 export function fieldSchemaOverride(entityType: string, name: string): Readonly<Partial<FieldSchema>> | undefined {
-  return FIELD_SCHEMA_OVERRIDES[`${entityType}.${name}`];
+  const whole = FIELD_SCHEMA_OVERRIDES[`${entityType}.${name}`];
+  if (!whole) return undefined;
+  const patch: Partial<FieldSchema> = {};
+  for (const key of PATCHED_KEYS) if (whole[key] !== undefined) Object.assign(patch, { [key]: whole[key] });
+  return patch;
+}
+
+/** The whole field, for a site whose schema does not declare it; undefined when it is not one of those. */
+export function undeclaredField(entityType: string, name: string): FieldSchema | undefined {
+  const whole = FIELD_SCHEMA_OVERRIDES[`${entityType}.${name}`];
+  return whole ? { name, entityType, ...whole } : undefined;
 }
 
 function prop<T>(props: Record<string, RawProperty<unknown>> | undefined, key: string): T | undefined {
@@ -135,20 +151,12 @@ export function normalizeFields(response: RawFieldsResponse, entityType?: string
   for (const [name, raw] of Object.entries(response.data)) out[name] = normalizeField(name, raw);
   const type = entityType ?? Object.values(out)[0]?.entityType;
   if (!type) return out;
-  for (const [key, patch] of Object.entries(FIELD_SCHEMA_OVERRIDES)) {
+  for (const key of Object.keys(FIELD_SCHEMA_OVERRIDES)) {
     const at = key.indexOf('.');
     const name = key.slice(at + 1);
     if (key.slice(0, at) !== type || out[name]) continue;
-    out[name] = {
-      name,
-      displayName: name,
-      entityType: type,
-      dataType: 'text',
-      editable: false,
-      mandatory: false,
-      unique: false,
-      ...patch,
-    };
+    const whole = undeclaredField(type, name);
+    if (whole) out[name] = whole;
   }
   return out;
 }

@@ -192,6 +192,41 @@ describe('a note thread on the wire', () => {
     expect(thread[2]?.author).toEqual({ type: 'HumanUser', id: 88, name: 'Anna van der Meer', image: 'https://media.example.com/avatar.png' });
     expect(thread[1]?.content).toBeNull();
   });
+
+  it('keeps the author under created_by on a Note widened with user', async () => {
+    const { client } = rest({
+      data: [
+        {
+          type: 'Note',
+          id: 6376,
+          content: 'the note body',
+          created_at: '2025-05-30T20:39:17Z',
+          created_by: { id: 88, name: 'Anna van der Meer', type: 'HumanUser' },
+          user: { id: 91, name: 'j.doe', type: 'HumanUser' },
+        },
+        { type: 'Reply', id: 477, content: 'the reply body', created_at: '2025-05-30T21:21:50Z', user: { id: 91, name: 'j.doe', type: 'HumanUser', image: null } },
+      ],
+    });
+    const thread = await client.threadContents(6376, { Note: ['user'] });
+    expect(thread[0]?.author).toEqual({ type: 'HumanUser', id: 88, name: 'Anna van der Meer' });
+    expect(thread[0]?.fields['user']).toEqual({ id: 91, name: 'j.doe', type: 'HumanUser' });
+    expect(thread[1]?.author).toEqual({ type: 'HumanUser', id: 91, name: 'j.doe', image: null });
+  });
+});
+
+describe('one field of the schema on the wire', () => {
+  it('answers the override when the site reads the field as data: null', async () => {
+    // An undeclared field the site still answers on the row (068_note_read_state).
+    const { client, sent } = rest({ data: null, links: { self: '/api/v1/schema/Note/fields/read_by_current_user' } });
+    const field = await client.fieldWithProject('Note', 'read_by_current_user', 70);
+    expect(sent[0]?.url).toBe('https://studio.example.com/api/v1/schema/Note/fields/read_by_current_user?project_id=70');
+    expect(field).toMatchObject({ name: 'read_by_current_user', entityType: 'Note', dataType: 'list', editable: true });
+  });
+
+  it('refuses a data: null answer for a field it has no override for', async () => {
+    const { client } = rest({ data: null, links: { self: '/api/v1/schema/Shot/fields/sg_mystery' } });
+    await expect(client.fieldWithProject('Shot', 'sg_mystery', 70)).rejects.toThrow("Field 'Shot.sg_mystery' is not in the schema.");
+  });
 });
 
 describe('the event log on the wire', () => {

@@ -9,7 +9,7 @@
 import type { TextSearchFilter, WireCondition, WireGroup } from './filter.js';
 import { toFilterArray } from './filter.js';
 import type { FieldSchema, RawFieldSchema, RawFieldsResponse } from './schema.js';
-import { normalizeField, normalizeFields } from './schema.js';
+import { normalizeField, normalizeFields, undeclaredField } from './schema.js';
 import type { StatusRecord } from './status.js';
 import type { EntityRef } from './filter.js';
 
@@ -491,10 +491,15 @@ export class RestClient implements SgClient {
   }
 
   async fieldWithProject(entityType: string, field: string, projectId: number): Promise<FieldSchema> {
-    const res = await this.request<{ data: RawFieldSchema }>('GET', `/schema/${entityType}/fields/${field}`, undefined, {
+    const res = await this.request<{ data: RawFieldSchema | null }>('GET', `/schema/${entityType}/fields/${field}`, undefined, {
       project_id: projectId,
     });
-    return normalizeField(field, res.data);
+    if (res.data) return normalizeField(field, res.data);
+    // A field the site answers on the row but leaves out of its schema reads
+    // `data: null` at 200; a name that is nothing at all is a 404 (068_note_read_state).
+    const known = undeclaredField(entityType, field);
+    if (known) return known;
+    throw new SgApiError(200, res, `Field '${entityType}.${field}' is not in the schema.`);
   }
 
   async search(entityType: string, options: SearchOptions): Promise<SearchResult> {
@@ -744,10 +749,11 @@ function toThreadAuthor(value: unknown): ThreadAuthor | null {
 
 /**
  * The author key follows the row type: `created_by` on a Note and an Attachment,
- * `user` on a Reply (get_entity_notes_id_thread_contents).
+ * `user` on a Reply (get_entity_notes_id_thread_contents). A Note widened with
+ * `user` still names its author under `created_by`.
  */
 function toThreadRow(row: ThreadWire): ThreadRow {
-  const author = toThreadAuthor(row['user'] ?? row['created_by'] ?? null);
+  const author = toThreadAuthor(row.type === 'Reply' ? row['user'] : row['created_by']);
   return {
     type: String(row.type),
     id: Number(row.id),

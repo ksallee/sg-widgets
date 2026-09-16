@@ -146,6 +146,12 @@ const INNER: Record<FilterEditorSize, FilterEditorSize> = { sm: 'sm', md: 'md', 
 /** A cross sits one step under the row's own control on the chip ladder. */
 const CROSS: Record<FilterEditorSize, ChipSize> = { sm: 'xs', md: 'xs', lg: 'sm' };
 const TOGGLE: Record<FilterEditorSize, 'sm' | 'default' | 'lg'> = { sm: 'sm', md: 'default', lg: 'lg' };
+/** The select trigger has two steps of its own; the third is its default step lifted to `h-9`. */
+const SELECT: Record<FilterEditorSize, { size: 'sm' | 'default'; className?: string }> = {
+  sm: { size: 'sm' },
+  md: { size: 'default' },
+  lg: { size: 'default', className: 'data-[size=default]:h-9' },
+};
 
 interface EditorContext {
   entityType: string;
@@ -485,7 +491,7 @@ function OperatorSlot({ ctx, path, node }: { ctx: EditorContext; path: NodePath;
       disabled={ctx.disabled || menu.length === 0}
       onValueChange={(id) => ctx.pickPreset(path, node, id as string)}
     >
-      <SelectTrigger className={cn(BOX[ctx.size], 'w-40 shrink-0')} data-slot="filter-operator">
+      <SelectTrigger size={SELECT[ctx.size].size} className={cn(SELECT[ctx.size].className, 'w-40 shrink-0')} data-slot="filter-operator">
         {presetById(dataType, current, operators)?.label ?? current}
       </SelectTrigger>
       <SelectContent>

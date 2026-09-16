@@ -12,6 +12,12 @@
 	/** A cross sits one step under the row's own control on the chip ladder. */
 	const CROSS: Record<FilterEditorSize, ChipSize> = { sm: 'xs', md: 'xs', lg: 'sm' };
 	const TOGGLE: Record<FilterEditorSize, 'sm' | 'default' | 'lg'> = { sm: 'sm', md: 'default', lg: 'lg' };
+	/** The select trigger has two steps of its own; the third is its default step lifted to `h-9`. */
+	const SELECT: Record<FilterEditorSize, { size: 'sm' | 'default'; class?: string }> = {
+		sm: { size: 'sm' },
+		md: { size: 'default' },
+		lg: { size: 'default', class: 'data-[size=default]:h-9' }
+	};
 	import type {
 		ConditionValue,
 		EntityRef,
@@ -313,7 +319,7 @@
 		disabled={disabled || menu.length === 0}
 		onValueChange={(id) => pickPreset(path, node, id)}
 	>
-		<Select.Trigger class={cn(BOX[size], 'w-40 shrink-0')} data-slot="filter-operator">
+		<Select.Trigger size={SELECT[size].size} class={cn(SELECT[size].class, 'w-40 shrink-0')} data-slot="filter-operator">
 			{presetById(dataType, current, operators)?.label ?? current}
 		</Select.Trigger>
 		<Select.Content>

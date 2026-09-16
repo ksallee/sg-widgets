@@ -1,21 +1,24 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import type {
+  FacetCondition,
   FacetValue,
   FieldSchema,
-  FilterCondition,
   FilterGroup,
   Operator,
   Scalar,
   SgContext,
+  StatusRecord,
   WireGroup,
 } from '@sg-widgets/core';
 import {
-  conditionArity,
   conditionParts,
+  conditionValues,
   describeCondition,
   emptyFilter,
+  facetShape,
   facetValues,
-  findCondition,
+  findFacet,
+  renderKindFor,
   setFacet,
   toApi3Hash,
   asFilterGroup,
@@ -24,7 +27,6 @@ import {
   withoutPaths,
 } from '@sg-widgets/core';
 import { PlusIcon, SearchX, TriangleAlert, XIcon } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
@@ -39,8 +41,11 @@ import {
 } from '@/registry/sg/components/control-classes';
 import { useEntityFields } from '@/registry/sg/components/entity-fields';
 import { FilterDialog } from '@/registry/sg/components/filter-dialog';
-import { CHIP_CROSS, REMOVE_CONTROL, type ChipSize } from '@/registry/sg/components/leaf-classes';
+import { CHIP_CROSS, LEAF_GLYPH, REMOVE_CONTROL, type ChipSize } from '@/registry/sg/components/leaf-classes';
+import { MatchText } from '@/registry/sg/components/match-text';
 import { StateLine } from '@/registry/sg/components/state-line';
+import { StatusBadge, type StatusBadgeSize } from '@/registry/sg/components/status-badge';
+import { StatusGlyph } from '@/registry/sg/components/status-glyph';
 
 export type FilterBarSize = ControlSize;
 
@@ -50,8 +55,14 @@ const CROSS: Record<FilterBarSize, ChipSize> = { sm: 'xs', md: 'sm', lg: 'md' };
  * The pill's trailing edge: the room above the cross, so its box sits as far from the
  * right as from the top (`docs/design-rules.md` rule 3).
  */
-const CROSS_PAD: Record<FilterBarSize, string> = { sm: 'pr-[7px]', md: 'pr-2', lg: 'pr-[9px]' };
-/** The button step beside a pill of each height. */
+const CROSS_PAD: Record<FilterBarSize, string> = { sm: 'pr-[5px]', md: 'pr-1.5', lg: 'pr-[7px]' };
+/** A badge sits one step under the pill it is in (`docs/design-rules.md` rule 3). */
+const BADGE: Record<FilterBarSize, StatusBadgeSize> = { sm: 'xs', md: 'sm', lg: 'md' };
+/**
+ * What a pill's value may take before it truncates. A facet with everything ticked would
+ * otherwise run the bar past the width it was given (`docs/design-rules.md` rule 2).
+ */
+const VALUE_WIDTH = 'max-w-64';
 
 export interface FilterBarProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange'> {
   /** The root element. */
@@ -62,6 +73,10 @@ export interface FilterBarProps extends Omit<React.HTMLAttributes<HTMLDivElement
   context: SgContext;
   /** Field names to offer as pills, in order. */
   facets: string[];
+  /** A name per facet, for a field whose schema label is not what the page calls it. */
+  labels?: Record<string, string>;
+  /** Values a pill names before the rest reads as `+n`. `0` names every one. */
+  maxValues?: number;
   value: FilterGroup;
   hidePaths?: string[];
   size?: FilterBarSize;
@@ -96,9 +111,11 @@ export function FilterBar({
   entityType,
   context,
   facets,
+  labels = {},
   value = emptyFilter(),
   hidePaths = [],
   size = 'md',
+  maxValues = 2,
   disabled = false,
   counts,
   baseFilter = null,
@@ -110,6 +127,8 @@ export function FilterBar({
 }: FilterBarProps) {
   const fields = useEntityFields(context, entityType);
   const [tally, setTally] = useState<Record<string, FacetValue[]>>({});
+  /** The `Status` rows, for a facet over a status field (probe 010). */
+  const [statuses, setStatuses] = useState<Record<string, StatusRecord>>({});
   /** What the open facet's search box holds. */
   const [facetQuery, setFacetQuery] = useState('');
   const [counting, setCounting] = useState(true);
@@ -161,19 +180,95 @@ export function FilterBar({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [context.client, entityType, fields, facets.join(','), scope, sampleSize, counts]);
 
-  const conditionOf = (name: string): FilterCondition | null => findCondition(value, name)?.condition ?? null;
+  useEffect(() => {
+    let live = true;
+    void context.statuses
+      .byCode()
+      .then((table) => {
+        if (live) setStatuses(Object.fromEntries(table));
+      })
+      .catch(() => {
+        // A facet without the table still reads: a badge falls back to its own code.
+      });
+    return () => {
+      live = false;
+    };
+  }, [context.statuses]);
 
-  const selectedOf = (name: string): Scalar[] => {
-    const found = conditionOf(name);
-    return found && Array.isArray(found.value) ? (found.value as Scalar[]) : [];
+  /** The name a pill and its popover carry: the caller's, else the schema's, else the path. */
+  const labelOf = (name: string): string => labels[name] ?? fields[name]?.displayName ?? name;
+  /** True where the facet's values are status codes, which draw as badges rather than text. */
+  const isStatus = (name: string): boolean => renderKindFor(fields[name]?.dataType ?? '') === 'status';
+
+  /** One value in a pill, where a status is a value: a status is a badge, and every other value is text. */
+  const valueBadge = (name: string, key: string): ReactNode => (
+    <StatusBadge
+      code={key}
+      status={statuses[key] ?? null}
+      field={fields[name] ?? null}
+      size={BADGE[size]}
+      siteUrl={context.siteUrl}
+    />
+  );
+
+  /**
+   * One checklist row: the status glyph as a leading mark before the label, the way a
+   * picker row whose label is a name reads, with the matched runs of the box bold.
+   */
+  const rowValue = (name: string, key: string, label: string): ReactNode => (
+    <>
+      {isStatus(name) ? (
+        <StatusGlyph status={statuses[key] ?? null} siteUrl={context.siteUrl} fallback className={LEAF_GLYPH[size]} />
+      ) : null}
+      <MatchText text={label} query={facetQuery} className="truncate" />
+    </>
+  );
+
+  /**
+   * A pill's value: the values it has room to name, then `+n`. It is capped and
+   * truncated with the whole list in its `title`, so a facet with everything ticked
+   * never stretches the bar.
+   */
+  const pillValues = (name: string, shown: ReturnType<typeof conditionValues> | null): ReactNode => {
+    if (!shown || shown.shown.length === 0) return null;
+    return (
+      <span
+        data-slot="filter-pill-values"
+        className={cn('flex min-w-0 items-center gap-1.5 truncate', VALUE_WIDTH)}
+        title={shown.title}
+      >
+        {isStatus(name) && shown.values.length > 0 ? (
+          shown.values.map((scalar) => (
+            <span key={keyOf(scalar)} className="flex min-w-0 items-center truncate">
+              {valueBadge(name, keyOf(scalar))}
+            </span>
+          ))
+        ) : (
+          <span className="min-w-0 truncate">{shown.text}</span>
+        )}
+        {shown.overflow > 0 ? (
+          <span data-slot="filter-pill-overflow" className="text-muted-foreground shrink-0 tabular-nums">
+            +{shown.overflow}
+          </span>
+        ) : null}
+      </span>
+    );
   };
+
+  /**
+   * The node this facet contributes. A field the API evaluates no `in` on holds an
+   * `or` of one-value conditions, which reads back as one checklist.
+   */
+  const facetOf = (name: string): FacetCondition | null => findFacet(value, name, fields[name]) ?? null;
+
+  const selectedOf = (name: string): Scalar[] => facetOf(name)?.values ?? [];
 
   const keyOf = (v: Scalar): string => (v !== null && typeof v === 'object' ? `${v.type}:${v.id}` : String(v));
 
   /** The list operator the checklist writes: the one the pill already holds, else `in`. */
   const listOperator = (name: string): Operator => {
-    const found = conditionOf(name);
-    return found && Array.isArray(found.value) ? found.operator : 'in';
+    const found = facetOf(name);
+    return found?.checklist ? found.operator : facetShape(fields[name]).any;
   };
 
   function toggle(name: string, option: FacetValue) {
@@ -181,7 +276,7 @@ export function FilterBar({
     const next = selected.some((v) => keyOf(v) === option.key)
       ? selected.filter((v) => keyOf(v) !== option.key)
       : [...selected, option.value];
-    onChange?.(setFacet(value, name, next, listOperator(name)));
+    onChange?.(setFacet(value, name, next, listOperator(name), fields[name]));
   }
 
   const facetList = (name: string): ReactNode => {
@@ -220,7 +315,9 @@ export function FilterBar({
                       tabIndex={-1}
                       aria-hidden="true"
                     />
-                    <span className="min-w-0 flex-1 truncate">{option.label}</span>
+                    <span className="flex min-w-0 flex-1 items-center gap-1.5 truncate" title={option.label}>
+                      {rowValue(name, option.key, option.label)}
+                    </span>
                     <span className="text-muted-foreground text-xs tabular-nums" data-slot="facet-count">
                       {option.count}
                     </span>
@@ -237,7 +334,7 @@ export function FilterBar({
               size={CONTROL_BUTTON[size]}
               className="w-full"
               data-slot="filter-pill-clear"
-              onClick={() => onChange?.(setFacet(value, name, []))}
+              onClick={() => onChange?.(setFacet(value, name, [], 'in', fields[name]))}
             >
               Clear
             </Button>
@@ -247,7 +344,7 @@ export function FilterBar({
     );
   };
 
-  const activeCount = facets.filter((name) => Boolean(conditionOf(name))).length;
+  const activeCount = facets.filter((name) => Boolean(facetOf(name))).length;
 
   return (
     <div
@@ -258,9 +355,9 @@ export function FilterBar({
     >
       {facets.map((name) => {
         const field = fields[name];
-        const found = conditionOf(name);
-        const parts = found ? conditionParts(found, field) : null;
-        const selected = selectedOf(name);
+        const found = facetOf(name);
+        const parts = found ? conditionParts(found.summary, field) : null;
+        const shown = found ? conditionValues(found.summary, field, maxValues) : null;
         const remove = (label: string) => (
           <button
             type="button"
@@ -273,7 +370,7 @@ export function FilterBar({
             <XIcon aria-hidden="true" className={CHIP_CROSS[CROSS[size]]} />
           </button>
         );
-        if (!found || !parts || conditionArity(found, field?.dataType ?? '') === 'many') {
+        if (!found || !parts || found.checklist) {
           // One popover and one trigger across both looks, so the first tick does not close the list.
           return (
             <Popover key={name}>
@@ -283,7 +380,7 @@ export function FilterBar({
                 data-size={size}
                 data-active={found ? 'true' : undefined}
                 role={found ? 'group' : undefined}
-                aria-label={found ? describeCondition(found, field) : undefined}
+                aria-label={found ? describeCondition(found.summary, field) : undefined}
                 className={cn(
                   'border-border inline-flex max-w-full min-w-0 items-center overflow-hidden rounded-lg border text-sm',
                   CONTROL_HEIGHT[size],
@@ -303,26 +400,21 @@ export function FilterBar({
                   {!found || !parts ? (
                     <>
                       <PlusIcon className={cn('shrink-0', CONTROL_GLYPH[size])} />
-                      <span className="min-w-0 truncate">{field?.displayName ?? name}</span>
+                      <span className="min-w-0 truncate">{labelOf(name)}</span>
                     </>
                   ) : (
                     <>
                       <span data-slot="filter-pill-field" className="shrink-0 font-medium">
-                        {parts.field}
+                        {labelOf(name)}
                       </span>
-                      {found.operator !== 'in' ? <span className="text-muted-foreground shrink-0">{parts.operator}</span> : null}
-                      <span data-slot="filter-pill-values" className="min-w-0 truncate" title={parts.value}>
-                        {parts.value}
-                      </span>
-                      {selected.length > 1 ? (
-                        <Badge variant="secondary" className="shrink-0">
-                          {selected.length}
-                        </Badge>
+                      {found.summary.operator !== 'in' ? (
+                        <span className="text-muted-foreground shrink-0">{parts.operator}</span>
                       ) : null}
+                      {pillValues(name, shown)}
                     </>
                   )}
                 </PopoverTrigger>
-                {found && parts ? remove(parts.field) : null}
+                {found && parts ? remove(labelOf(name)) : null}
               </div>
               {facetList(name)}
             </Popover>
@@ -337,7 +429,7 @@ export function FilterBar({
             data-size={size}
             data-active="true"
             role="group"
-            aria-label={describeCondition(found, field)}
+            aria-label={describeCondition(found.summary, field)}
             className={cn(
               'border-border bg-background inline-flex max-w-full min-w-0 items-center overflow-hidden rounded-lg border text-sm',
               CONTROL_HEIGHT[size],
@@ -345,17 +437,15 @@ export function FilterBar({
             )}
           >
             <span
-              data-slot="filter-pill-values"
               className={cn('inline-flex min-w-0 items-center gap-1.5', CONTROL_HEIGHT[size], CONTROL_PAD[size])}
-              title={parts.value}
             >
               <span data-slot="filter-pill-field" className="shrink-0 font-medium">
-                {parts.field}
+                {labelOf(name)}
               </span>
               <span className="text-muted-foreground shrink-0">{parts.operator}</span>
-              {parts.value ? <span className="min-w-0 truncate">{parts.value}</span> : null}
+              {pillValues(name, shown)}
             </span>
-            {remove(parts.field)}
+            {remove(labelOf(name))}
           </div>
         );
       })}

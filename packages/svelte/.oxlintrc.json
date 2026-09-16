@@ -10,7 +10,7 @@
   },
   "overrides": [
     {
-      "files": ["src/lib/registry/components/*.ts"],
+      "files": ["src/lib/registry/components/*.ts", "src/lib/registry/components/*.svelte"],
       "rules": {
         "shadcn/no-restyle": ["warn", { "allow": ["layout"] }],
         "shadcn/no-raw-colors": ["warn", { "scanAllStrings": true }],
@@ -18,7 +18,7 @@
           "warn",
           {
             "scanAllStrings": true,
-            "allow": ["pr-[5px]", "pr-[7px]", "pr-[9px]", "rounded-[inherit]"]
+            "allow": ["pr-[5px]", "pr-[7px]", "rounded-[inherit]"]
           }
         ],
         "shadcn/no-inline-styles": "warn",

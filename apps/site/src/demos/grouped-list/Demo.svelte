@@ -1,6 +1,21 @@
 <script lang="ts">
-	import type { CollectionColumn, EntityRef, EntityRow, StatusRecord } from '@sg-widgets/core';
-	import { cellValue, condition, createEntitySource, resolveColumns } from '@sg-widgets/core';
+	import type {
+		CollapseState,
+		CollectionColumn,
+		EntityRef,
+		EntityRow,
+		SortSpec,
+		StatusRecord
+	} from '@sg-widgets/core';
+	import {
+		cellValue,
+		collapseAll,
+		condition,
+		createEntitySource,
+		displayNameOf,
+		expandAll,
+		resolveColumns
+	} from '@sg-widgets/core';
 	import GroupedList from '$lib/registry/components/grouped-list.svelte';
 	import StatusBadge from '$lib/registry/components/status-badge.svelte';
 	import { createDemoClient, createDemoContext } from '../_shared/client';
@@ -34,6 +49,21 @@
 		pageSize: 25
 	});
 
+	/**
+	 * Versions under the Shot or Asset each is of. The record is `entity`, which the
+	 * list does not sort on: the caller's own sort on `code` is what puts the versions
+	 * of one record together.
+	 */
+	const recordSource = createEntitySource({
+		client: context.client,
+		entityType: 'Version',
+		fields: ['code', 'sg_status_list', 'entity', 'description'],
+		filters: context.live ? condition('project', 'is', { type: 'Project', id: context.projectId }) : null,
+		sort: [{ path: 'code', descending: false }],
+		mode: 'infinite',
+		pageSize: 25
+	});
+
 	/** A client whose next read can be armed to fail, so the error line is on the page. */
 	const failing = createDemoClient();
 	const failedSource = createEntitySource({
@@ -54,6 +84,10 @@
 
 	let statusTable = $state<Record<string, StatusRecord>>({});
 	let compact = $state(false);
+	let pagedCollapsed = $state<CollapseState>(expandAll());
+	let collapsed = $state<CollapseState>(expandAll());
+	/** The derived list's sort, as the source holds it. Unset until the source says. */
+	let derivedSort = $state<SortSpec[] | undefined>();
 	let selected = $state<EntityRef[]>([]);
 
 	async function load(): Promise<{
@@ -85,28 +119,65 @@
 	<p class="text-muted-foreground text-sm">Loading the site…</p>
 {:then { columns, statuses }}
 	<div class="flex w-full min-w-0 flex-col gap-3">
-		<div class="flex flex-wrap items-center gap-2">
-			<button type="button" class={toggle} aria-pressed={compact} onclick={() => (compact = !compact)}>
-				Compact
-			</button>
-			<span class="text-muted-foreground text-xs tabular-nums" data-testid="selection-count">
-				{selected.length} selected
-			</span>
-		</div>
-		<GroupedList
-			{source}
-			{context}
-			paging="pages"
-			groupBy={columns[0]!}
-			labelField="content"
-			subLabelField={columns[1]!}
-			secondaryField={columns[2]!}
-			{statuses}
-			{leading}
-			selectable
-			density={compact ? 'compact' : 'default'}
-			onSelectionChange={(rows) => (selected = rows)}
-		/>
+		<section class="flex w-full min-w-0 flex-col gap-3" data-demo-case="pages">
+			<div class="flex flex-wrap items-center gap-2">
+				<button type="button" class={toggle} aria-pressed={compact} onclick={() => (compact = !compact)}>
+					Compact
+				</button>
+				<button type="button" class={toggle} data-demo="collapse-all" onclick={() => (pagedCollapsed = collapseAll())}>
+					Collapse all
+				</button>
+				<button type="button" class={toggle} data-demo="expand-all" onclick={() => (pagedCollapsed = expandAll())}>
+					Expand all
+				</button>
+				<span class="text-muted-foreground text-xs tabular-nums" data-testid="selection-count">
+					{selected.length} selected
+				</span>
+			</div>
+			<GroupedList
+				{source}
+				{context}
+				paging="pages"
+				groupBy={columns[0]!}
+				labelField="content"
+				subLabelField={columns[1]!}
+				secondaryField={columns[2]!}
+				{statuses}
+				{leading}
+				selectable
+				density={compact ? 'compact' : 'default'}
+				bind:collapsed={pagedCollapsed}
+				onSelectionChange={(rows) => (selected = rows)}
+			/>
+		</section>
+
+		<section class="flex w-full min-w-0 flex-col gap-3" data-demo-case="derived">
+			<h4 class="text-muted-foreground text-xs font-medium">Grouped on a derived key</h4>
+			<div class="flex flex-wrap items-center gap-2">
+				<button type="button" class={toggle} data-demo="collapse-all" onclick={() => (collapsed = collapseAll())}>
+					Collapse all
+				</button>
+				<button type="button" class={toggle} data-demo="expand-all" onclick={() => (collapsed = expandAll())}>
+					Expand all
+				</button>
+				<span class="text-muted-foreground text-xs" data-testid="derived-sort">
+					Sorted on {(derivedSort ?? []).map((key) => key.path).join(', ') || 'nothing'}
+				</span>
+			</div>
+			<GroupedList
+				source={recordSource}
+				{context}
+				paging="more"
+				groupKey={(row) => cellValue(row, 'entity')}
+				groupLabel={(record) => displayNameOf(record as Record<string, unknown>)}
+				labelField="code"
+				subLabelField="description"
+				{statuses}
+				bind:collapsed
+				bind:sort={derivedSort}
+				maxHeight="16rem"
+			/>
+		</section>
 
 		<section class="flex w-full min-w-0 flex-col gap-3" data-demo-case="states">
 			<h4 class="text-muted-foreground text-xs font-medium">Empty and error</h4>

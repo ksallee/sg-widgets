@@ -4,7 +4,7 @@
 	export type SortPickerSize = 'sm' | 'md' | 'lg';
 
 	/** Controls follow the input ladder of `docs/design-rules.md`. */
-	const BOX: Record<SortPickerSize, string> = { sm: 'h-8 px-2', md: 'h-9 px-3', lg: 'h-10 px-3' };
+	const BOX: Record<SortPickerSize, string> = { sm: 'h-7 px-2', md: 'h-8 px-3', lg: 'h-9 px-3' };
 	const GLYPH: Record<SortPickerSize, string> = { sm: 'size-4', md: 'size-4', lg: 'size-5' };
 	/** The count beside the label is a chip, so it takes the step under the control. */
 	const COUNT: Record<SortPickerSize, ChipSize> = { sm: 'xs', md: 'sm', lg: 'md' };

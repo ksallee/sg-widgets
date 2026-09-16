@@ -30,6 +30,25 @@ describe('matchRuns', () => {
     ]);
   });
 
+  it('takes a regex metacharacter as the character it is', () => {
+    expect(matchRuns('v001.exr (final)', '. (')).toEqual([
+      { text: 'v001', match: false },
+      { text: '.', match: true },
+      { text: 'exr ', match: false },
+      { text: '(', match: true },
+      { text: 'final)', match: false },
+    ]);
+    expect(matchRuns('plain', '.')).toEqual([{ text: 'plain', match: false }]);
+  });
+
+  it('ends on a matched run when the word closes the label', () => {
+    expect(matchRuns('Published', 'ed')).toEqual([
+      { text: 'Publish', match: false },
+      { text: 'ed', match: true },
+    ]);
+    expect(matchRuns('ed', 'ed')).toEqual([{ text: 'ed', match: true }]);
+  });
+
   it('merges overlapping words into one run', () => {
     expect(matchRuns('abcdef', 'abc bcd')).toEqual([
       { text: 'abcd', match: true },

@@ -13,6 +13,9 @@
 import type {
   EntityRow,
   EntityTypeInfo,
+  EventLogOptions,
+  EventLogResult,
+  FollowingOptions,
   HierarchyNode,
   HierarchyPath,
   SearchOptions,
@@ -22,14 +25,18 @@ import type {
   SummarizeResult,
   SummaryGroup,
   TextSearchRow,
+  ThreadAuthor,
+  ThreadRow,
+  UploadFile,
+  UploadResult,
 } from './client.js';
-import { SgApiError } from './client.js';
+import { EVENT_LOG_FIELDS, eventLogFilters, normalizeEventLogEntry, pluralPath, SgApiError } from './client.js';
 import type { EntityRef, TextSearchFilter, WireCondition, WireGroup } from './filter.js';
 import { toFilterArray } from './filter.js';
 import type { Operator, TimeUnit } from './field-types.js';
 import { isFilterable, isLinkType, isNumericType, NEGATING_OPERATORS, operatorsFor, TIME_UNITS } from './field-types.js';
 import type { FieldSchema } from './schema.js';
-import { displayNameOf } from './schema.js';
+import { displayNameOf, fieldSchemaOverride } from './schema.js';
 import type { StatusIcon, StatusRecord } from './status.js';
 
 /* -------------------------------------------------------------------------- */
@@ -82,6 +89,13 @@ interface FieldSpec {
   displayName: string;
   dataType: string;
   editable?: boolean;
+  /**
+   * Flagged `editable: false` and still taken by a create: `created_at` and
+   * `updated_at` are stored as sent on a `POST` and 400 on a `PUT` with
+   * `is editable on create only` (070_authored_timestamps), as `this_file` does
+   * (entity_types/Attachment).
+   */
+  createOnly?: boolean;
   mandatory?: boolean;
   unique?: boolean;
   validTypes?: string[];
@@ -107,6 +121,11 @@ const SHOT_STATUSES = ['wtg', 'ip', 'rev', 'apr', 'fin', 'hld', 'omt'];
 const SEQUENCE_STATUSES = ['wtg', 'ip', 'fin'];
 /** entity_types/HumanUser: two codes, `act` the default, and `act` is a condition on impersonation. */
 const USER_STATUSES = ['act', 'dis'];
+/** A Note is created `opn`; the open set is what the `open_notes_count` rollups count (entity_types/Note). */
+const NOTE_STATUSES = ['opn', 'clsd'];
+/** Attachment's own list on the probed site, `na` the default (entity_types/Attachment). */
+const ATTACHMENT_STATUSES = ['fin', 'na'];
+const NOTE_TYPES = ['Client', 'Internal', 'Direction'];
 
 /** `display_values` is per site, not per type; a missing key falls back to the raw code (009_status_lists). */
 const STATUS_DISPLAY: Record<string, string> = {
@@ -114,7 +133,7 @@ const STATUS_DISPLAY: Record<string, string> = {
   fin: 'Final', ip: 'In Progress', clsd: 'Closed', cmpt: 'Complete', cfrm: 'Confirmed',
   pndad: 'Pending Art Director', pndl: 'Pending Lead', pndvs: 'Pending VFX Supervisor',
   part: 'partial', pass: 'pass', pndng: 'Pending', wtg: 'Waiting to Start', hld: 'On Hold',
-  omt: 'Omitted', dis: 'Discarded', ready: 'Ready to Start', act: 'Active',
+  omt: 'Omitted', dis: 'Discarded', ready: 'Ready to Start', act: 'Active', opn: 'Open',
 };
 
 /** `bg_color` is comma-separated decimal RGB, never hex (010_status_icons). */
@@ -124,7 +143,7 @@ const STATUS_BG: Record<string, string> = {
   cmpt: '25,118,27', cfrm: '52,152,219', clsd: '90,90,90', hld: '224,80,80',
   omt: '128,128,128', dis: '160,160,160', part: '200,150,50', pass: '100,180,100',
   pndad: '236,151,31', pndl: '236,151,31', pndvs: '236,151,31', pndng: '236,151,31',
-  custom: '255,105,180', act: '25,118,27',
+  custom: '255,105,180', act: '25,118,27', opn: '236,151,31',
 };
 
 /** A 1x1 png, standing in for the one `display_type: image` icon the probed site had. */
@@ -142,19 +161,20 @@ const PROJECT_STATUSES = ['Active', 'Bidding', 'Complete', 'On Hold'];
 const AUDIT: Record<string, FieldSpec> = {
   id: { displayName: 'Id', dataType: 'number', editable: false },
   cached_display_name: { displayName: 'Display Name', dataType: 'text' },
-  created_at: { displayName: 'Date Created', dataType: 'date_time', editable: false },
-  updated_at: { displayName: 'Date Updated', dataType: 'date_time', editable: false },
+  created_at: { displayName: 'Date Created', dataType: 'date_time', editable: false, createOnly: true },
+  updated_at: { displayName: 'Date Updated', dataType: 'date_time', editable: false, createOnly: true },
   created_by: { displayName: 'Created by', dataType: 'entity', editable: false, validTypes: ['HumanUser', 'ApiUser'] },
   updated_by: { displayName: 'Updated by', dataType: 'entity', editable: false, validTypes: ['HumanUser', 'ApiUser'] },
 };
 
-function statusSpec(validValues: string[], defaultValue: string): FieldSpec {
+function statusSpec(validValues: string[], defaultValue: string, mandatory = false): FieldSpec {
   return {
     displayName: 'Status',
     dataType: 'status_list',
     validValues,
     displayValues: Object.fromEntries(validValues.map((c) => [c, STATUS_DISPLAY[c] ?? c])),
     defaultValue,
+    mandatory,
   };
 }
 
@@ -280,6 +300,78 @@ const SPECS: Record<string, Record<string, FieldSpec>> = {
     task_reviewers: { displayName: 'Reviewers', dataType: 'multi_entity', validTypes: ['Group', 'HumanUser'] },
     upstream_tasks: { displayName: 'Upstream Tasks', dataType: 'multi_entity', validTypes: ['Task'] },
   },
+  Note: {
+    ...AUDIT,
+    // `subject` is the title and `content` the body, and `cached_display_name` is
+    // `"<subject> - <content>"` when both are set (entity_types/Note).
+    subject: { displayName: 'Subject', dataType: 'text', mandatory: true },
+    content: { displayName: 'Body', dataType: 'text' },
+    // A site is free to flag a status field mandatory, and Note's commonly is. The probed
+    // site's Version status reads `mandatory: false` (probe 009); the flag is per site and
+    // per field, so a widget reads it rather than assuming either way.
+    sg_status_list: statusSpec(NOTE_STATUSES, 'opn', true),
+    sg_note_type: { displayName: 'Note Type', dataType: 'list', validValues: NOTE_TYPES },
+    // The codes `unread` and `read`, never a boolean (067_notes_in_the_stream).
+    read_by_current_user: { displayName: 'Read by Current User', dataType: 'list', validValues: ['unread', 'read'] },
+    publish_status: { displayName: 'Publish Status', dataType: 'text' },
+    project: { displayName: 'Project', dataType: 'entity', validTypes: ['Project'] },
+    user: { displayName: 'Author', dataType: 'entity', validTypes: ['HumanUser', 'ApiUser'] },
+    // Site configuration on a real site, 36 types on the probed one, and not enforced.
+    note_links: { displayName: 'Link', dataType: 'multi_entity', validTypes: ['Shot', 'Asset', 'Sequence', 'Version', 'Playlist'] },
+    // A Note about a Task goes here: `Task` is absent from `note_links` (entity_types/Note).
+    tasks: { displayName: 'Tasks', dataType: 'multi_entity', validTypes: ['Task'] },
+    replies: { displayName: 'Replies', dataType: 'multi_entity', validTypes: ['Reply'] },
+    attachments: { displayName: 'Attachments', dataType: 'multi_entity', validTypes: ['Attachment'] },
+    addressings_to: { displayName: 'To', dataType: 'multi_entity', validTypes: ['Group', 'HumanUser'] },
+    addressings_cc: { displayName: 'Cc', dataType: 'multi_entity', validTypes: ['Group', 'HumanUser'] },
+  },
+  // Site-wide: seven fields and no `project`, so a filter on one is 400
+  // `API read() Reply.project doesn't exist.` (entity_types/Reply). `updated_at` is
+  // not among the seven: a create naming it is 400 `doesn't exist` (070_authored_timestamps).
+  Reply: {
+    id: AUDIT['id'] as FieldSpec,
+    cached_display_name: AUDIT['cached_display_name'] as FieldSpec,
+    created_at: AUDIT['created_at'] as FieldSpec,
+    content: { displayName: 'Reply Text', dataType: 'text', mandatory: true },
+    // Nearly every type on the site, which makes it a generic link and not a Note link.
+    entity: { displayName: 'Link', dataType: 'entity', validTypes: ['Note', 'Version', 'Shot', 'Asset', 'Task'] },
+    user: { displayName: 'Author', dataType: 'entity', validTypes: ['HumanUser', 'ApiUser', 'ClientUser'] },
+    publish_status: { displayName: 'Publish Status', dataType: 'text' },
+  },
+  Attachment: {
+    ...AUDIT,
+    // There is no `name` field on the type; `display_name` is what a person reads.
+    display_name: { displayName: 'File Display Name', dataType: 'text' },
+    description: { displayName: 'Description', dataType: 'text' },
+    original_fname: { displayName: 'Original Filename', dataType: 'text' },
+    // The three read-only ones are refused on create and on update alike (entity_types/Attachment).
+    filename: { displayName: 'File Name', dataType: 'text', editable: false },
+    file_extension: { displayName: 'File Type', dataType: 'text', editable: false },
+    file_size: { displayName: 'File Size', dataType: 'number', editable: false },
+    // A `{url, name}` hash on the create is the one body that makes a usable row; a
+    // second write is `is editable on create only` (entity_types/Attachment).
+    this_file: { displayName: 'Link', dataType: 'url', editable: false, createOnly: true },
+    processing_status: { displayName: 'Processing Status', dataType: 'list', editable: false, validValues: ['thumbnail_pending', 'unverified', 'clean', 'infected'] },
+    sg_status_list: statusSpec(ATTACHMENT_STATUSES, 'na'),
+    project: { displayName: 'Project', dataType: 'entity', validTypes: ['Project'] },
+    attachment_links: { displayName: 'Attachment Links', dataType: 'multi_entity', validTypes: ['Note', 'Version', 'Shot', 'Asset', 'Sequence', 'Delivery'] },
+  },
+  // Every field is server-written, `meta` says what changed, and `audit_trail` is
+  // never returned even when it is named (025_event_log).
+  EventLogEntry: {
+    id: AUDIT['id'] as FieldSpec,
+    cached_display_name: AUDIT['cached_display_name'] as FieldSpec,
+    created_at: AUDIT['created_at'] as FieldSpec,
+    event_type: { displayName: 'Event Type', dataType: 'text', editable: false },
+    attribute_name: { displayName: 'Attribute Name', dataType: 'text', editable: false },
+    description: { displayName: 'Description', dataType: 'text', editable: false },
+    // `serializable`: readable, and 400 `cannot be used in a filter` on every operator.
+    meta: { displayName: 'Meta', dataType: 'serializable', editable: false },
+    session_uuid: { displayName: 'Session UUID', dataType: 'uuid', editable: false },
+    entity: { displayName: 'Entity', dataType: 'entity', editable: false, validTypes: ['Shot', 'Asset', 'Sequence', 'Version', 'Task', 'Note', 'Reply', 'Project'] },
+    project: { displayName: 'Project', dataType: 'entity', editable: false, validTypes: ['Project'] },
+    user: { displayName: 'User', dataType: 'entity', editable: false, validTypes: ['HumanUser', 'ApiUser'] },
+  },
   HumanUser: {
     ...AUDIT,
     // `login` is the only unique field on the type, and it is what `sudo_as_login` matches.
@@ -336,10 +428,23 @@ const SPECS: Record<string, Record<string, FieldSpec>> = {
   },
 };
 
+/**
+ * The identity field per type. It is flagged `mandatory` and is optional on a
+ * create; the server fills it with `New <display name> <id>` on the types below,
+ * and a Note is left titleless (012_create_version, entity_types/Note).
+ */
+const IDENTITY_FIELD: Record<string, string> = {
+  Project: 'name', Sequence: 'code', Shot: 'code', Asset: 'code', Version: 'code',
+  Task: 'content', Note: 'subject', Reply: 'content', Attachment: 'display_name',
+};
+
+const GENERATED_IDENTITY: ReadonlySet<string> = new Set(['Sequence', 'Shot', 'Asset', 'Version', 'Task']);
+
 const DISPLAY_NAMES: Record<string, string> = {
   Project: 'Project', Sequence: 'Sequence', Shot: 'Shot', Asset: 'Asset', Version: 'Version',
   Task: 'Task', HumanUser: 'Person', ApiUser: 'Script', Step: 'Pipeline Step',
-  Status: 'Status', Icon: 'Icon',
+  Status: 'Status', Icon: 'Icon', Note: 'Note', Reply: 'Reply', Attachment: 'Attachment',
+  EventLogEntry: 'Event Log Entry',
 };
 
 /**
@@ -400,6 +505,9 @@ function thumb(slug: string, w = 96, h = 54): string {
   return `https://picsum.photos/seed/${slug}/${w}/${h}`;
 }
 
+/** The web root of the mock site, which is where a transcoding placeholder lives. */
+const MOCK_SITE_URL = 'https://mock.example.studio';
+
 /** Illustrated portraits from DiceBear's CC0 "lorelei" set, one per login, so no real face appears. */
 function portrait(login: string): string {
   return `https://api.dicebear.com/9.x/lorelei/svg?seed=${encodeURIComponent(login)}&backgroundType=gradientLinear&backgroundColor=d1d4f9,c0aede,ffdfbf,b6e3f4`;
@@ -413,6 +521,8 @@ interface Fixtures {
   rows: Map<string, Row[]>;
   /** Every row by `Type:id`, for resolving a link's display name and a dotted path. */
   index: Map<string, Row>;
+  /** What each HumanUser follows, by user id. A follow is a link and carries no date. */
+  follows: Map<number, EntityRef[]>;
 }
 
 const STEP_SEEDS = [
@@ -436,6 +546,67 @@ const USER_SEEDS = [
   { first: 'Farid', last: 'Nasser', dept: 'Modelling', status: 'act' },
   { first: 'Grace', last: 'Ono', dept: 'Rigging', status: 'act' },
   { first: 'Hiro', last: 'Tanaka', dept: 'Production', status: 'act' },
+];
+
+/**
+ * The threads. `day` and the minute offsets place every row of a thread on one
+ * timeline, so the Note, its Attachments and its Replies interleave in time order
+ * the way `thread_contents` returns them.
+ */
+const NOTE_SEEDS = [
+  {
+    subject: 'Key light reads flat',
+    content: 'The key reads flat against the plate. Warmer, and a stop down.',
+    day: -6,
+    author: 0,
+    status: 'opn',
+    read: 'unread',
+    noteType: 'Internal',
+    attachments: [
+      { filename: 'key_light_ref.png', minutes: 2 },
+      { filename: 'plate_compare.png', minutes: 60 },
+    ],
+    replies: [
+      { author: 2, minutes: 45, content: 'Warmed it by 300K and dropped the key.' },
+      { author: 0, minutes: 90, content: 'Better. Leave the rim where it is.' },
+    ],
+  },
+  {
+    subject: 'Comp edges on the rotoscope',
+    content: 'The left edge tears on frame 1042.',
+    day: -4,
+    author: 2,
+    status: 'opn',
+    read: 'unread',
+    noteType: 'Client',
+    attachments: [{ filename: 'frame_1042.png', minutes: 5 }],
+    replies: [{ author: 5, minutes: 200, content: 'Repainted the edge and pushed a new version.' }],
+  },
+  {
+    subject: 'Approved for the reel',
+    content: 'Nothing else from me.',
+    day: -3,
+    author: 7,
+    status: 'clsd',
+    read: 'read',
+    noteType: 'Internal',
+    attachments: [],
+    replies: [],
+  },
+  {
+    subject: 'Dust pass is too heavy',
+    content: 'Half the density and keep the drift.',
+    day: -2,
+    author: 3,
+    status: 'opn',
+    read: 'read',
+    noteType: 'Direction',
+    attachments: [],
+    replies: [
+      { author: 5, minutes: 30, content: 'Halved it.' },
+      { author: 3, minutes: 120, content: 'That reads.' },
+    ],
+  },
 ];
 
 const ASSET_SEEDS = [
@@ -531,7 +702,9 @@ function buildFixtures(seed: number, counts: { versions?: number } = {}): Fixtur
   );
 
   /* statuses and icons ----------------------------------------------------- */
-  const allCodes = [...new Set([...VERSION_STATUSES, ...TASK_STATUSES, ...SHOT_STATUSES, ...SEQUENCE_STATUSES, ...USER_STATUSES])];
+  const allCodes = [
+    ...new Set([...VERSION_STATUSES, ...TASK_STATUSES, ...SHOT_STATUSES, ...SEQUENCE_STATUSES, ...USER_STATUSES, ...NOTE_STATUSES, ...ATTACHMENT_STATUSES]),
+  ];
   allCodes.forEach((code, i) => {
     const iconId = 400 + i;
     // Three renderings, exactly as 010_status_icons groups them: 94 image_map, 1 image, 3 html.
@@ -650,7 +823,8 @@ function buildFixtures(seed: number, counts: { versions?: number } = {}): Fixtur
         sg_complexity: Math.floor(rng() * 101),
         sg_lens: 24 + Math.round(rng() * 800) / 10,
         sg_omit: false,
-        image: thumb(code),
+        // One Shot with no picture, so a list of them reaches the type glyph.
+        image: shotId === 865 ? null : thumb(code),
         sg_shot_notes_url: null,
         project: seq.values['project'] as EntityRef,
         sg_sequence: ref(seq),
@@ -773,6 +947,7 @@ function buildFixtures(seed: number, counts: { versions?: number } = {}): Fixtur
   }
 
   /* versions --------------------------------------------------------------- */
+  const versions: Row[] = [];
   let versionId = 17055;
   const versionCount = counts.versions ?? 60;
   for (let i = 0; i < versionCount; i += 1) {
@@ -785,7 +960,7 @@ function buildFixtures(seed: number, counts: { versions?: number } = {}): Fixtur
     const code = `${String(target.values['code'])}_${stepName.toLowerCase().replace(/\s+/g, '')}_v${String(revision).padStart(3, '0')}`;
     const first = 1001;
     const last = first + 40 + Math.floor(rng() * 120);
-    add('Version', versionId, {
+    const version = add('Version', versionId, {
       code,
       cached_display_name: code,
       description: `Review submission for ${String(target.values['code'])}`,
@@ -801,7 +976,8 @@ function buildFixtures(seed: number, counts: { versions?: number } = {}): Fixtur
       sg_path_to_movie: `/mnt/prod/mov/${code}.mov`,
       client_approved: rng() > 0.85,
       client_approved_at: null,
-      image: thumb(code),
+      // Every seventh Version has no picture: 99 of 100 read null on the sample project (field_types/image).
+      image: i % 7 === 3 ? null : thumb(code),
       sg_uploaded_movie: null,
       sg_bar_color: pick(rng, BAR_COLORS),
       project: target.values['project'] as EntityRef,
@@ -814,10 +990,212 @@ function buildFixtures(seed: number, counts: { versions?: number } = {}): Fixtur
       created_by: ref(bot),
       updated_by: ref(bot),
     });
+    versions.push(version);
     versionId += 1;
   }
 
-  return { rows, index };
+  /* notes, replies and attachments ------------------------------------------ */
+  // The link to a Note lives on the Reply, in `Reply.entity`; `Note.replies` is the
+  // reverse view of it (entity_types/Reply). An Attachment links back through
+  // `attachment_links` (entity_types/Attachment).
+  const notes: Row[] = [];
+  /** Each Reply with the day and minute it was written, for the event log below. */
+  const replies: Array<{ row: Row; day: number; minutes: number }> = [];
+  let noteId = 11030;
+  let replyId = 610;
+  let attachmentId = 2626;
+  NOTE_SEEDS.forEach((seed, i) => {
+    // One thread in the second project, so a per-project read has something to cut.
+    const target = versions[i === 3 ? 23 : i * 5] ?? (shots[i] as Row);
+    const project = target.values['project'] as EntityRef;
+    const author = users[seed.author] as Row;
+    const addressed = users[(seed.author + 1) % users.length] as Row;
+    const note = add('Note', noteId, {
+      subject: seed.subject,
+      content: seed.content,
+      // `cached_display_name` is `"<subject> - <content>"` when both are set (entity_types/Note).
+      cached_display_name: `${seed.subject} - ${seed.content}`,
+      sg_status_list: seed.status,
+      sg_note_type: seed.noteType,
+      // The codes `unread` and `read`, never a boolean (067_notes_in_the_stream).
+      read_by_current_user: seed.read,
+      publish_status: 'published',
+      project,
+      user: ref(author),
+      note_links: [ref(target)],
+      tasks: [],
+      replies: [],
+      attachments: [],
+      addressings_to: [ref(addressed)],
+      addressings_cc: [],
+      created_at: isoDateTime(seed.day),
+      updated_at: isoDateTime(seed.day),
+      created_by: ref(author),
+      updated_by: ref(author),
+    });
+    for (const file of seed.attachments) {
+      const attachment = add('Attachment', attachmentId, {
+        display_name: file.filename,
+        cached_display_name: file.filename,
+        description: null,
+        original_fname: file.filename,
+        filename: file.filename,
+        // Neither fills in on an uploaded row; take the size from the bytes you sent
+        // and the extension from the filename (entity_types/Attachment).
+        file_extension: null,
+        file_size: null,
+        this_file: { url: `https://media.example.studio/${file.filename}`, name: file.filename, content_type: 'image/png', link_type: 'upload' },
+        processing_status: null,
+        sg_status_list: 'na',
+        project,
+        attachment_links: [ref(note)],
+        created_at: isoDateTime(seed.day, file.minutes * 60),
+        updated_at: isoDateTime(seed.day, file.minutes * 60),
+        created_by: ref(author),
+        updated_by: ref(author),
+      });
+      (note.values['attachments'] as EntityRef[]).push(ref(attachment));
+      attachmentId += 1;
+    }
+    for (const seeded of seed.replies) {
+      const replyAuthor = users[seeded.author] as Row;
+      const reply = add('Reply', replyId, {
+        content: seeded.content,
+        // Filled from `content` at create time, and it is what `Note.replies` returns as a name.
+        cached_display_name: seeded.content,
+        entity: ref(note),
+        user: ref(replyAuthor),
+        publish_status: 'published',
+        created_at: isoDateTime(seed.day, seeded.minutes * 60),
+        updated_at: isoDateTime(seed.day, seeded.minutes * 60),
+      });
+      (note.values['replies'] as EntityRef[]).push(ref(reply));
+      replies.push({ row: reply, day: seed.day, minutes: seeded.minutes });
+      replyId += 1;
+    }
+    notes.push(note);
+    noteId += 1;
+  });
+
+  /* the event log ----------------------------------------------------------- */
+  const pending: Array<{ day: number; seconds: number; values: Record<string, unknown> }> = [];
+  const event = (day: number, seconds: number, values: Record<string, unknown>): void => {
+    pending.push({ day, seconds, values });
+  };
+  const changed = (row: Row, oldValue: string, day: number, seconds: number, user: Row): void => {
+    const newValue = row.values['sg_status_list'];
+    event(day, seconds, {
+      event_type: `Shotgun_${row.type}_Change`,
+      attribute_name: 'sg_status_list',
+      description: `${displayNameOf(user.values, '')} changed "Status" from "${oldValue}" to "${String(newValue)}" on ${row.type} ${displayNameOf(row.values, '')}`,
+      // `old_value` and `new_value` exist where `meta.type` is `attribute_change` and
+      // nowhere else (025_event_log).
+      meta: {
+        type: 'attribute_change',
+        attribute_name: 'sg_status_list',
+        entity_type: row.type,
+        entity_id: row.id,
+        in_create: false,
+        field_data_type: 'status_list',
+        old_value: oldValue,
+        new_value: newValue,
+        platform_id: null,
+      },
+      entity: ref(row),
+      project: row.values['project'] as EntityRef,
+      user: ref(user),
+    });
+  };
+  const created = (row: Row, day: number, seconds: number, user: Row, extra: Record<string, unknown> = {}): void => {
+    event(day, seconds, {
+      event_type: `Shotgun_${row.type}_New`,
+      attribute_name: null,
+      description: `${displayNameOf(user.values, '')} created ${row.type} ${displayNameOf(row.values, '')}`,
+      meta: { type: 'new_entity', entity_type: row.type, entity_id: row.id, ...extra },
+      entity: ref(row),
+      project: (row.values['project'] as EntityRef | undefined) ?? null,
+      user: ref(user),
+    });
+  };
+  shots.slice(0, 6).forEach((shot, i) => changed(shot, 'wtg', -9 + i, 3600 + i * 137, users[i % users.length] as Row));
+  versions.slice(0, 4).forEach((version, i) => changed(version, 'rev', -5 + i, 7200 + i * 211, activeUsers[i % activeUsers.length] as Row));
+  tasks.slice(0, 3).forEach((task, i) => changed(task, 'wtg', -7 + i, 5400 + i * 97, activeUsers[(i + 1) % activeUsers.length] as Row));
+  notes.forEach((note, i) => {
+    const author = index.get(`HumanUser:${(note.values['user'] as EntityRef).id}`) as Row;
+    created(note, NOTE_SEEDS[i]?.day ?? 0, 30, author);
+  });
+  for (const { row: reply, day, minutes } of replies) {
+    const author = index.get(`HumanUser:${(reply.values['user'] as EntityRef).id}`) as Row;
+    const note = index.get(`Note:${(reply.values['entity'] as EntityRef).id}`) as Row;
+    event(day, minutes * 60, {
+      event_type: 'Shotgun_Reply_New',
+      attribute_name: null,
+      description: `${displayNameOf(author.values, '')} replied to Note ${displayNameOf(note.values, '')}`,
+      // A `new_entity` meta carries the row's id and its content, and no values.
+      meta: { type: 'new_entity', entity_type: 'Reply', entity_id: reply.id, content: reply.values['content'] },
+      entity: ref(reply),
+      project: note.values['project'] as EntityRef,
+      user: ref(author),
+    });
+  }
+  // `entity` goes null when its target is deleted and `meta` remembers, so a deleted
+  // row's history is reachable by `event_type` and `created_at` alone (025_event_log).
+  event(-30, 0, {
+    event_type: 'Shotgun_Shot_Change',
+    attribute_name: 'sg_status_list',
+    description: 'A shot that no longer exists changed "Status" from "ip" to "omt"',
+    meta: {
+      type: 'attribute_change',
+      attribute_name: 'sg_status_list',
+      entity_type: 'Shot',
+      entity_id: 9001,
+      in_create: false,
+      field_data_type: 'status_list',
+      old_value: 'ip',
+      new_value: 'omt',
+      platform_id: null,
+    },
+    entity: null,
+    project: ref(p0),
+    user: ref(bot),
+  });
+  pending.sort((a, b) => a.day * 86_400 + a.seconds - (b.day * 86_400 + b.seconds));
+  // Ids ascend with time, and the head is sparse: blocks are reserved ahead of use and
+  // fill in later, so a cursor on `max(id)` loses what lands in a gap (025_event_log).
+  let eventId = 1_240_000;
+  for (const entry of pending) {
+    add('EventLogEntry', eventId, {
+      cached_display_name: null,
+      session_uuid: `7a1b2c3d-0000-4000-8000-${String(eventId).padStart(12, '0')}`,
+      created_at: isoDateTime(entry.day, entry.seconds),
+      ...entry.values,
+    });
+    eventId += eventId % 7 === 0 ? 3 : 1;
+  }
+
+  /* what each person follows ------------------------------------------------- */
+  // A follow is a type and an id and nothing else: no name, and no date the follow
+  // started (get_entity_human_users_id_following).
+  const follows = new Map<number, EntityRef[]>();
+  const follow = (userRef: EntityRef | null | undefined, row: Row): void => {
+    if (!userRef || userRef.type !== 'HumanUser') return;
+    const list = follows.get(userRef.id) ?? [];
+    if (!list.some((r) => r.type === row.type && r.id === row.id)) list.push(ref(row));
+    follows.set(userRef.id, list);
+  };
+  for (const note of notes) {
+    follow(note.values['user'] as EntityRef, note);
+    for (const to of note.values['addressings_to'] as EntityRef[]) follow(to, note);
+  }
+  for (const { row: reply } of replies) {
+    const note = index.get(`Note:${(reply.values['entity'] as EntityRef).id}`);
+    if (note) follow(reply.values['user'] as EntityRef, note);
+  }
+  for (const task of tasks) {
+    for (const assignee of task.values['task_assignees'] as EntityRef[]) follow(assignee, task);
+  }
+
+  return { rows, index, follows };
 }
 
 /* -------------------------------------------------------------------------- */
@@ -896,7 +1274,8 @@ export class MockClient implements SgClient {
       if (hidden && (s.dataType === 'status_list' || s.dataType === 'list')) {
         field.hiddenValues = hidden[`${entityType}.${name}`] ?? [];
       }
-      out[name] = field;
+      // The same correction a schema read gets, so the mock answers the schema a client sees.
+      out[name] = { ...field, ...fieldSchemaOverride(entityType, name) };
     }
     return out;
   }
@@ -980,11 +1359,13 @@ export class MockClient implements SgClient {
       // `API create() Reply.project doesn't exist.` is the create spelling of this 400
       // (entity_types/Reply); a write to a read-only field is `is read only.` (entity_types/Sequence).
       if (!field) throw new SgApiError(400, null, `API update() ${entityType}.${name} doesn't exist.`);
+      if (field.createOnly) throw new SgApiError(400, null, `API update() ${entityType}.${name} is editable on create only.`);
       if (field.editable === false) throw new SgApiError(400, null, `API update() ${entityType}.${name} is read only.`);
+      this.checkLink('update', entityType, name, field, value);
       // Writing "" to a text field stores null: the two are one value (field_types/text).
       row.values[name] = field.dataType === 'text' && value === '' ? null : value;
     }
-    if (Object.keys(patch).length > 0) row.values['updated_at'] = isoDateTime(0);
+    if (spec['updated_at'] && Object.keys(patch).length > 0) row.values['updated_at'] = isoDateTime(0);
     // A PUT answers the whole record, changed fields and untouched ones alike (024_read_after_write).
     return this.project(row, spec);
   }
@@ -1306,6 +1687,289 @@ export class MockClient implements SgClient {
     });
   }
 
+  /**
+   * Create one row and answer it.
+   *
+   * `project` is the whole contract on a project-scoped type, and the schema's
+   * `mandatory` flags are not it: the identity field is optional and the server
+   * fills it, except on a Note, which stays titleless (012_create_version,
+   * entity_types/Note). Nothing is unique, so two identical creates make two rows.
+   */
+  async create(entityType: string, body: Record<string, unknown>): Promise<EntityRow> {
+    await this.gate();
+    const spec = this.schemaOf(entityType);
+    // `{}` and the identity field alone both answer this, with the body echoed.
+    if (spec['project'] && body['project'] === undefined) {
+      throw new SgApiError(400, null, `API create() missing 'project' attribute: ${JSON.stringify(body)}`);
+    }
+    const identity = IDENTITY_FIELD[entityType];
+    for (const [name, value] of Object.entries(body)) {
+      const field = spec[name];
+      if (!field) throw new SgApiError(400, null, `API create() ${entityType}.${name} doesn't exist.`);
+      if (field.editable === false && !field.createOnly) throw new SgApiError(400, null, `API create() ${entityType}.${name} is read only.`);
+      this.checkLink('create', entityType, name, field, value);
+      // Omitting the identity field and sending an empty one are different (entity_types/Shot).
+      if (name === identity && value === '') {
+        throw new SgApiError(400, null, `Create failed for [${entityType}]: Cannot set identifier field to empty. (${entityType})`);
+      }
+    }
+    const id = this.nextId(entityType);
+    const values: Record<string, unknown> = {};
+    for (const [name, field] of Object.entries(spec)) {
+      // `default_value` applies when the key is omitted, so a status is never unset.
+      values[name] = field.dataType === 'multi_entity' ? [] : (field.defaultValue ?? null);
+    }
+    // `user` and `created_by` hold the authenticating user (entity_types/Note).
+    const author = this.fixtures.rows.get('ApiUser')?.[0];
+    const authored = author ? ref(author) : null;
+    if (spec['created_by']) values['created_by'] = authored;
+    if (spec['updated_by']) values['updated_by'] = authored;
+    if (spec['user']) values['user'] = authored;
+    // The 201 echoes the server's defaults: a fresh Note is `unread` and `published`
+    // (entity_types/Note), and so is a Reply (entity_types/Reply).
+    if (spec['read_by_current_user']) values['read_by_current_user'] = 'unread';
+    if (spec['publish_status']) values['publish_status'] = 'published';
+    values['created_at'] = isoDateTime(0);
+    if (spec['updated_at']) values['updated_at'] = isoDateTime(0);
+    // An authored `created_at` or `updated_at` in the body is stored as sent (070_authored_timestamps).
+    Object.assign(values, body, { id });
+    if (identity && values[identity] === null && GENERATED_IDENTITY.has(entityType)) {
+      values[identity] = `New ${DISPLAY_NAMES[entityType] ?? entityType} ${id}`;
+    }
+    values['cached_display_name'] =
+      entityType === 'Note'
+        ? [values['subject'], values['content']].filter(Boolean).join(' - ')
+        : displayNameOf({ ...values, cached_display_name: null }, '');
+    const row: Row = { type: entityType, id, values };
+    const rows = this.fixtures.rows.get(entityType);
+    if (rows) rows.push(row);
+    else this.fixtures.rows.set(entityType, [row]);
+    this.fixtures.index.set(`${entityType}:${id}`, row);
+    this.linkBack(row);
+    return this.project(row, spec);
+  }
+
+  /**
+   * Put a file on a row, as the three-call handshake leaves the site.
+   *
+   * The field in the path picks the kind: `image` a Thumbnail, another field an
+   * Attachment on it, no field a generic Attachment on `attachment_links`
+   * (recipes/001). The mock moves no bytes, so there is no `ETag` to give back.
+   */
+  async upload(entityType: string, id: number, file: UploadFile): Promise<UploadResult> {
+    await this.gate();
+    const spec = this.schemaOf(entityType);
+    const target = this.fixtures.index.get(`${entityType}:${id}`);
+    if (!target) throw new SgApiError(404, null, `Entity of type [${entityType}] with id=${id} does not exist.`);
+    // `filename` is a required query parameter on the ticket call.
+    if (!file.filename) throw new SgApiError(400, { filename: ['filename is missing'] }, 'Request Parameters invalid.');
+    // The 404 for a field the type does not have is worded as a missing field.
+    if (file.field !== undefined && !spec[file.field]) {
+      throw new SgApiError(404, null, `Field '${entityType}.${file.field}' does not exist.`);
+    }
+    const attachmentId = this.nextId('Attachment');
+    const author = this.fixtures.rows.get('ApiUser')?.[0];
+    const attachment: Row = {
+      type: 'Attachment',
+      id: attachmentId,
+      values: {
+        id: attachmentId,
+        display_name: file.filename,
+        cached_display_name: file.filename,
+        description: null,
+        original_fname: file.filename,
+        filename: file.filename,
+        // Neither fills in, then or later (entity_types/Attachment).
+        file_extension: null,
+        file_size: null,
+        this_file: { url: `https://media.example.studio/${file.filename}`, name: file.filename, content_type: 'application/octet-stream', link_type: 'upload' },
+        // The token the field answers straight after an upload, which is not one of the
+        // four its own `valid_values` declares (entity_types/Attachment).
+        processing_status: 'thumbnail_pending_us',
+        sg_status_list: 'na',
+        project: (target.values['project'] as EntityRef | undefined) ?? null,
+        attachment_links: [{ type: entityType, id }],
+        created_at: isoDateTime(0),
+        updated_at: isoDateTime(0),
+        created_by: author ? ref(author) : null,
+        updated_by: author ? ref(author) : null,
+      },
+    };
+    const attachments = this.fixtures.rows.get('Attachment');
+    if (attachments) attachments.push(attachment);
+    else this.fixtures.rows.set('Attachment', [attachment]);
+    this.fixtures.index.set(`Attachment:${attachmentId}`, attachment);
+
+    const linkField = file.field ?? (spec['attachments'] ? 'attachments' : undefined);
+    const field = linkField === undefined ? undefined : spec[linkField];
+    if (linkField !== undefined && field) {
+      if (field.dataType === 'multi_entity') (target.values[linkField] as EntityRef[]).push(ref(attachment));
+      else if (linkField === 'image') {
+        // A media field is not readable yet: it answers an absolute placeholder on the
+        // site root under `/images/status/transient/` until the transcode lands
+        // (013_upload_media, field_types/image).
+        target.values[linkField] = `${MOCK_SITE_URL}/images/status/transient/thumbnail_pending.png`;
+      } else target.values[linkField] = String((attachment.values['this_file'] as { url: string }).url);
+    }
+    const uploadType = file.field === 'image' ? 'Thumbnail' : 'Attachment';
+    return {
+      uploadType,
+      uploadInfo: {
+        timestamp: isoDateTime(0),
+        upload_type: uploadType,
+        upload_id: null,
+        storage_service: 's3',
+        original_filename: file.filename,
+        multipart_upload: false,
+      },
+      // No bytes were moved, so there is no md5 receipt.
+      etag: null,
+    };
+  }
+
+  /**
+   * An entity link is a `{type, id}` hash. A bare id is refused naming the class it
+   * got (entity_types/Reply, field_types/entity) and a hash with no `type` naming the
+   * missing key (field_types/entity).
+   */
+  private checkLink(verb: 'create' | 'update', entityType: string, name: string, field: FieldSpec, value: unknown): void {
+    if (field.dataType !== 'entity' || value === null || value === undefined) return;
+    if (Number.isInteger(value) || typeof value === 'string') {
+      const got = typeof value === 'number' ? `Integer: ${value}` : `String: ${JSON.stringify(value)}`;
+      throw new SgApiError(
+        400,
+        null,
+        `API ${verb}() ${entityType}.${name} expected [Hash, ActiveSupport::HashWithIndifferentAccess, ActionDispatch::Http::Parameters, ActionDispatch::Http::ParamsHashWithIndifferentAccess, NilClass] data type(s) but got ${got}`,
+      );
+    }
+    if (typeof value === 'object' && !Array.isArray(value) && typeof (value as { type?: unknown }).type !== 'string') {
+      throw new SgApiError(400, null, `API ${verb}() invalid/missing entity hash string 'type': ${JSON.stringify(value)}`);
+    }
+  }
+
+  /** The next free id of a type, which is what a create takes. */
+  private nextId(entityType: string): number {
+    return (this.fixtures.rows.get(entityType) ?? []).reduce((max, row) => Math.max(max, row.id), 0) + 1;
+  }
+
+  /** The reverse view of a link the server fills in: a Reply lands in `Note.replies`. */
+  private linkBack(row: Row): void {
+    const push = (owner: EntityRef | null | undefined, field: string): void => {
+      if (!owner) return;
+      const target = this.fixtures.index.get(`${owner.type}:${owner.id}`);
+      const list = target?.values[field];
+      if (Array.isArray(list)) (list as EntityRef[]).push(ref(row));
+    };
+    if (row.type === 'Reply') push(row.values['entity'] as EntityRef | null, 'replies');
+    if (row.type === 'Attachment') {
+      for (const link of (row.values['attachment_links'] as EntityRef[] | undefined) ?? []) push(link, 'attachments');
+    }
+  }
+
+  /**
+   * A Note, its Attachments and its Replies in one list in time order.
+   *
+   * The author key follows the row type, `created_by` on a Note and an Attachment
+   * and `user` on a Reply, whose hash carries an avatar the other two do not, and
+   * so does what `entityFields` can widen: the Reply entry is accepted and changes
+   * nothing (get_entity_notes_id_thread_contents).
+   */
+  async threadContents(noteId: number, entityFields?: Record<string, string[]>): Promise<ThreadRow[]> {
+    await this.gate();
+    const note = this.fixtures.index.get(`Note:${noteId}`);
+    // The 404 names the Note. On any other type it is worded as a missing field,
+    // `Field 'Version.thread_contents' does not exist.`
+    if (!note) throw new SgApiError(404, null, `Note: ${noteId} not found`);
+    const linked = (field: string, type: string): Row[] =>
+      ((note.values[field] as EntityRef[] | undefined) ?? [])
+        .map((r) => this.fixtures.index.get(`${type}:${r.id}`))
+        .filter((r): r is Row => r !== undefined);
+    const rows = [note, ...linked('attachments', 'Attachment'), ...linked('replies', 'Reply')];
+    rows.sort((a, b) => {
+      const at = String(a.values['created_at'] ?? '');
+      const bt = String(b.values['created_at'] ?? '');
+      return at < bt ? -1 : at > bt ? 1 : a.id - b.id;
+    });
+    return rows.map((row) => this.threadRow(row, entityFields?.[row.type] ?? []));
+  }
+
+  /** One thread row, in the flat shape the endpoint answers. */
+  private threadRow(row: Row, widen: string[]): ThreadRow {
+    const isReply = row.type === 'Reply';
+    const author = this.threadAuthor(row.values[isReply ? 'user' : 'created_by'] as EntityRef | null, isReply);
+    const fields: Record<string, unknown> = { type: row.type, id: row.id, created_at: row.values['created_at'] ?? null };
+    // `content` is absent from an Attachment row: only its id, type, timestamp and author come back.
+    if (row.type !== 'Attachment') fields['content'] = row.values['content'] ?? null;
+    fields[isReply ? 'user' : 'created_by'] = author;
+    // `entity_fields[Reply]` is accepted and widens nothing.
+    if (!isReply) {
+      for (const name of widen) if (SPECS[row.type]?.[name]) fields[name] = row.values[name] ?? null;
+    }
+    return {
+      type: row.type,
+      id: row.id,
+      createdAt: (row.values['created_at'] as string | null | undefined) ?? null,
+      content: row.type === 'Attachment' ? null : ((row.values['content'] as string | null | undefined) ?? null),
+      author,
+      fields,
+    };
+  }
+
+  /** `{id, name, type}`, plus a presigned `image` when the row is a Reply. */
+  private threadAuthor(value: EntityRef | null | undefined, withImage: boolean): ThreadAuthor | null {
+    if (!value) return null;
+    const row = this.fixtures.index.get(`${value.type}:${value.id}`);
+    const author: ThreadAuthor = { type: value.type, id: value.id, name: row ? displayNameOf(row.values, `#${value.id}`) : `#${value.id}` };
+    if (withImage) author.image = (row?.values['image'] as string | null | undefined) ?? null;
+    return author;
+  }
+
+  /**
+   * What changed, newest first. `meta` is read off the row because it takes no
+   * filter and no sort, and the cut is made on `project`, `entity`, `event_type`,
+   * `attribute_name` and `created_at` (025_event_log).
+   */
+  async eventLog(options: EventLogOptions = {}): Promise<EventLogResult> {
+    const size = options.page?.size ?? 50;
+    const res = await this.search('EventLogEntry', {
+      filters: eventLogFilters(options),
+      fields: [...EVENT_LOG_FIELDS],
+      sort: '-id',
+      page: { size, number: options.page?.number ?? 1 },
+    });
+    return { data: res.data.map(normalizeEventLogEntry), hasMore: res.hasMore };
+  }
+
+  /**
+   * Everything one person follows, unpaged. `entity` takes the schema name or the
+   * snake_case plural, and both cuts are made server-side
+   * (get_entity_human_users_id_following).
+   */
+  async following(userId: number, options: FollowingOptions = {}): Promise<EntityRef[]> {
+    await this.gate();
+    // An ApiUser id under this path answers the same 404: a script cannot ask what it follows.
+    if (!this.fixtures.index.get(`HumanUser:${userId}`)) {
+      throw new SgApiError(404, null, `Couldn't find HumanUser with id="${userId}"`);
+    }
+    if (options.projectId !== undefined && !this.fixtures.index.get(`Project:${options.projectId}`)) {
+      throw new SgApiError(404, null, `Couldn't find Project with id="${options.projectId}"`);
+    }
+    let wanted: string | null = null;
+    if (options.entity !== undefined) {
+      wanted = entityTypeNamed(options.entity);
+      if (wanted === null) throw new SgApiError(400, { entity: ['entity is not valid'] }, 'entity is not valid');
+    }
+    const rows = this.fixtures.follows.get(userId) ?? [];
+    return rows
+      .filter((r) => {
+        if (wanted !== null && r.type !== wanted) return false;
+        if (options.projectId === undefined) return true;
+        const row = this.fixtures.index.get(`${r.type}:${r.id}`);
+        return (row?.values['project'] as EntityRef | undefined)?.id === options.projectId;
+      })
+      .map((r) => ({ type: r.type, id: r.id }));
+  }
+
   /* ---------------------------------------------------------------------- */
   /* projection                                                             */
   /* ---------------------------------------------------------------------- */
@@ -1510,6 +2174,13 @@ export class MockClient implements SgClient {
 /* -------------------------------------------------------------------------- */
 /* operator evaluation                                                        */
 /* -------------------------------------------------------------------------- */
+
+/** A type named as a schema name or as its snake_case plural, or null for neither. */
+function entityTypeNamed(name: string): string | null {
+  if (SPECS[name]) return name;
+  const wanted = name.toLowerCase();
+  return Object.keys(SPECS).find((type) => type.toLowerCase() === wanted || pluralPath(type) === wanted) ?? null;
+}
 
 function isNullish(v: unknown): boolean {
   // A text field has no empty string: writing "" stores null, so the two are one value (field_types/text).

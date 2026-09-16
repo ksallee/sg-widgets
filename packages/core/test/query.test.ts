@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createQueryCache } from '../src/query.js';
 import { MockClient } from '../src/mock.js';
 import { SgApiError } from '../src/client.js';
-import type { EntityRow, EntityTypeInfo, HierarchyNode, HierarchyPath, SummarizeOptions, SummarizeResult, SearchOptions, SearchResult, SgClient, TextSearchRow } from '../src/client.js';
+import type { EntityRow, EntityTypeInfo, EventLogOptions, EventLogResult, FollowingOptions, HierarchyNode, HierarchyPath, SummarizeOptions, SummarizeResult, SearchOptions, SearchResult, SgClient, TextSearchRow, ThreadRow, UploadFile, UploadResult } from '../src/client.js';
 import type { EntityRef, TextSearchFilter } from '../src/filter.js';
 import type { FieldSchema } from '../src/schema.js';
 import type { StatusRecord } from '../src/status.js';
@@ -35,9 +35,29 @@ function counting(inner: SgClient): { client: SgClient; calls: string[] } {
       calls.push('statuses');
       return inner.statuses();
     },
+    create(entityType: string, body: Record<string, unknown>): Promise<EntityRow> {
+      calls.push(`create ${entityType}`);
+      return inner.create(entityType, body);
+    },
+    upload(entityType: string, id: number, file: UploadFile): Promise<UploadResult> {
+      calls.push(`upload ${entityType} ${id}`);
+      return inner.upload(entityType, id, file);
+    },
     update(entityType: string, id: number, patch: Record<string, unknown>): Promise<EntityRow> {
       calls.push(`update ${entityType} ${id}`);
       return inner.update(entityType, id, patch);
+    },
+    threadContents(noteId: number, entityFields?: Record<string, string[]>): Promise<ThreadRow[]> {
+      calls.push(`threadContents ${noteId}`);
+      return inner.threadContents(noteId, entityFields);
+    },
+    eventLog(eventOptions?: EventLogOptions): Promise<EventLogResult> {
+      calls.push('eventLog');
+      return inner.eventLog(eventOptions);
+    },
+    following(userId: number, followingOptions?: FollowingOptions): Promise<EntityRef[]> {
+      calls.push(`following ${userId}`);
+      return inner.following(userId, followingOptions);
     },
     hierarchySearch(rootPath: string, entity: EntityRef): Promise<HierarchyPath[]> {
       calls.push(`hierarchySearch ${rootPath} ${entity.type}:${entity.id}`);
@@ -90,6 +110,56 @@ describe('caching', () => {
     await cache.search('Shot', { fields: ['code'], sort: 'code', page: { size: 5 } });
     await cache.search('Shot', { page: { size: 5 }, sort: 'code', fields: ['code'] });
     expect(calls).toEqual(['search Shot']);
+  });
+});
+
+describe('the reads a notes app makes', () => {
+  it('caches a thread and a follow list, and never caches the event log', async () => {
+    const { client, calls } = counting(new MockClient());
+    const cache = createQueryCache(client);
+    await cache.threadContents(11030);
+    await cache.threadContents(11030);
+    await cache.threadContents(11030, { Note: ['subject'] });
+    await cache.following(20);
+    await cache.following(20);
+    // A change feed answered from a cache reports that nothing changed.
+    await cache.eventLog({ page: { size: 2 } });
+    await cache.eventLog({ page: { size: 2 } });
+    expect(calls).toEqual(['threadContents 11030', 'threadContents 11030', 'following 20', 'eventLog', 'eventLog']);
+  });
+});
+
+describe('the writes', () => {
+  it('drops every cached page of a type after a create and after an upload', async () => {
+    const { client, calls } = counting(new MockClient());
+    const cache = createQueryCache(client);
+    await cache.search('Note', { fields: ['subject'] });
+    await cache.create('Note', { project: { type: 'Project', id: 70 }, subject: 'Fresh' });
+    await cache.search('Note', { fields: ['subject'] });
+    await cache.upload('Note', 11030, { filename: 'a.png', data: new Uint8Array([1]), field: 'attachments' });
+    await cache.search('Note', { fields: ['subject'] });
+    expect(calls).toEqual(['search Note', 'create Note', 'search Note', 'upload Note 11030', 'search Note']);
+  });
+
+  it('drops a cached thread after a reply, an upload and an update, within the ttl', async () => {
+    const { client, calls } = counting(new MockClient());
+    const cache = createQueryCache(client, { ttlMs: Number.POSITIVE_INFINITY });
+    const before = await cache.threadContents(11030);
+    const reply = await cache.create('Reply', { entity: { type: 'Note', id: 11030 }, content: 'Seen it.' });
+    const replied = await cache.threadContents(11030);
+    expect(replied).toHaveLength(before.length + 1);
+    expect(replied.at(-1)?.id).toBe(reply.id);
+
+    await cache.upload('Note', 11030, { filename: 'a.png', data: new Uint8Array([1]), field: 'attachments' });
+    const attached = await cache.threadContents(11030);
+    expect(attached.filter((row) => row.type === 'Attachment')).toHaveLength(
+      replied.filter((row) => row.type === 'Attachment').length + 1,
+    );
+
+    await cache.update('Note', 11030, { content: 'Edited.' });
+    const edited = await cache.threadContents(11030);
+    expect(edited[0]?.content).toBe('Edited.');
+    expect(calls.filter((c) => c.startsWith('threadContents'))).toHaveLength(4);
   });
 });
 

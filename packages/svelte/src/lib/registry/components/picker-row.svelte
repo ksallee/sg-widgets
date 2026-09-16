@@ -53,7 +53,6 @@
 	import type { Snippet } from 'svelte';
 	import type { FieldSchema, StatusRecord } from '@sg-widgets/core';
 	import {
-		highlightRuns,
 		isEmptyValue,
 		pathOf,
 		renderKindFor,
@@ -66,6 +65,7 @@
 	import { cn } from '$lib/utils.js';
 	import { PICKER_ROW_INDICATOR } from '$lib/registry/components/picker-classes.js';
 	import FieldValue from '$lib/registry/components/field-value.svelte';
+	import MatchText from '$lib/registry/components/match-text.svelte';
 	import Thumbnail from '$lib/registry/components/thumbnail.svelte';
 	import UserAvatar from '$lib/registry/components/user-avatar.svelte';
 
@@ -188,6 +188,7 @@
 				src={picture}
 				aspect="square"
 				{size}
+				entityType={row.type}
 				class={roundThumbnail ? 'rounded-full' : undefined}
 			/>
 		{/if}
@@ -200,13 +201,12 @@
 			>{#each crumbs as crumb, i (i)}<span class="text-muted-foreground">{crumb}</span><span
 					aria-hidden="true"
 					class="text-muted-foreground">{' › '}</span
-				>{/each}<span
+				>{/each}<MatchText
 				data-slot="picker-row-name"
+				text={row.name}
+				{query}
 				class={crumbs.length > 0 ? 'font-medium' : undefined}
-				>{#each highlightRuns(row.name, query) as run, i (i)}<span
-						class={run.match ? 'font-semibold' : undefined}>{run.text}</span
-					>{/each}</span
-			></span
+			/></span
 		>
 		{#if code}
 			<span data-slot="picker-row-code" class="text-muted-foreground shrink-0 font-mono text-xs">{code}</span>
@@ -214,11 +214,13 @@
 	</span>
 	{#if sub}
 		<!-- Highlighted too, so a row matched on its login or its email shows why. -->
-		<span data-slot="picker-row-sub-label" class="text-muted-foreground truncate text-xs" title={sub}
-			>{#each highlightRuns(sub, query) as run, i (i)}<span class={run.match ? 'font-semibold' : undefined}
-					>{run.text}</span
-				>{/each}</span
-		>
+		<MatchText
+			data-slot="picker-row-sub-label"
+			text={sub}
+			{query}
+			class="text-muted-foreground truncate text-xs"
+			title={sub}
+		/>
 	{/if}
 </span>
 

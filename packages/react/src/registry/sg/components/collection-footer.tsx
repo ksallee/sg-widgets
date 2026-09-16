@@ -53,7 +53,7 @@ export function CollectionFooter({ source, pager, pageSizes, loading, slotName }
               value={String(pager.pageSize)}
               onValueChange={(value) => void source.setPageSize(Number(value))}
             >
-              <SelectTrigger aria-label="Rows per page" className="h-8 w-auto min-w-16">
+              <SelectTrigger aria-label="Rows per page" className="w-auto min-w-16">
                 <span data-slot="select-value" className="tabular-nums">
                   {pager.pageSize}
                 </span>
@@ -85,7 +85,7 @@ export function CollectionFooter({ source, pager, pageSizes, loading, slotName }
               min="1"
               inputMode="numeric"
               aria-label="Page number"
-              className="h-8 w-14 text-center tabular-nums"
+              className="w-14 text-center tabular-nums"
               value={pageDraft === '' ? String(pager.page) : pageDraft}
               onChange={(event) => setPageDraft(event.currentTarget.value)}
               onKeyDown={(event) => {

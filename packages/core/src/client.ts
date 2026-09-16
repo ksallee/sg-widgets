@@ -9,7 +9,7 @@
 import type { TextSearchFilter, WireCondition, WireGroup } from './filter.js';
 import { toFilterArray } from './filter.js';
 import type { FieldSchema, RawFieldSchema, RawFieldsResponse } from './schema.js';
-import { normalizeField, normalizeFields } from './schema.js';
+import { normalizeField, normalizeFields, undeclaredField } from './schema.js';
 import type { StatusRecord } from './status.js';
 import type { EntityRef } from './filter.js';
 
@@ -136,6 +136,131 @@ export interface EntityTypeInfo {
   displayName: string;
 }
 
+/**
+ * Who wrote a thread row. A Reply's hash carries a fourth key, `image`, a
+ * presigned avatar re-signed on every read; the `created_by` hash on a Note and
+ * an Attachment has none (get_entity_notes_id_thread_contents).
+ */
+export interface ThreadAuthor extends EntityRef {
+  image?: string | null;
+}
+
+/** One row of a note thread, flat and not the `_search` shape. */
+export interface ThreadRow {
+  /** `Note`, `Attachment` or `Reply`. */
+  type: string;
+  id: number;
+  createdAt: string | null;
+  /** The body. An Attachment row has none. */
+  content: string | null;
+  author: ThreadAuthor | null;
+  /** The row as it arrived, including whatever `entityFields` widened it by. */
+  fields: Record<string, unknown>;
+}
+
+/**
+ * Which rows the event log answers. `meta` holds what changed and takes neither a
+ * filter nor a sort, so the cut is made on these and `meta` is read off the row
+ * (025_event_log).
+ */
+export interface EventLogOptions {
+  projectId?: number;
+  /**
+   * The row the events are about. It is null on an event whose target has been
+   * deleted, so a deleted row's history is reachable by `eventType` and dates alone.
+   */
+  entity?: EntityRef;
+  /** One event type or several, e.g. `Shotgun_Shot_Change`. */
+  eventType?: string | string[];
+  /** The field that changed. Site-wide on its own, so pair it with `entity` or `eventType`. */
+  attributeName?: string;
+  /** Keep events after this `date_time`, as `created_at greater_than`. */
+  since?: string;
+  /** Keep events before this `date_time`, as `created_at less_than`. */
+  until?: string;
+  page?: { size?: number; number?: number };
+}
+
+/**
+ * The cut the event log takes, as the `and` group `_search` wants. Nothing here
+ * touches `meta`: it takes no filter (025_event_log).
+ */
+export function eventLogFilters(options: EventLogOptions = {}): WireGroup {
+  const conditions: WireCondition[] = [];
+  if (options.projectId !== undefined) conditions.push(['project', 'is', { type: 'Project', id: options.projectId }]);
+  if (options.entity) conditions.push(['entity', 'is', { type: options.entity.type, id: options.entity.id }]);
+  if (options.eventType !== undefined) {
+    conditions.push(Array.isArray(options.eventType) ? ['event_type', 'in', options.eventType] : ['event_type', 'is', options.eventType]);
+  }
+  if (options.attributeName !== undefined) conditions.push(['attribute_name', 'is', options.attributeName]);
+  if (options.since !== undefined) conditions.push(['created_at', 'greater_than', options.since]);
+  if (options.until !== undefined) conditions.push(['created_at', 'less_than', options.until]);
+  return { logical_operator: 'and', conditions };
+}
+
+/**
+ * What an event is read with. `audit_trail` is never returned even when it is
+ * named, so it is not asked for (025_event_log).
+ */
+export const EVENT_LOG_FIELDS = ['event_type', 'attribute_name', 'description', 'created_at', 'meta', 'entity', 'project', 'user'] as const;
+
+/** One event, `meta` decoded, with the two values an attribute change carries lifted out. */
+export interface EventLogEntry {
+  id: number;
+  eventType: string | null;
+  attributeName: string | null;
+  /** The rendered English sentence the server writes. */
+  description: string | null;
+  createdAt: string | null;
+  /** Null once the row the event is about is deleted; `meta` still names it. */
+  entity: EntityRef | null;
+  project: EntityRef | null;
+  user: EntityRef | null;
+  /** The whole decoded `meta`. Its keys follow `meta.type`. */
+  meta: Record<string, unknown> | null;
+  /** `meta.old_value`, present on an `attribute_change` and nowhere else. */
+  oldValue: unknown;
+  /** `meta.new_value`, present on an `attribute_change` and nowhere else. */
+  newValue: unknown;
+}
+
+export interface EventLogResult {
+  data: EventLogEntry[];
+  /** True when another page exists. Read from the row count, as on `search` (probe 006). */
+  hasMore: boolean;
+}
+
+/** Bytes to put on a row, and where they land. */
+export interface UploadFile {
+  /** The name the bytes are stored under. Its extension decides the upload type. */
+  filename: string;
+  /** The bytes themselves. From a browser `File`, `new Uint8Array(await file.arrayBuffer())`. */
+  data: Uint8Array;
+  /**
+   * The field in the path, which picks the kind: `image` is a Thumbnail, another
+   * field an Attachment on that field, and no field at all a generic Attachment on
+   * `attachment_links` (recipes/001).
+   */
+  field?: string;
+}
+
+/** What the handshake answered. The Attachment it made is visible only on the parent row. */
+export interface UploadResult {
+  /** `Thumbnail` on `image`, `Attachment` on any other form. Nothing in the request names it. */
+  uploadType: string;
+  /** The whole `upload_info` the ticket carried and the third call sent back. */
+  uploadInfo: Record<string, unknown>;
+  /** The storage's `ETag`, when it exposes one; the `PUT` status is the receipt (put_links_upload). */
+  etag: string | null;
+}
+
+/** The two cuts `following` takes. Both are made server-side. */
+export interface FollowingOptions {
+  /** One type to keep. The schema name and the snake_case plural both work. */
+  entity?: string;
+  projectId?: number;
+}
+
 export interface SgClient {
   /** Enabled entity types on the site with their display names. */
   entityTypes(): Promise<EntityTypeInfo[]>;
@@ -185,6 +310,56 @@ export interface SgClient {
    * values and their counts (020_summarize).
    */
   summarize(entityType: string, options?: SummarizeOptions): Promise<SummarizeResult>;
+  /**
+   * Create one row and answer it.
+   *
+   * `project` is the create contract on a project-scoped type and the schema's
+   * `mandatory` flags are not it: the identity field is flagged mandatory, is
+   * optional, and is generated by the server when it is left out (012_create_version).
+   * An entity link is a `{type, id}` hash; a bare id 400s. Nothing is unique on any
+   * type measured, so two creates of the same body make two rows: key on `id`.
+   */
+  create(entityType: string, body: Record<string, unknown>): Promise<EntityRow>;
+  /**
+   * Put a file on a row, in the three calls the API takes.
+   *
+   * A ticket, a `PUT` of the bytes to presigned storage, and a completing `POST`.
+   * The 201 the third answers proves the handshake and not that bytes exist:
+   * skipping the second is undetectable, and the row it leaves reads the same
+   * (039_upload_silent_failures). A media field is not readable straight after: it
+   * returns a placeholder under `/images/status/transient/` until the transcode
+   * lands (recipes/001).
+   */
+  upload(entityType: string, id: number, file: UploadFile): Promise<UploadResult>;
+  /**
+   * A Note, its Attachments and its Replies as one list in time order.
+   *
+   * It replaces a `_search` on each of the three types and orders them together.
+   * `entityFields` widens a row type, one entry per type; it is accepted and
+   * changes nothing for Reply, whose extra fields need a `_search` on replies
+   * (get_entity_notes_id_thread_contents).
+   */
+  threadContents(noteId: number, entityFields?: Record<string, string[]>): Promise<ThreadRow[]>;
+  /**
+   * What changed, newest first.
+   *
+   * This is the change log, not the activity stream: a status change written over
+   * the API was on no stream 430s later (067_notes_in_the_stream). Rows are sorted
+   * `-id`; `id` and `created_at` are the two orders the type answers, and ids at the
+   * head are sparse and fill in later, so a cursor on `max(id)` drops events: re-scan
+   * behind the head or drive the feed from `created_at` and deduplicate on `id`
+   * (025_event_log).
+   */
+  eventLog(options?: EventLogOptions): Promise<EventLogResult>;
+  /**
+   * Everything one person follows, in one unpaged body.
+   *
+   * Each row is a type and an id: neither the record's name nor the date the
+   * follow started is returned, so a display list costs a `_search` on the ids.
+   * The user must be a HumanUser; a script cannot ask what it follows
+   * (get_entity_human_users_id_following).
+   */
+  following(userId: number, options?: FollowingOptions): Promise<EntityRef[]>;
 }
 
 /** The node shape `/hierarchy/_expand` answers, before normalising. */
@@ -220,7 +395,7 @@ export function normalizeHierarchyNode(raw: RawHierarchyNode, path: string): Hie
 /**
  * Children keyed by path, first occurrence kept. `_expand` repeats the "no <field>"
  * bucket (`.../Sequence/__none__`) once after every group on a grouped level, and the
- * repeats are the same node (measured on the probed site, `/Project/<id>/Shot`).
+ * repeats are the same node (post_hierarchy_expand, 064_hierarchy_expand_buckets).
  */
 function uniqueByPath(nodes: HierarchyNode[]): HierarchyNode[] {
   const seen = new Set<string>();
@@ -270,10 +445,12 @@ function pluralPath(entityType: string): string {
 
 export class RestClient implements SgClient {
   private readonly base: string;
+  private readonly siteRoot: string;
   private readonly fetchFn: typeof fetch;
 
   constructor(private readonly options: RestClientOptions) {
-    this.base = options.siteUrl.replace(/\/+$/, '') + '/api/v1';
+    this.siteRoot = options.siteUrl.replace(/\/+$/, '');
+    this.base = this.siteRoot + '/api/v1';
     // Bound: the default `fetch` called as a method of this object is an Illegal invocation in a browser.
     this.fetchFn = options.fetch ?? globalThis.fetch.bind(globalThis);
   }
@@ -311,14 +488,19 @@ export class RestClient implements SgClient {
 
   async fields(entityType: string, projectId?: number): Promise<Record<string, FieldSchema>> {
     const res = await this.request<RawFieldsResponse>('GET', `/schema/${entityType}/fields`, undefined, { project_id: projectId });
-    return normalizeFields(res);
+    return normalizeFields(res, entityType);
   }
 
   async fieldWithProject(entityType: string, field: string, projectId: number): Promise<FieldSchema> {
-    const res = await this.request<{ data: RawFieldSchema }>('GET', `/schema/${entityType}/fields/${field}`, undefined, {
+    const res = await this.request<{ data: RawFieldSchema | null }>('GET', `/schema/${entityType}/fields/${field}`, undefined, {
       project_id: projectId,
     });
-    return normalizeField(field, res.data);
+    if (res.data) return normalizeField(field, res.data);
+    // A field the site answers on the row but leaves out of its schema reads
+    // `data: null` at 200; a name that is nothing at all is a 404 (068_note_read_state).
+    const known = undeclaredField(entityType, field);
+    if (known) return known;
+    throw new SgApiError(200, res, `Field '${entityType}.${field}' is not in the schema.`);
   }
 
   async search(entityType: string, options: SearchOptions): Promise<SearchResult> {
@@ -341,9 +523,8 @@ export class RestClient implements SgClient {
   ): Promise<TextSearchRow[]> {
     // `entity_types` keys a filter by the type it applies to, and its shape follows the
     // Content-Type: under `api3_hash` each value is a `{logical_operator, conditions}` group,
-    // an empty group for no filter; an array there is `Query is not an Hash` (measured on
-    // the probed site 2026-09-09; post_entity_text_search records the array form under
-    // `api3_array`).
+    // an empty group for no filter; an array there is `Query is not an Hash`
+    // (post_entity_text_search).
     const types: Record<string, WireGroup> = {};
     for (const [t, f] of Object.entries(entityTypes)) types[t] = toHashGroup(f);
     // 25 is the cap and the default, and the message is off by one: 26 answers
@@ -361,6 +542,55 @@ export class RestClient implements SgClient {
     return res.data;
   }
 
+  async create(entityType: string, body: Record<string, unknown>): Promise<EntityRow> {
+    // A write takes plain JSON, as `update` does; the vendor types are a `_search`
+    // requirement (probe 004).
+    const res = await this.request<{ data: EntityRow }>('POST', `/entity/${pluralPath(entityType)}`, body, undefined, 'application/json');
+    return res.data;
+  }
+
+  async upload(entityType: string, id: number, file: UploadFile): Promise<UploadResult> {
+    const field = file.field === undefined ? '' : `/${file.field}`;
+    // Step one: the ticket. `filename` is required and its absence is 400 `filename is missing`.
+    const ticket = await this.request<UploadTicket>('GET', `/entity/${pluralPath(entityType)}/${id}${field}/_upload`, undefined, {
+      filename: file.filename,
+    });
+    // Step two goes to storage and not to Flow PT. The signature covers the request, so
+    // no Authorization header is sent (put_links_upload).
+    const stored = await this.fetchFn(ticket.links.upload, { method: 'PUT', body: file.data as BodyInit });
+    if (!stored.ok) throw new SgApiError(stored.status, await stored.text(), 'The presigned upload refused the bytes');
+    // Step three. `complete_upload` is resolved against the site root: it already carries
+    // `/api/v1`, and prefixing it again is a 404 with a null source. `upload_data` is
+    // required even when it is empty, and the 201 answers a single space, so this reply
+    // is never parsed (post_links_complete_upload).
+    const completed = await this.fetchFn(new URL(ticket.links.complete_upload, this.siteRoot).toString(), {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        Authorization: `Bearer ${await this.options.token()}`,
+        // The complete call takes plain JSON; the vendor type 415s here (probe 014).
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ upload_info: ticket.data, upload_data: {} }),
+    });
+    if (!completed.ok) {
+      const text = await completed.text();
+      let parsed: unknown = text;
+      try {
+        parsed = text ? JSON.parse(text) : null;
+      } catch {
+        parsed = text;
+      }
+      const title = (parsed as { errors?: Array<{ title?: string }> } | null)?.errors?.[0]?.title;
+      throw new SgApiError(completed.status, parsed, title);
+    }
+    return {
+      uploadType: String(ticket.data['upload_type'] ?? ''),
+      uploadInfo: ticket.data,
+      etag: stored.headers.get('ETag')?.replace(/"/g, '') ?? null,
+    };
+  }
+
   async summarize(entityType: string, options: SummarizeOptions = {}): Promise<SummarizeResult> {
     const body: Record<string, unknown> = {
       filters: options.filters ?? { logical_operator: 'and', conditions: [] },
@@ -372,6 +602,41 @@ export class RestClient implements SgClient {
     // The same vendor content type `_search` requires; `application/json` is 415 (020_summarize).
     const res = await this.request<SummarizeEnvelope>('POST', `/entity/${pluralPath(entityType)}/_summarize`, body);
     return normalizeSummarize(res);
+  }
+
+  async threadContents(noteId: number, entityFields?: Record<string, string[]>): Promise<ThreadRow[]> {
+    // One query parameter per row type, `entity_fields[Note]=subject,sg_status_list`. The
+    // Reply entry is accepted and changes nothing (get_entity_notes_id_thread_contents).
+    const params: Record<string, string> = {};
+    for (const [type, names] of Object.entries(entityFields ?? {})) params[`entity_fields[${type}]`] = names.join(',');
+    const res = await this.request<{ data: ThreadWire[] }>('GET', `/entity/notes/${noteId}/thread_contents`, undefined, params);
+    return res.data.map(toThreadRow);
+  }
+
+  async eventLog(options: EventLogOptions = {}): Promise<EventLogResult> {
+    const size = options.page?.size ?? 50;
+    const body = {
+      filters: eventLogFilters(options),
+      fields: EVENT_LOG_FIELDS.join(','),
+      // The only order the type answers: a sort on anything else falls back to ascending `id`
+      // at 200, so an ignored sort cannot be told from a satisfied one (025_event_log).
+      sort: '-id',
+      page: { size, number: options.page?.number ?? 1 },
+    };
+    const res = await this.request<{ data: EntityRow[] }>('POST', '/entity/event_log_entries/_search', body);
+    return { data: res.data.map(normalizeEventLogEntry), hasMore: res.data.length === size };
+  }
+
+  async following(userId: number, options: FollowingOptions = {}): Promise<EntityRef[]> {
+    // Unpaged, and it takes no `fields` and no `sort`: `entity` and `project_id` are the whole
+    // vocabulary, and each row is an id, a type and a link (get_entity_human_users_id_following).
+    const res = await this.request<{ data: Array<{ id: number; type: string }> }>(
+      'GET',
+      `/entity/human_users/${userId}/following`,
+      undefined,
+      { entity: options.entity, project_id: options.projectId },
+    );
+    return res.data.map((row) => ({ type: String(row.type), id: Number(row.id) }));
   }
 
   async hierarchyExpand(path: string): Promise<HierarchyNode> {
@@ -460,6 +725,67 @@ function toTextSearchRow(row: TextSearchWire): TextSearchRow {
     name: String(row.attributes?.name ?? ''),
     links: pair,
     status: row.attributes?.status ?? null,
+  };
+}
+
+/** The ticket step one mints: the `upload_info` to send back, and the two links to call. */
+interface UploadTicket {
+  data: Record<string, unknown>;
+  links: { upload: string; complete_upload: string };
+}
+
+/** A thread row: `type`, `id`, a timestamp, an author under one of two keys, and whatever else was asked for. */
+type ThreadWire = Record<string, unknown> & { type: string; id: number };
+
+function toThreadAuthor(value: unknown): ThreadAuthor | null {
+  if (value === null || typeof value !== 'object') return null;
+  const hash = value as { type?: unknown; id?: unknown; name?: unknown; image?: unknown };
+  if (typeof hash.type !== 'string' || typeof hash.id !== 'number') return null;
+  const author: ThreadAuthor = { type: hash.type, id: hash.id };
+  if (typeof hash.name === 'string') author.name = hash.name;
+  if (hash.image !== undefined) author.image = (hash.image as string | null) ?? null;
+  return author;
+}
+
+/**
+ * The author key follows the row type: `created_by` on a Note and an Attachment,
+ * `user` on a Reply (get_entity_notes_id_thread_contents). A Note widened with
+ * `user` still names its author under `created_by`.
+ */
+function toThreadRow(row: ThreadWire): ThreadRow {
+  const author = toThreadAuthor(row.type === 'Reply' ? row['user'] : row['created_by']);
+  return {
+    type: String(row.type),
+    id: Number(row.id),
+    createdAt: (row['created_at'] as string | null | undefined) ?? null,
+    content: (row['content'] as string | null | undefined) ?? null,
+    author,
+    fields: row,
+  };
+}
+
+function entityRefOf(value: unknown): EntityRef | null {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) return null;
+  const ref = value as EntityRef;
+  return typeof ref.name === 'string' ? { type: ref.type, id: ref.id, name: ref.name } : { type: ref.type, id: ref.id };
+}
+
+/** One `_search` row of `EventLogEntry`, with `meta` decoded as the API returns it. */
+export function normalizeEventLogEntry(row: EntityRow): EventLogEntry {
+  const a = row.attributes;
+  const meta = (a['meta'] ?? null) as Record<string, unknown> | null;
+  return {
+    id: row.id,
+    eventType: (a['event_type'] as string | null | undefined) ?? null,
+    attributeName: (a['attribute_name'] as string | null | undefined) ?? null,
+    description: (a['description'] as string | null | undefined) ?? null,
+    createdAt: (a['created_at'] as string | null | undefined) ?? null,
+    entity: entityRefOf(row.relationships['entity']?.data),
+    project: entityRefOf(row.relationships['project']?.data),
+    user: entityRefOf(row.relationships['user']?.data),
+    meta,
+    oldValue: meta?.['old_value'] ?? null,
+    newValue: meta?.['new_value'] ?? null,
   };
 }
 

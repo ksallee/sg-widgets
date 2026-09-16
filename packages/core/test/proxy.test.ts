@@ -75,6 +75,31 @@ describe('round trip', () => {
     await expect(client.hierarchySearch('/Project/70', null as never)).rejects.toThrow(/must be a \{type, id\} object/);
   });
 
+  it('carries a note thread, the event log and a follow list', async () => {
+    const direct = new MockClient();
+    const client = proxy(new MockClient());
+    expect(await client.threadContents(11030)).toEqual(await direct.threadContents(11030));
+    expect(await client.threadContents(11030, { Note: ['subject'] })).toEqual(
+      await direct.threadContents(11030, { Note: ['subject'] }),
+    );
+    const options = { entity: { type: 'Shot' as const, id: 862 }, page: { size: 5 } };
+    expect(await client.eventLog(options)).toEqual(await direct.eventLog(options));
+    expect(await client.eventLog()).toEqual(await direct.eventLog());
+    expect(await client.following(20, { entity: 'notes' })).toEqual(await direct.following(20, { entity: 'notes' }));
+  });
+
+  it('carries a create, and the bytes of an upload base64-encoded', async () => {
+    const direct = new MockClient();
+    const client = proxy(new MockClient());
+    const body = { entity: { type: 'Note', id: 11030 }, content: 'through the proxy' };
+    const made = await client.create('Reply', body);
+    expect(made).toEqual(await direct.create('Reply', body));
+    expect(made.attributes['content']).toBe('through the proxy');
+
+    const file = { filename: 'screenshot.png', data: new Uint8Array([137, 80, 78, 71]), field: 'attachments' };
+    expect(await client.upload('Note', 11030, file)).toEqual(await direct.upload('Note', 11030, file));
+  });
+
   it('sends the headers the caller supplies, per request', async () => {
     const inner = new MockClient();
     const { fetch, seen } = wired(inner);
@@ -115,6 +140,18 @@ describe('errors', () => {
     expect((await handle('fields', {})).status).toBe(400);
     expect((await handle('fields', 'nope')).status).toBe(400);
     expect((await handle('fieldWithProject', { entityType: 'Shot', field: 'sg_status_list' })).status).toBe(400);
+    expect((await handle('threadContents', {})).status).toBe(400);
+    expect((await handle('create', { entityType: 'Note' })).status).toBe(400);
+    expect((await handle('upload', { entityType: 'Note', id: 11030, file: { filename: 'a.png' } })).status).toBe(400);
+    expect((await handle('following', {})).status).toBe(400);
+  });
+
+  it('carries a zero-byte file, and answers 400 on bytes that are not base64', async () => {
+    const handle = createProxyHandler(new MockClient());
+    const empty = await handle('upload', { entityType: 'Note', id: 11030, file: { filename: 'empty.txt', data: '', field: 'attachments' } });
+    expect(empty.status).toBe(200);
+    const bad = await handle('upload', { entityType: 'Note', id: 11030, file: { filename: 'a.png', data: '%%not base64%%', field: 'attachments' } });
+    expect(bad).toEqual({ status: 400, body: { error: { status: 400, message: "'file.data' is not base64", body: null } } });
   });
 
   it('reports a non-JSON answer from anything between the two halves', async () => {

@@ -43,10 +43,10 @@
 //   second size.
 //
 //   The filter bar's pill stands on the control ladder and its cross sits as far from the
-//   right as from the top, which is what the ladder leaves once the cross's box is taken
-//   out of the pill's height: 7, 8 and 9 at the three steps.
+//   right as from the top, which is what the ladder leaves once the cross's box and the
+//   pill's own border are taken out of its height: 5, 6 and 7 at the three steps.
 
-const LADDER = { sm: 32, md: 36, lg: 40 };
+const LADDER = { sm: 28, md: 32, lg: 36 };
 const INSET = { sm: 8, md: 12, lg: 12 };
 const GLYPH_GAP = 6;
 const SMALL_CHIP_GLYPH_GAP = 4;
@@ -109,7 +109,7 @@ const CONTROL_GLYPH = [16, 20];
 /** A count drawn as a chip: the chip ladder at the step under its control. */
 const COUNT_BOX = { sm: 20, md: 24, lg: 32 };
 /** The room the pill's ladder leaves around its cross, above it and beside it. */
-const PILL_CROSS = { sm: 7, md: 8, lg: 9 };
+const PILL_CROSS = { sm: 5, md: 6, lg: 7 };
 /** Sub-labels, codes and counts: rule 6's second size. */
 const META_TEXT =
   '[data-slot$="-sub-label"],[data-slot$="-code"],[data-slot$="-zone"],[data-slot$="-overflow"],[data-slot$="-count"]';
@@ -139,9 +139,14 @@ function leading(box) {
 }
 
 /** The chip or badge a control draws its value as, if it draws one. */
-function chipValue(box) {
+function chipValue(box, size) {
   const chip = box.querySelector(`${CHIP},${TEXT_CHIP}`);
-  return chip && chip.getBoundingClientRect().height > 0 ? chip : null;
+  if (!chip || chip.getBoundingClientRect().height === 0) return null;
+  // A control that leads with a label of its own, as the filter bar's pill does, draws its
+  // chip after that label and keeps the reading inset; only a control the chip itself leads
+  // insets to the room around it.
+  const from = chip.getBoundingClientRect().left - box.getBoundingClientRect().left;
+  return from <= INSET[size] ? chip : null;
 }
 
 /** True when the element renders text itself rather than handing it to a child. */
@@ -309,7 +314,7 @@ for (const pane of $$('[data-pane]')) {
       check(widget, framework, `control ${size}`, 'height', LADDER[size], Math.round(box.getBoundingClientRect().height));
       // A filled control that holds a chip insets it to the room above and below it. An
       // empty one, and a control whose value is text, keep the reading inset.
-      const value = box.hasAttribute('data-empty') ? null : chipValue(box);
+      const value = box.hasAttribute('data-empty') ? null : chipValue(box, size);
       if (value) {
         const room = value.getBoundingClientRect().top - box.getBoundingClientRect().top - px(s.borderTopWidth);
         check(widget, framework, `control ${size}`, 'leading-inset', Math.round(room), leading(box), 2.01);
@@ -357,7 +362,7 @@ for (const pane of $$('[data-pane]')) {
     if (footer) {
       check(widget, framework, 'footer', 'gap', ITEM_GAP, px(getComputedStyle(footer).columnGap));
       for (const control of $$('[data-slot="select-trigger"],[data-slot="input"],[data-slot="button"]', footer)) {
-        check(widget, framework, `footer ${control.dataset.slot}`, 'height', LADDER.sm, Math.round(control.getBoundingClientRect().height));
+        check(widget, framework, `footer ${control.dataset.slot}`, 'height', LADDER.md, Math.round(control.getBoundingClientRect().height));
       }
     }
 

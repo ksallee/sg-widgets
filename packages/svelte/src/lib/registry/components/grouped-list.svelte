@@ -18,7 +18,8 @@
 	export interface GroupedListGroupContext {
 		/** The value the run shares. */
 		value: unknown;
-		column: CollectionColumn;
+		/** The column the value was read from. `null` when the key is derived. */
+		column: CollectionColumn | null;
 		/** Rows loaded under this header. */
 		count: number;
 		collapsed: boolean;
@@ -39,12 +40,15 @@
 	const GLYPH: Record<GroupedListSize, string> = { sm: 'size-3.5', md: 'size-4', lg: 'size-5' };
 	/** Row heights per density, so a virtualised list can be measured before it is drawn. */
 	const ROW_HEIGHT: Record<GroupedListDensity, number> = { compact: 30, default: 34 };
+	/** What a list given nothing to group on says. */
+	const GROUPING_REQUIRED = 'GroupedList needs groupBy or groupKey.';
 </script>
 
 <script lang="ts">
 	import { untrack, type Snippet } from 'svelte';
 	import type { HTMLAttributes } from 'svelte/elements';
 	import type {
+		CollapseState,
 		EntityRef,
 		EntitySource,
 		FieldSpec,
@@ -57,15 +61,18 @@
 		StatusRecord
 	} from '@sg-widgets/core';
 	import {
+		asCollapseState,
 		cellValue,
 		displayNameOf,
+		expandAll,
+		groupKeyText,
 		groupRowsKeyed,
+		isCollapsed,
 		nextEnabledIndex,
 		NO_ROWS_LABEL,
-		sameIds,
 		stateLine,
 		toColumn,
-		toggleId
+		toggleCollapsed
 	} from '@sg-widgets/core';
 	import ChevronRight from '@lucide/svelte/icons/chevron-right';
 	import CircleAlert from '@lucide/svelte/icons/circle-alert';
@@ -88,8 +95,19 @@
 	type Props = WithElementRef<Omit<HTMLAttributes<HTMLDivElement>, 'children'>, HTMLDivElement> & {
 		/** The rows and the order behind them. Created with core's `createEntitySource`. */
 		source: EntitySource;
-		/** Path the rows are grouped on. The source is sorted on it. */
-		groupBy: CollectionColumn;
+		/** Column the rows are grouped on. The source is sorted on it. Not read when `groupKey` is set. */
+		groupBy?: CollectionColumn;
+		/**
+		 * The value a row groups under, derived rather than read from a column: a
+		 * multi-entity field no site sorts on, or a value that comes from one field on
+		 * one type and another on another. The source's sort is left as the caller set
+		 * it, so the caller orders the rows so the runs come out whole. Two values are one
+		 * run when their JSON text is the same, so the caller answers a stable shape. One
+		 * of `groupBy` and this is required.
+		 */
+		groupKey?: (row: EntityRow) => unknown;
+		/** The header's text for a derived key; not read with `groupBy`. Without it the key reads as its own display name. */
+		groupLabel?: (value: unknown) => string;
 		/** Field holding the thumbnail URL. `false` leaves the leading slot to `leading`. */
 		thumbnail?: string | false;
 		/** Field shown as the row's label. Defaults to the type's own display name. */
@@ -121,9 +139,12 @@
 		getRowId?: RowIdFn;
 		/** True for a row that cannot be selected or reached by the keyboard. */
 		isRowDisabled?: RowDisabledFn;
-		/** Keys of the groups that are shut, two-way. */
-		collapsed?: string[];
-		onCollapsedChange?: (keys: string[]) => void;
+		/**
+		 * Which groups are shut, two-way. A bare key list reads as the open mode with those
+		 * keys shut; `collapseAll()` shuts the groups a later page brings too.
+		 */
+		collapsed?: string[] | CollapseState;
+		onCollapsedChange?: (state: CollapseState) => void;
 		/** The source's sort, two-way, so a SortPicker drops into the header. */
 		sort?: SortSpec[];
 		onSortChange?: (sort: SortSpec[]) => void;
@@ -158,6 +179,8 @@
 	let {
 		source,
 		groupBy,
+		groupKey,
+		groupLabel,
 		thumbnail = false,
 		labelField = null,
 		subLabelField = null,
@@ -176,7 +199,7 @@
 		onSelect,
 		getRowId,
 		isRowDisabled,
-		collapsed = $bindable([]),
+		collapsed = $bindable(expandAll()),
 		onCollapsedChange,
 		sort = $bindable(),
 		onSortChange,
@@ -198,6 +221,8 @@
 		ref = $bindable(null),
 		...rest
 	}: Props = $props();
+
+	if (untrack(() => !groupBy && !groupKey)) throw new Error(GROUPING_REQUIRED);
 
 	const control = createCollectionControl({
 		source: () => source,
@@ -230,11 +255,13 @@
 	const snapshot = $derived(control.snapshot);
 	$effect(() => {
 		// A group is only whole when the server put its rows together, so the group path
-		// leads the sort. Setting it reads the first page again.
-		if (snapshot.sort[0]?.path !== groupBy.path) {
+		// leads the sort. Setting it reads the first page again. A derived key has no path
+		// to sort on, and the order is then the caller's to set.
+		const path = groupKey ? undefined : groupBy?.path;
+		if (path !== undefined && snapshot.sort[0]?.path !== path) {
 			void source.setSort([
-				{ path: groupBy.path, descending: false },
-				...snapshot.sort.filter((key) => key.path !== groupBy.path)
+				{ path, descending: false },
+				...snapshot.sort.filter((key) => key.path !== path)
 			]);
 		}
 	});
@@ -244,38 +271,27 @@
 	const subColumn = $derived(subLabelField ? toColumn(subLabelField) : null);
 	const secondaryColumn = $derived(secondaryField ? toColumn(secondaryField) : null);
 
-	/** The keys of the shut groups. The `collapsed` prop holds the same list. */
-	let shutKeys = $state<string[]>([]);
-
 	// A page whose first rows carry the value the last group carries grows that group
 	// rather than opening a second one, and the key it is collapsed under stands.
-	const groups = $derived(groupRowsKeyed(rows, groupBy.path));
+	const groups = $derived(groupRowsKeyed(rows, groupKey ?? groupBy?.path ?? ''));
 
-	/*
-	 * The collapsed keys, two-way: one effect out and one in, each reading the other
-	 * side untracked, so a change travels once and the two never write to each other.
-	 */
-	$effect(() => {
-		const keys = shutKeys;
-		if (sameIds(keys, untrack(() => collapsed ?? []))) return;
-		collapsed = [...keys];
-		onCollapsedChange?.(collapsed);
-	});
-	$effect(() => {
-		const keys = collapsed ?? [];
-		if (sameIds(keys, untrack(() => shutKeys))) return;
-		shutKeys = [...keys];
-	});
+	/** Which groups are shut: the `collapsed` prop, read as a state. */
+	const shut = $derived(asCollapseState(collapsed));
+
+	function toggleGroup(key: string): void {
+		const next = toggleCollapsed(shut, key);
+		collapsed = next;
+		onCollapsedChange?.(next);
+	}
 
 	/* the lines ------------------------------------------------------------ */
 
 	/** Headers and rows as one stream, which is what a virtualised list walks. */
 	const flat = $derived.by(() => {
-		const shut = new Set(shutKeys);
 		const out: Array<{ group: (typeof groups)[number]; row: EntityRow | null }> = [];
 		for (const group of groups) {
 			out.push({ group, row: null });
-			if (!shut.has(group.key)) for (const row of group.rows) out.push({ group, row });
+			if (!isCollapsed(shut, group.key)) for (const row of group.rows) out.push({ group, row });
 		}
 		return out;
 	});
@@ -407,13 +423,13 @@
 			{/if}
 			{#each blocks as block (block.group.key)}
 				{@const group = block.group}
-				{@const shut = shutKeys.includes(group.key)}
+				{@const closed = isCollapsed(shut, group.key)}
 				<div data-slot="grouped-list-group" data-group-key={group.key}>
 					{#if block.header}
 						<button
 							type="button"
-							aria-expanded={!shut}
-							onclick={() => (shutKeys = toggleId(shutKeys, group.key))}
+							aria-expanded={!closed}
+							onclick={() => toggleGroup(group.key)}
 							class={cn(
 								'bg-muted/50 focus-visible:ring-ring focus-visible:ring-offset-background border-border sticky top-0 z-10 flex w-full items-center gap-1.5 border-b px-2 py-1.5 text-left font-medium outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
 								TEXT[size]
@@ -424,17 +440,22 @@
 								class={cn(
 									'shrink-0 transition-transform duration-150 ease-out',
 									GLYPH[size],
-									!shut && 'rotate-90'
+									!closed && 'rotate-90'
 								)}
 							/>
 							{#if groupHeader}
 								{@render groupHeader({
 									value: group.value,
-									column: groupBy,
+									column: groupKey ? null : (groupBy ?? null),
 									count: group.rows.length,
-									collapsed: shut,
+									collapsed: closed,
 									id: group.key
 								})}
+							{:else if groupKey || !groupBy}
+								<span class="min-w-0 truncate">
+									{groupLabel ? groupLabel(group.value) : groupKeyText(group.value)}
+								</span>
+								<span class="text-muted-foreground font-mono text-xs tabular-nums">{group.rows.length}</span>
 							{:else}
 								<span class="min-w-0 truncate">
 									<FieldValue
@@ -490,6 +511,7 @@
 												src={cellValue(row, thumbnail) as string | null}
 												alt=""
 												size={THUMB[size][density]}
+												entityType={row.type}
 												class="shrink-0"
 											/>
 										{:else if leading}

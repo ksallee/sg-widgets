@@ -75,6 +75,7 @@
 	import { untrack, type Snippet } from 'svelte';
 	import type { HTMLAttributes } from 'svelte/elements';
 	import type {
+		CollapseState,
 		EntityRef,
 		EntitySource,
 		PagingMode,
@@ -93,7 +94,11 @@
 		isEditableType,
 		nextEnabledIndex,
 		preferencesOf,
-		sameIds,
+		asCollapseState,
+		collapseStateFrom,
+		expandAll,
+		isCollapsed,
+		sameCollapse,
 		stateLine
 	} from '@sg-widgets/core';
 	import {
@@ -165,9 +170,12 @@
 		isRowDisabled?: RowDisabledFn;
 		/** Collapse rows under headers of a shared value at this path. */
 		groupBy?: string | null;
-		/** Ids of the group headers that are shut, two-way. */
-		collapsed?: string[];
-		onCollapsedChange?: (ids: string[]) => void;
+		/**
+		 * Which group headers are shut, two-way. A bare id list reads as the open mode with
+		 * those ids shut; `collapseAll()` shuts the headers a later page brings too.
+		 */
+		collapsed?: string[] | CollapseState;
+		onCollapsedChange?: (state: CollapseState) => void;
 		/** The source's sort, two-way, so a SortPicker drops into the toolbar. */
 		sort?: SortSpec[];
 		onSortChange?: (sort: SortSpec[]) => void;
@@ -229,7 +237,7 @@
 		getRowId,
 		isRowDisabled,
 		groupBy = null,
-		collapsed = $bindable([]),
+		collapsed = $bindable(expandAll()),
 		onCollapsedChange,
 		sort = $bindable(),
 		onSortChange,
@@ -355,6 +363,9 @@
 		// the caller put it.
 		groupedColumnMode: false,
 		initialState: { expanded: true },
+		// A page is a data change, and the mode in force says what its headers do; the
+		// table's own reset would open every one.
+		autoResetExpanded: false,
 		getRowId: (row: EntityRow) => control.rowId(row),
 		columnResizeMode: 'onChange'
 	});
@@ -365,25 +376,43 @@
 	const expansion = $derived(table.atoms.expanded.get());
 
 	/*
-	 * The shut group headers, two-way: one effect out of the table and one into it, each
-	 * reading the other side untracked, so a change travels once and the two never write
-	 * to each other.
+	 * The shut group headers, two-way. The mode is written into the table when it or
+	 * the drawn headers change, and read back out of it when a header is pressed; each
+	 * effect answers one direction and reads the other side untracked, and neither runs
+	 * while no header is drawn, so a mode a host passed before the rows landed survives
+	 * the mount and a reload.
 	 */
 	/** The group headers, which the two-way `collapsed` names by id. */
 	const groupHeaders = $derived.by(() => {
 		void expansion;
 		return table.getRowModel().flatRows.filter((row) => row.getIsGrouped());
 	});
+	const headerIds = $derived(groupHeaders.map((row) => row.id).join('\n'));
 	$effect(() => {
-		const shut = groupHeaders.filter((row) => !row.getIsExpanded()).map((row) => row.id);
-		if (sameIds(shut, untrack(() => collapsed ?? []))) return;
-		collapsed = shut;
-		onCollapsedChange?.(shut);
+		const state = asCollapseState(collapsed);
+		void headerIds;
+		untrack(() => {
+			if (groupHeaders.length === 0) return;
+			if (groupHeaders.every((row) => row.getIsExpanded() === !isCollapsed(state, row.id))) return;
+			// One write for every header, so the read-back never sees a half-applied mode.
+			table.setExpanded(
+				Object.fromEntries(groupHeaders.filter((row) => !isCollapsed(state, row.id)).map((row) => [row.id, true]))
+			);
+		});
 	});
 	$effect(() => {
-		const shut = new Set(collapsed ?? []);
+		// The table answers which headers are shut, not which one was pressed, so the state
+		// is read back under the mode in force and a later page still follows it.
+		void expansion;
 		untrack(() => {
-			for (const row of groupHeaders) if (row.getIsExpanded() === shut.has(row.id)) row.toggleExpanded(!shut.has(row.id));
+			if (groupHeaders.length === 0) return;
+			const drawn = groupHeaders.map((row) => row.id);
+			const shut = groupHeaders.filter((row) => !row.getIsExpanded()).map((row) => row.id);
+			const held = asCollapseState(collapsed);
+			const next = collapseStateFrom(held, shut, drawn);
+			if (sameCollapse(next, held)) return;
+			collapsed = next;
+			onCollapsedChange?.(next);
 		});
 	});
 

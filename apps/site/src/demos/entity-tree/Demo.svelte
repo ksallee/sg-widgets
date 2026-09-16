@@ -1,11 +1,15 @@
 <script lang="ts">
 	import type { EntityRef, TreeNode } from '@sg-widgets/core';
 	import EntityTree from '$lib/registry/components/entity-tree.svelte';
+	import { CONTROL_BUTTON, type ControlSize } from '$lib/registry/components/control-classes.js';
+	import { Button } from '$lib/components/ui/button/index.js';
 	import { createDemoContext } from '../_shared/client';
 	import { setDemoContext } from '../_shared/svelte';
 
 	const context = createDemoContext();
 	setDemoContext(context);
+
+	const SIZES: ControlSize[] = ['sm', 'md', 'lg'];
 
 	const rootPath = `/Project/${context.projectId}`;
 	const seedPath = context.live ? null : `${rootPath}/Shot/sg_sequence/Sequence/100/id/862`;
@@ -73,5 +77,17 @@
 			maxHeight="16rem"
 			data-testid="thumbnail-tree"
 		/>
+	</section>
+
+	<section class={group}>
+		<h4 class={label}>Sizes, each beside a button of the same step</h4>
+		{#each SIZES as size (size)}
+			<div class="flex flex-wrap items-start gap-3" data-demo="size-{size}">
+				<div class="w-72" data-qa-widget="entity-tree" data-qa-size={size}>
+					<EntityTree {context} {rootPath} searchable {size} maxHeight="8rem" />
+				</div>
+				<Button variant="outline" size={CONTROL_BUTTON[size]}>Button</Button>
+			</div>
+		{/each}
 	</section>
 </div>

@@ -1,10 +1,13 @@
 import { useMemo, useState } from 'react';
 import type { EntityRef } from '@sg-widgets/core';
+import { Button } from '@/components/ui/button';
+import { CONTROL_BUTTON, type ControlSize } from '@/registry/sg/components/control-classes';
 import { GlobalSearch } from '@/registry/sg/components/global-search';
 import { createDemoContext } from '../_shared/client';
 
 const TYPES = ['Shot', 'Asset', 'Sequence', 'Task', 'Version', 'HumanUser', 'Project'];
 const SHOTS = ['Shot'];
+const SIZES: ControlSize[] = ['sm', 'md', 'lg'];
 
 const group = 'flex flex-col gap-2';
 const label = 'text-muted-foreground text-xs font-medium tracking-wide uppercase';
@@ -72,6 +75,20 @@ export default function Demo() {
           'Nothing selected yet.'
         )}
       </p>
+
+      <section className={group}>
+        <h4 className={label}>Sizes, each beside a button of the same step</h4>
+        {SIZES.map((size) => (
+          <div key={size} className="flex flex-wrap items-start gap-3" data-demo={`size-${size}`}>
+            <div className="w-64">
+              <GlobalSearch context={context} entityTypes={TYPES} size={size} label="Search the site" />
+            </div>
+            <Button variant="outline" size={CONTROL_BUTTON[size]}>
+              Button
+            </Button>
+          </div>
+        ))}
+      </section>
     </div>
   );
 }

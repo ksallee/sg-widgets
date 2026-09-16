@@ -52,8 +52,9 @@ export interface StatusBadgeProps extends Omit<React.HTMLAttributes<HTMLSpanElem
  * already carries a colour of its own.
  *
  * `glyph` is the icon alone, in its own colour, with no pill around it: no border, no
- * background, no inset, sized like a row glyph. It is what a list row's leading slot
- * draws, where a bordered pill would read as a second surface. The label stays as the
+ * background, no inset, sized like a row glyph. It is the leading mark of a row whose
+ * label is an entity's name, where a bordered pill would read as a second surface; a
+ * status listed as an option is the glyph and its name. The label stays as the
  * accessible name and the tooltip, `color` has nothing to paint, and there is no room for
  * a cross. A status with no icon to draw takes the neutral dot, so a row always carries a
  * leading mark.
@@ -97,7 +98,9 @@ export function StatusBadge({
 
   const content = (
     <>
-      {showGlyph ? <StatusGlyph status={status} siteUrl={siteUrl} className={CHIP_GLYPH[size]} /> : null}
+      {showGlyph ? (
+        <StatusGlyph status={status} siteUrl={siteUrl} onColor={Boolean(paint)} className={CHIP_GLYPH[size]} />
+      ) : null}
       <span className={cn('truncate', !showText && 'sr-only')}>{textIcon ?? text}</span>
     </>
   );

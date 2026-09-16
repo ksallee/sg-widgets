@@ -131,9 +131,14 @@ export function applyPrefs(): void {
   // The palette and the radius also land on `:root`, where the `--sl-*` block in
   // global.css hands the tokens to Starlight, so the header, the sidebar and the
   // content follow the demos. src/scripts/palette-boot.js writes the same two before
-  // the first paint. Light and dark is Starlight's own `data-theme` and is left alone.
+  // the first paint. The tokens for light and dark are Starlight's own `data-theme` and
+  // are left alone.
   document.documentElement.dataset.sgPalette = prefs.palette;
   document.documentElement.dataset.sgRadius = prefs.radius;
+  // The dark class lands on the root as well as on each stage: a popup portals to the
+  // body, and the `dark:` variant both packages define reads `.dark *`, so a row drawn
+  // outside the stage would otherwise keep its light treatment.
+  document.documentElement.classList.toggle('dark', prefs.theme === 'dark');
 
   for (const root of document.querySelectorAll<HTMLElement>('[data-sg-demo]')) {
     root.dataset.framework = prefs.framework;

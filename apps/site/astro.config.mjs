@@ -62,7 +62,13 @@ export default defineConfig({
         SiteTitle: './src/components/overrides/SiteTitle.astro',
       },
       sidebar: [
-        { label: 'Start', items: [{ label: 'Introduction', slug: 'start/introduction' }] },
+        {
+          label: 'Start',
+          items: [
+            { label: 'Introduction', slug: 'start/introduction' },
+            { label: 'Install', slug: 'start/install' },
+          ],
+        },
         {
           label: 'Core',
           items: [{ autogenerate: { directory: 'core' } }],
@@ -77,7 +83,7 @@ export default defineConfig({
             },
             {
               label: 'Display',
-              items: ['status-badge', 'entity-chip', 'entity-card', 'field-value'].map((n) => ({ slug: `widgets/${n}` })),
+              items: ['status-badge', 'entity-chip', 'entity-card', 'field-value', 'match-text'].map((n) => ({ slug: `widgets/${n}` })),
             },
             {
               label: 'Pickers',

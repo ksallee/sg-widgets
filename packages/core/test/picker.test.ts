@@ -1,11 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createQueryCache } from '../src/query.js';
+import { matchRuns, searchWords } from '../src/search.js';
 import { MockClient } from '../src/mock.js';
 import type { WireGroup } from '../src/filter.js';
 import { condition, group, toApi3Hash } from '../src/filter.js';
 import type { PickerRow } from '../src/picker.js';
 import {
   asFilterGroup,
+  clearableForField,
   createEntitySearch,
   entityKey,
   fitChips,
@@ -43,7 +45,8 @@ async function until<T>(read: () => T | null | undefined, timeoutMs = 2000): Pro
 }
 
 describe('queryTokens', () => {
-  it('splits on any run of whitespace and drops the empties', () => {
+  it('is the one tokenizer under its picker name', () => {
+    expect(queryTokens).toBe(searchWords);
     expect(queryTokens('  pub   an \n x ')).toEqual(['pub', 'an', 'x']);
     expect(queryTokens('   ')).toEqual([]);
   });
@@ -229,6 +232,20 @@ describe('pruneFilterToFields', () => {
 });
 
 describe('highlightRuns', () => {
+  it('is the one splitting, under the name the pickers use', () => {
+    expect(highlightRuns).toBe(matchRuns);
+    for (const [label, query] of [
+      ['Published Anna', 'pub an'],
+      ['abcdef', 'abc bcd'],
+      ['', 'x'],
+      ['Ada Lovelace', ''],
+    ] as const) {
+      expect(highlightRuns(label, query)).toEqual(matchRuns(label, query));
+      // The runs rebuild the label exactly, whatever the query was.
+      expect(highlightRuns(label, query).map((run) => run.text).join('')).toBe(label);
+    }
+  });
+
   it('marks every occurrence of every word', () => {
     expect(highlightRuns('Published Anna', 'pub an')).toEqual([
       { text: 'Pub', match: true },
@@ -673,5 +690,17 @@ describe('createEntitySearch', () => {
     search.hydrate([{ type: 'Shot', id: 862 }]);
     await until(() => search.state.error !== null);
     expect(search.known.get('Shot:862')?.name).toBe('Shot 862');
+  });
+});
+
+describe('clearableForField', () => {
+  it('drops the clear on a mandatory field and keeps the caller answer otherwise', () => {
+    expect(clearableForField(true, { mandatory: true })).toBe(false);
+    expect(clearableForField(undefined, { mandatory: true })).toBe(false);
+    expect(clearableForField(true, { mandatory: false })).toBe(true);
+    expect(clearableForField(false, { mandatory: false })).toBe(false);
+    // A field the widget has not read is not mandatory as far as it knows.
+    expect(clearableForField(undefined, null)).toBe(true);
+    expect(clearableForField(false, null)).toBe(false);
   });
 });

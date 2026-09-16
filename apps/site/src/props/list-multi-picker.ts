@@ -8,7 +8,7 @@ export default {
     { name: 'slot', type: '`string`', default: '`\'list-multi-picker\'`', meaning: 'The `data-slot` prefix every part of this picker carries.' },
     { name: 'readonly', type: '`boolean`', default: '`false`', meaning: 'Keeps full contrast and drops the chevron, the popup and the remove controls.' },
     { name: 'placeholder', type: '`string`', default: '`\'Select values\'`', meaning: 'Shown while nothing is chosen.' },
-    { name: 'clearable', type: '`boolean`', default: '`true`', meaning: 'Offers a control that clears the selection. A mandatory field is never clearable.' },
+    { name: 'clearable', type: '`boolean`', default: 'the field', meaning: 'Offers a control that clears the selection. Unset, it follows the field: a mandatory one is never clearable.' },
     { name: 'summary', type: '`\'chips\' | \'ellipsis\' | \'count\'`', default: '`\'ellipsis\'`', meaning: 'What the control shows for the selection.' },
     { name: 'max', type: '`number`', default: '`0`', meaning: 'Chips drawn before the rest becomes `+n`. `0` lets the row fit what it can.' },
   ],

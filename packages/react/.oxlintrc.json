@@ -22,7 +22,7 @@
           "warn",
           {
             "scanAllStrings": true,
-            "allow": ["pr-[5px]", "pr-[7px]", "pr-[9px]", "rounded-[inherit]"]
+            "allow": ["pr-[5px]", "pr-[7px]", "rounded-[inherit]"]
           }
         ],
         "shadcn/no-inline-styles": "warn",

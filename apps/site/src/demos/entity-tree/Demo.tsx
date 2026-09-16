@@ -1,9 +1,12 @@
 import { useMemo, useState } from 'react';
 import type { EntityRef, TreeNode } from '@sg-widgets/core';
+import { Button } from '@/components/ui/button';
+import { CONTROL_BUTTON, type ControlSize } from '@/registry/sg/components/control-classes';
 import { EntityTree } from '@/registry/sg/components/entity-tree';
 import { createDemoContext } from '../_shared/client';
 import { DemoContextProvider } from '../_shared/react';
 
+const SIZES: ControlSize[] = ['sm', 'md', 'lg'];
 const group = 'flex flex-col gap-2';
 const label = 'text-muted-foreground text-xs font-medium tracking-wide uppercase';
 const toggle =
@@ -79,6 +82,20 @@ export default function EntityTreeDemo() {
             maxHeight="16rem"
             data-testid="thumbnail-tree"
           />
+        </section>
+
+        <section className={group}>
+          <h4 className={label}>Sizes, each beside a button of the same step</h4>
+          {SIZES.map((size) => (
+            <div key={size} className="flex flex-wrap items-start gap-3" data-demo={`size-${size}`}>
+              <div className="w-72" data-qa-widget="entity-tree" data-qa-size={size}>
+                <EntityTree context={context} rootPath={rootPath} searchable size={size} maxHeight="8rem" />
+              </div>
+              <Button variant="outline" size={CONTROL_BUTTON[size]}>
+                Button
+              </Button>
+            </div>
+          ))}
         </section>
       </div>
     </DemoContextProvider>

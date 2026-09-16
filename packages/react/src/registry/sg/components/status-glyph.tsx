@@ -3,6 +3,14 @@ import type { StatusRecord } from '@sg-widgets/core';
 import { statusGlyph } from '@sg-widgets/core';
 import { cn } from '@/lib/utils';
 
+/**
+ * The stock sprite was drawn for a light page, so a cell inverts and hue-rotates in
+ * dark: the mark reads against the page and a coloured cell keeps its hue. A site's
+ * own `image` icon is sent ready for both schemes and the dot is a token, so neither
+ * takes this.
+ */
+const SPRITE_DARK = 'dark:invert dark:hue-rotate-180';
+
 export interface StatusGlyphProps {
   /** The resolved `Status` row. A plain `list` field has none, so it draws no icon. */
   status?: StatusRecord | null;
@@ -10,6 +18,8 @@ export interface StatusGlyphProps {
   siteUrl?: string;
   /** Draw the dot for a status that names no icon, so every row carries a leading mark. */
   fallback?: boolean;
+  /** The glyph sits on the status colour, which is its own ground in both schemes, so the sprite is left as it is. */
+  onColor?: boolean;
   /** Sizes the `image` drawing. A sprite cell carries its own size. */
   className?: string;
 }
@@ -23,8 +33,11 @@ export interface StatusGlyphProps {
  * `siteUrl`, and a key with neither resolves to a neutral dot. The key stays on the
  * element as `data-status-icon`. An `html` icon is the label itself, so it draws no
  * picture at all; `fallback` gives it the dot instead, which is what a list row wants.
+ *
+ * A sprite cell is inverted in dark, since the stock sprite was drawn for a light page;
+ * `onColor` turns that off for a glyph sitting on the status colour.
  */
-export function StatusGlyph({ status = null, siteUrl, fallback = false, className }: StatusGlyphProps) {
+export function StatusGlyph({ status = null, siteUrl, fallback = false, onColor = false, className }: StatusGlyphProps) {
   const glyph = statusGlyph(status, siteUrl);
   if (glyph.kind === 'image') {
     return (
@@ -46,7 +59,7 @@ export function StatusGlyph({ status = null, siteUrl, fallback = false, classNam
         data-slot="status-glyph"
         data-status-icon={glyph.imageMapKey}
         style={{ width: `${glyph.cell.w}px`, height: `${glyph.cell.h}px` }}
-        className="shrink-0 [image-rendering:crisp-edges]"
+        className={cn('shrink-0 [image-rendering:crisp-edges]', !onColor && SPRITE_DARK)}
       />
     );
   }
@@ -57,7 +70,7 @@ export function StatusGlyph({ status = null, siteUrl, fallback = false, classNam
         data-slot="status-glyph"
         data-status-icon={glyph.imageMapKey}
         style={glyph.style as React.CSSProperties}
-        className="shrink-0"
+        className={cn('shrink-0', !onColor && SPRITE_DARK)}
       />
     );
   }

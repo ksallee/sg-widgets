@@ -7,9 +7,9 @@
 	 * height is fixed, so there is no vertical inset to take.
 	 */
 	const BOX: Record<FieldPickerSize, string> = {
-		sm: 'h-8 px-2 data-empty:pl-1.5',
-		md: 'h-9 px-3 data-empty:pl-2',
-		lg: 'h-10 px-3 data-empty:pl-2'
+		sm: 'h-7 px-2 data-empty:pl-1.5',
+		md: 'h-8 px-3 data-empty:pl-2',
+		lg: 'h-9 px-3 data-empty:pl-2'
 	};
 	const GLYPH: Record<FieldPickerSize, string> = {
 		sm: 'size-4',
@@ -155,9 +155,9 @@
 
 	/** The trailing controls ride the first row, so they stay with it when the value wraps. */
 const TRAILING: Record<FieldPickerSize, string> = {
-	sm: 'h-8',
-	md: 'h-9',
-	lg: 'h-10'
+	sm: 'h-7',
+	md: 'h-8',
+	lg: 'h-9'
 }
 
 const ICONS: Record<string, typeof Type> = {

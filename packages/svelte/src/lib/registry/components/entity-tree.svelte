@@ -29,6 +29,8 @@
 	const LEAF: Record<EntityTreeSize, 'sm' | 'md'> = { sm: 'sm', md: 'sm', lg: 'md' };
 	/** A badge sits one step under the row it is in, on the chip ladder of `docs/design-rules.md`. */
 	const BADGE: Record<EntityTreeSize, StatusBadgeSize> = { sm: 'xs', md: 'sm', lg: 'md' };
+	/** The search input's trailing inset: room for the spinner, `end-2` either side of the glyph. */
+	const SEARCH_TRAIL: Record<EntityTreeSize, string> = { sm: 'pe-8', md: 'pe-8', lg: 'pe-9' };
 
 	/** `aria-checked` as a tree row spells it: `mixed` for a part-checked branch. */
 	function checkedAttr(state: TreeCheckState): 'true' | 'false' | 'mixed' {
@@ -47,7 +49,6 @@
 		hierarchyLoader,
 		hierarchySearcher,
 		isEmptyValue,
-		matchRuns,
 		NO_MATCH_LABEL,
 		NO_ROWS_LABEL,
 		pathOf,
@@ -65,7 +66,9 @@
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
+	import { CONTROL_BOX, CONTROL_GLYPH } from '$lib/registry/components/control-classes.js';
 	import FieldValue from '$lib/registry/components/field-value.svelte';
+	import MatchText from '$lib/registry/components/match-text.svelte';
 	import StateLine from '$lib/registry/components/state-line.svelte';
 	import StatusBadge from '$lib/registry/components/status-badge.svelte';
 	import Thumbnail from '$lib/registry/components/thumbnail.svelte';
@@ -429,12 +432,15 @@
 				aria-label={searchPlaceholder}
 				aria-busy={snap.searching ? true : undefined}
 				data-slot="entity-tree-search"
-				class="h-9 px-3 pe-8"
+				class={cn(CONTROL_BOX[size], SEARCH_TRAIL[size])}
 			/>
 			{#if snap.searching}
 				<Loader
 					aria-hidden="true"
-					class="text-muted-foreground pointer-events-none absolute end-2 size-4 motion-safe:animate-spin"
+					class={cn(
+						'text-muted-foreground pointer-events-none absolute end-2 motion-safe:animate-spin',
+						CONTROL_GLYPH[size]
+					)}
 				/>
 			{/if}
 		</div>
@@ -588,18 +594,25 @@
 								{#if thumbnail !== false}
 									<span class={cn('flex shrink-0 items-center', LEAD[size])}>
 										{#if thumbOf(node)}
-											<Thumbnail src={thumbOf(node)} aspect="square" size={LEAF[size]} />
+											<Thumbnail
+												src={thumbOf(node)}
+												aspect="square"
+												size={LEAF[size]}
+												entityType={node.entity?.type ?? null}
+											/>
 										{/if}
 									</span>
 								{/if}
 
 								<span class="flex min-w-0 flex-1 flex-col">
 									<span class="flex min-w-0 items-center gap-1.5">
-										<span data-slot="entity-tree-label" class="truncate" title={name}>
-											{#each matchRuns(name, snap.search) as part, i (i)}
-												{#if part.match}<span class="font-semibold">{part.text}</span>{:else}{part.text}{/if}
-											{/each}
-										</span>
+										<MatchText
+											data-slot="entity-tree-label"
+											text={name}
+											query={snap.search}
+											class="truncate"
+											title={name}
+										/>
 										{#if code}
 											<span data-slot="entity-tree-code" class="text-muted-foreground shrink-0 font-mono text-xs"
 												>{code}</span

@@ -12,6 +12,7 @@
 	let shared = $state<string[]>([]);
 	let project = $state<string[]>(['Active', 'Bidding']);
 	let unknown = $state<string[]>(['zz_retired', 'rev']);
+	let note = $state<string[]>(['opn']);
 	/** One value per summary demo, so every control on the page takes an edit. */
 	let shown = $state<Record<string, string[]>>({});
 	const shownAt = (at: string) => shown[at] ?? FIVE;
@@ -78,6 +79,17 @@
 			<div class={field} data-demo="project">
 				<span class={caption}>Project's own status field</span>
 				<StatusMultiPicker {context} entityType="Project" bind:value={project} />
+			</div>
+		</div>
+	</section>
+
+	<section class={group}>
+		<h4 class={label}>A mandatory field, which offers no clear</h4>
+		<div class={stack}>
+			<div class={field} data-demo="mandatory">
+				<span class={caption}>Note's status, which the site flags mandatory</span>
+				<StatusMultiPicker {context} entityType="Note" bind:value={note} />
+				<span class={readout}>{note.join(', ') || '—'}</span>
 			</div>
 		</div>
 	</section>

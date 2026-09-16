@@ -50,7 +50,7 @@
 				value={String(pager.pageSize)}
 				onValueChange={(value) => void source.setPageSize(Number(value))}
 			>
-				<Select.Trigger aria-label="Rows per page" class="h-8 w-auto min-w-16">
+				<Select.Trigger aria-label="Rows per page" class="w-auto min-w-16">
 					<span data-slot="select-value" class="tabular-nums">{pager.pageSize}</span>
 				</Select.Trigger>
 				<Select.Content>
@@ -76,7 +76,7 @@
 				min="1"
 				inputmode="numeric"
 				aria-label="Page number"
-				class="h-8 w-14 text-center tabular-nums"
+				class="w-14 text-center tabular-nums"
 				value={pageDraft === '' ? String(pager.page) : pageDraft}
 				oninput={(event) => (pageDraft = event.currentTarget.value)}
 				onkeydown={(event) => {

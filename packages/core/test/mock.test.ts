@@ -695,13 +695,30 @@ describe('update', () => {
     expect(row.attributes['description']).toBeNull();
   });
 
-  it('refuses a read-only field and an unknown one', async () => {
+  it('refuses a read-only field, a create-only one and an unknown one', async () => {
     const c = client();
+    await expect(c.update('Shot', 862, { id: 1 })).rejects.toMatchObject({
+      status: 400,
+      message: 'API update() Shot.id is read only.',
+    });
+    // A timestamp is stored on create and refused on update (070_authored_timestamps).
     await expect(c.update('Shot', 862, { created_at: '2026-01-01T00:00:00Z' })).rejects.toMatchObject({
       status: 400,
-      message: 'API update() Shot.created_at is read only.',
+      message: 'API update() Shot.created_at is editable on create only.',
     });
     await expect(c.update('Shot', 862, { sg_not_a_field: 1 })).rejects.toBeInstanceOf(SgApiError);
+  });
+
+  it('refuses a bare id where an entity link hash is required', async () => {
+    const c = client();
+    await expect(c.update('Version', 17055, { entity: 862 })).rejects.toMatchObject({
+      status: 400,
+      message: /^API update\(\) Version\.entity expected \[Hash, .* but got Integer: 862$/,
+    });
+    await expect(c.update('Version', 17055, { entity: { id: 862 } })).rejects.toMatchObject({
+      status: 400,
+      message: `API update() invalid/missing entity hash string 'type': {"id":862}`,
+    });
   });
 
   it('404s on an id that is not there', async () => {
@@ -823,5 +840,287 @@ describe('summarize', () => {
     const total = summary.groups.reduce((n, g) => n + (g.summaries['id'] ?? 0), 0);
     expect(total).toBe(summary.summaries['id']);
     for (const group of summary.groups) expect(typeof group.groupValue).toBe('string');
+  });
+});
+
+describe('a note thread', () => {
+  it('returns the Note, its Attachments and its Replies in time order', async () => {
+    const c = client();
+    const thread = await c.threadContents(11030);
+    expect(thread.map((row) => [row.type, row.id])).toEqual([
+      ['Note', 11030],
+      ['Attachment', 2626],
+      ['Reply', 610],
+      ['Attachment', 2627],
+      ['Reply', 611],
+    ]);
+    const times = thread.map((row) => String(row.createdAt));
+    expect([...times].sort()).toEqual(times);
+  });
+
+  it('names the author under created_by on a Note and an Attachment and under user on a Reply', async () => {
+    const thread = await client().threadContents(11030);
+    const note = thread[0];
+    const attachment = thread[1];
+    const reply = thread[2];
+    expect(note?.fields['created_by']).toEqual(note?.author);
+    expect(note?.fields['user']).toBeUndefined();
+    expect(attachment?.fields['created_by']).toEqual(attachment?.author);
+    expect(reply?.fields['user']).toEqual(reply?.author);
+    expect(reply?.fields['created_by']).toBeUndefined();
+    // Only a Reply's author hash carries the presigned avatar.
+    expect(reply?.author?.image).toMatch(/^https:\/\//);
+    expect(note?.author?.image).toBeUndefined();
+  });
+
+  it('carries no content on an Attachment row', async () => {
+    const thread = await client().threadContents(11030);
+    const attachment = thread.find((row) => row.type === 'Attachment');
+    expect(attachment?.content).toBeNull();
+    expect(attachment?.fields).not.toHaveProperty('content');
+  });
+
+  it('widens a Note and an Attachment, and ignores the Reply entry', async () => {
+    const thread = await client().threadContents(11030, {
+      Note: ['subject', 'sg_status_list'],
+      Attachment: ['filename'],
+      Reply: ['updated_at'],
+    });
+    expect(thread[0]?.fields['subject']).toBe('Key light reads flat');
+    expect(thread[0]?.fields['sg_status_list']).toBe('opn');
+    expect(thread[1]?.fields['filename']).toBe('key_light_ref.png');
+    expect(thread[2]?.fields).not.toHaveProperty('updated_at');
+  });
+
+  it('answers one row for a note with no replies, and 404s on an unknown note', async () => {
+    const c = client();
+    const alone = await c.threadContents(11032);
+    expect(alone.map((row) => row.type)).toEqual(['Note']);
+    await expect(c.threadContents(999999999)).rejects.toMatchObject({ status: 404 });
+  });
+
+  it('reads read_by_current_user as a code and types it as a list', async () => {
+    const c = client();
+    const fields = await c.fields('Note');
+    expect(fields['read_by_current_user']?.dataType).toBe('list');
+    expect(fields['read_by_current_user']?.validValues).toEqual(['unread', 'read']);
+    const note = (await c.search('Note', { filters: only('id', 'is', 11030), fields: ['read_by_current_user'] })).data[0];
+    expect(note?.attributes['read_by_current_user']).toBe('unread');
+  });
+
+  it('has no project field on Reply', async () => {
+    const c = client();
+    await expect(c.search('Reply', { filters: only('project', 'is', { type: 'Project', id: 70 }) })).rejects.toMatchObject({
+      status: 400,
+      message: "API read() Reply.project doesn't exist.",
+    });
+  });
+});
+
+describe('the event log', () => {
+  it('answers newest first, by id', async () => {
+    const log = await client().eventLog({ page: { size: 10 } });
+    const ids = log.data.map((entry) => entry.id);
+    expect(ids.length).toBe(10);
+    expect([...ids].sort((a, b) => b - a)).toEqual(ids);
+  });
+
+  it('narrows on entity, event type and attribute name, and reads the values out of meta', async () => {
+    const c = client();
+    const shot = (await c.search('Shot', { fields: ['sg_status_list'], page: { size: 1 } })).data[0];
+    if (!shot) throw new Error('no shot');
+    const log = await c.eventLog({
+      entity: { type: 'Shot', id: shot.id },
+      eventType: 'Shotgun_Shot_Change',
+      attributeName: 'sg_status_list',
+    });
+    expect(log.data.length).toBe(1);
+    const entry = log.data[0];
+    expect(entry?.entity).toMatchObject({ type: 'Shot', id: shot.id });
+    expect(entry?.meta?.['type']).toBe('attribute_change');
+    expect(entry?.oldValue).toBe('wtg');
+    // The newest entry's new_value is what the row holds now, which is what makes a restore safe.
+    expect(entry?.newValue).toBe(shot.attributes['sg_status_list']);
+  });
+
+  it('keeps an event whose target is deleted, with entity null and meta naming it', async () => {
+    const log = await client().eventLog({ eventType: 'Shotgun_Shot_Change', page: { size: 50 } });
+    const orphan = log.data.find((entry) => entry.entity === null);
+    expect(orphan?.meta?.['entity_id']).toBe(9001);
+    expect(orphan?.newValue).toBe('omt');
+  });
+
+  it('cuts on project and on a date window', async () => {
+    const c = client();
+    const all = await c.eventLog({ page: { size: 100 } });
+    const mine = await c.eventLog({ projectId: 71, page: { size: 100 } });
+    expect(mine.data.length).toBeGreaterThan(0);
+    expect(mine.data.length).toBeLessThan(all.data.length);
+    for (const entry of mine.data) expect(entry.project?.id).toBe(71);
+
+    const recent = await c.eventLog({ since: '2026-01-02T00:00:00Z', page: { size: 100 } });
+    expect(recent.data.length).toBeGreaterThan(0);
+    for (const entry of recent.data) expect(String(entry.createdAt) > '2026-01-02T00:00:00Z').toBe(true);
+  });
+
+  it('refuses a filter on meta, the field that holds the answer', async () => {
+    const c = client();
+    await expect(c.search('EventLogEntry', { filters: only('meta', 'is', null) })).rejects.toMatchObject({
+      status: 400,
+      message: "API read() EventLogEntry.meta's 'serializable' data type cannot be used in a filter.",
+    });
+  });
+});
+
+describe('what a person follows', () => {
+  it('answers a type and an id per row, unpaged', async () => {
+    const rows = await client().following(20);
+    expect(rows.length).toBeGreaterThan(0);
+    for (const row of rows) expect(Object.keys(row).sort()).toEqual(['id', 'type']);
+    expect(new Set(rows.map((row) => row.type))).toEqual(new Set(['Note', 'Task']));
+  });
+
+  it('takes the schema name and the plural alike, and cuts on the project', async () => {
+    const c = client();
+    const notes = await c.following(20, { entity: 'Note' });
+    expect(await c.following(20, { entity: 'notes' })).toEqual(notes);
+    expect(notes.every((row) => row.type === 'Note')).toBe(true);
+    // A type nobody follows is an empty list, not an error.
+    expect(await c.following(20, { entity: 'shots' })).toEqual([]);
+    const inProject = await c.following(20, { projectId: 70 });
+    expect(inProject.length).toBeGreaterThan(0);
+    expect(inProject.length).toBeLessThanOrEqual((await c.following(20)).length);
+  });
+
+  it('404s on a user who is not a HumanUser and on an unknown project', async () => {
+    const c = client();
+    await expect(c.following(90)).rejects.toMatchObject({ status: 404 });
+    await expect(c.following(20, { projectId: 999999999 })).rejects.toMatchObject({ status: 404 });
+    await expect(c.following(20, { entity: 'nonsense' })).rejects.toMatchObject({ status: 400 });
+  });
+});
+
+describe('create', () => {
+  it('refuses a project-scoped create with no project, and echoes the body', async () => {
+    const c = client();
+    await expect(c.create('Note', { subject: 'No project' })).rejects.toMatchObject({
+      status: 400,
+      message: 'API create() missing \'project\' attribute: {"subject":"No project"}',
+    });
+  });
+
+  it('fills the identity field the server generates, and leaves a Note titleless', async () => {
+    const c = client();
+    const shot = await c.create('Shot', { project: { type: 'Project', id: 70 } });
+    expect(shot.attributes['code']).toBe(`New Shot ${shot.id}`);
+    // A Note's subject is optional and is not auto-filled (entity_types/Note).
+    const note = await c.create('Note', { project: { type: 'Project', id: 70 } });
+    expect(note.attributes['subject']).toBeNull();
+    expect(note.attributes['cached_display_name']).toBe('');
+    // The defaults come back on the answer, so they are read off it (entity_types/Note).
+    expect(note.attributes['sg_status_list']).toBe('opn');
+    expect(note.attributes['read_by_current_user']).toBe('unread');
+    expect(note.attributes['publish_status']).toBe('published');
+  });
+
+  it('stores an authored created_at and updated_at, and has no updated_at on a Reply', async () => {
+    const c = client();
+    const project = { type: 'Project', id: 70 };
+    // Both are flagged `editable: false` and both are taken by a create (070_authored_timestamps).
+    const dated = await c.create('Note', { project, subject: 'Imported', created_at: '2019-03-04T05:06:07Z', updated_at: '2020-01-02T03:04:05Z' });
+    expect(dated.attributes['created_at']).toBe('2019-03-04T05:06:07Z');
+    expect(dated.attributes['updated_at']).toBe('2020-01-02T03:04:05Z');
+    await expect(c.create('Reply', { entity: { type: 'Note', id: 11030 }, updated_at: '2020-01-02T03:04:05Z' })).rejects.toMatchObject({
+      status: 400,
+      message: "API create() Reply.updated_at doesn't exist.",
+    });
+  });
+
+  it('takes this_file on an Attachment create and never after', async () => {
+    const c = client();
+    const project = { type: 'Project', id: 70 };
+    const link = { url: 'https://example.com/probe.png', name: 'probe.png' };
+    const made = await c.create('Attachment', { project, this_file: link });
+    expect(made.attributes['this_file']).toEqual(link);
+    await expect(c.update('Attachment', made.id, { this_file: link })).rejects.toMatchObject({
+      status: 400,
+      message: 'API update() Attachment.this_file is editable on create only.',
+    });
+  });
+
+  it('refuses a bare id where an entity link hash is required', async () => {
+    const c = client();
+    await expect(c.create('Reply', { entity: 11030, content: 'On it.' })).rejects.toMatchObject({
+      status: 400,
+      message: /^API create\(\) Reply\.entity expected \[Hash, .* but got Integer: 11030$/,
+    });
+  });
+
+  it('puts a Reply in the thread it names, and keeps one that names nothing', async () => {
+    const c = client();
+    const reply = await c.create('Reply', { entity: { type: 'Note', id: 11030 }, content: 'On it.' });
+    expect(reply.relationships['entity']?.data).toMatchObject({ type: 'Note', id: 11030 });
+    const thread = await c.threadContents(11030);
+    expect(thread[thread.length - 1]?.id).toBe(reply.id);
+    // A Reply created without `entity` is legal and is permanent litter (entity_types/Reply).
+    const orphan = await c.create('Reply', { content: 'Nowhere.' });
+    expect(orphan.relationships['entity']?.data).toBeNull();
+  });
+
+  it('refuses an unknown field, a read-only one and an empty identity', async () => {
+    const c = client();
+    const project = { type: 'Project', id: 70 };
+    await expect(c.create('Note', { project, nope: 1 })).rejects.toMatchObject({ message: "API create() Note.nope doesn't exist." });
+    await expect(c.create('Attachment', { project, filename: 'probe.png' })).rejects.toMatchObject({
+      message: 'API create() Attachment.filename is read only.',
+    });
+    await expect(c.create('Shot', { project, code: '' })).rejects.toMatchObject({
+      message: 'Create failed for [Shot]: Cannot set identifier field to empty. (Shot)',
+    });
+  });
+});
+
+describe('upload', () => {
+  const bytes = new Uint8Array([137, 80, 78, 71]);
+
+  it('puts an Attachment on the row and names the kind after the field', async () => {
+    const c = client();
+    const before = c.rowsOf('Attachment').length;
+    const result = await c.upload('Note', 11030, { filename: 'screenshot.png', data: bytes, field: 'attachments' });
+    expect(result.uploadType).toBe('Attachment');
+    expect(result.uploadInfo['original_filename']).toBe('screenshot.png');
+    expect(c.rowsOf('Attachment')).toHaveLength(before + 1);
+    const thread = await c.threadContents(11030);
+    expect(thread.filter((row) => row.type === 'Attachment').map((row) => row.fields['id'])).toContain(
+      c.rowsOf('Attachment')[before]?.['id'],
+    );
+  });
+
+  it('is a Thumbnail on image, and the field reads a placeholder until the transcode lands', async () => {
+    const c = client();
+    const result = await c.upload('Shot', 862, { filename: 'frame.png', data: bytes, field: 'image' });
+    expect(result.uploadType).toBe('Thumbnail');
+    const shot = (await c.search('Shot', { filters: only('id', 'is', 862), fields: ['image'] })).data[0];
+    // Absolute, on the site root (013_upload_media).
+    expect(String(shot?.attributes['image'])).toMatch(/^https:\/\/[^/]+\/images\/status\/transient\//);
+  });
+
+  it('leaves the size and the extension unset, as an uploaded row reads them', async () => {
+    const c = client();
+    await c.upload('Version', 17055, { filename: 'workflow.json', data: bytes });
+    const attachment = c.rowsOf('Attachment').at(-1);
+    expect(attachment?.['file_size']).toBeNull();
+    expect(attachment?.['file_extension']).toBeNull();
+    // Not one of the four values its own `valid_values` declares (entity_types/Attachment).
+    expect(attachment?.['processing_status']).toBe('thumbnail_pending_us');
+  });
+
+  it('404s on a field the type does not have and on a row that is not there', async () => {
+    const c = client();
+    await expect(c.upload('Shot', 862, { filename: 'x.png', data: bytes, field: 'attachments' })).rejects.toMatchObject({
+      status: 404,
+      message: "Field 'Shot.attachments' does not exist.",
+    });
+    await expect(c.upload('Shot', 999999, { filename: 'x.png', data: bytes })).rejects.toMatchObject({ status: 404 });
   });
 });

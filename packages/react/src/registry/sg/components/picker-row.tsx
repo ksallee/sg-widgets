@@ -8,7 +8,6 @@ import type {
   StatusRecord,
 } from '@sg-widgets/core';
 import {
-  highlightRuns,
   isEmptyValue,
   pathOf,
   renderKindFor,
@@ -20,6 +19,7 @@ import {
 } from '@sg-widgets/core';
 import { cn } from '@/lib/utils';
 import { FieldValue } from '@/registry/sg/components/field-value';
+import { MatchText } from '@/registry/sg/components/match-text';
 import { PICKER_ROW_INDICATOR } from '@/registry/sg/components/picker-classes';
 import { Thumbnail } from '@/registry/sg/components/thumbnail';
 import { UserAvatar } from '@/registry/sg/components/user-avatar';
@@ -198,6 +198,7 @@ export function PickerRow({
               src={picture}
               aspect="square"
               size={size}
+              entityType={row.type}
               className={roundThumbnail ? 'rounded-full' : undefined}
             />
           )}
@@ -215,16 +216,12 @@ export function PickerRow({
                 </span>
               </Fragment>
             ))}
-            <span
+            <MatchText
               data-slot="picker-row-name"
+              text={row.name}
+              query={query}
               className={crumbs.length > 0 ? 'font-medium' : undefined}
-            >
-              {highlightRuns(row.name, query).map((run, i) => (
-                <span key={i} className={run.match ? 'font-semibold' : undefined}>
-                  {run.text}
-                </span>
-              ))}
-            </span>
+            />
           </span>
           {code ? (
             <span data-slot="picker-row-code" className="text-muted-foreground shrink-0 font-mono text-xs">
@@ -234,17 +231,13 @@ export function PickerRow({
         </span>
         {sub ? (
           // Highlighted too, so a row matched on its login or its email shows why.
-          <span
+          <MatchText
             data-slot="picker-row-sub-label"
+            text={sub}
+            query={query}
             className="text-muted-foreground truncate text-xs"
             title={sub}
-          >
-            {highlightRuns(sub, query).map((run, i) => (
-              <span key={i} className={run.match ? 'font-semibold' : undefined}>
-                {run.text}
-              </span>
-            ))}
-          </span>
+          />
         ) : null}
       </span>
 

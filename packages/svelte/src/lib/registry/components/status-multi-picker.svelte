@@ -6,11 +6,12 @@
 
 <script lang="ts">
 	import type { HTMLAttributes } from 'svelte/elements';
-	import type { PickerRow, SgContext, StatusOption, StatusRecord } from '@sg-widgets/core';
-	import { matchesTokens, NO_MATCH_LABEL } from '@sg-widgets/core';
+	import type { FieldSchema, PickerRow, SgContext, StatusOption, StatusRecord } from '@sg-widgets/core';
+	import { clearableForField, matchesTokens, NO_MATCH_LABEL } from '@sg-widgets/core';
 	import { Combobox } from 'bits-ui';
 	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
+	import { LEAF_GLYPH } from '$lib/registry/components/leaf-classes.js';
 	import PickerControl from '$lib/registry/components/picker-control.svelte';
 	import Row from '$lib/registry/components/picker-row.svelte';
 	import {
@@ -19,6 +20,7 @@
 		PICKER_ROW
 	} from '$lib/registry/components/picker-classes.js';
 	import StatusBadge, { type StatusBadgeVariant } from '$lib/registry/components/status-badge.svelte';
+	import StatusGlyph from '$lib/registry/components/status-glyph.svelte';
 
 	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>, HTMLDivElement> & {
 		/** The widget context. The options and the status table are read through it, once per page. */
@@ -41,6 +43,7 @@
 		loadingLabel?: string;
 		/** Shown in place of what the failed read said. */
 		errorLabel?: string;
+		/** Offer a control that clears the selection. A mandatory field is never clearable. */
 		clearable?: boolean;
 		readonly?: boolean;
 		disabled?: boolean;
@@ -79,7 +82,7 @@
 		emptyLabel = NO_MATCH_LABEL,
 		loadingLabel,
 		errorLabel,
-		clearable = true,
+		clearable = undefined,
 		readonly = false,
 		disabled = false,
 		invalid = false,
@@ -108,6 +111,8 @@
 		loading: boolean;
 		error: string | null;
 		options: StatusOption[];
+		/** The field the codes come from, which is what clause 8 reads `mandatory` off. */
+		field: FieldSchema | null;
 		statuses: ReadonlyMap<string, StatusRecord>;
 	}
 
@@ -125,10 +130,19 @@
 	 * a "last seen" key.
 	 */
 	function load(type: string, ids: number[], name: string | undefined): Loaded {
-		const state = $state<Loaded>({ loading: true, error: null, options: [], statuses: new Map() });
-		Promise.all([optionsFor(type, ids, name), statusTable.byCode()]).then(
-			([options, statuses]) => {
+		const state = $state<Loaded>({
+			loading: true,
+			error: null,
+			options: [],
+			field: null,
+			statuses: new Map()
+		});
+		// The field itself, for its display name and its `mandatory` flag.
+		const named = name === undefined ? schema.statusField(type) : schema.field(type, name);
+		Promise.all([optionsFor(type, ids, name), named, statusTable.byCode()]).then(
+			([options, found, statuses]) => {
 				state.options = options;
+				state.field = typeof found === 'string' || found === undefined ? null : found;
 				state.statuses = statuses;
 				state.loading = false;
 			},
@@ -220,10 +234,10 @@
 	it: the vocabulary is read once and the query input narrows it in the browser
 	(field_types/status_list).
 
-	A row is the shared picker row of rule 9, after its checkbox: the status icon as the
-	leading glyph, the display label with the matched runs bold, and the code
+	A row is the shared picker row of rule 9, after its checkbox: the status glyph as the
+	leading mark, the display label with the matched runs bold, and the code
 	right-aligned. The badge stays in the control, where a status is a value rather than
-	a row.
+	an option.
 -->
 <div
 	bind:this={ref}
@@ -256,7 +270,8 @@
 		{inert}
 		{readonly}
 		{invalid}
-		{clearable}
+		clearable={clearableForField(clearable, query.field)}
+		controlProps={{ 'aria-label': query.field?.displayName, 'aria-required': query.field?.mandatory }}
 		{placeholder}
 		{searchPlaceholder}
 		bind:open
@@ -323,13 +338,11 @@
 							<Checkbox checked={chosen} tabindex={-1} aria-hidden="true" class="pointer-events-none" />
 						{/snippet}
 						{#snippet glyph()}
-							<StatusBadge
-								code={option.code}
+							<StatusGlyph
 								status={query.statuses.get(option.code) ?? null}
-								field={badgeField}
-								variant="glyph"
-								{size}
 								siteUrl={site}
+								fallback
+								class={LEAF_GLYPH[size]}
 							/>
 						{/snippet}
 					</Row>

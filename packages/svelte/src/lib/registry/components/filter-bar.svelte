@@ -7,6 +7,7 @@
 		type ControlSize
 	} from '$lib/registry/components/control-classes.js';
 	import { CHIP_CROSS, type ChipSize } from '$lib/registry/components/leaf-classes.js';
+	import type { StatusBadgeSize } from '$lib/registry/components/status-badge.svelte';
 
 	export type FilterBarSize = ControlSize;
 
@@ -16,8 +17,14 @@
 	 * The pill's trailing edge: the room above the cross, so its box sits as far from the
 	 * right as from the top (`docs/design-rules.md` rule 3).
 	 */
-	const CROSS_PAD: Record<FilterBarSize, string> = { sm: 'pr-[7px]', md: 'pr-2', lg: 'pr-[9px]' };
-	/** The button step beside a pill of each height. */
+	const CROSS_PAD: Record<FilterBarSize, string> = { sm: 'pr-[5px]', md: 'pr-1.5', lg: 'pr-[7px]' };
+	/** A badge sits one step under the pill it is in (`docs/design-rules.md` rule 3). */
+	const BADGE: Record<FilterBarSize, StatusBadgeSize> = { sm: 'xs', md: 'sm', lg: 'md' };
+	/**
+	 * What a pill's value may take before it truncates. A facet with everything ticked
+	 * would otherwise run the bar past the width it was given (`docs/design-rules.md` rule 2).
+	 */
+	const VALUE_WIDTH = 'max-w-64';
 </script>
 
 <script lang="ts">
@@ -27,9 +34,9 @@
 	import TriangleAlertIcon from '@lucide/svelte/icons/triangle-alert';
 	import XIcon from '@lucide/svelte/icons/x';
 	import type {
+		FacetCondition,
 		FacetValue,
 		FieldSchema,
-		FilterCondition,
 		FilterGroup,
 		Operator,
 		Scalar,
@@ -37,12 +44,14 @@
 		WireGroup
 	} from '@sg-widgets/core';
 	import {
-		conditionArity,
 		conditionParts,
+		conditionValues,
 		describeCondition,
 		emptyFilter,
+		facetShape,
 		facetValues,
-		findCondition,
+		findFacet,
+		renderKindFor,
 		setFacet,
 		toApi3Hash,
 		asFilterGroup,
@@ -50,7 +59,6 @@
 		matchesTokens,
 		withoutPaths
 	} from '@sg-widgets/core';
-	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
 	import * as Command from '$lib/components/ui/command/index.js';
@@ -58,8 +66,11 @@
 	import { cn, type WithElementRef } from '$lib/utils.js';
 	import { entityFields } from '$lib/registry/components/entity-fields.svelte.js';
 	import FilterDialog from '$lib/registry/components/filter-dialog.svelte';
-	import { REMOVE_CONTROL } from '$lib/registry/components/leaf-classes.js';
+	import { LEAF_GLYPH, REMOVE_CONTROL } from '$lib/registry/components/leaf-classes.js';
+	import MatchText from '$lib/registry/components/match-text.svelte';
 	import StateLine from '$lib/registry/components/state-line.svelte';
+	import StatusBadge from '$lib/registry/components/status-badge.svelte';
+	import StatusGlyph from '$lib/registry/components/status-glyph.svelte';
 
 	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>, HTMLDivElement> & {
 		entityType: string;
@@ -67,6 +78,10 @@
 		context: SgContext;
 		/** Field names to offer as pills, in order. */
 		facets: string[];
+		/** A name per facet, for a field whose schema label is not what the page calls it. */
+		labels?: Record<string, string>;
+		/** Values a pill names before the rest reads as `+n`. `0` names every one. */
+		maxValues?: number;
 		value: FilterGroup;
 		hidePaths?: string[];
 		size?: FilterBarSize;
@@ -88,9 +103,11 @@
 		entityType,
 		context,
 		facets,
+		labels = {},
 		value = $bindable(emptyFilter()),
 		hidePaths = [],
 		size = 'md',
+		maxValues = 2,
 		disabled = false,
 		counts,
 		baseFilter = null,
@@ -114,7 +131,10 @@
 	const tally = $derived(loadFacets(scope, fields, facets));
 	/** What the open facet's search box holds. */
 	let facetQuery = $state('');
-	const activeCount = $derived(facets.filter((name) => Boolean(findCondition(value, name))).length);
+	/** The facet whose checklist is open, if any. */
+	let openFacet = $state<string | null>(null);
+	let searchEl = $state<HTMLInputElement | null>(null);
+	const activeCount = $derived(facets.filter((name) => Boolean(facetOf(name))).length);
 
 	async function loadFacets(
 		filters: WireGroup | null,
@@ -141,13 +161,30 @@
 		return out;
 	}
 
-	function conditionOf(name: string): FilterCondition | null {
-		return findCondition(value, name)?.condition ?? null;
+	/** The `Status` rows, for a facet over a status field (probe 010). */
+	// A facet without the table still reads: a badge falls back to its own code.
+	const statuses = $derived(context.statuses.byCode());
+
+	/** The name a pill and its popover carry: the caller's, else the schema's, else the path. */
+	function labelOf(name: string): string {
+		return labels[name] ?? fields[name]?.displayName ?? name;
+	}
+
+	/** True where the facet's values are status codes, which draw as badges rather than text. */
+	function isStatus(name: string): boolean {
+		return renderKindFor(fields[name]?.dataType ?? '') === 'status';
+	}
+
+	/**
+	 * The node this facet contributes. A field the API evaluates no `in` on holds an
+	 * `or` of one-value conditions, which reads back as one checklist.
+	 */
+	function facetOf(name: string): FacetCondition | null {
+		return findFacet(value, name, fields[name]) ?? null;
 	}
 
 	function selectedOf(name: string): Scalar[] {
-		const found = conditionOf(name);
-		return found && Array.isArray(found.value) ? (found.value as Scalar[]) : [];
+		return facetOf(name)?.values ?? [];
 	}
 
 	function keyOf(v: Scalar): string {
@@ -162,8 +199,8 @@
 
 	/** The list operator the checklist writes: the one the pill already holds, else `in`. */
 	function listOperator(name: string): Operator {
-		const found = conditionOf(name);
-		return found && Array.isArray(found.value) ? found.operator : 'in';
+		const found = facetOf(name);
+		return found?.checklist ? found.operator : facetShape(fields[name]).any;
 	}
 
 	function toggle(name: string, option: FacetValue): void {
@@ -171,7 +208,7 @@
 		const next = selected.some((v) => keyOf(v) === option.key)
 			? selected.filter((v) => keyOf(v) !== option.key)
 			: [...selected, option.value];
-		commit(setFacet(value, name, next, listOperator(name)));
+		commit(setFacet(value, name, next, listOperator(name), fields[name]));
 	}
 </script>
 
@@ -188,11 +225,84 @@
 	</button>
 {/snippet}
 
+<!-- One value in a pill, where a status is a value: a status is a badge, and every other value is text. -->
+{#snippet valueBadge(name: string, key: string)}
+	{#await statuses then table}
+		<StatusBadge
+			code={key}
+			status={table.get(key) ?? null}
+			field={fields[name] ?? null}
+			size={BADGE[size]}
+			siteUrl={context.siteUrl}
+		/>
+	{:catch}
+		<StatusBadge code={key} field={fields[name] ?? null} size={BADGE[size]} siteUrl={context.siteUrl} />
+	{/await}
+{/snippet}
+
+<!--
+	One checklist row: the status glyph as a leading mark before the label, the way a
+	picker row whose label is a name reads, with the matched runs of the box bold.
+-->
+{#snippet rowValue(name: string, key: string, label: string)}
+	{#if isStatus(name)}
+		{#await statuses then table}
+			<StatusGlyph
+				status={table.get(key) ?? null}
+				siteUrl={context.siteUrl}
+				fallback
+				class={LEAF_GLYPH[size]}
+			/>
+		{:catch}
+			<StatusGlyph siteUrl={context.siteUrl} fallback class={LEAF_GLYPH[size]} />
+		{/await}
+	{/if}
+	<MatchText text={label} query={facetQuery} class="truncate" />
+{/snippet}
+
+<!--
+	A pill's value: the values it has room to name, then `+n`. It is capped and truncated
+	with the whole list in its `title`, so a facet with everything ticked never stretches
+	the bar.
+-->
+{#snippet pillValues(name: string, shown: ReturnType<typeof conditionValues>)}
+	{#if shown.shown.length > 0}
+		<span
+			data-slot="filter-pill-values"
+			class={cn('flex min-w-0 items-center gap-1.5 truncate', VALUE_WIDTH)}
+			title={shown.title}
+		>
+			{#if isStatus(name) && shown.values.length > 0}
+				{#each shown.values as scalar (keyOf(scalar as Scalar))}
+					<span class="flex min-w-0 items-center truncate">
+						{@render valueBadge(name, keyOf(scalar as Scalar))}
+					</span>
+				{/each}
+			{:else}
+				<span class="min-w-0 truncate">{shown.text}</span>
+			{/if}
+			{#if shown.overflow > 0}
+				<span data-slot="filter-pill-overflow" class="text-muted-foreground shrink-0 tabular-nums">
+					+{shown.overflow}
+				</span>
+			{/if}
+		</span>
+	{/if}
+{/snippet}
+
 {#snippet facetList(name: string)}
 	{@const selected = selectedOf(name)}
-	<Popover.Content strategy="fixed" class="w-64 p-0" align="start">
+	<Popover.Content
+		strategy="fixed"
+		class="w-64 p-0"
+		align="start"
+		onOpenAutoFocus={(event) => {
+			event.preventDefault();
+			searchEl?.focus({ preventScroll: true });
+		}}
+	>
 		<Command.Root shouldFilter={false}>
-			<Command.Input bind:value={facetQuery} placeholder="Search values…" />
+			<Command.Input bind:ref={searchEl} bind:value={facetQuery} placeholder="Search values…" />
 			<Command.List>
 				{#await tally}
 					<p class="text-muted-foreground py-6 text-center text-sm">Counting…</p>
@@ -212,7 +322,9 @@
 								tabindex={-1}
 								aria-hidden="true"
 							/>
-							<span class="min-w-0 flex-1 truncate">{option.label}</span>
+							<span class="flex min-w-0 flex-1 items-center gap-1.5 truncate" title={option.label}>
+								{@render rowValue(name, option.key, option.label)}
+							</span>
 							<span class="text-muted-foreground text-xs tabular-nums" data-slot="facet-count">
 								{option.count}
 							</span>
@@ -235,7 +347,7 @@
 					size={CONTROL_BUTTON[size]}
 					class="w-full"
 					data-slot="filter-pill-clear"
-					onclick={() => commit(setFacet(value, name, []))}
+					onclick={() => commit(setFacet(value, name, [], 'in', fields[name]))}
 				>
 					Clear
 				</Button>
@@ -265,19 +377,21 @@
 >
 	{#each facets as name (name)}
 		{@const field = fields[name]}
-		{@const found = conditionOf(name)}
-		{@const parts = found ? conditionParts(found, field) : null}
-		{@const selected = selectedOf(name)}
-		{#if !found || conditionArity(found, field?.dataType ?? '') === 'many'}
+		{@const found = facetOf(name)}
+		{@const parts = found ? conditionParts(found.summary, field) : null}
+		{@const shown = found ? conditionValues(found.summary, field, maxValues) : null}
+		{#if !found || found.checklist}
 			<!-- One popover and one trigger across both looks, so the first tick does not close the list. -->
-			<Popover.Root>
+			<Popover.Root
+				bind:open={() => openFacet === name, (next) => (openFacet = next ? name : null)}
+			>
 				<div
 					data-slot="filter-pill"
 					data-field={name}
 					data-size={size}
 					data-active={found ? 'true' : undefined}
 					role={found ? 'group' : undefined}
-					aria-label={found ? describeCondition(found, field) : undefined}
+					aria-label={found ? describeCondition(found.summary, field) : undefined}
 					class={cn(
 						'border-border inline-flex max-w-full min-w-0 items-center overflow-hidden rounded-lg border text-sm',
 						CONTROL_HEIGHT[size],
@@ -296,20 +410,17 @@
 					>
 						{#if !found || !parts}
 							<PlusIcon class={cn('shrink-0', CONTROL_GLYPH[size])} />
-							<span class="min-w-0 truncate">{field?.displayName ?? name}</span>
+							<span class="min-w-0 truncate">{labelOf(name)}</span>
 						{:else}
-							<span data-slot="filter-pill-field" class="shrink-0 font-medium">{parts.field}</span>
-							{#if found.operator !== 'in'}
+							<span data-slot="filter-pill-field" class="shrink-0 font-medium">{labelOf(name)}</span>
+							{#if found.summary.operator !== 'in'}
 								<span class="text-muted-foreground shrink-0">{parts.operator}</span>
 							{/if}
-							<span data-slot="filter-pill-values" class="min-w-0 truncate" title={parts.value}>{parts.value}</span>
-							{#if selected.length > 1}
-								<Badge variant="secondary" class="shrink-0">{selected.length}</Badge>
-							{/if}
+							{#if shown}{@render pillValues(name, shown)}{/if}
 						{/if}
 					</Popover.Trigger>
 					{#if found && parts}
-						{@render remove(name, parts.field)}
+						{@render remove(name, labelOf(name))}
 					{/if}
 				</div>
 				{@render facetList(name)}
@@ -322,7 +433,7 @@
 				data-size={size}
 				data-active="true"
 				role="group"
-				aria-label={describeCondition(found, field)}
+				aria-label={describeCondition(found.summary, field)}
 				class={cn(
 					'border-border bg-background inline-flex max-w-full min-w-0 items-center overflow-hidden rounded-lg border text-sm',
 					CONTROL_HEIGHT[size],
@@ -330,15 +441,13 @@
 				)}
 			>
 				<span
-					data-slot="filter-pill-values"
 					class={cn('inline-flex min-w-0 items-center gap-1.5', CONTROL_HEIGHT[size], CONTROL_PAD[size])}
-					title={parts.value}
 				>
-					<span data-slot="filter-pill-field" class="shrink-0 font-medium">{parts.field}</span>
+					<span data-slot="filter-pill-field" class="shrink-0 font-medium">{labelOf(name)}</span>
 					<span class="text-muted-foreground shrink-0">{parts.operator}</span>
-					{#if parts.value}<span class="min-w-0 truncate">{parts.value}</span>{/if}
+					{#if shown}{@render pillValues(name, shown)}{/if}
 				</span>
-				{@render remove(name, parts.field)}
+				{@render remove(name, labelOf(name))}
 			</div>
 		{/if}
 	{/each}

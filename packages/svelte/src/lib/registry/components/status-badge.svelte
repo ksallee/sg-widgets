@@ -104,15 +104,16 @@
 	the pill already carries a colour of its own.
 
 	`glyph` is the icon alone, in its own colour, with no pill around it: no border, no
-	background, no inset, sized like a row glyph. It is what a list row's leading slot
-	draws, where a bordered pill would read as a second surface. The label stays as the
+	background, no inset, sized like a row glyph. It is the leading mark of a row whose
+	label is an entity's name, where a bordered pill would read as a second surface; a
+	status listed as an option is the glyph and its name. The label stays as the
 	accessible name and the tooltip, `color` has nothing to paint, and there is no room
 	for a cross. A status with no icon to draw takes the neutral dot, so a row always
 	carries a leading mark.
 -->
 {#snippet content()}
 	{#if showGlyph}
-		<StatusGlyph {status} {siteUrl} class={CHIP_GLYPH[size]} />
+		<StatusGlyph {status} {siteUrl} onColor={Boolean(paint)} class={CHIP_GLYPH[size]} />
 	{/if}
 	<span class={cn('truncate', !showText && 'sr-only')}>{textIcon ?? text}</span>
 {/snippet}

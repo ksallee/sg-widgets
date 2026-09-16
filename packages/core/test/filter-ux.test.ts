@@ -9,10 +9,14 @@ import {
   defaultCondition,
   defaultValueFor,
   conditionParts,
+  conditionValues,
   describeCondition,
   emptyValueFor,
   facetPresets,
+  facetShape,
   facetValues,
+  fieldOperators,
+  findFacet,
   filterableFields,
   findCondition,
   fromSortString,
@@ -48,6 +52,7 @@ import {
   withoutPaths,
 } from '../src/filter-ux.js';
 import type { FieldSchema } from '../src/schema.js';
+import { normalizeFields } from '../src/schema.js';
 
 function field(partial: Partial<FieldSchema> & { name: string; dataType: string }): FieldSchema {
   return {
@@ -517,6 +522,137 @@ describe('facets', () => {
   });
 });
 
+describe('a facet on a field the API evaluates no `in` on', () => {
+  const readState = normalizeFields({ data: {} }, 'Note')['read_by_current_user'] as FieldSchema;
+  const empty = group('and', []);
+
+  it('narrows the data type vocabulary to what the field declares', () => {
+    expect(fieldOperators(readState)).toEqual(['is', 'is_not']);
+    expect(fieldOperators({ dataType: 'list' })).toEqual(['is', 'is_not', 'in', 'not_in']);
+    expect(facetShape(readState)).toEqual({ any: 'is', none: 'is_not', spread: true });
+    expect(facetShape(status)).toEqual({ any: 'in', none: 'not_in', spread: false });
+  });
+
+  it('serialises one ticked value to `is` and several to an `or` of `is`', () => {
+    const one = setFacet(empty, 'read_by_current_user', ['read'], 'in', readState);
+    expect(toApi3Hash(one)).toEqual({
+      logical_operator: 'and',
+      conditions: [['read_by_current_user', 'is', 'read']],
+    });
+
+    const both = setFacet(empty, 'read_by_current_user', ['read', 'unread'], 'in', readState);
+    expect(toApi3Hash(both)).toEqual({
+      logical_operator: 'and',
+      conditions: [
+        {
+          logical_operator: 'or',
+          conditions: [
+            ['read_by_current_user', 'is', 'read'],
+            ['read_by_current_user', 'is', 'unread'],
+          ],
+        },
+      ],
+    });
+  });
+
+  it('negates as `is_not`, which is `and` over several values', () => {
+    const negated = setFacet(empty, 'read_by_current_user', ['read', 'unread'], 'not_in', readState);
+    expect(toApi3Hash(negated)).toEqual({
+      logical_operator: 'and',
+      conditions: [
+        {
+          logical_operator: 'and',
+          conditions: [
+            ['read_by_current_user', 'is_not', 'read'],
+            ['read_by_current_user', 'is_not', 'unread'],
+          ],
+        },
+      ],
+    });
+  });
+
+  it('reads the spread conditions back as one checklist, and replaces them in place', () => {
+    const both = setFacet(empty, 'read_by_current_user', ['read', 'unread'], 'in', readState);
+    const found = findFacet(both, 'read_by_current_user', readState);
+    expect(found?.checklist).toBe(true);
+    expect(found?.operator).toBe('is');
+    expect(found?.values).toEqual(['read', 'unread']);
+    // The pill reads every facet the same way, so the group stands in as one list condition.
+    expect(found?.summary).toMatchObject({ operator: 'in', value: ['read', 'unread'] });
+
+    const one = setFacet(both, 'read_by_current_user', ['read'], 'is', readState);
+    expect(countConditions(one)).toBe(1);
+    expect(nodeAt(one, [0])).toMatchObject({ operator: 'is', value: 'read' });
+    expect(setFacet(both, 'read_by_current_user', [], 'in', readState).conditions).toEqual([]);
+  });
+
+  it('strips the whole group when the pill is removed', () => {
+    const tree = group('and', [
+      condition('project', 'is', { type: 'Project', id: 1180 }),
+      group('or', [
+        condition('read_by_current_user', 'is', 'read'),
+        condition('read_by_current_user', 'is', 'unread'),
+      ]),
+    ]);
+    const stripped = withoutPaths(tree, ['read_by_current_user']);
+    expect(stripped.conditions).toHaveLength(1);
+    expect(nodeAt(stripped, [0])).toMatchObject({ path: 'project' });
+  });
+
+  it('offers the editor menu only the operators the field evaluates, the empty tests included', () => {
+    const ids = operatorMenu('list', fieldOperators(readState)).flatMap((run) => run.presets.map((p) => p.id));
+    expect(ids).toEqual(['is', 'is_not']);
+    expect(presetById('list', 'in', fieldOperators(readState))).toBeUndefined();
+    expect(presetById('list', 'is_empty', fieldOperators(readState))).toBeUndefined();
+    expect(defaultCondition('read_by_current_user', 'list', fieldOperators(readState)).operator).toBe('is');
+    // A field with no narrowing keeps the type's whole menu, the empty tests included.
+    expect(presetsFor('list', fieldOperators({ dataType: 'list' })).map((p) => p.id)).toEqual(
+      presetsFor('list').map((p) => p.id),
+    );
+    expect(facetPresets('list', readState).map((p) => p.id)).toEqual(['in', 'not_in']);
+  });
+
+  it('finds a negated single value at the root at its own path, so it unticks and clears', () => {
+    const tree = group('and', [condition('read_by_current_user', 'is_not', 'read')]);
+    const found = findFacet(tree, 'read_by_current_user', readState);
+    expect(found).toMatchObject({ at: [0], operator: 'is_not', values: ['read'], checklist: true });
+    expect(found!.summary).toMatchObject({ operator: 'not_in', value: ['read'] });
+    expect(setFacet(tree, 'read_by_current_user', [], 'is_not', readState).conditions).toEqual([]);
+    const both = setFacet(tree, 'read_by_current_user', ['read', 'unread'], 'is_not', readState);
+    expect(nodeAt(both, [0])).toMatchObject({ kind: 'group', logicalOperator: 'and' });
+    expect(findFacet(both, 'read_by_current_user', readState)?.at).toEqual([0]);
+    // A group at the root holding one such condition is never the facet itself.
+    const alone = group('or', [condition('read_by_current_user', 'is', 'read')]);
+    expect(findFacet(alone, 'read_by_current_user', readState)?.at).toEqual([0]);
+  });
+
+  it('spells a facet by what the field evaluates, per data type', () => {
+    const shape = (dataType: string) => facetShape({ dataType });
+    expect(shape('list')).toEqual({ any: 'in', none: 'not_in', spread: false });
+    expect(shape('status_list')).toEqual({ any: 'in', none: 'not_in', spread: false });
+    expect(shape('entity')).toEqual({ any: 'in', none: 'not_in', spread: false });
+    expect(shape('multi_entity')).toEqual({ any: 'in', none: 'not_in', spread: false });
+    expect(shape('text')).toEqual({ any: 'in', none: 'not_in', spread: false });
+    expect(shape('checkbox')).toEqual({ any: 'is', none: 'is_not', spread: true });
+    expect(facetShape(readState)).toEqual({ any: 'is', none: 'is_not', spread: true });
+  });
+
+  it('leaves an emptied root as an empty group', () => {
+    const tree = group('and', [condition('read_by_current_user', 'is_not', 'read')]);
+    expect(withoutPaths(tree, ['read_by_current_user'])).toEqual({ kind: 'group', logicalOperator: 'and', conditions: [] });
+  });
+
+  it('names the ticked values as one comma-joined line', () => {
+    const found = findFacet(
+      setFacet(empty, 'read_by_current_user', ['read', 'unread'], 'in', readState),
+      'read_by_current_user',
+      readState,
+    );
+    expect(conditionValues(found!.summary, readState, 2).text).toBe('read, unread');
+    expect(conditionValues(found!.summary, readState, 1)).toMatchObject({ text: 'read', overflow: 1 });
+  });
+});
+
 describe('conditionParts', () => {
   it('splits the sentence describeCondition joins', () => {
     const ticked = condition('sg_status_list', 'in', ['apr', 'fin']);
@@ -539,6 +675,31 @@ describe('conditionParts', () => {
 
   it('falls back to the dotted path with no schema', () => {
     expect(conditionParts(condition('entity.Shot.code', 'contains', '010')).field).toBe('entity.Shot.code');
+  });
+});
+
+describe('conditionValues', () => {
+  it('names the first values and counts the rest, with the whole list in the title', () => {
+    const ticked = condition('sg_status_list', 'in', ['apr', 'fin', 'ip', 'rev']);
+    expect(conditionValues(ticked, status, 2)).toEqual({
+      shown: ['Approved', 'Final'],
+      overflow: 2,
+      title: 'Approved, Final, In Progress, rev',
+      text: 'Approved, Final',
+      values: ['apr', 'fin'],
+    });
+    // `max` of 0 is every value, and a list shorter than `max` never overflows.
+    expect(conditionValues(ticked, status, 0).overflow).toBe(0);
+    expect(conditionValues(condition('sg_status_list', 'in', ['apr']), status, 2).overflow).toBe(0);
+  });
+
+  it('gives a condition on any other shape its one value and no overflow', () => {
+    const one = conditionValues(condition('code', 'contains', '010'));
+    expect(one.shown).toEqual(['010']);
+    expect(one.overflow).toBe(0);
+    expect(one.values).toEqual([]);
+    // An operator that pins its own value has nothing to name.
+    expect(conditionValues(condition('sg_status_list', 'is', null), status).shown).toEqual([]);
   });
 });
 

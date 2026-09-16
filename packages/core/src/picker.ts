@@ -24,6 +24,8 @@ import { pathOf } from './row.js';
 import type { SchemaService } from './schema-service.js';
 import { createSchemaService } from './schema-service.js';
 import { DISPLAY_NAME_FIELDS, displayNameOf } from './schema.js';
+import type { MatchRun } from './search.js';
+import { matchRuns, searchWords } from './search.js';
 
 /* -------------------------------------------------------------------------- */
 /* rows                                                                       */
@@ -81,9 +83,8 @@ export function flattenRow(row: EntityRow, labelField?: string): PickerRow {
 /* the query filter                                                           */
 /* -------------------------------------------------------------------------- */
 
-export function queryTokens(query: string): string[] {
-  return query.trim().split(/\s+/).filter(Boolean);
-}
+/** The words of a query. The name the pickers were written against; `searchWords` is the function. */
+export const queryTokens = searchWords;
 
 /** One field a query is matched against, and how. */
 export interface SearchField {
@@ -110,7 +111,7 @@ function asSearchField(spec: SearchFieldSpec): SearchField {
  * be `entity.Shot.code` (017_filter_operators).
  */
 export function nameSearchFilter(query: string, fields: readonly SearchFieldSpec[]): FilterGroup {
-  const tokens = queryTokens(query);
+  const tokens = searchWords(query);
   const usable = fields.map(asSearchField).filter((f) => f.path.length > 0);
   if (tokens.length === 0 || usable.length === 0) return group('and');
   const perField = usable.map((field) =>
@@ -237,56 +238,31 @@ export function projectPickerFilters(
   return mergeFilters(asFilterGroup(extra), includeArchived ? null : condition('archived', 'is', false));
 }
 
+/**
+ * Clause 8 of the picker contract: the clear control follows `clearable`, and a
+ * mandatory field never offers one. A field whose schema the widget has not read is
+ * not mandatory as far as it knows, so the caller's answer stands.
+ */
+export function clearableForField(
+  clearable: boolean | undefined,
+  field: { mandatory?: boolean } | null | undefined,
+): boolean {
+  if (field?.mandatory === true) return false;
+  return clearable ?? true;
+}
+
 /* -------------------------------------------------------------------------- */
 /* highlighting                                                               */
 /* -------------------------------------------------------------------------- */
 
-export interface HighlightRun {
-  text: string;
-  /** True when this run is part of a matched word. Rendered bold, never coloured. */
-  match: boolean;
-}
+/** A stretch of a label, matched or not. The shape `matchRuns` answers. */
+export type HighlightRun = MatchRun;
 
 /**
- * Split a label into matched and unmatched runs for the current query. Matching is
- * case-insensitive and per word, the same rule the search filter sends, and
- * overlapping words merge into one run. The result is text, never markup: a widget
- * renders the runs as elements and never sets HTML from a row.
+ * Split a label into matched and unmatched runs for the current query, the one
+ * splitting `matchRuns` does. Kept as the name the pickers were written against.
  */
-export function highlightRuns(label: string, query: string): HighlightRun[] {
-  if (label.length === 0) return [];
-  const tokens = queryTokens(query).map((t) => t.toLowerCase());
-  if (tokens.length === 0) return [{ text: label, match: false }];
-
-  const haystack = label.toLowerCase();
-  const ranges: Array<[number, number]> = [];
-  for (const token of tokens) {
-    let from = haystack.indexOf(token);
-    while (from !== -1) {
-      ranges.push([from, from + token.length]);
-      from = haystack.indexOf(token, from + 1);
-    }
-  }
-  if (ranges.length === 0) return [{ text: label, match: false }];
-
-  ranges.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
-  const merged: Array<[number, number]> = [];
-  for (const range of ranges) {
-    const last = merged[merged.length - 1];
-    if (last && range[0] <= last[1]) last[1] = Math.max(last[1], range[1]);
-    else merged.push([range[0], range[1]]);
-  }
-
-  const runs: HighlightRun[] = [];
-  let at = 0;
-  for (const [start, end] of merged) {
-    if (start > at) runs.push({ text: label.slice(at, start), match: false });
-    runs.push({ text: label.slice(start, end), match: true });
-    at = end;
-  }
-  if (at < label.length) runs.push({ text: label.slice(at), match: false });
-  return runs;
-}
+export const highlightRuns = matchRuns;
 
 /* -------------------------------------------------------------------------- */
 /* option list composition                                                    */

@@ -13,7 +13,7 @@ export default {
     { name: 'selectable', type: '`boolean`', default: '`false`', meaning: 'Draws a checkbox column.' },
     { name: 'isRowDisabled', type: '`(row) => boolean`', default: '—', meaning: 'True for a row that cannot be selected or edited.' },
     { name: 'groupBy', type: '`string | null`', default: '`null`', meaning: 'Collapses rows under headers of a shared value at this path.' },
-    { name: 'collapsed', type: '`string[]`', default: '`[]`', meaning: 'Ids of the group headers that are shut, two-way.' },
+    { name: 'collapsed', type: '`string[] | CollapseState`', default: '`expandAll()`', meaning: 'Which group headers are shut, two-way. A bare id list is the open mode with those ids shut.' },
     { name: 'editable', type: '`boolean`', default: '`false`', meaning: 'Lets an editable cell open an editor.' },
     { name: 'editorFor', type: '`(dataType) => Component | null`', default: '—', meaning: 'The editor a cell opens, by data type. A type it does not answer for opens FieldEditor.' },
     { name: 'editorPlacement', type: '`\'inline\' | \'popover\'`', default: 'per data type', meaning: 'Where every cell editor opens. A column\'s own `editorPlacement` wins over it.' },
@@ -31,7 +31,7 @@ export default {
   events: [
     { name: 'onColumnsChange', payload: '`CollectionColumn[]`', when: 'A column was hidden from its header menu.' },
     { name: 'onSelectionChange', payload: '`EntityRef[]`', when: 'The selection changed.' },
-    { name: 'onCollapsedChange', payload: '`string[]`', when: 'A group header was opened or shut.' },
+    { name: 'onCollapsedChange', payload: '`CollapseState`', when: 'A group header was opened or shut.' },
     { name: 'onSortChange', payload: '`SortSpec[]`', when: 'The source\'s sort changed, from a header or from the prop.' },
     { name: 'onFiltersChange', payload: '`FilterNode | WireGroup | null`', when: 'The source\'s filter changed.' },
   ],

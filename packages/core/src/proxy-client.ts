@@ -17,6 +17,9 @@
 import type {
   EntityRow,
   EntityTypeInfo,
+  EventLogOptions,
+  EventLogResult,
+  FollowingOptions,
   HierarchyNode,
   HierarchyPath,
   SummarizeOptions,
@@ -25,10 +28,14 @@ import type {
   SearchResult,
   SgClient,
   TextSearchRow,
+  ThreadRow,
+  UploadFile,
+  UploadResult,
 } from './client.js';
 import { SgApiError } from './client.js';
 import type { EntityRef, TextSearchFilter } from './filter.js';
 import type { ProxyError, ProxyMethod } from './proxy-handler.js';
+import { bytesToBase64 } from './proxy-handler.js';
 import type { FieldSchema } from './schema.js';
 import type { StatusRecord } from './status.js';
 
@@ -107,6 +114,19 @@ export class ProxyClient implements SgClient {
     return this.post('statuses', {});
   }
 
+  create(entityType: string, body: Record<string, unknown>): Promise<EntityRow> {
+    return this.post('create', { entityType, body });
+  }
+
+  /** The bytes cross the protocol base64-encoded; the handler runs the three calls. */
+  upload(entityType: string, id: number, file: UploadFile): Promise<UploadResult> {
+    return this.post('upload', {
+      entityType,
+      id,
+      file: { filename: file.filename, data: bytesToBase64(file.data), field: file.field ?? null },
+    });
+  }
+
   update(entityType: string, id: number, patch: Record<string, unknown>): Promise<EntityRow> {
     return this.post('update', { entityType, id, patch });
   }
@@ -121,5 +141,17 @@ export class ProxyClient implements SgClient {
 
   summarize(entityType: string, options: SummarizeOptions = {}): Promise<SummarizeResult> {
     return this.post('summarize', { entityType, options });
+  }
+
+  threadContents(noteId: number, entityFields?: Record<string, string[]>): Promise<ThreadRow[]> {
+    return this.post('threadContents', { noteId, entityFields: entityFields ?? null });
+  }
+
+  eventLog(options: EventLogOptions = {}): Promise<EventLogResult> {
+    return this.post('eventLog', { options });
+  }
+
+  following(userId: number, options: FollowingOptions = {}): Promise<EntityRef[]> {
+    return this.post('following', { userId, options });
   }
 }

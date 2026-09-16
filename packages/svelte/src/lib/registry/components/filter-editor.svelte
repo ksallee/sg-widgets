@@ -4,12 +4,20 @@
 
 	export type FilterEditorSize = 'sm' | 'md' | 'lg';
 
-	/** A condition row is a control inside a control, so its ladder sits one step down. */
+	/** The control ladder of `docs/design-rules.md`, which a condition's own controls stand on. */
 	const BOX: Record<FilterEditorSize, string> = { sm: 'h-7', md: 'h-8', lg: 'h-9' };
-	const INNER: Record<FilterEditorSize, 'sm' | 'md'> = { sm: 'sm', md: 'sm', lg: 'md' };
+	const ROW: Record<FilterEditorSize, string> = { sm: 'min-h-7', md: 'min-h-8', lg: 'min-h-9' };
+	/** Every control in a row stands on the row's own step, so one row has one height. */
+	const INNER: Record<FilterEditorSize, FilterEditorSize> = { sm: 'sm', md: 'md', lg: 'lg' };
 	/** A cross sits one step under the row's own control on the chip ladder. */
 	const CROSS: Record<FilterEditorSize, ChipSize> = { sm: 'xs', md: 'xs', lg: 'sm' };
-	const TOGGLE: Record<FilterEditorSize, 'sm' | 'default'> = { sm: 'sm', md: 'sm', lg: 'default' };
+	const TOGGLE: Record<FilterEditorSize, 'sm' | 'default' | 'lg'> = { sm: 'sm', md: 'default', lg: 'lg' };
+	/** The select trigger has two steps of its own; the third is its default step lifted to `h-9`. */
+	const SELECT: Record<FilterEditorSize, { size: 'sm' | 'default'; class?: string }> = {
+		sm: { size: 'sm' },
+		md: { size: 'default' },
+		lg: { size: 'default', class: 'data-[size=default]:h-9' }
+	};
 	import type {
 		ConditionValue,
 		EntityRef,
@@ -98,6 +106,7 @@
 	import {
 		appendAt,
 		applyPreset,
+		fieldOperators,
 		condition as makeCondition,
 		conditionArity,
 		conditionList,
@@ -230,6 +239,11 @@
 		return fieldOf(path)?.dataType ?? '';
 	}
 
+	/** The operators the site answers on a path, which may be fewer than its data type takes. */
+	function operatorsOf(path: string): readonly Operator[] {
+		return fieldOperators(fieldOf(path) ?? { dataType: dataTypeOf(path) });
+	}
+
 	/** True while a dotted path is still being walked; its leaf decides the whole row. */
 	function unresolved(path: string): boolean {
 		return path.includes('.') && !(leafKey(path) in leaves);
@@ -246,14 +260,20 @@
 
 	async function pickField(path: NodePath, current: FilterCondition, chosen: string): Promise<void> {
 		const before = dataTypeOf(current.path);
-		const after = chosen.includes('.') ? ((await resolveLeaf(chosen))?.dataType ?? '') : dataTypeOf(chosen);
+		const leaf = chosen.includes('.') ? await resolveLeaf(chosen) : fieldOf(chosen);
+		const after = leaf?.dataType ?? '';
 		// The operator vocabulary is per data type, so moving to another type resets the row.
-		edit(path, before === after && current.path ? { ...current, path: chosen } : defaultCondition(chosen, after));
+		edit(
+			path,
+			before === after && current.path
+				? { ...current, path: chosen }
+				: defaultCondition(chosen, after, fieldOperators(leaf ?? { dataType: after }))
+		);
 	}
 
 	function pickPreset(path: NodePath, current: FilterCondition, id: string): void {
 		const dataType = dataTypeOf(current.path);
-		const preset = presetById(dataType, id);
+		const preset = presetById(dataType, id, operatorsOf(current.path));
 		if (preset) edit(path, applyPreset(current, preset, dataType));
 	}
 </script>
@@ -290,7 +310,8 @@
 
 {#snippet operatorSlot(path: NodePath, node: FilterCondition)}
 	{@const dataType = dataTypeOf(node.path)}
-	{@const menu = operatorMenu(dataType)}
+	{@const operators = operatorsOf(node.path)}
+	{@const menu = operatorMenu(dataType, operators)}
 	{@const current = presetIdOf(node, dataType)}
 	<Select.Root
 		type="single"
@@ -298,8 +319,8 @@
 		disabled={disabled || menu.length === 0}
 		onValueChange={(id) => pickPreset(path, node, id)}
 	>
-		<Select.Trigger class={cn(BOX[size], 'w-40 shrink-0')} data-slot="filter-operator">
-			{presetById(dataType, current)?.label ?? current}
+		<Select.Trigger size={SELECT[size].size} class={cn(SELECT[size].class, 'w-40 shrink-0')} data-slot="filter-operator">
+			{presetById(dataType, current, operators)?.label ?? current}
 		</Select.Trigger>
 		<Select.Content>
 			{#each menu as run (run.label)}
@@ -585,18 +606,18 @@
 {/snippet}
 
 <!--
-	A row is two bands: the field, the operator and the value on one 36px line, and
+	A row is two bands: the field, the operator and the value on one line of the row's own height, and
 	the remove button on its own. The remove sits outside the wrapping band, so it
 	holds the same vertical axis at every depth and never costs the row a line.
 -->
 {#snippet conditionRow(path: NodePath, node: FilterCondition)}
-	<div class="flex min-h-9 min-w-0 items-center gap-2" data-slot="filter-row" data-path={path.join('.')}>
+	<div class={cn('flex min-w-0 items-center gap-2', ROW[size])} data-slot="filter-row" data-path={path.join('.')}>
 		<div class="flex min-w-0 flex-1 flex-wrap items-center gap-2" data-slot="filter-row-content">
 			{@render fieldSlot(path, node)}
 			{@render operatorSlot(path, node)}
 			{@render valueSlot(path, node)}
 		</div>
-		<div class="flex h-9 shrink-0 items-center self-start">
+		<div class={cn('flex shrink-0 items-center self-start', BOX[size])}>
 			<button
 				type="button"
 				class={cn(REMOVE_CONTROL, 'disabled:pointer-events-none disabled:opacity-50')}
@@ -625,7 +646,7 @@
 		data-depth={depth}
 		data-logical-operator={node.logicalOperator}
 	>
-		<div class="flex min-h-9 min-w-0 items-center gap-2" data-slot="filter-group-header">
+		<div class={cn('flex min-w-0 items-center gap-2', ROW[size])} data-slot="filter-group-header">
 			<ToggleGroup.Root
 				type="single"
 				size={TOGGLE[size]}
@@ -641,7 +662,7 @@
 			</ToggleGroup.Root>
 			<span class="text-muted-foreground min-w-0 flex-1 truncate text-xs">of these match</span>
 			{#if depth > 0}
-				<div class="flex h-9 shrink-0 items-center self-start">
+				<div class={cn('flex shrink-0 items-center self-start', BOX[size])}>
 					<button
 						type="button"
 						class={cn(REMOVE_CONTROL, 'disabled:pointer-events-none disabled:opacity-50')}

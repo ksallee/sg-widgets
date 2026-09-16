@@ -10,7 +10,6 @@ import {
   CONTRAST,
   GROUPS,
   MODES,
-  TEXT_RATIO,
   contrast,
   followsByDefault,
   formatRem,
@@ -22,6 +21,7 @@ import {
   renderBlock,
   resolve,
   toSrgb,
+  wantedRatio,
   type Base,
   type Block,
   type Edit,
@@ -414,7 +414,7 @@ function Lab({ blocks }: { blocks: Record<Mode, Block> }) {
           </div>
           {names.map((name) => {
             const row = current.get(name)!;
-            const text = name === '--foreground' || name.endsWith('-foreground');
+            const wanted = wantedRatio(name);
             const inGamut = toSrgb(row.color).inGamut;
             return (
               <div key={name} className="tl-row" data-tl-token={name} data-changed={row.changed ? '' : undefined}>
@@ -425,7 +425,7 @@ function Lab({ blocks }: { blocks: Record<Mode, Block> }) {
                   <code>{name}</code>
                   <span className="tl-meta">
                     {ratios(name).map(({ surface, ratio }) => (
-                      <span key={surface} data-fail={text && ratio < TEXT_RATIO ? '' : undefined}>
+                      <span key={surface} data-fail={wanted !== null && ratio < wanted ? '' : undefined}>
                         {ratio.toFixed(2)}:1 on {surface}
                       </span>
                     ))}

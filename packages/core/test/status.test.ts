@@ -8,7 +8,14 @@ import {
   usableStatuses,
 } from '../src/status.js';
 import { STOCK_ICON_CELLS } from '../src/status-icons.js';
-import { displayNameOf, normalizeField, statusFieldFor } from '../src/schema.js';
+import {
+  displayNameOf,
+  fieldSchemaOverride,
+  normalizeField,
+  normalizeFields,
+  statusFieldFor,
+  statusFieldNameFor,
+} from '../src/schema.js';
 
 describe('usableStatuses', () => {
   const field = {
@@ -96,9 +103,125 @@ describe('schema', () => {
     expect(statusFieldFor('Version', { sg_status_list: f })).toBe(f);
     expect(statusFieldFor('Project')).toBe('sg_status');
   });
+  it('the conventional status field wins over another status_list the site added', () => {
+    const shape = (name: string, displayName: string) => ({
+      name,
+      displayName,
+      entityType: 'Shot',
+      dataType: 'status_list' as const,
+      editable: true,
+      mandatory: false,
+      unique: false,
+    });
+    // A schema read answers in no order the caller controls, so the first status_list
+    // found is not the type's status.
+    const fields = {
+      sg_client_status: shape('sg_client_status', 'Client Status'),
+      sg_status_list: shape('sg_status_list', 'Status'),
+    };
+    expect(statusFieldFor('Shot', fields)).toBe(fields.sg_status_list);
+    // With no conventional field the first status_list is still better than a guess.
+    expect(statusFieldFor('Shot', { sg_client_status: fields.sg_client_status })).toBe(fields.sg_client_status);
+    expect(statusFieldFor('Shot', {})).toBe('sg_status_list');
+    expect(statusFieldNameFor('Project')).toBe('sg_status');
+  });
   it('display name falls back through the conventional fields', () => {
     expect(displayNameOf({ code: 'sh010', name: 'x' })).toBe('sh010');
     expect(displayNameOf({ content: 'Comp' })).toBe('Comp');
     expect(displayNameOf({}, '#12')).toBe('#12');
+  });
+});
+
+describe('the fields the schema types wrongly', () => {
+  it('reads Note.read_by_current_user as a list of unread and read', () => {
+    const field = normalizeField('read_by_current_user', {
+      name: { value: 'Read by Current User', editable: true },
+      entity_type: { value: 'Note', editable: false },
+      data_type: { value: 'checkbox', editable: false },
+      editable: { value: true, editable: false },
+      mandatory: { value: false, editable: false },
+      unique: { value: false, editable: false },
+      properties: {},
+    });
+    expect(field.dataType).toBe('list');
+    expect(field.validValues).toEqual(['unread', 'read']);
+    expect(fieldSchemaOverride('Shot', 'sg_status_list')).toBeUndefined();
+  });
+
+  it('answers Note.read_by_current_user from a schema that does not declare it', () => {
+    const fields = normalizeFields({
+      data: {
+        subject: {
+          name: { value: 'Subject', editable: true },
+          entity_type: { value: 'Note', editable: false },
+          data_type: { value: 'text', editable: false },
+          editable: { value: true, editable: false },
+          mandatory: { value: true, editable: false },
+          unique: { value: false, editable: false },
+          properties: {},
+        },
+      },
+    });
+    const read = fields['read_by_current_user'];
+    expect(read).toEqual({
+      name: 'read_by_current_user',
+      displayName: 'Read by Current User',
+      entityType: 'Note',
+      dataType: 'list',
+      validValues: ['unread', 'read'],
+      operators: ['is', 'is_not'],
+      // A person's write is stored (068_note_read_state).
+      editable: true,
+      mandatory: false,
+      unique: false,
+    });
+  });
+
+  it('patches only the type, the values and the operators on a site that declares the field', () => {
+    const declared = normalizeField('read_by_current_user', {
+      name: { value: 'Read State', editable: true },
+      entity_type: { value: 'Note', editable: false },
+      data_type: { value: 'checkbox', editable: false },
+      editable: { value: false, editable: false },
+      mandatory: { value: false, editable: false },
+      unique: { value: false, editable: false },
+      properties: { description: { value: 'Per person.', editable: true } },
+    });
+    expect(declared).toEqual({
+      name: 'read_by_current_user',
+      displayName: 'Read State',
+      entityType: 'Note',
+      dataType: 'list',
+      validValues: ['unread', 'read'],
+      operators: ['is', 'is_not'],
+      editable: false,
+      mandatory: false,
+      unique: false,
+      description: 'Per person.',
+    });
+    expect(fieldSchemaOverride('Note', 'read_by_current_user')).toEqual({
+      dataType: 'list',
+      validValues: ['unread', 'read'],
+      operators: ['is', 'is_not'],
+    });
+  });
+
+  it('leaves the field the schema did declare alone, and adds nothing to another type', () => {
+    const raw = (entityType: string, dataType: string) => ({
+      name: { value: 'Read by Current User', editable: true },
+      entity_type: { value: entityType, editable: false },
+      data_type: { value: dataType, editable: false },
+      editable: { value: true, editable: false },
+      mandatory: { value: false, editable: false },
+      unique: { value: false, editable: false },
+      properties: {},
+    });
+    const notes = normalizeFields({ data: { read_by_current_user: raw('Note', 'checkbox') } });
+    expect(Object.keys(notes)).toEqual(['read_by_current_user']);
+    expect(notes['read_by_current_user']?.dataType).toBe('list');
+    const shots = normalizeFields({ data: { read_by_current_user: raw('Shot', 'checkbox') } });
+    expect(shots['read_by_current_user']?.dataType).toBe('checkbox');
+    expect(Object.keys(normalizeFields({ data: {} }, 'Note'))).toEqual(['read_by_current_user']);
+    expect(Object.keys(normalizeFields({ data: {} }))).toEqual([]);
   });
 });

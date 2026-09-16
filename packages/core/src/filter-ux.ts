@@ -12,7 +12,7 @@
  * and `findings/field_types/*`) through `operatorsFor`.
  */
 import type { ConditionValue, FilterCondition, FilterGroup, FilterNode, Scalar } from './filter.js';
-import { isBlankCondition } from './filter.js';
+import { condition as makeCondition, group as makeGroup, isBlankCondition } from './filter.js';
 import type { DataType, Operator, TimeUnit, ValueShape } from './field-types.js';
 import {
   isFilterable,
@@ -190,6 +190,16 @@ function plainPreset(operator: Operator, dataType: string): OperatorPreset {
   };
 }
 
+/**
+ * The operators a field takes: its data type's vocabulary, narrowed by the
+ * field's own `operators` where the API evaluates fewer of them.
+ */
+export function fieldOperators(field?: Pick<FieldSchema, 'dataType' | 'operators'> | null): readonly Operator[] {
+  const all = operatorsFor(field?.dataType ?? '');
+  const only = field?.operators;
+  return only ? all.filter((operator) => only.includes(operator)) : all;
+}
+
 /** Which named run an operator belongs in. */
 function groupOf(operator: Operator): string {
   switch (operator) {
@@ -221,10 +231,11 @@ const GROUP_ORDER = ['Is', 'Text', 'Compare', 'Relative', 'Calendar', 'Link', 'E
 
 /**
  * The operator menu for a data type, grouped. Every entry names the raw operator
- * it serialises to; an unfilterable type gets an empty menu.
+ * it serialises to; an unfilterable type gets an empty menu. `operators` narrows
+ * the menu to what the field's own site answers.
  */
-export function operatorMenu(dataType: string): OperatorGroup[] {
-  const presets = presetsFor(dataType);
+export function operatorMenu(dataType: string, operators?: readonly Operator[]): OperatorGroup[] {
+  const presets = presetsFor(dataType, operators);
   const byGroup = new Map<string, OperatorPreset[]>();
   for (const preset of presets) {
     const label = presetGroup(preset);
@@ -249,8 +260,8 @@ function presetGroup(preset: OperatorPreset): string {
  * replaced by their named offsets and never offered raw: an integer offset with
  * no wording around it is not a control anyone can read.
  */
-export function presetsFor(dataType: string): OperatorPreset[] {
-  const operators = operatorsFor(dataType);
+export function presetsFor(dataType: string, only?: readonly Operator[]): OperatorPreset[] {
+  const operators = only ?? operatorsFor(dataType);
   if (operators.length === 0) return [];
   const empty = emptyValueFor(dataType);
   const out: OperatorPreset[] = [];
@@ -267,16 +278,26 @@ export function presetsFor(dataType: string): OperatorPreset[] {
     }
   }
   // uuid spells its empty test `is ""`, which the tree reads as an unfilled row and
-  // drops, so the menu cannot offer it; every other type spells it `is null`.
-  if (empty === null) {
+  // drops, so the menu cannot offer it; every other type spells it `is null`. A field
+  // whose own `operators` narrows the type's vocabulary was measured on those operators
+  // with values, never on null: `Note.read_by_current_user` evaluates `is` and `is_not`
+  // against `read` and `unread` alone (068_note_read_state), so the empty tests follow
+  // the narrowing off the menu.
+  if (empty === null && !narrowed(dataType, only) && operators.includes('is') && operators.includes('is_not')) {
     out.push({ id: 'is_empty', label: 'is empty', operator: 'is', input: 'none', value: null });
     out.push({ id: 'is_not_empty', label: 'is not empty', operator: 'is_not', input: 'none', value: null });
   }
   return out;
 }
 
-export function presetById(dataType: string, id: string): OperatorPreset | undefined {
-  return presetsFor(dataType).find((p) => p.id === id);
+/** True where `only` leaves out an operator the data type's own vocabulary holds. */
+function narrowed(dataType: string, only?: readonly Operator[]): boolean {
+  if (!only) return false;
+  return operatorsFor(dataType).some((operator) => !only.includes(operator));
+}
+
+export function presetById(dataType: string, id: string, operators?: readonly Operator[]): OperatorPreset | undefined {
+  return presetsFor(dataType, operators).find((p) => p.id === id);
 }
 
 /** The menu entry a condition currently sits on. */
@@ -348,8 +369,8 @@ export function defaultValueFor(dataType: string, operator: Operator): Condition
 }
 
 /** A blank condition on a field, ready for its value. */
-export function defaultCondition(path: string, dataType: string): FilterCondition {
-  const preset = presetsFor(dataType)[0];
+export function defaultCondition(path: string, dataType: string, operators?: readonly Operator[]): FilterCondition {
+  const preset = presetsFor(dataType, operators)[0];
   const operator: Operator = preset ? preset.operator : 'is';
   return {
     kind: 'condition',
@@ -363,6 +384,9 @@ export function defaultCondition(path: string, dataType: string): FilterConditio
 /* summary                                                                    */
 /* -------------------------------------------------------------------------- */
 
+/** Between the values of a list, wherever one is spelled out. */
+const VALUE_SEPARATOR = ', ';
+
 function scalarLabel(value: Scalar, field?: FieldSchema | null): string {
   if (value === null || value === undefined) return '';
   if (typeof value === 'boolean') return value ? 'Yes' : 'No';
@@ -375,7 +399,7 @@ function valueSummary(condition: FilterCondition, field?: FieldSchema | null): s
   const { operator, value } = condition;
   switch (VALUE_SHAPE[operator]) {
     case 'list':
-      return Array.isArray(value) ? value.map((v) => scalarLabel(v as Scalar, field)).join(', ') : '';
+      return Array.isArray(value) ? value.map((v) => scalarLabel(v as Scalar, field)).join(VALUE_SEPARATOR) : '';
     case 'range': {
       if (!Array.isArray(value) || value.length !== 2) return '';
       return `${scalarLabel(value[0] as Scalar, field)} and ${scalarLabel(value[1] as Scalar, field)}`;
@@ -412,6 +436,46 @@ export function conditionParts(condition: FilterCondition, field?: FieldSchema |
     field: field?.displayName ?? condition.path,
     operator: preset?.label ?? operatorLabel(condition.operator, dataType),
     value: valueSummary(condition, field),
+  };
+}
+
+/** A condition's values, as much of them as a pill has room to name. */
+export interface ConditionValues {
+  /** The values the pill names, in order. */
+  shown: string[];
+  /** Values past `shown`, which the pill reads as `+n`. */
+  overflow: number;
+  /** Every value, comma-joined, for the `title` a truncated pill carries. */
+  title: string;
+  /** The shown values as one line, for a pill that spells its values rather than drawing them. */
+  text: string;
+  /** The scalar behind each shown value, for a pill that draws its values rather than spelling them. */
+  values: Scalar[];
+}
+
+/**
+ * A condition's values as a pill reads them: the first `max`, a count of the rest,
+ * and the whole list for the title. A condition on any other shape than a list has
+ * one value and no overflow, so a pill draws it whole.
+ */
+export function conditionValues(
+  condition: FilterCondition,
+  field?: FieldSchema | null,
+  max = 2,
+): ConditionValues {
+  const title = valueSummary(condition, field);
+  if (VALUE_SHAPE[condition.operator] !== 'list' || !Array.isArray(condition.value)) {
+    return { shown: title ? [title] : [], overflow: 0, title, text: title, values: [] };
+  }
+  const all = condition.value as Scalar[];
+  const limit = max > 0 ? Math.min(max, all.length) : all.length;
+  const shown = all.slice(0, limit).map((v) => scalarLabel(v, field));
+  return {
+    shown,
+    overflow: all.length - limit,
+    title,
+    text: shown.join(VALUE_SEPARATOR),
+    values: all.slice(0, limit),
   };
 }
 
@@ -767,38 +831,166 @@ export function findCondition(
   return undefined;
 }
 
-/** A copy of the tree with every condition on one of `paths` gone. */
+/**
+ * A copy of the tree with every condition on one of `paths` gone. A group the
+ * pruning emptied goes with it, so the `or` of `is` conditions a facet writes
+ * leaves nothing behind.
+ */
 export function withoutPaths(root: FilterGroup, paths: readonly string[]): FilterGroup {
   const drop = new Set(paths);
   const prune = (node: FilterNode): FilterNode | null => {
     if (node.kind === 'condition') return drop.has(node.path) ? null : node;
     const conditions = node.conditions.map(prune).filter((c): c is FilterNode => c !== null);
+    if (node.conditions.length > 0 && conditions.length === 0) return null;
     return { ...node, conditions };
   };
-  return prune(root) as FilterGroup;
+  return (prune(root) as FilterGroup | null) ?? { ...root, conditions: [] };
+}
+
+/**
+ * How a facet spells a set of ticked values on a field.
+ *
+ * A field the API evaluates `in` on takes one condition holding the list. A field
+ * it does not takes one condition per value: `is` joined by `or`, `is_not` joined
+ * by `and`, which is the same set of rows.
+ */
+export interface FacetShape {
+  /** The operator a ticked set writes. */
+  any: Operator;
+  /** The operator a negated set writes. */
+  none: Operator;
+  /** True where a set of several values is one condition per value. */
+  spread: boolean;
+}
+
+export function facetShape(field?: Pick<FieldSchema, 'dataType' | 'operators'> | null): FacetShape {
+  const operators = fieldOperators(field);
+  if (operators.includes('in') && operators.includes('not_in')) return { any: 'in', none: 'not_in', spread: false };
+  return { any: 'is', none: 'is_not', spread: true };
+}
+
+/** The node a facet contributes, read back as one checklist. */
+export interface FacetCondition {
+  /** Where the node sits in the tree. */
+  at: NodePath;
+  /** The condition, or the group of one-value conditions, the facet wrote. */
+  node: FilterNode;
+  /**
+   * The condition a pill reads. A group of one-value conditions stands in as one
+   * list-shaped condition, so a pill draws every facet the same way. Never serialised.
+   */
+  summary: FilterCondition;
+  /** The operator the checklist writes, `in` or `is` and their negations. */
+  operator: Operator;
+  /** The values ticked. Empty where the node is not a checklist. */
+  values: Scalar[];
+  /** True where the node is a checklist this facet can edit, false where the editor wrote it. */
+  checklist: boolean;
+}
+
+/**
+ * The values a node holds as one checklist on `path`, or `null` where it is not one.
+ * A group qualifies only when every child is a one-value condition on the path; the
+ * root never does, since a facet writes into the root and never is it.
+ */
+function facetValuesOf(node: FilterNode, path: string, shape: FacetShape, dataType: string, root = false): Scalar[] | null {
+  if (node.kind === 'condition') {
+    if (node.path !== path || isPinned(node, dataType)) return null;
+    if (node.operator === 'in' || node.operator === 'not_in') {
+      return Array.isArray(node.value) ? (node.value as Scalar[]) : null;
+    }
+    if (!shape.spread || (node.operator !== shape.any && node.operator !== shape.none)) return null;
+    return [node.value as Scalar];
+  }
+  if (root || !shape.spread || node.conditions.length === 0) return null;
+  const wanted = node.logicalOperator === 'or' ? shape.any : shape.none;
+  const values: Scalar[] = [];
+  for (const child of node.conditions) {
+    if (child.kind !== 'condition' || child.path !== path || child.operator !== wanted) return null;
+    if (isPinned(child, dataType)) return null;
+    values.push(child.value as Scalar);
+  }
+  return values;
+}
+
+function facetOperatorOf(node: FilterNode, shape: FacetShape): Operator {
+  if (node.kind === 'condition') return node.operator;
+  return node.logicalOperator === 'or' ? shape.any : shape.none;
+}
+
+/**
+ * The node a facet contributes on `path`, wherever it sits: the condition it
+ * wrote, or the group of one-value conditions it wrote on a field the API
+ * evaluates no `in` on.
+ */
+export function findFacet(
+  root: FilterNode,
+  path: string,
+  field?: Pick<FieldSchema, 'dataType' | 'operators'> | null,
+  at: NodePath = [],
+): FacetCondition | undefined {
+  const shape = facetShape(field);
+  const dataType = field?.dataType ?? '';
+  const read = (node: FilterNode, where: NodePath): FacetCondition | undefined => {
+    const values = facetValuesOf(node, path, shape, dataType, node === root);
+    if (values) {
+      const operator = facetOperatorOf(node, shape);
+      const list = operator === shape.none || operator === 'not_in' ? 'not_in' : 'in';
+      return { at: where, node, summary: makeCondition(path, list, values), operator, values, checklist: true };
+    }
+    if (node.kind === 'condition') {
+      if (node.path !== path) return undefined;
+      return { at: where, node, summary: node, operator: node.operator, values: [], checklist: false };
+    }
+    for (let i = 0; i < node.conditions.length; i += 1) {
+      const found = read(node.conditions[i] as FilterNode, [...where, i]);
+      if (found) return found;
+    }
+    return undefined;
+  };
+  return read(root, at);
 }
 
 /**
  * Set the condition a facet contributes: replaced where one exists, appended to
- * the root where none does, removed when nothing is ticked. `operator` is one of
- * the list operators a facet offers.
+ * the root where none does, removed when nothing is ticked. `operator` is the
+ * list operator the facet holds, spelled out as one `is` per value on a field the
+ * API evaluates no `in` on.
  */
 export function setFacet(
   root: FilterGroup,
   path: string,
   values: readonly Scalar[],
   operator: Operator = 'in',
+  field?: Pick<FieldSchema, 'dataType' | 'operators'> | null,
 ): FilterGroup {
-  const found = findCondition(root, path);
+  const shape = facetShape(field);
+  const negated = operator === 'not_in' || operator === 'is_not';
+  const op = negated ? shape.none : shape.any;
+  const found = findFacet(root, path, field);
   if (values.length === 0) return found ? removeAt(root, found.at) : root;
-  const next: FilterCondition = { kind: 'condition', path, operator, value: [...values] };
+  const next: FilterNode = !shape.spread
+    ? makeCondition(path, op, [...values])
+    : values.length === 1
+      ? makeCondition(path, op, values[0] as Scalar)
+      : makeGroup(negated ? 'and' : 'or', values.map((v) => makeCondition(path, op, v)));
   return found ? replaceAt(root, found.at, next) : appendAt(root, [], next);
 }
 
 /** A facet's condition moved onto another of its menu entries. */
-export function setFacetPreset(root: FilterGroup, path: string, preset: OperatorPreset, dataType: string): FilterGroup {
-  const found = findCondition(root, path);
-  const current = found?.condition ?? { kind: 'condition' as const, path, operator: 'in' as Operator, value: [] };
+export function setFacetPreset(
+  root: FilterGroup,
+  path: string,
+  preset: OperatorPreset,
+  dataType: string,
+  field?: Pick<FieldSchema, 'dataType' | 'operators'> | null,
+): FilterGroup {
+  const found = findFacet(root, path, field ?? { dataType });
+  // A list preset keeps the values and changes only which way the facet spells them.
+  if (preset.input === 'list' && found?.checklist) {
+    return setFacet(root, path, found.values, preset.operator, field ?? { dataType });
+  }
+  const current = found?.summary ?? { kind: 'condition' as const, path, operator: 'in' as Operator, value: [] };
   const next = applyPreset(current, preset, dataType);
   return found ? replaceAt(root, found.at, next) : appendAt(root, [], next);
 }
@@ -861,10 +1053,16 @@ export function facetValues(rows: readonly EntityRow[], field: FieldSchema): Fac
 
 /**
  * The menu a facet pill's operator segment offers: the operators that take the
- * checklist's list of values, and the empty tests, which take none.
+ * checklist's list of values, and the empty tests, which take none. A field the
+ * API evaluates no `in` on still offers both list entries, since the facet spells
+ * a list out as one condition per value.
  */
-export function facetPresets(dataType: string): OperatorPreset[] {
-  return presetsFor(dataType).filter((p) => p.input === 'list' || p.id === 'is_empty' || p.id === 'is_not_empty');
+export function facetPresets(dataType: string, field?: Pick<FieldSchema, 'dataType' | 'operators'> | null): OperatorPreset[] {
+  const lists = presetsFor(dataType).filter((p) => p.input === 'list');
+  const empties = presetsFor(dataType, field ? fieldOperators(field) : undefined).filter(
+    (p) => p.id === 'is_empty' || p.id === 'is_not_empty',
+  );
+  return [...lists, ...empties];
 }
 
 function facetLabel(value: Scalar, field: FieldSchema): string {

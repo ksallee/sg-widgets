@@ -10,7 +10,7 @@ export default {
     { name: 'title', type: '`string`', default: '`\'Filters\'`', meaning: 'Dialog title.' },
     { name: 'disabled', type: '`boolean`', default: '`false`', meaning: 'Blocks both buttons.' },
     { name: 'open', type: '`boolean`', default: '`false`', meaning: 'Whether the dialog is showing. Two-way in Svelte.' },
-    { name: 'size', type: '`\'sm\' | \'md\' | \'lg\'`', default: '`\'md\'`', meaning: 'Launcher heights 8, 9 and 10. Passed to the editor inside.' },
+    { name: 'size', type: '`\'sm\' | \'md\' | \'lg\'`', default: '`\'md\'`', meaning: 'Launcher heights 7, 8 and 9. Passed to the editor inside.' },
     { name: 'class / className', type: '`string`', default: '—', meaning: 'Merged after the widget\'s own classes.' },
   ],
   events: [

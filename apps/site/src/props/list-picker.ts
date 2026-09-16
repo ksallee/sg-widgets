@@ -18,7 +18,7 @@ export default {
     { name: 'emptyLabel', type: '`string`', default: '`\'No rows\'`', meaning: 'Shown when the list offers nothing.' },
     { name: 'searchable', type: '`boolean`', default: '`false`', meaning: 'Offers a search box, which narrows the set in the browser.' },
     { name: 'searchPlaceholder', type: '`string`', default: '`\'Search values…\'`', meaning: 'Placeholder of the search box.' },
-    { name: 'clearable', type: '`boolean`', default: '`true`', meaning: 'Offers a control that clears the value. A mandatory field is never clearable.' },
+    { name: 'clearable', type: '`boolean`', default: 'the field', meaning: 'Offers a control that clears the value. Unset, it follows the field: a mandatory one is never clearable.' },
     { name: 'showCode', type: '`boolean`', default: '`false`', meaning: 'Draws the stored string as a row\'s right-aligned secondary, where it says more than the label.' },
     { name: 'secondary', type: '`(option) => string`', default: 'the value', meaning: 'A row\'s right-aligned value, of the caller\'s own making.' },
     { name: 'subLabel', type: '`(option) => string`', default: '—', meaning: 'The muted line under a row\'s label.' },

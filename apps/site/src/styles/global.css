@@ -193,7 +193,9 @@
   --info-foreground: oklch(1 0 0);
   --border: oklch(0 0 0 / 0.1); /* divider.heavyweight over surface.level200 */
   --input: oklch(0 0 0 / 0.16); /* border.base over surface.level200 */
-  --ring: oklch(0 0 238.2409 / 0.24); /* reference.accent #0696d7, which halo.focus tints */
+  /* halo.focus tints reference.accent, and a focus mark is held to 3:1, which no wash of
+     black on this ground reaches. The accent itself reads 3.21:1 on the page. */
+  --ring: oklch(0.6395 0.1412 238.2409); /* reference.accent #0696d7 */
   --chart-1: oklch(0.6395 0.1412 238.2409); /* reference.accent */
   --chart-2: oklch(0.6219 0.1464 129.3125); /* status.success #6a9728 */
   --chart-3: oklch(0.782 0.1643 69.5839); /* status.warning #faa21b */
@@ -225,6 +227,8 @@
  * Weave's dark-blue medium-density theme, from the same package and version as the light
  * block above. Its surface ramp runs the other way: `level100` is the topmost surface and
  * `level350` the ground, so `--background` takes the last step and a card the middle one.
+ * A wash of white over the ground stands in for the surfaces Weave lifts off it, since
+ * a shadcn token that is drawn over a card has to lift off that too.
  */
 :root[data-theme='dark'],
 [data-stage].dark {
@@ -240,7 +244,7 @@
   --secondary-foreground: oklch(0.9702 0.0137 241.9);
   --muted: oklch(1 0.0211 241.9 / 0.02); /* surface.level300 #222933 */
   --muted-foreground: oklch(0.6262 0.0048 241.9); /* text.dim over surface.level300 */
-  --accent: oklch(1 0.0327 241.9 / 0.04); /* surface.level100 #454f61 */
+  --accent: oklch(1 0.0327 241.9 / 0.14); /* the page colour at 14% white, a selected row's lift */
   --accent-foreground: oklch(0.9702 0.0137 241.9);
   --destructive: oklch(0.6507 0.1858 23.8376); /* status.error #eb5555 */
   --destructive-foreground: oklch(0.2369 0.0137 253.0936);
@@ -250,9 +254,11 @@
   --warning-foreground: oklch(0.2369 0.0137 253.0936);
   --info: oklch(0.7002 0.1253 232.5245); /* reference.accent #38abdf */
   --info-foreground: oklch(0.2369 0.0137 253.0936);
-  --border: oklch(1 0.003 241.9 / 0.05); /* divider.heavyweight over surface.level350 */
-  --input: oklch(1 0.003 241.9 / 0.08); /* border.base over surface.level350 */
-  --ring: oklch(1 0.005 241.9 / 0.12); /* reference.accent */
+  --border: oklch(1 0.003 241.9 / 0.1); /* the page colour at 10% white, a divider */
+  --input: oklch(1 0.003 241.9 / 0.12); /* the page colour at 12% white, a control's edge */
+  /* halo.focus tints reference.accent, and a focus mark is held to 3:1, which no wash of
+     white on this ground reaches; the accent itself clears it. */
+  --ring: oklch(0.7002 0.1253 232.5245); /* reference.accent #38abdf */
   --chart-1: oklch(0.7002 0.1253 232.5245);
   --chart-2: oklch(0.7117 0.1513 127.6839); /* status.success #87b340 */
   --chart-3: oklch(0.8203 0.1452 74.6168); /* status.warning #fbb549 */

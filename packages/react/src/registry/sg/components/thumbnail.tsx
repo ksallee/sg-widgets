@@ -1,8 +1,9 @@
 import type * as React from 'react';
 import { useState } from 'react';
 import { imageState } from '@sg-widgets/core';
-import { Hourglass, ImageOff, Play } from 'lucide-react';
+import { Hourglass, ImageIcon, Play } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { entityGlyph } from '@/registry/sg/components/entity-glyphs';
 
 export type ThumbnailAspect = '16:9' | 'square';
 export type ThumbnailSize = 'sm' | 'md' | 'lg' | 'xl' | '2xl';
@@ -44,6 +45,8 @@ export interface ThumbnailProps extends Omit<React.HTMLAttributes<HTMLDivElement
   alt?: string;
   aspect?: ThumbnailAspect;
   size?: ThumbnailSize;
+  /** The row's entity type, whose glyph stands in when there is no picture. */
+  entityType?: string | null;
   /** Draws a centred play badge, the way the desktop tk-framework-qtwidgets label marks playable media. */
   playable?: boolean;
 }
@@ -53,9 +56,10 @@ export interface ThumbnailProps extends Omit<React.HTMLAttributes<HTMLDivElement
  *
  * The value of an `image` field is the only state marker there is: null means the row
  * never had one, and the `/images/status/transient/` prefix means it is still
- * transcoding, so neither is tested for truthiness (field_types/image). Both states
- * get an explicit glyph rather than an empty box, as does a URL that fails to load:
- * the value is presigned and expires, so a stale one is a normal outcome. Corners
+ * transcoding, so neither is tested for truthiness (field_types/image). Having none
+ * is the ordinary case and reads as one: the type's own glyph on the muted box,
+ * never a broken picture. A URL that fails to load reads the same, since the value
+ * is presigned and expires, so a stale one is a normal outcome. Corners
  * follow `--radius` through `rounded-md`, and the height comes from the size ladder
  * while the width follows the aspect, so the atom never sets a fixed width.
  */
@@ -64,6 +68,7 @@ export function Thumbnail({
   alt = '',
   aspect = '16:9',
   size = 'md',
+  entityType = null,
   playable = false,
   className,
   ...rest
@@ -71,6 +76,8 @@ export function Thumbnail({
   // Held as the failing URL, not a flag, so a new `src` retries without an effect.
   const [failed, setFailed] = useState<string | null>(null);
   const imgState = failed !== null && failed === src ? 'none' : imageState(src);
+  // A row with no type still has a picture's shape to stand in for.
+  const Empty = entityType ? entityGlyph(entityType) : ImageIcon;
 
   return (
     <div
@@ -103,7 +110,7 @@ export function Thumbnail({
         </span>
       ) : (
         <span role="img" aria-label="No image" className="text-muted-foreground flex items-center justify-center">
-          <ImageOff aria-hidden="true" className={GLYPH[size]} />
+          <Empty aria-hidden="true" className={GLYPH[size]} />
         </span>
       )}
 

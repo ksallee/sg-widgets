@@ -18,14 +18,15 @@ export type PickerSize = 'sm' | 'md' | 'lg';
  * `min-h` holds the ladder and the trailing inset stays reserve for the clear and open
  * controls.
  *
- * The vertical inset is what the chip leaves under the ladder: 24 plus 8 fits under 36 at
- * md, while 24 under 32 at sm and 32 under 40 at lg leave 2 each, so those two take the
- * half step. Anything more and a filled control overruns the ladder.
+ * The inset is what the chip and the control's own border leave under the ladder, halved:
+ * 20 and 2 under 28 at sm, 24 and 2 under 32 at md leave 3 each, and 32 and 2 under 36 at
+ * lg leave 1. Each step is then exact on one line. Anything more and a filled control
+ * overruns the ladder.
  */
 export const PICKER_BOX: Record<PickerSize, string> = {
-  sm: 'min-h-8 pr-2 pl-[5px] py-0.5 data-empty:pl-1.5 data-empty:py-0',
-  md: 'min-h-9 pr-3 pl-[5px] py-1 data-empty:pl-2 data-empty:py-0.5',
-  lg: 'min-h-10 pr-3 pl-1 py-0.5 data-empty:pl-2 data-empty:py-0'
+  sm: 'min-h-7 pr-2 pl-0.75 py-0.75 data-empty:pl-1.5 data-empty:py-0',
+  md: 'min-h-8 pr-3 pl-0.75 py-0.75 data-empty:pl-2 data-empty:py-0',
+  lg: 'min-h-9 pr-3 pl-px py-px data-empty:pl-2 data-empty:py-0'
 };
 
 /**
@@ -34,21 +35,20 @@ export const PICKER_BOX: Record<PickerSize, string> = {
  * reading inset, and `data-empty` takes it one step tighter.
  */
 export const PICKER_TEXT_BOX: Record<PickerSize, string> = {
-  sm: 'min-h-8 px-2 data-empty:pl-1.5',
-  md: 'min-h-9 px-3 data-empty:pl-2',
-  lg: 'min-h-10 px-3 data-empty:pl-2',
+  sm: 'min-h-7 px-2 data-empty:pl-1.5',
+  md: 'min-h-8 px-3 data-empty:pl-2',
+  lg: 'min-h-9 px-3 data-empty:pl-2',
 };
 
 /**
  * The trailing controls ride the first row of the control: they centre on a control that
- * holds one line and stay with that row when the value wraps below it. Only md stretches
- * past its chip row to hold the ladder, so one height cannot serve both states there; it
- * takes the ladder, which is exact on one line and 2px high when the value wraps.
+ * holds one line and stay with that row when the value wraps below it. Each takes the
+ * ladder, which is exact on one line and as high as the ladder when the value wraps.
  */
 export const PICKER_TRAILING: Record<PickerSize, string> = {
-  sm: 'h-8',
-  md: 'h-9',
-  lg: 'h-10'
+  sm: 'h-7',
+  md: 'h-8',
+  lg: 'h-9'
 };
 
 /** The glyphs inside a control. */
@@ -72,7 +72,7 @@ export const PICKER_TOKEN_INPUT =
 /** The search box a summary trigger keeps in its popup instead. */
 export const PICKER_SEARCH_ROW = 'border-border flex items-center gap-1.5 border-b px-3';
 export const PICKER_SEARCH =
-  'placeholder:text-muted-foreground h-9 w-full min-w-0 bg-transparent text-sm outline-none disabled:cursor-not-allowed';
+  'placeholder:text-muted-foreground h-8 w-full min-w-0 bg-transparent text-sm outline-none disabled:cursor-not-allowed';
 
 /** The `+n` pill. A press on it opens the list, where the hidden ones are. */
 export const PICKER_PILL =

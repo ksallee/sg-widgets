@@ -51,8 +51,11 @@ The goal is one system: a page mixing ten of our widgets must read as one hand.
 
 ## 3. Sizes
 
-- Controls come in `sm`, `md` (default), `lg`, matching shadcn's button and input heights (`h-8`, `h-9`,
-  `h-10`). Icons inside controls are `size-4` for sm/md and `size-5` for lg. Thumbnails in list rows are
+- Controls come in `sm`, `md` (default), `lg`, matching the shadcn button's own steps as this repo
+  vendors them: `h-7`, `h-8`, `h-9`, which is 28, 32 and 36. The button reads `sm`, `default` and
+  `lg` for those three, `Input` and the select trigger stand at `h-8`, and rule 2's icon-button row
+  is the same ladder, so a page mixing a widget and a shadcn button has one set of heights.
+  Icons inside controls are `size-4` for sm/md and `size-5` for lg. Thumbnails in list rows are
   `size-6` (sm), `size-8` (md), `size-10` (lg); cards and detail panes use `xl` (h-16) and `2xl` (h-24).
   Avatars follow the first three sizes.
 - A chip or a badge sits one step under the control it is in: `xs` (h-5) in sm, `sm` (h-6) in md and `md`
@@ -64,7 +67,7 @@ The goal is one system: a page mixing ten of our widgets must read as one hand.
   cross grows with the chip, `size-3` at `xs` to `size-4.5` at `lg`.
 - A picker control insets its leading edge to match the room above and below the chip or badge it
   holds, so a value sits evenly inside the border. It carries `data-empty`, which
-  gives that reading inset back and takes the vertical inset down one step (md: `pl-2 py-0.5`), so an
+  gives that reading inset back and takes the vertical inset down one step (md: `pl-2 py-0`), so an
   empty control reads as a plain input. A control whose filled value is plain text, `FieldPicker`
   among them, keeps the reading inset in both states. `min-h` never changes, so the height holds
   across the two states; the trailing inset is reserve for the clear and open controls and stays put.
@@ -103,6 +106,8 @@ tell the user".
 
 - Focus: `focus-visible:ring-2 ring-ring ring-offset-2 ring-offset-background`, never `outline-none`
   without a ring replacement. Focus rings are the shadcn ones, unchanged.
+- `--ring` reads at least 3:1 against the surface it sits on, in both themes, for every shipped
+  palette; `tools/drives/palette-contrast.js` measures it.
 - Disabled: `opacity-50 pointer-events-none`, plus `aria-disabled`; a tile that is mostly a picture
   also greys it (`[&_img]:grayscale`), since a photo at half opacity still reads as a photo. Readonly keeps full contrast and
   removes affordances (no chevron, no clear button).
@@ -210,6 +215,14 @@ The row itself is one component per framework, `picker-row`, and every widget th
 composes it rather than drawing a second one. A list that can tick a row opens the row on an
 indicator column, whose width is fixed whether or not the row is ticked, so a label sits at one x
 down the whole list.
+
+A status offered as an option is not a badge: a list of options is read by its names, and a column of
+pills is noise. The row is the status glyph as its leading mark and the name as plain text beside it,
+with the matched runs bold and the code or the count right-aligned after it, in the two pickers and in
+the filter bar's facet rows alike. The badge is what a status is where it is a value rather than an
+option: the selected value in a control, a list row's status column, a card, a table cell. The stock
+sprite was drawn for a light page, so the glyph inverts and keeps its hue in dark; a site's own icon
+is left as it was sent.
 
 A popup list fades at whichever edge has more content past it and holds a gutter for its scrollbar,
 and carries a live region under it saying what it is doing: the read in flight, the count it

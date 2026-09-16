@@ -15,7 +15,7 @@ pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/status-badge.json
 pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/status-badge.json
 ```
 
-<Demo name="status-badge" title="StatusBadge: neutral and coloured, removable, labels, stock icons, unknown codes" />
+<Demo name="status-badge" title="StatusBadge: neutral and coloured, the bare glyph on the muted ground and on its colour, removable, labels, stock icons, unknown codes" />
 
 ## Props
 
@@ -25,9 +25,15 @@ The name resolves in one order: the Status row's name, then the field's display 
 code. A code unknown to both renders as itself in the label and in the tooltip.
 
 `glyph` is the icon alone, in its own colour, with no pill around it: no border, no background and no
-inset, at the size a list row draws a glyph (4 at sm and md, 5 at lg). It is what a leading slot
-takes, where a bordered pill reads as a second surface. The label stays as the accessible name and
-the tooltip, `color` has nothing to paint, and a status with no icon to draw takes a neutral dot.
+inset, at the size a list row draws a glyph (4 at sm and md, 5 at lg). It is the leading mark of a row
+whose label is a name, where a bordered pill reads as a second surface. The label stays as the
+accessible name and the tooltip, `color` has nothing to paint, and a status with no icon to draw takes
+a neutral dot.
+
+The stock sprite was drawn as dark strokes for a light page, so a cell of it is inverted and its hue
+rotated back on a dark page: the mark reads against the page in both schemes and a green tick stays
+green. A site's own icon is sent ready for both and is left as it is, and so is a glyph sitting on the
+status colour.
 
 The root carries the status code, the variant and whether it was resolved, as data attributes. An
 image-map icon carries its key on the glyph, as a data attribute. A removable badge draws its cross inside the pill

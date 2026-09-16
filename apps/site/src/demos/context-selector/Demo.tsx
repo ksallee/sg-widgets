@@ -1,11 +1,15 @@
 import { useState } from 'react';
 import type { EntityRef } from '@sg-widgets/core';
+import { Button } from '@/components/ui/button';
 import { ContextSelector, type WorkContext } from '@/registry/sg/components/context-selector';
+import { CONTROL_BUTTON, type ControlSize } from '@/registry/sg/components/control-classes';
 import type { DemoContext } from '../_shared/client';
 import { DemoContextProvider, useSgContext } from '../_shared/react';
 
 /* The mock's first person, as the app would pass the signed-in user. */
 const currentUser: EntityRef = { type: 'HumanUser', id: 20, name: 'Ada Lovelace' };
+
+const SIZES: ControlSize[] = ['sm', 'md', 'lg'];
 
 /*
  * On a real site the context starts on the project the Connect panel picked, and the
@@ -46,6 +50,8 @@ function Selector() {
   const context = useSgContext();
   const [workContext, setWorkContext] = useState<WorkContext>(() => startContext(context));
   const [recents, setRecents] = useState<WorkContext[]>(() => startRecents(context));
+  /** The sizes row shows a fixed context; it takes no picks. */
+  const [fixed] = useState<WorkContext>(() => startContext(context));
 
   return (
     <div className="flex flex-col gap-4">
@@ -68,6 +74,22 @@ function Selector() {
         task{' '}
         {workContext.task?.name ?? '-'}
       </p>
+
+      <section className="flex flex-col gap-2">
+        <h4 className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+          Sizes, each beside a button of the same step
+        </h4>
+        {SIZES.map((size) => (
+          <div key={size} className="flex flex-wrap items-start gap-3" data-demo={`size-${size}`}>
+            <div className="w-80">
+              <ContextSelector context={context} workContext={fixed} currentUser={currentUser} size={size} />
+            </div>
+            <Button variant="outline" size={CONTROL_BUTTON[size]}>
+              Button
+            </Button>
+          </div>
+        ))}
+      </section>
     </div>
   );
 }

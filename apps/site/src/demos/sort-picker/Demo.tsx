@@ -8,6 +8,8 @@ import {
   serializeSort,
   toSortString,
 } from '@sg-widgets/core';
+import { Button } from '@/components/ui/button';
+import { CONTROL_BUTTON, type ControlSize } from '@/registry/sg/components/control-classes';
 import { EntityTable } from '@/registry/sg/components/entity-table';
 import { SortPicker } from '@/registry/sg/components/sort-picker';
 import { createDemoContext } from '../_shared/client';
@@ -15,6 +17,7 @@ import { DemoContextProvider } from '../_shared/react';
 import { RESULT_PAGE_SIZE, scopeToProject } from '../_shared/results';
 
 const label = 'text-muted-foreground text-xs font-medium tracking-wide uppercase';
+const SIZES: ControlSize[] = ['sm', 'md', 'lg'];
 
 const COLUMNS = [
   { path: 'code', width: 200 },
@@ -106,6 +109,20 @@ export default function SortPickerDemo() {
           ) : (
             <p className="text-muted-foreground text-sm">Loading the site…</p>
           )}
+        </section>
+
+        <section className="flex flex-col gap-2">
+          <h4 className={label}>Sizes, each beside a button of the same step</h4>
+          {SIZES.map((size) => (
+            <div key={size} className="flex flex-wrap items-start gap-3" data-demo={`size-${size}`}>
+              <div className="w-64">
+                <SortPicker entityType="Shot" context={context} value={INITIAL} size={size} />
+              </div>
+              <Button variant="outline" size={CONTROL_BUTTON[size]}>
+                Button
+              </Button>
+            </div>
+          ))}
         </section>
       </div>
     </DemoContextProvider>

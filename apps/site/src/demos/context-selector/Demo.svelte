@@ -3,9 +3,13 @@
 	import ContextSelector, {
 		type WorkContext
 	} from '$lib/registry/components/context-selector.svelte';
+	import { CONTROL_BUTTON, type ControlSize } from '$lib/registry/components/control-classes.js';
+	import { Button } from '$lib/components/ui/button/index.js';
 	import { getDemoContext } from '../_shared/client';
 
 	const context = getDemoContext();
+
+	const SIZES: ControlSize[] = ['sm', 'md', 'lg'];
 
 	/* The mock's first person, as the app would pass the signed-in user. */
 	const currentUser: EntityRef = { type: 'HumanUser', id: 20, name: 'Ada Lovelace' };
@@ -64,4 +68,18 @@
 		project {workContext.project?.name ?? '-'} / entity {workContext.entity?.name ?? '-'} / task
 		{workContext.task?.name ?? '-'}
 	</p>
+
+	<section class="flex flex-col gap-2">
+		<h4 class="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+			Sizes, each beside a button of the same step
+		</h4>
+		{#each SIZES as size (size)}
+			<div class="flex flex-wrap items-start gap-3" data-demo="size-{size}">
+				<div class="w-80">
+					<ContextSelector {context} workContext={start} {currentUser} {size} />
+				</div>
+				<Button variant="outline" size={CONTROL_BUTTON[size]}>Button</Button>
+			</div>
+		{/each}
+	</section>
 </div>

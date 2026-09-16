@@ -28,7 +28,7 @@ export default {
     { name: 'noMatchLabel', type: '`string`', default: '`\'No match\'`', meaning: 'Shown when a search matched no row.' },
     { name: 'loadingLabel', type: '`string`', default: '`\'Loading…\'`', meaning: 'Names the skeletons a read stands behind, for a screen reader.' },
     { name: 'errorLabel', type: '`string`', default: '—', meaning: 'Shown in place of what the failed read said.' },
-    { name: 'size', type: '`\'sm\' | \'md\' | \'lg\'`', default: '`\'md\'`', meaning: 'Row text, leading slot and glyphs.' },
+    { name: 'size', type: '`\'sm\' | \'md\' | \'lg\'`', default: '`\'md\'`', meaning: 'Row text, leading slot and glyphs, and the search input on the control ladder.' },
     { name: 'density', type: '`\'compact\' | \'default\'`', default: '`\'default\'`', meaning: 'Compact halves the vertical row padding and draws a row chip and badge a step smaller.' },
     { name: 'class / className', type: '`string`', default: '—', meaning: 'Merged after the widget\'s own classes.' },
   ],

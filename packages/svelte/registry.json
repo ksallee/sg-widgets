@@ -1411,7 +1411,8 @@
         "local:checkbox",
         "skeleton",
         "input",
-        "local:match-text"
+        "local:match-text",
+        "local:control-classes"
       ],
       "files": [
         {

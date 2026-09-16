@@ -86,10 +86,25 @@ function noteFilter(pane) {
   return $('[data-testid="note-filter-json"]', pane)?.textContent ?? '';
 }
 
-/** The total once the count line has moved off `was`. Boxed, since zero is an answer. */
-function settled(pane, was) {
+/** One spelling for a filter, whichever whitespace it was printed with. */
+function compact(text) {
+  try {
+    return JSON.stringify(JSON.parse(text));
+  } catch {
+    return text;
+  }
+}
+
+/**
+ * The total that answers the filter the bar now emits. The count line names the filter
+ * it counted, so a total left over from the request before never passes as this one,
+ * whether or not the two happen to differ. Boxed, since zero is an answer.
+ */
+function settled(pane) {
+  const line = $('[data-testid="note-count"]', pane);
+  if (!line || compact(line.dataset.for ?? '') !== compact(noteFilter(pane))) return null;
   const now = noteTotal(pane);
-  return now !== null && now !== was ? { total: now } : null;
+  return now !== null ? { total: now } : null;
 }
 
 function press(el) {
@@ -110,7 +125,7 @@ for (const framework of ['svelte', 'react']) {
     failures.push(`${framework}: the bar drew no read-state pill`);
     continue;
   }
-  const all = await until(() => settled(pane, null));
+  const all = await until(() => settled(pane));
   const trigger = $('[data-slot="filter-pill-trigger"]', pill);
   // A tick redraws the checklist, so every row is found again rather than held from before.
   const option = (key) => $$(`[data-option="${key}"]`).filter((row) => row.getClientRects().length > 0)[0] ?? null;
@@ -129,7 +144,7 @@ for (const framework of ['svelte', 'react']) {
     failures.push(`${framework}: the bar emitted no condition for read`);
     continue;
   }
-  const read = await until(() => settled(pane, all.total), 30000);
+  const read = await until(() => settled(pane), 30000);
 
   // Untick `read` and tick `unread`, so the two totals are the two halves of the set.
   press(await until(() => option('read'), 15000));
@@ -139,7 +154,7 @@ for (const framework of ['svelte', 'react']) {
     failures.push(`${framework}: the bar emitted no condition for unread`);
     continue;
   }
-  const unread = await until(() => settled(pane, read ? read.total : all.total), 30000);
+  const unread = await until(() => settled(pane), 30000);
 
   seen[framework] = {
     ...(seen[framework] ?? {}),

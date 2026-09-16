@@ -1,11 +1,14 @@
 // One ladder: a widget and a shadcn primitive beside it stand at the same height.
 //
 //   pnpm qa --start --path /qa/composition/ --framework both --drive tools/drives/control-ladder.js
+//   pnpm qa --start --path /widgets/filter-editor/ --framework both --drive tools/drives/control-ladder.js
 //
 // The registry's controls are read at whatever step their cell declares and the shadcn
 // primitives beside them at theirs. A host mixing the two gets one set of heights only if
 // every reading lands on a step of the ladder, and a primitive at its own default size
-// stands where a widget at `md` stands.
+// stands where a widget at `md` stands. A filter editor cell is read control by control:
+// the field picker, the operator select, every value editor and the buttons of a row all
+// stand on the row's step.
 
 const LADDER = { sm: 28, md: 32, lg: 36 };
 
@@ -31,6 +34,21 @@ const CONTROL = {
   'date-editor': '[data-slot="date-editor-trigger"]',
   'date-time-editor': '[data-slot="date-time-editor-trigger"]',
   'url-editor': '[data-slot="url-editor-url"]',
+  'filter-dialog': '[data-slot="filter-launch"]',
+};
+
+/** Widgets read control by control: every match in the cell stands on its step. */
+const EVERY = {
+  'filter-editor': [
+    '[data-slot="filter-row"] [data-slot="field-picker-trigger"]',
+    '[data-slot="filter-operator"]',
+    '[data-slot="filter-value"] [data-slot$="-picker-control"]',
+    '[data-slot="filter-value"] [data-slot="input"]',
+    '[data-slot="filter-value"] [data-slot="date-editor-trigger"]',
+    '[data-slot="filter-value"] [data-slot="date-time-editor-trigger"]',
+    '[data-slot="filter-logic"] [data-slot="toggle-group-item"]',
+    '[data-slot="filter-foot"] [data-slot="button"]',
+  ].join(','),
 };
 
 /** The shadcn primitives a host installs beside them. */
@@ -50,18 +68,25 @@ const off = [];
 for (const framework of drawn) {
   let read = 0;
   for (const cell of pane(framework).querySelectorAll('[data-qa-widget]')) {
-    const selector = CONTROL[cell.dataset.qaWidget];
-    const control = selector ? cell.querySelector(selector) : null;
-    if (!control || !seen(control)) continue;
-    read += 1;
+    const name = cell.dataset.qaWidget;
     const size = cell.dataset.qaSize ?? 'md';
-    const height = tall(control);
-    if (height !== LADDER[size]) {
-      off.push(`${framework} ${cell.dataset.qaWidget} at ${size} is ${height}, wanted ${LADDER[size]}`);
+    const controls = EVERY[name]
+      ? [...cell.querySelectorAll(EVERY[name])]
+      : CONTROL[name]
+        ? [cell.querySelector(CONTROL[name])].filter(Boolean)
+        : [];
+    for (const control of controls.filter(seen)) {
+      read += 1;
+      const height = tall(control);
+      if (height !== LADDER[size]) {
+        off.push(`${framework} ${name} ${control.dataset.slot} at ${size} is ${height}, wanted ${LADDER[size]}`);
+      }
     }
   }
   notes.push(`${framework}: ${read} widget controls on the ladder`);
-  if (read < 15) off.push(`${framework} found only ${read} widget controls to read`);
+  // The composition page draws the whole set; a widget page draws its own rows.
+  const wanted = location.pathname.includes('/qa/composition') ? 15 : 3;
+  if (read < wanted) off.push(`${framework} found only ${read} widget controls to read, wanted ${wanted}`);
 
   // Every primitive, measured against the ladder as a whole.
   const heights = new Map();

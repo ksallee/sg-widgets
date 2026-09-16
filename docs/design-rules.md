@@ -106,6 +106,8 @@ tell the user".
 
 - Focus: `focus-visible:ring-2 ring-ring ring-offset-2 ring-offset-background`, never `outline-none`
   without a ring replacement. Focus rings are the shadcn ones, unchanged.
+- `--ring` reads at least 3:1 against the surface it sits on, in both themes, for every shipped
+  palette; `tools/drives/palette-contrast.js` measures it.
 - Disabled: `opacity-50 pointer-events-none`, plus `aria-disabled`; a tile that is mostly a picture
   also greys it (`[&_img]:grayscale`), since a photo at half opacity still reads as a photo. Readonly keeps full contrast and
   removes affordances (no chevron, no clear button).

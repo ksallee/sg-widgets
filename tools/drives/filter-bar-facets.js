@@ -6,6 +6,9 @@
 // The status pill is opened and every one of its values ticked, which is the worst case
 // the bar has: the pill then names two of them, reads `+n` for the rest, carries the
 // whole list in its title, and stays inside the cap.
+//
+// The read-state facet is the other shape: the API evaluates no `in` on its field, so one
+// ticked value emits `is` and two emit an `or` of `is`, and its pill names them comma-joined.
 
 const notes = [];
 const pane = (name) => document.querySelector(`[data-pane="${name}"]`);
@@ -112,7 +115,81 @@ for (const framework of drawn) {
   await wait(200);
 }
 
+/** The condition or group the tree holds on one path, wherever it sits. */
+function nodeOn(node, path) {
+  if (!node) return null;
+  if (Array.isArray(node)) return node[0] === path ? node : null;
+  const children = node.conditions ?? [];
+  if (children.length > 1 && children.every((c) => Array.isArray(c) && c[0] === path)) return node;
+  for (const child of children) {
+    const found = nodeOn(child, path);
+    if (found) return found;
+  }
+  return null;
+}
+
+function emitted(framework, path) {
+  const held = pane(framework)?.querySelector('[data-testid="note-filter-json"]')?.textContent ?? 'null';
+  try {
+    return nodeOn(JSON.parse(held), path);
+  } catch {
+    return null;
+  }
+}
+
+// The read-state facet: only `is` and `is_not` are evaluated on the field, so the checklist
+// spells its values out rather than sending an `in` that answers the caller's unread rows.
+const READ = 'read_by_current_user';
+for (const framework of drawn) {
+  const readPill = await until(() => pill(framework, READ));
+  if (!readPill) return { verdict: `FAIL ${framework} drew no read-state pill`, notes };
+  press(readPill.querySelector('[data-slot="filter-pill-trigger"]'));
+  if (!(await until(() => document.querySelector('[data-option="read"]')))) {
+    return { verdict: `FAIL ${framework} listed no value under the read-state facet`, notes };
+  }
+
+  press(document.querySelector('[data-option="read"]'));
+  const one = await until(() => emitted(framework, READ), 15000);
+  if (!one) return { verdict: `FAIL ${framework} emitted no condition on ${READ}`, notes };
+  notes.push(`${framework}: one value emits ${JSON.stringify(one)}`);
+  if (JSON.stringify(one) !== JSON.stringify([READ, 'is', 'read'])) {
+    return { verdict: `FAIL ${framework} emitted ${JSON.stringify(one)} for one ticked value`, notes };
+  }
+
+  press(await until(() => document.querySelector('[data-option="unread"]'), 15000));
+  const two = await until(() => {
+    const found = emitted(framework, READ);
+    return found && !Array.isArray(found) ? found : null;
+  }, 15000);
+  if (!two) return { verdict: `FAIL ${framework} did not take the second value`, notes };
+  notes.push(`${framework}: two values emit ${JSON.stringify(two)}`);
+  const wanted = {
+    logical_operator: 'or',
+    conditions: [
+      [READ, 'is', 'read'],
+      [READ, 'is', 'unread'],
+    ],
+  };
+  if (JSON.stringify(two) !== JSON.stringify(wanted)) {
+    return { verdict: `FAIL ${framework} emitted ${JSON.stringify(two)} for two ticked values`, notes };
+  }
+
+  // The pill names both values on one line, separated.
+  const values = await until(() => pill(framework, READ)?.querySelector('[data-slot="filter-pill-values"]'), 15000);
+  const label = values?.textContent.trim() ?? '';
+  notes.push(`${framework}: the read-state pill reads "${label}"`);
+  if (label !== 'read, unread') {
+    return { verdict: `FAIL ${framework} read "${label}" in the pill, expected "read, unread"`, notes };
+  }
+  document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  await wait(200);
+}
+
 pill(drawn[0], 'sg_status_list')?.scrollIntoView({ block: 'center' });
 await wait(400);
 
-return { verdict: 'PASS status facets mark their values with the glyph, the pill badges what it holds, a facet takes the caller name, and a full pill holds its width', notes };
+return {
+  verdict:
+    'PASS status facets mark their values with the glyph, the pill badges what it holds, a facet takes the caller name, a full pill holds its width, and the read-state facet emits `is` and an `or` of `is` under a comma-joined pill',
+  notes,
+};

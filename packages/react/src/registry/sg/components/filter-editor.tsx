@@ -19,6 +19,7 @@ import {
   conditionArity,
   conditionList,
   defaultCondition,
+  fieldOperators,
   emptyFilter,
   group as makeGroup,
   NOTHING_CHOSEN_LABEL,
@@ -289,14 +290,16 @@ export function FilterEditor({
           replaceAt(
             value,
             path,
-            before === type && node.path ? { ...node, path: chosen } : defaultCondition(chosen, type),
+            before === type && node.path
+              ? { ...node, path: chosen }
+              : defaultCondition(chosen, type, fieldOperators(after ?? { dataType: type })),
           ),
         );
       });
     },
     pickPreset: (path, node, id) => {
       const dataType = dataTypeOf(node.path);
-      const preset = presetById(dataType, id);
+      const preset = presetById(dataType, id, fieldOperators(fieldOf(node.path) ?? { dataType }));
       if (preset) commit(replaceAt(value, path, applyPreset(node, preset, dataType)));
     },
   };
@@ -469,8 +472,10 @@ function FieldSlot({ ctx, path, node }: { ctx: EditorContext; path: NodePath; no
 }
 
 function OperatorSlot({ ctx, path, node }: { ctx: EditorContext; path: NodePath; node: FilterCondition }) {
-  const dataType = ctx.fieldOf(node.path)?.dataType ?? '';
-  const menu = operatorMenu(dataType);
+  const field = ctx.fieldOf(node.path);
+  const dataType = field?.dataType ?? '';
+  const operators = fieldOperators(field ?? { dataType });
+  const menu = operatorMenu(dataType, operators);
   const current = presetIdOf(node, dataType);
   return (
     <Select
@@ -479,7 +484,7 @@ function OperatorSlot({ ctx, path, node }: { ctx: EditorContext; path: NodePath;
       onValueChange={(id) => ctx.pickPreset(path, node, id as string)}
     >
       <SelectTrigger className={cn(BOX[ctx.size], 'w-40 shrink-0')} data-slot="filter-operator">
-        {presetById(dataType, current)?.label ?? current}
+        {presetById(dataType, current, operators)?.label ?? current}
       </SelectTrigger>
       <SelectContent>
         {menu.map((run) => (

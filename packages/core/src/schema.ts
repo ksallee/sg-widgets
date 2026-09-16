@@ -6,7 +6,7 @@
  * `data[field].editable.value` is the one that answers "can I write this".
  * With `project_id`, status and list fields gain `hidden_values`.
  */
-import type { DataType } from './field-types.js';
+import type { DataType, Operator } from './field-types.js';
 
 /** One property as the API returns it. */
 export interface RawProperty<T = unknown> {
@@ -44,6 +44,11 @@ export interface FieldSchema {
   displayValues?: Record<string, string>;
   /** For `list` and `status_list`, only when read with `project_id`. May contain codes outside `validValues`. */
   hiddenValues?: string[];
+  /**
+   * The operators the API evaluates on this field, where they are fewer than the
+   * vocabulary it advertises. Absent means the whole vocabulary.
+   */
+  operators?: Operator[];
   defaultValue?: unknown;
   description?: string;
 }
@@ -55,15 +60,28 @@ export interface FieldSchema {
  * checkbox (067_notes_in_the_stream, entity_types/Note).
  *
  * An entry carries the whole field, because a site may leave it out of the schema
- * and still answer it on the row: `GET /schema/Note/fields` returned 33 fields and
- * no `read_by_current_user` among them (measured on the operator's site,
- * 2026-09-15). `normalizeFields` adds what the schema left out.
+ * and still answer it on the row: `GET /schema/Note/fields` answers 33 fields and
+ * no `read_by_current_user` among them, while `GET /schema/Note/fields/read_by_current_user`
+ * answers 200 with `data: null`, which is what an undeclared field reads as and a
+ * name that is nothing at all answers 404 (068_note_read_state). `normalizeFields`
+ * adds what the schema left out.
+ *
+ * `operators` is the set the API evaluates, which is not always the set it
+ * advertises. `read_by_current_user` names `is`, `is_not`, `in` and `not_in` in its
+ * own `Valid relations`, and evaluates only the first two: `in`, `not_in` and an
+ * `is` value outside the vocabulary all answer 200 with the caller's unread rows
+ * whatever the list holds, in `_search` and in `_summarize`, under both body shapes
+ * (068_note_read_state).
+ *
+ * The value is per person and an ApiUser has none: a script's own write answers 200
+ * and stores nothing, so it is not editable (068_note_read_state).
  */
 export const FIELD_SCHEMA_OVERRIDES: Readonly<Record<string, Readonly<Partial<FieldSchema>>>> = {
   'Note.read_by_current_user': {
     displayName: 'Read by Current User',
     dataType: 'list',
     validValues: ['unread', 'read'],
+    operators: ['is', 'is_not'],
     editable: false,
     mandatory: false,
     unique: false,

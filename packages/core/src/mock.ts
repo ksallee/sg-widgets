@@ -36,7 +36,7 @@ import { toFilterArray } from './filter.js';
 import type { Operator, TimeUnit } from './field-types.js';
 import { isFilterable, isLinkType, isNumericType, NEGATING_OPERATORS, operatorsFor, TIME_UNITS } from './field-types.js';
 import type { FieldSchema } from './schema.js';
-import { displayNameOf } from './schema.js';
+import { displayNameOf, fieldSchemaOverride } from './schema.js';
 import type { StatusIcon, StatusRecord } from './status.js';
 
 /* -------------------------------------------------------------------------- */
@@ -1260,7 +1260,8 @@ export class MockClient implements SgClient {
       if (hidden && (s.dataType === 'status_list' || s.dataType === 'list')) {
         field.hiddenValues = hidden[`${entityType}.${name}`] ?? [];
       }
-      out[name] = field;
+      // The same correction a schema read gets, so the mock answers the schema a client sees.
+      out[name] = { ...field, ...fieldSchemaOverride(entityType, name) };
     }
     return out;
   }

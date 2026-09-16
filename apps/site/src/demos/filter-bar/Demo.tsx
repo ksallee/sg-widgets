@@ -28,6 +28,8 @@ interface Loaded {
 export default function FilterBarDemo() {
   const context = useMemo(() => createDemoContext(), []);
   const [value, setValue] = useState<FilterGroup>(emptyFilter);
+  /** The read-state bar, over a field the API evaluates only `is` and `is_not` on. */
+  const [readState, setReadState] = useState<FilterGroup>(emptyFilter);
 
   // The first tree goes in at construction, and the group path leads the sort, so the
   // list's own first read is already the one it groups.
@@ -60,6 +62,24 @@ export default function FilterBarDemo() {
   }, [context]);
 
   const wire = JSON.stringify(toApi3Hash(scopeToProject(context, value)));
+  const readWire = JSON.stringify(toApi3Hash(scopeToProject(context, readState)), null, 2);
+  const [notes, setNotes] = useState<ResultCount>({ kind: 'counting' });
+
+  useEffect(() => {
+    let live = true;
+    setNotes({ kind: 'counting' });
+    void readCount(async () => {
+      const summary = await context.client.summarize('Note', {
+        filters: JSON.parse(readWire) as WireGroup | null,
+        summaryFields: [{ field: 'id', type: 'count' }],
+      });
+      const total = summary.summaries['id'];
+      return typeof total === 'number' ? total : null;
+    }).then((next) => live && setNotes(next));
+    return () => {
+      live = false;
+    };
+  }, [context.client, readWire]);
 
   useEffect(() => {
     let live = true;
@@ -113,6 +133,31 @@ export default function FilterBarDemo() {
           ) : (
             <p className="text-muted-foreground text-sm">Loading the site…</p>
           )}
+        </section>
+
+        <section className="flex min-w-0 flex-col gap-2">
+          <h4 className="text-muted-foreground text-xs font-medium tracking-wide uppercase">Notes by read state</h4>
+          <FilterBar
+            entityType="Note"
+            context={context}
+            facets={['read_by_current_user']}
+            baseFilter={
+              context.live
+                ? group('and', [condition('project', 'is', { type: 'Project', id: context.projectId })])
+                : null
+            }
+            value={readState}
+            onChange={setReadState}
+          />
+          <p className="text-muted-foreground text-sm tabular-nums" data-testid="note-count">
+            {matchLabel(notes, 'Note')}
+          </p>
+          <pre
+            data-testid="note-filter-json"
+            className="border-border bg-muted text-foreground max-h-32 overflow-auto rounded-lg border p-3 font-mono text-xs"
+          >
+            {readWire}
+          </pre>
         </section>
       </div>
     </DemoContextProvider>

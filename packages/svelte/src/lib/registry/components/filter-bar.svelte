@@ -34,9 +34,9 @@
 	import TriangleAlertIcon from '@lucide/svelte/icons/triangle-alert';
 	import XIcon from '@lucide/svelte/icons/x';
 	import type {
+		FacetCondition,
 		FacetValue,
 		FieldSchema,
-		FilterCondition,
 		FilterGroup,
 		Operator,
 		Scalar,
@@ -44,13 +44,13 @@
 		WireGroup
 	} from '@sg-widgets/core';
 	import {
-		conditionArity,
 		conditionParts,
 		conditionValues,
 		describeCondition,
 		emptyFilter,
+		facetShape,
 		facetValues,
-		findCondition,
+		findFacet,
 		renderKindFor,
 		setFacet,
 		toApi3Hash,
@@ -131,7 +131,7 @@
 	const tally = $derived(loadFacets(scope, fields, facets));
 	/** What the open facet's search box holds. */
 	let facetQuery = $state('');
-	const activeCount = $derived(facets.filter((name) => Boolean(findCondition(value, name))).length);
+	const activeCount = $derived(facets.filter((name) => Boolean(facetOf(name))).length);
 
 	async function loadFacets(
 		filters: WireGroup | null,
@@ -172,13 +172,16 @@
 		return renderKindFor(fields[name]?.dataType ?? '') === 'status';
 	}
 
-	function conditionOf(name: string): FilterCondition | null {
-		return findCondition(value, name)?.condition ?? null;
+	/**
+	 * The node this facet contributes. A field the API evaluates no `in` on holds an
+	 * `or` of one-value conditions, which reads back as one checklist.
+	 */
+	function facetOf(name: string): FacetCondition | null {
+		return findFacet(value, name, fields[name]) ?? null;
 	}
 
 	function selectedOf(name: string): Scalar[] {
-		const found = conditionOf(name);
-		return found && Array.isArray(found.value) ? (found.value as Scalar[]) : [];
+		return facetOf(name)?.values ?? [];
 	}
 
 	function keyOf(v: Scalar): string {
@@ -193,8 +196,8 @@
 
 	/** The list operator the checklist writes: the one the pill already holds, else `in`. */
 	function listOperator(name: string): Operator {
-		const found = conditionOf(name);
-		return found && Array.isArray(found.value) ? found.operator : 'in';
+		const found = facetOf(name);
+		return found?.checklist ? found.operator : facetShape(fields[name]).any;
 	}
 
 	function toggle(name: string, option: FacetValue): void {
@@ -202,7 +205,7 @@
 		const next = selected.some((v) => keyOf(v) === option.key)
 			? selected.filter((v) => keyOf(v) !== option.key)
 			: [...selected, option.value];
-		commit(setFacet(value, name, next, listOperator(name)));
+		commit(setFacet(value, name, next, listOperator(name), fields[name]));
 	}
 </script>
 
@@ -219,21 +222,17 @@
 	</button>
 {/snippet}
 
-<!-- One value in a pill, where a status is a value: a badge on a status field, its label everywhere else. -->
-{#snippet valueLabel(name: string, key: string, label: string)}
-	{#if isStatus(name)}
-		{#await statuses then table}
-			<StatusBadge
-				code={key}
-				status={table.get(key) ?? null}
-				field={fields[name] ?? null}
-				size={BADGE[size]}
-				siteUrl={context.siteUrl}
-			/>
-		{/await}
-	{:else}
-		{label}
-	{/if}
+<!-- One value in a pill, where a status is a value: a status is a badge, and every other value is text. -->
+{#snippet valueBadge(name: string, key: string)}
+	{#await statuses then table}
+		<StatusBadge
+			code={key}
+			status={table.get(key) ?? null}
+			field={fields[name] ?? null}
+			size={BADGE[size]}
+			siteUrl={context.siteUrl}
+		/>
+	{/await}
 {/snippet}
 
 <!--
@@ -266,15 +265,15 @@
 			class={cn('flex min-w-0 items-center gap-1.5 truncate', VALUE_WIDTH)}
 			title={shown.title}
 		>
-			{#each shown.shown as label, i (i)}
-				<span class="flex min-w-0 items-center truncate">
-					{#if shown.values.length > 0}
-						{@render valueLabel(name, keyOf(shown.values[i] as Scalar), label)}
-					{:else}
-						{label}
-					{/if}
-				</span>
-			{/each}
+			{#if isStatus(name) && shown.values.length > 0}
+				{#each shown.values as scalar, i (i)}
+					<span class="flex min-w-0 items-center truncate">
+						{@render valueBadge(name, keyOf(scalar as Scalar))}
+					</span>
+				{/each}
+			{:else}
+				<span class="min-w-0 truncate">{shown.text}</span>
+			{/if}
 			{#if shown.overflow > 0}
 				<span data-slot="filter-pill-overflow" class="text-muted-foreground shrink-0 tabular-nums">
 					+{shown.overflow}
@@ -333,7 +332,7 @@
 					size={CONTROL_BUTTON[size]}
 					class="w-full"
 					data-slot="filter-pill-clear"
-					onclick={() => commit(setFacet(value, name, []))}
+					onclick={() => commit(setFacet(value, name, [], 'in', fields[name]))}
 				>
 					Clear
 				</Button>
@@ -363,10 +362,10 @@
 >
 	{#each facets as name (name)}
 		{@const field = fields[name]}
-		{@const found = conditionOf(name)}
-		{@const parts = found ? conditionParts(found, field) : null}
-		{@const shown = found ? conditionValues(found, field, maxValues) : null}
-		{#if !found || conditionArity(found, field?.dataType ?? '') === 'many'}
+		{@const found = facetOf(name)}
+		{@const parts = found ? conditionParts(found.summary, field) : null}
+		{@const shown = found ? conditionValues(found.summary, field, maxValues) : null}
+		{#if !found || found.checklist}
 			<!-- One popover and one trigger across both looks, so the first tick does not close the list. -->
 			<Popover.Root>
 				<div
@@ -375,7 +374,7 @@
 					data-size={size}
 					data-active={found ? 'true' : undefined}
 					role={found ? 'group' : undefined}
-					aria-label={found ? describeCondition(found, field) : undefined}
+					aria-label={found ? describeCondition(found.summary, field) : undefined}
 					class={cn(
 						'border-border inline-flex max-w-full min-w-0 items-center overflow-hidden rounded-lg border text-sm',
 						CONTROL_HEIGHT[size],
@@ -397,7 +396,7 @@
 							<span class="min-w-0 truncate">{labelOf(name)}</span>
 						{:else}
 							<span data-slot="filter-pill-field" class="shrink-0 font-medium">{labelOf(name)}</span>
-							{#if found.operator !== 'in'}
+							{#if found.summary.operator !== 'in'}
 								<span class="text-muted-foreground shrink-0">{parts.operator}</span>
 							{/if}
 							{#if shown}{@render pillValues(name, shown)}{/if}
@@ -417,7 +416,7 @@
 				data-size={size}
 				data-active="true"
 				role="group"
-				aria-label={describeCondition(found, field)}
+				aria-label={describeCondition(found.summary, field)}
 				class={cn(
 					'border-border bg-background inline-flex max-w-full min-w-0 items-center overflow-hidden rounded-lg border text-sm',
 					CONTROL_HEIGHT[size],

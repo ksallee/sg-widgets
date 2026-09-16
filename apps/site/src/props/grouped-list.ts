@@ -4,9 +4,9 @@ export default {
   extends: { name: 'collection-control' },
   props: [
     { name: 'source', type: '`EntitySource`', default: '—', meaning: 'The rows and the order behind them.' },
-    { name: 'groupBy', type: '`CollectionColumn`', default: '—', meaning: 'Column the rows are grouped on. The source is sorted on it. Not read with `groupKey`.' },
-    { name: 'groupKey', type: '`(row) => unknown`', default: '—', meaning: 'The value a row groups under, derived from the row. The source\'s sort is left as the caller set it.' },
-    { name: 'groupLabel', type: '`(value) => string`', default: '—', meaning: 'The header\'s text for a derived key. Without it the key reads as its own display name.' },
+    { name: 'groupBy', type: '`CollectionColumn`', default: '—', meaning: 'Column the rows are grouped on. The source is sorted on it. Not read with `groupKey`. One of the two is required.' },
+    { name: 'groupKey', type: '`(row) => unknown`', default: '—', meaning: 'The value a row groups under, derived from the row and compared by its JSON text. The source\'s sort is left as the caller set it.' },
+    { name: 'groupLabel', type: '`(value) => string`', default: '—', meaning: 'The header\'s text for a derived key; not read with `groupBy`. Without it the key reads as its own display name.' },
     { name: 'thumbnail', type: '`string | false`', default: '`false`', meaning: 'Field holding the thumbnail URL.' },
     { name: 'labelField', type: '`string | null`', default: '`null`', meaning: 'Field shown as the row\'s label. Defaults to the type\'s display name.' },
     { name: 'subLabelField', type: '`string | CollectionColumn | null`', default: '`null`', meaning: 'The muted line under the label. A resolved column renders it by type.' },

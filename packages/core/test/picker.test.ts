@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createQueryCache } from '../src/query.js';
-import { matchRuns } from '../src/search.js';
+import { matchRuns, searchWords } from '../src/search.js';
 import { MockClient } from '../src/mock.js';
 import type { WireGroup } from '../src/filter.js';
 import { condition, group, toApi3Hash } from '../src/filter.js';
@@ -45,7 +45,8 @@ async function until<T>(read: () => T | null | undefined, timeoutMs = 2000): Pro
 }
 
 describe('queryTokens', () => {
-  it('splits on any run of whitespace and drops the empties', () => {
+  it('is the one tokenizer under its picker name', () => {
+    expect(queryTokens).toBe(searchWords);
     expect(queryTokens('  pub   an \n x ')).toEqual(['pub', 'an', 'x']);
     expect(queryTokens('   ')).toEqual([]);
   });

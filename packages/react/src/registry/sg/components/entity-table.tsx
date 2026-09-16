@@ -378,39 +378,53 @@ export function EntityTable({
     // the caller put it.
     groupedColumnMode: false,
     initialState: { expanded: true },
+    // A page is a data change, and the mode in force says what its headers do; the
+    // table's own reset would open every one.
+    autoResetExpanded: false,
     getRowId: (row: EntityRow) => control.rowId(row),
     columnResizeMode: 'onChange',
   });
 
   /*
-   * The shut group headers, controlled with the table's own as the fallback: one effect
-   * out of the table and one into it, each reading the other side off a ref, so a change
-   * travels once and the two never write to each other.
+   * The shut group headers, controlled with the table's own as the fallback. The mode
+   * is written into the table when it or the drawn headers change, and read back out
+   * of it when a header is pressed; each effect answers one direction, and neither
+   * runs while no header is drawn, so a mode a host passed before the rows landed
+   * survives the mount and a reload.
    */
   const [ownCollapsed, setOwnCollapsed] = useState<CollapseState>(expandAll);
-  const collapsed = collapsedProp === undefined ? ownCollapsed : asCollapseState(collapsedProp);
+  const collapsed = useMemo(
+    () => (collapsedProp === undefined ? ownCollapsed : asCollapseState(collapsedProp)),
+    [collapsedProp, ownCollapsed],
+  );
   const collapsedLatest = useLatest(collapsed);
   const expansion = table.state.expanded;
   const groupHeaders = table.getRowModel().flatRows.filter((row) => row.getIsGrouped());
   const groupHeadersLatest = useLatest(groupHeaders);
+  const headerIds = groupHeaders.map((row) => row.id).join('\n');
+  useEffect(() => {
+    const headers = groupHeadersLatest.current;
+    if (headers.length === 0) return;
+    if (headers.every((row) => row.getIsExpanded() === !isCollapsed(collapsed, row.id))) return;
+    // One write for every header, so the read-back never sees a half-applied mode.
+    table.setExpanded(
+      Object.fromEntries(headers.filter((row) => !isCollapsed(collapsed, row.id)).map((row) => [row.id, true])),
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [collapsed, headerIds]);
   useEffect(() => {
     // The table answers which headers are shut, not which one was pressed, so the state
     // is read back under the mode in force and a later page still follows it.
-    const drawn = groupHeadersLatest.current.map((row) => row.id);
-    const shut = groupHeadersLatest.current.filter((row) => !row.getIsExpanded()).map((row) => row.id);
+    const headers = groupHeadersLatest.current;
+    if (headers.length === 0) return;
+    const drawn = headers.map((row) => row.id);
+    const shut = headers.filter((row) => !row.getIsExpanded()).map((row) => row.id);
     const next = collapseStateFrom(collapsedLatest.current, shut, drawn);
     if (sameCollapse(next, collapsedLatest.current)) return;
     setOwnCollapsed(next);
     onCollapsedChange?.(next);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [expansion, groupHeaders.length]);
-  useEffect(() => {
-    for (const row of groupHeadersLatest.current) {
-      const shut = isCollapsed(collapsed, row.id);
-      if (row.getIsExpanded() === shut) row.toggleExpanded(!shut);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [collapsed, groupHeaders.length]);
+  }, [expansion]);
 
   /** Leaf columns in render order: pinned to the start first, the rest as ordered. */
   const rank = (id: string, pinned: false | 'start' | 'end'): number =>

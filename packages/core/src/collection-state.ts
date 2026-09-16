@@ -197,12 +197,17 @@ export function expandAll(): CollapseState {
   return { all: false, except: [] };
 }
 
-/** A caller's value as a state. A bare key list is the open mode with those keys shut. */
-export function asCollapseState(value: readonly string[] | CollapseState | null | undefined): CollapseState {
+/**
+ * A caller's value as a state. A bare key list is the open mode with those keys
+ * shut, and a mode written without `except` has none.
+ */
+export function asCollapseState(
+  value: readonly string[] | Pick<CollapseState, 'all'> | CollapseState | null | undefined,
+): CollapseState {
   if (!value) return expandAll();
   if (Array.isArray(value)) return { all: false, except: [...value] };
-  const state = value as CollapseState;
-  return { all: state.all, except: [...state.except] };
+  const state = value as Partial<CollapseState>;
+  return { all: state.all === true, except: [...(state.except ?? [])] };
 }
 
 /** True when the group under `key` is shut. */

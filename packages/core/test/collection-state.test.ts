@@ -188,11 +188,30 @@ describe('collapse state', () => {
     expect(toggleCollapsed(opened, 'b', true)).toEqual({ all: true, except: ['a'] });
   });
 
+  it('toggles one group under expand-all and back', () => {
+    const shut = toggleCollapsed(expandAll(), 'a');
+    expect(shut).toEqual({ all: false, except: ['a'] });
+    expect(isCollapsed(shut, 'a')).toBe(true);
+    expect(isCollapsed(shut, 'b')).toBe(false);
+    expect(toggleCollapsed(shut, 'a')).toEqual({ all: false, except: [] });
+  });
+
   it('reads a bare key list as the open mode with those keys shut', () => {
     expect(asCollapseState(['a', 'b'])).toEqual({ all: false, except: ['a', 'b'] });
     expect(asCollapseState(undefined)).toEqual({ all: false, except: [] });
+    expect(asCollapseState(null)).toEqual({ all: false, except: [] });
     expect(isCollapsed(asCollapseState(['a']), 'a')).toBe(true);
     expect(isCollapsed(asCollapseState(['a']), 'b')).toBe(false);
+  });
+
+  it('reads a mode written without exceptions', () => {
+    expect(asCollapseState({ all: true })).toEqual({ all: true, except: [] });
+    expect(asCollapseState({ all: false })).toEqual({ all: false, except: [] });
+    // The copy is the caller's own list no longer.
+    const except = ['a'];
+    const state = asCollapseState({ all: true, except });
+    except.push('b');
+    expect(state.except).toEqual(['a']);
   });
 
   it('answers which of the drawn keys are shut', () => {
@@ -209,6 +228,11 @@ describe('collapse state', () => {
     expect(collapseStateFrom(expandAll(), ['a', 'c'], keys)).toEqual({ all: false, except: ['a', 'c'] });
     // An exception for a key no longer drawn is dropped.
     expect(collapseStateFrom({ all: true, except: ['gone'] }, keys, keys)).toEqual({ all: true, except: [] });
+  });
+
+  it('keeps the mode and no exception when nothing is drawn', () => {
+    expect(collapseStateFrom(collapseAll(), [], [])).toEqual({ all: true, except: [] });
+    expect(collapseStateFrom({ all: false, except: ['a'] }, [], [])).toEqual({ all: false, except: [] });
   });
 
   it('compares two states by what they shut', () => {

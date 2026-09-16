@@ -30,13 +30,16 @@ toggleCollapsed(collapseAll(), 'group:2');  // every group shut but that one
 isCollapsed(collapseAll(), 'a group nothing has loaded yet'); // true
 ```
 
-`groupKey` groups on a value derived from the row instead of read from a column: the record a note
-is about, which is a multi-entity field no site sorts on, or a value that comes from one field on one
-type and another on another. The list then leaves the source's sort as the caller set it, so the
-caller orders the rows so each run comes out whole. `groupLabel` draws the header's text, since
-there is no column to render the value by.
+One of `groupBy` and `groupKey` is required; a list given neither throws. `groupKey` groups on a
+value derived from the row instead of read from a column: the record a note is about, which is a
+multi-entity field no site sorts on, or a value that comes from one field on one type and another on
+another. The list then leaves the source's sort as the caller set it, so the caller orders the rows
+so each run comes out whole. Two rows share a run when the JSON text of their keys is the same, so a
+key answers a stable shape: the same keys in the same order, or a string. `groupLabel` draws the
+header's text for a derived key, since there is no column to render the value by; with `groupBy` it
+is not read.
 
-```ts
+```tsx
 <GroupedList
   source={source}
   groupKey={(row) => recordOf(row)}

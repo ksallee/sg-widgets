@@ -97,11 +97,12 @@ export interface GroupedListProps extends Omit<React.HTMLAttributes<HTMLDivEleme
    * The value a row groups under, derived rather than read from a column: a
    * multi-entity field no site sorts on, or a value that comes from one field on one
    * type and another on another. The source's sort is left as the caller set it, so the
-   * caller orders the rows so the runs come out whole. One of `groupBy` and this is
-   * required.
+   * caller orders the rows so the runs come out whole. Two values are one run when their
+   * JSON text is the same, so the caller answers a stable shape. One of `groupBy` and
+   * this is required.
    */
   groupKey?: (row: EntityRow) => unknown;
-  /** The header's text for a derived key. Without it the key reads as its own display name. */
+  /** The header's text for a derived key; not read with `groupBy`. Without it the key reads as its own display name. */
   groupLabel?: (value: unknown) => string;
   /** Field holding the thumbnail URL. `false` leaves the leading slot to `leading`. */
   thumbnail?: string | false;
@@ -172,6 +173,9 @@ export interface GroupedListProps extends Omit<React.HTMLAttributes<HTMLDivEleme
   errorLabel?: string;
 }
 
+/** What a list given nothing to group on says. */
+const GROUPING_REQUIRED = 'GroupedList needs groupBy or groupKey.';
+
 /**
  * Rows under collapsible group headers.
  *
@@ -232,6 +236,7 @@ export function GroupedList({
   className,
   ...rest
 }: GroupedListProps) {
+  if (!groupBy && !groupKey) throw new Error(GROUPING_REQUIRED);
   const root = useRef<HTMLDivElement>(null);
 
   const control = useCollectionControl({

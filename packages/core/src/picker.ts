@@ -25,7 +25,7 @@ import type { SchemaService } from './schema-service.js';
 import { createSchemaService } from './schema-service.js';
 import { DISPLAY_NAME_FIELDS, displayNameOf } from './schema.js';
 import type { MatchRun } from './search.js';
-import { matchRuns } from './search.js';
+import { matchRuns, searchWords } from './search.js';
 
 /* -------------------------------------------------------------------------- */
 /* rows                                                                       */
@@ -83,9 +83,8 @@ export function flattenRow(row: EntityRow, labelField?: string): PickerRow {
 /* the query filter                                                           */
 /* -------------------------------------------------------------------------- */
 
-export function queryTokens(query: string): string[] {
-  return query.trim().split(/\s+/).filter(Boolean);
-}
+/** The words of a query. The name the pickers were written against; `searchWords` is the function. */
+export const queryTokens = searchWords;
 
 /** One field a query is matched against, and how. */
 export interface SearchField {
@@ -112,7 +111,7 @@ function asSearchField(spec: SearchFieldSpec): SearchField {
  * be `entity.Shot.code` (017_filter_operators).
  */
 export function nameSearchFilter(query: string, fields: readonly SearchFieldSpec[]): FilterGroup {
-  const tokens = queryTokens(query);
+  const tokens = searchWords(query);
   const usable = fields.map(asSearchField).filter((f) => f.path.length > 0);
   if (tokens.length === 0 || usable.length === 0) return group('and');
   const perField = usable.map((field) =>

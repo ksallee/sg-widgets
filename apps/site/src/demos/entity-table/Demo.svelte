@@ -1,9 +1,11 @@
 <script lang="ts">
-	import type { CollectionColumn, EditorPlacement, EntityRef, FilterGroup, PagingMode, SortKey, StatusRecord } from '@sg-widgets/core';
+	import type { CollapseState, CollectionColumn, EditorPlacement, EntityRef, FilterGroup, PagingMode, SortKey, StatusRecord } from '@sg-widgets/core';
 	import {
+		collapseAll,
 		condition,
 		createEntitySource,
 		emptyFilter,
+		expandAll,
 		group,
 		resolveColumns,
 		toSortSpecs
@@ -57,6 +59,7 @@
 	let selected = $state<EntityRef[]>([]);
 	let picking = $state(false);
 	let grouped = $state(false);
+	let collapsed = $state<CollapseState>(expandAll());
 	let compact = $state(false);
 	let paging = $state<PagingMode>('pages');
 	let placement = $state<EditorPlacement>('popover');
@@ -96,10 +99,16 @@
 {#await load()}
 	<p class="text-muted-foreground text-sm">Loading the site…</p>
 {:then { statuses }}
-	<div class="flex w-full min-w-0 flex-col gap-3">
+	<div class="flex w-full min-w-0 flex-col gap-3" data-collapsed={JSON.stringify(collapsed)}>
 		<div class="flex flex-wrap items-center gap-2">
 			<button type="button" class={toggle} aria-pressed={grouped} onclick={() => (grouped = !grouped)}>
 				Group by status
+			</button>
+			<button type="button" class="{toggle} disabled:pointer-events-none disabled:opacity-50" data-demo="collapse-all" disabled={!grouped} onclick={() => (collapsed = collapseAll())}>
+				Collapse all
+			</button>
+			<button type="button" class="{toggle} disabled:pointer-events-none disabled:opacity-50" data-demo="expand-all" disabled={!grouped} onclick={() => (collapsed = expandAll())}>
+				Expand all
 			</button>
 			<button type="button" class={toggle} aria-pressed={compact} onclick={() => (compact = !compact)}>
 				Compact
@@ -146,6 +155,7 @@
 			editorPlacement={placement}
 			density={compact ? 'compact' : 'default'}
 			groupBy={grouped ? 'sg_status_list' : null}
+			bind:collapsed
 		>
 			{#snippet toolbarStart()}
 				<FilterBar entityType="Version" {context} facets={FACETS} baseFilter={scope} size="sm" bind:value={filter} />

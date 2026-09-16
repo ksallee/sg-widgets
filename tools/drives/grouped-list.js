@@ -1,4 +1,6 @@
-// Collapse a group, count its rows, select two, and read the list grouped on a derived key.
+// Collapse a group, count its rows, select two, and read the list grouped on a derived key:
+// every row under a header belongs to the record the header names, and the sort stays the
+// caller's.
 const notes = [];
 const pane = () => $$('[data-sg-demo] [data-pane]').find((p) => p.offsetParent !== null) ?? document;
 const lists = () => [...pane().querySelectorAll('[data-slot="grouped-list"]')];
@@ -53,4 +55,25 @@ if (heads.some((h) => h.label === '')) return { verdict: 'FAIL a derived header 
 const mismatch = keyed.findIndex((g, i) => g.querySelectorAll('[data-slot="grouped-list-row"]').length !== heads[i].stated);
 if (mismatch !== -1) return { verdict: `FAIL derived group ${mismatch} states ${heads[mismatch].stated} against its rows`, notes };
 
-return { verdict: 'PASS grouping, counts, collapse, selection and the derived key', notes };
+// A Version's code opens on the code of the record it is of, so every row under a header
+// carries the header's label, and no header's label is another header's.
+const rowLabel = (row) => row.querySelector('[data-slot="grouped-list-row-label"] span span').textContent.trim();
+for (const [i, g] of keyed.entries()) {
+  const strays = [...g.querySelectorAll('[data-slot="grouped-list-row"]')]
+    .map(rowLabel)
+    .filter((label) => !label.startsWith(`${heads[i].label}_`));
+  if (strays.length > 0) {
+    return { verdict: `FAIL derived group "${heads[i].label}" holds ${strays.length} rows of another record: ${strays.join(', ')}`, notes };
+  }
+}
+if (new Set(heads.map((h) => h.label)).size !== heads.length) {
+  return { verdict: 'FAIL a record is split over two derived groups', notes };
+}
+notes.push(`every row under a derived header is a version of its record`);
+
+// A derived key leaves the source's sort as the caller set it: on code, not on the record.
+const sortLine = pane().querySelector('[data-demo-case="derived"] [data-testid="derived-sort"]')?.textContent.trim();
+notes.push(`derived list: ${sortLine}`);
+if (sortLine !== 'Sorted on code') return { verdict: `FAIL the derived list reads "${sortLine}", expected "Sorted on code"`, notes };
+
+return { verdict: 'PASS grouping, counts, collapse, selection, the derived key, its rows and its sort', notes };

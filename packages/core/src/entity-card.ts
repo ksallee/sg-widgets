@@ -86,8 +86,8 @@ export async function describeEntityCard(
     Promise.all(paths.map((path) => describeColumn(context, row, path))),
   ]);
   const status = statusFieldFor(row.type, schema);
-  const statusName = typeof status === 'string' ? status : status.name;
   const code = typeof status === 'string' ? null : row.attributes[status.name];
+  const badge = typeof status === 'string' || typeof code !== 'string' ? null : { code, field: status };
   const image = options.imagePath ?? DEFAULT_IMAGE_PATH;
   const thumbnail = row.attributes[image];
   return {
@@ -96,11 +96,12 @@ export async function describeEntityCard(
     name: displayNameOf(row.attributes, `${row.type} #${row.id}`),
     typeLabel: types.find((t) => t.name === row.type)?.displayName ?? row.type,
     thumbnail: typeof thumbnail === 'string' ? thumbnail : null,
-    status: typeof status === 'string' || typeof code !== 'string' ? null : { code, field: status },
-    // The header already draws this row's own status, so the same field asked for by
-    // name is one value with one badge. A path that ends at a linked row's status is a
+    status: badge,
+    // The header draws this row's own status when it has one, so the same field asked
+    // for by name is one value with one badge. With no status to draw, the column is
+    // where its emptiness shows. A path that ends at a linked row's status is a
     // different row's and stays.
-    columns: columns.filter((column) => column.path !== statusName),
+    columns: badge ? columns.filter((column) => column.path !== badge.field.name) : columns,
   };
 }
 

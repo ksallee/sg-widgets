@@ -112,6 +112,14 @@ describe('describeEntityCard', () => {
     expect(card.columns.map((c) => c.path)).toEqual(['sg_type']);
   });
 
+  it('keeps the status column when the row has no status to draw', async () => {
+    const sg = context();
+    const row = { type: 'Shot', id: 4243, attributes: { code: 'sh_4243', sg_status_list: null }, relationships: {} };
+    const card = await describeEntityCard(sg, row, { fields: ['sg_status_list', 'description'] });
+    expect(card.status).toBeNull();
+    expect(card.columns.map((c) => c.path)).toEqual(['sg_status_list', 'description']);
+  });
+
   it('falls back to type and id when the row has no name', async () => {
     const sg = context();
     const card = await describeEntityCard(sg, { type: 'Shot', id: 4242, attributes: {}, relationships: {} });

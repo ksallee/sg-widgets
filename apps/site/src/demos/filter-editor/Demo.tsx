@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
 import type { FilterGroup } from '@sg-widgets/core';
 import { condition, group, toApi3Hash } from '@sg-widgets/core';
-import { FilterEditor } from '@/registry/sg/components/filter-editor';
+import { Button } from '@/components/ui/button';
+import { FilterEditor, type FilterEditorSize } from '@/registry/sg/components/filter-editor';
 import { createDemoContext } from '../_shared/client';
 import { DemoContextProvider } from '../_shared/react';
 import { VersionResults } from '../_shared/version-results';
@@ -34,10 +35,20 @@ function initial(live: boolean): FilterGroup {
   ]);
 }
 
+const SIZES: FilterEditorSize[] = ['sm', 'md', 'lg'];
+const section = 'flex min-w-0 flex-col gap-2';
+const label = 'text-muted-foreground text-xs font-medium tracking-wide uppercase';
+
+/** One row per control kind: a status list on the multi picker and a text on the input. */
+const sizedTree = () => group('and', [condition('sg_status_list', 'in', ['rev']), condition('code', 'contains', 'sh')]);
+
 export default function FilterEditorDemo() {
   const context = useMemo(() => createDemoContext(), []);
   const [value, setValue] = useState<FilterGroup>(() => initial(context.live));
   const hash = toApi3Hash(value);
+  /** A Note, whose read-state field evaluates `is` and `is_not` and nothing else. */
+  const [note, setNote] = useState<FilterGroup>(() => group('and', [condition('read_by_current_user', 'is', 'unread')]));
+  const [sized, setSized] = useState<Record<FilterEditorSize, FilterGroup>>({ sm: sizedTree(), md: sizedTree(), lg: sizedTree() });
 
   return (
     <DemoContextProvider context={context}>
@@ -61,6 +72,33 @@ export default function FilterEditorDemo() {
         </section>
 
         <VersionResults context={context} value={value} />
+
+        <section className={section} data-demo="note">
+          <h4 className={label}>Note, whose read-state field takes is and is not alone</h4>
+          <FilterEditor entityType="Note" context={context} value={note} onChange={setNote} />
+        </section>
+
+        <section className={section} data-demo="sizes">
+          <h4 className={label}>Sizes, beside a button of the same size</h4>
+          <div className="flex min-w-0 flex-col gap-4">
+            {SIZES.map((size) => (
+              <div key={size} className="flex min-w-0 items-start gap-3" data-qa-widget="filter-editor" data-qa-size={size}>
+                <div className="min-w-0 flex-1">
+                  <FilterEditor
+                    entityType="Version"
+                    context={context}
+                    size={size}
+                    value={sized[size]}
+                    onChange={(next) => setSized({ ...sized, [size]: next })}
+                  />
+                </div>
+                <Button variant="outline" size={size === 'md' ? 'default' : size}>
+                  {size}
+                </Button>
+              </div>
+            ))}
+          </div>
+        </section>
       </div>
     </DemoContextProvider>
   );

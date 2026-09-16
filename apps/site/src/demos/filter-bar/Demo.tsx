@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CollectionColumn, FilterGroup, StatusRecord, WireGroup } from '@sg-widgets/core';
 import { condition, createEntitySource, emptyFilter, group, resolveColumns, toApi3Hash } from '@sg-widgets/core';
-import { FilterBar } from '@/registry/sg/components/filter-bar';
+import { Button } from '@/components/ui/button';
+import { FilterBar, type FilterBarSize } from '@/registry/sg/components/filter-bar';
 import { GroupedList } from '@/registry/sg/components/grouped-list';
 import { createDemoContext } from '../_shared/client';
 import { DemoContextProvider } from '../_shared/react';
@@ -18,6 +19,19 @@ const GROUP = 'sg_status_list';
 const SUB = 'description';
 const SECONDARY = 'sg_sequence';
 const FIELDS = ['code', GROUP, SUB, SECONDARY];
+const SIZES: FilterBarSize[] = ['sm', 'md', 'lg'];
+const section = 'flex min-w-0 flex-col gap-2';
+const label = 'text-muted-foreground text-xs font-medium tracking-wide uppercase';
+
+/** Four statuses and three kinds ticked: the pill names two and reads the rest as `+n`. */
+const seededTree = () =>
+  group('and', [
+    condition(GROUP, 'in', ['ip', 'rev', 'apr', 'fin']),
+    condition('sg_shot_type', 'in', ['VFX', '2D', 'Full CG']),
+  ]);
+
+/** Every status ticked, on a bar that names every value: the pill holds its cap. */
+const everyTree = () => group('and', [condition(GROUP, 'in', ['wtg', 'ip', 'rev', 'apr', 'fin', 'hld', 'omt'])]);
 
 interface Loaded {
   columns: CollectionColumn[];
@@ -30,6 +44,10 @@ export default function FilterBarDemo() {
   const [value, setValue] = useState<FilterGroup>(emptyFilter);
   /** The read-state bar, over a field the API evaluates only `is` and `is_not` on. */
   const [readState, setReadState] = useState<FilterGroup>(emptyFilter);
+  const [seeded, setSeeded] = useState<FilterGroup>(seededTree);
+  const [every, setEvery] = useState<FilterGroup>(everyTree);
+  const [sized, setSized] = useState<Record<FilterBarSize, FilterGroup>>({ sm: seededTree(), md: seededTree(), lg: seededTree() });
+  const scope = context.live ? group('and', [condition('project', 'is', { type: 'Project', id: context.projectId })]) : null;
 
   // The first tree goes in at construction, and the group path leads the sort, so the
   // list's own first read is already the one it groups.
@@ -63,11 +81,11 @@ export default function FilterBarDemo() {
 
   const wire = JSON.stringify(toApi3Hash(scopeToProject(context, value)));
   const readWire = JSON.stringify(toApi3Hash(scopeToProject(context, readState)), null, 2);
-  const [notes, setNotes] = useState<ResultCount>({ kind: 'counting' });
+  /** The Note total, paired with the filter it answered so a stale total never reads as a new one. */
+  const [notes, setNotes] = useState<{ wire: string; count: ResultCount }>({ wire: '', count: { kind: 'counting' } });
 
   useEffect(() => {
     let live = true;
-    setNotes({ kind: 'counting' });
     void readCount(async () => {
       const summary = await context.client.summarize('Note', {
         filters: JSON.parse(readWire) as WireGroup | null,
@@ -75,7 +93,7 @@ export default function FilterBarDemo() {
       });
       const total = summary.summaries['id'];
       return typeof total === 'number' ? total : null;
-    }).then((next) => live && setNotes(next));
+    }).then((next) => live && setNotes({ wire: readWire, count: next }));
     return () => {
       live = false;
     };
@@ -103,7 +121,7 @@ export default function FilterBarDemo() {
           context={context}
           facets={['sg_status_list', 'sg_sequence', 'sg_shot_type']}
           labels={{ sg_shot_type: 'Kind' }}
-          baseFilter={context.live ? group('and', [condition('project', 'is', { type: 'Project', id: context.projectId })]) : null}
+          baseFilter={scope}
           value={value}
           onChange={setValue}
         />
@@ -135,22 +153,44 @@ export default function FilterBarDemo() {
           )}
         </section>
 
-        <section className="flex min-w-0 flex-col gap-2">
-          <h4 className="text-muted-foreground text-xs font-medium tracking-wide uppercase">Notes by read state</h4>
+        <section className={section} data-demo="seeded">
+          <h4 className={label}>Seeded with four statuses and three kinds</h4>
+          <FilterBar
+            entityType="Shot"
+            context={context}
+            facets={['sg_status_list', 'sg_shot_type']}
+            labels={{ sg_shot_type: 'Kind' }}
+            baseFilter={scope}
+            value={seeded}
+            onChange={setSeeded}
+          />
+        </section>
+
+        <section className={section} data-demo="every-value">
+          <h4 className={label}>Every status ticked, every value named</h4>
+          <FilterBar
+            entityType="Shot"
+            context={context}
+            facets={['sg_status_list']}
+            maxValues={0}
+            baseFilter={scope}
+            value={every}
+            onChange={setEvery}
+          />
+        </section>
+
+        <section className={section}>
+          <h4 className={label}>Notes by read state</h4>
           <FilterBar
             entityType="Note"
             context={context}
             facets={['read_by_current_user']}
-            baseFilter={
-              context.live
-                ? group('and', [condition('project', 'is', { type: 'Project', id: context.projectId })])
-                : null
-            }
+            baseFilter={scope}
             value={readState}
             onChange={setReadState}
           />
-          <p className="text-muted-foreground text-sm tabular-nums" data-testid="note-count">
-            {matchLabel(notes, 'Note')}
+          <p className="text-muted-foreground text-sm tabular-nums" data-testid="note-count" data-for={readWire}>
+            {matchLabel(notes.wire === readWire ? notes.count : { kind: 'counting' }, 'Note')}
           </p>
           <pre
             data-testid="note-filter-json"
@@ -158,6 +198,31 @@ export default function FilterBarDemo() {
           >
             {readWire}
           </pre>
+        </section>
+
+        <section className={section} data-demo="sizes">
+          <h4 className={label}>Sizes, beside a button of the same size</h4>
+          <div className="flex min-w-0 flex-col gap-3">
+            {SIZES.map((size) => (
+              <div key={size} className="flex min-w-0 items-start gap-3" data-qa-widget="filter-bar" data-qa-size={size}>
+                <div className="min-w-0 flex-1">
+                  <FilterBar
+                    entityType="Shot"
+                    context={context}
+                    facets={['sg_status_list', 'sg_shot_type']}
+                    labels={{ sg_shot_type: 'Kind' }}
+                    size={size}
+                    baseFilter={scope}
+                    value={sized[size]}
+                    onChange={(next) => setSized({ ...sized, [size]: next })}
+                  />
+                </div>
+                <Button variant="outline" size={size === 'md' ? 'default' : size}>
+                  {size}
+                </Button>
+              </div>
+            ))}
+          </div>
         </section>
       </div>
     </DemoContextProvider>

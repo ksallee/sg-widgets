@@ -1,7 +1,8 @@
 <script lang="ts">
 	import type { FieldSchema, NativeStatus, StatusRecord } from '@sg-widgets/core';
-	import { NATIVE_STATUSES, STOCK_ICON_KEYS } from '@sg-widgets/core';
+	import { NATIVE_STATUSES, STOCK_ICON_KEYS, statusPaint } from '@sg-widgets/core';
 	import StatusBadge from '$lib/registry/components/status-badge.svelte';
+	import StatusGlyph from '$lib/registry/components/status-glyph.svelte';
 	import { setDemoContext } from '../_shared/svelte';
 
 	const context = setDemoContext();
@@ -89,6 +90,23 @@
 				<StatusBadge code="ip" status={statuses['ip']} {field} color />
 				<StatusBadge code="hld" status={statuses['hld']} {field} color />
 				<StatusBadge code="omt" status={statuses['omt']} {field} color />
+			</div>
+		</section>
+
+		<section class={group} data-demo="glyph">
+			<h4 class={label}>The bare glyph on the muted ground, and on its own colour</h4>
+			<div class={row}>
+				<span class="bg-muted inline-flex size-8 items-center justify-center rounded-md" data-demo="glyph-muted">
+					<StatusGlyph status={statuses['apr']} fallback class="size-4" />
+				</span>
+				<!-- Status colour is data, not a token, so it is applied inline (design rule 1). -->
+				<span
+					class="inline-flex size-8 items-center justify-center rounded-md"
+					style="background-color:{statusPaint(statuses['apr'])?.background}"
+					data-demo="glyph-colour"
+				>
+					<StatusGlyph status={statuses['apr']} fallback onColor class="size-4" />
+				</span>
 			</div>
 		</section>
 

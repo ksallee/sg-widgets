@@ -15,10 +15,18 @@
 		hiddenValues: ['Marketing', 'Trailer']
 	};
 
+	/** A field the site flags mandatory: the picker offers no clear. */
+	const step = {
+		displayName: 'Pipeline Step',
+		mandatory: true,
+		validValues: ['Model', 'Rig', 'Animate', 'Light', 'Comp']
+	};
+
 	let type = $state<string[]>(['Type A']);
 	let shot = $state<string[]>(['VFX', '2D']);
 	let scoped = $state<string[]>(['Full CG']);
 	let searched = $state<string[]>([]);
+	let chosen = $state<string[]>(['Model']);
 
 	const cell = 'px-3 py-2 align-top';
 	const typeCell = 'text-muted-foreground w-28 px-3 py-2 align-top font-mono text-xs';
@@ -30,7 +38,7 @@
 		<tr class="border-border border-b">
 			<th scope="row" class={typeCell}>valid values</th>
 			<td class={cell}>
-				<div data-demo="values" class="flex w-full min-w-0 flex-col gap-2">
+				<div data-demo="values" data-field-mandatory="false" class="flex w-full min-w-0 flex-col gap-2">
 					<ListMultiPicker bind:value={type} field={versionType} />
 					<p class={valueCell}>{JSON.stringify(type)}</p>
 				</div>
@@ -39,7 +47,7 @@
 		<tr class="border-border border-b">
 			<th scope="row" class={typeCell}>display values</th>
 			<td class={cell}>
-				<div data-demo="labels" class="flex w-full min-w-0 flex-col gap-2">
+				<div data-demo="labels" data-field-mandatory="false" class="flex w-full min-w-0 flex-col gap-2">
 					<ListMultiPicker bind:value={shot} field={shotType} showCode />
 					<p class={valueCell}>{JSON.stringify(shot)}</p>
 				</div>
@@ -48,7 +56,7 @@
 		<tr class="border-border border-b">
 			<th scope="row" class={typeCell}>project 63</th>
 			<td class={cell}>
-				<div data-demo="project" class="flex w-full min-w-0 flex-col gap-2">
+				<div data-demo="project" data-field-mandatory="false" class="flex w-full min-w-0 flex-col gap-2">
 					<ListMultiPicker bind:value={scoped} field={shotType} projectId={63} />
 					<p class={valueCell}>{JSON.stringify(scoped)}</p>
 				</div>
@@ -57,9 +65,18 @@
 		<tr class="border-border border-b">
 			<th scope="row" class={typeCell}>searchable</th>
 			<td class={cell}>
-				<div data-demo="searchable" class="flex w-full min-w-0 flex-col gap-2">
+				<div data-demo="searchable" data-field-mandatory="false" class="flex w-full min-w-0 flex-col gap-2">
 					<ListMultiPicker bind:value={searched} field={shotType} searchable />
 					<p class={valueCell}>{JSON.stringify(searched)}</p>
+				</div>
+			</td>
+		</tr>
+		<tr class="border-border border-b">
+			<th scope="row" class={typeCell}>mandatory</th>
+			<td class={cell}>
+				<div data-demo="mandatory" data-field-mandatory={String(step.mandatory)} class="flex w-full min-w-0 flex-col gap-2">
+					<ListMultiPicker bind:value={chosen} field={step} />
+					<p class={valueCell}>{JSON.stringify(chosen)}</p>
 				</div>
 			</td>
 		</tr>

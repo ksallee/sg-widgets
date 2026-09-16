@@ -93,7 +93,8 @@
       "dependencies": [
         "@sg-widgets/core",
         "@base-ui/react",
-        "lucide-react"
+        "lucide-react",
+        "cn"
       ],
       "registryDependencies": [
         "dialog",
@@ -275,7 +276,6 @@
       ],
       "dependencies": [
         "@sg-widgets/core",
-        "lucide-react",
         "cn"
       ],
       "registryDependencies": [
@@ -376,7 +376,6 @@
         "search"
       ],
       "dependencies": [
-        "@sg-widgets/core",
         "cn"
       ],
       "registryDependencies": [
@@ -400,10 +399,11 @@
         "atom"
       ],
       "dependencies": [
-        "@sg-widgets/core",
         "tw-animate-css"
       ],
-      "registryDependencies": [],
+      "registryDependencies": [
+        "https://sg-widgets.dev/r/react/leaf-classes.json"
+      ],
       "docs": "Class strings only. Import what a control needs; the ladder and the states are the design rules'.",
       "files": [
         {
@@ -421,9 +421,7 @@
         "flow-production-tracking",
         "atom"
       ],
-      "dependencies": [
-        "@sg-widgets/core"
-      ],
+      "dependencies": [],
       "registryDependencies": [],
       "docs": "Class strings only. Import what a control needs; the ladder is the design rules'.",
       "files": [
@@ -442,9 +440,7 @@
         "flow-production-tracking",
         "atom"
       ],
-      "dependencies": [
-        "@sg-widgets/core"
-      ],
+      "dependencies": [],
       "registryDependencies": [],
       "docs": "Class strings only. A leaf atom sits on the thumbnail ladder, not the control one.",
       "files": [
@@ -464,7 +460,6 @@
         "atom"
       ],
       "dependencies": [
-        "@sg-widgets/core",
         "lucide-react"
       ],
       "registryDependencies": [],
@@ -485,9 +480,7 @@
         "flow-production-tracking",
         "editor"
       ],
-      "dependencies": [
-        "@sg-widgets/core"
-      ],
+      "dependencies": [],
       "registryDependencies": [],
       "docs": "Pass the message and the caller errorMessage renderer; nothing is drawn without a message.",
       "files": [
@@ -587,8 +580,7 @@
       "registryDependencies": [
         "https://sg-widgets.dev/r/react/search-skeleton.json",
         "https://sg-widgets.dev/r/react/state-line.json",
-        "https://sg-widgets.dev/r/react/command.json",
-        "skeleton"
+        "https://sg-widgets.dev/r/react/command.json"
       ],
       "docs": "The debounce, the ticket that drops a stale answer, the page and its load-more row, and the list with its error, loading and empty blocks.",
       "files": [
@@ -642,7 +634,8 @@
       "registryDependencies": [
         "https://sg-widgets.dev/r/react/picker-control.json",
         "https://sg-widgets.dev/r/react/picker-classes.json",
-        "checkbox"
+        "checkbox",
+        "https://sg-widgets.dev/r/react/leaf-classes.json"
       ],
       "docs": "Takes a SchemaService. The value is an array of codes, and the control shows it as chips, as `+n` or as a count.",
       "files": [
@@ -670,7 +663,8 @@
         "https://sg-widgets.dev/r/react/state-line.json",
         "popover",
         "https://sg-widgets.dev/r/react/command.json",
-        "skeleton"
+        "skeleton",
+        "https://sg-widgets.dev/r/react/picker-classes.json"
       ],
       "docs": "Emits ShotGrid's dotted path. Only single entity fields are descended into; a path through a multi-entity field reads back nothing.",
       "files": [
@@ -743,8 +737,7 @@
         "editor"
       ],
       "dependencies": [
-        "@sg-widgets/core",
-        "lucide-react"
+        "@sg-widgets/core"
       ],
       "registryDependencies": [
         "https://sg-widgets.dev/r/react/value-editor.json",
@@ -772,7 +765,8 @@
       "dependencies": [
         "@sg-widgets/core",
         "lucide-react",
-        "cn"
+        "cn",
+        "@base-ui/react"
       ],
       "registryDependencies": [
         "https://sg-widgets.dev/r/react/value-editor.json",
@@ -799,7 +793,6 @@
       ],
       "dependencies": [
         "@sg-widgets/core",
-        "lucide-react",
         "cn"
       ],
       "registryDependencies": [
@@ -914,9 +907,7 @@
         "flow-production-tracking",
         "deprecated"
       ],
-      "dependencies": [
-        "@sg-widgets/core"
-      ],
+      "dependencies": [],
       "registryDependencies": [
         "https://sg-widgets.dev/r/react/list-picker.json"
       ],
@@ -947,7 +938,8 @@
         "https://sg-widgets.dev/r/react/picker-control.json",
         "https://sg-widgets.dev/r/react/picker-row.json",
         "https://sg-widgets.dev/r/react/picker-classes.json",
-        "checkbox"
+        "checkbox",
+        "https://sg-widgets.dev/r/react/leaf-classes.json"
       ],
       "docs": "With a project id the field's hidden values are subtracted, which REST does not do on write.",
       "files": [
@@ -966,9 +958,7 @@
         "flow-production-tracking",
         "deprecated"
       ],
-      "dependencies": [
-        "@sg-widgets/core"
-      ],
+      "dependencies": [],
       "registryDependencies": [
         "https://sg-widgets.dev/r/react/list-multi-picker.json"
       ],
@@ -990,8 +980,7 @@
         "editor"
       ],
       "dependencies": [
-        "@sg-widgets/core",
-        "lucide-react"
+        "@sg-widgets/core"
       ],
       "registryDependencies": [
         "https://sg-widgets.dev/r/react/value-editor.json",
@@ -1017,7 +1006,6 @@
       ],
       "dependencies": [
         "@sg-widgets/core",
-        "lucide-react",
         "cn"
       ],
       "registryDependencies": [
@@ -1044,7 +1032,6 @@
       ],
       "dependencies": [
         "@sg-widgets/core",
-        "lucide-react",
         "@base-ui/react",
         "tw-animate-css",
         "cn"
@@ -1057,14 +1044,13 @@
         "https://sg-widgets.dev/r/react/checkbox-editor.json",
         "https://sg-widgets.dev/r/react/date-editor.json",
         "https://sg-widgets.dev/r/react/date-time-editor.json",
-        "https://sg-widgets.dev/r/react/list-select.json",
         "https://sg-widgets.dev/r/react/url-editor.json",
         "https://sg-widgets.dev/r/react/color-editor.json",
         "https://sg-widgets.dev/r/react/status-picker.json",
         "https://sg-widgets.dev/r/react/entity-picker.json",
         "https://sg-widgets.dev/r/react/entity-multi-picker.json",
         "button",
-        "popover"
+        "https://sg-widgets.dev/r/react/list-picker.json"
       ],
       "docs": "Installs FieldValue, the eight typed editors and the three pickers alongside it.",
       "files": [
@@ -1125,13 +1111,13 @@
         "https://sg-widgets.dev/r/react/entity-multi-picker.json",
         "https://sg-widgets.dev/r/react/entity-picker.json",
         "https://sg-widgets.dev/r/react/field-picker.json",
-        "https://sg-widgets.dev/r/react/list-multi-select.json",
-        "https://sg-widgets.dev/r/react/list-select.json",
         "https://sg-widgets.dev/r/react/number-editor.json",
         "https://sg-widgets.dev/r/react/status-multi-picker.json",
         "https://sg-widgets.dev/r/react/status-picker.json",
         "https://sg-widgets.dev/r/react/text-editor.json",
-        "https://sg-widgets.dev/r/react/url-editor.json"
+        "https://sg-widgets.dev/r/react/url-editor.json",
+        "https://sg-widgets.dev/r/react/list-multi-picker.json",
+        "https://sg-widgets.dev/r/react/list-picker.json"
       ],
       "docs": "Takes a FilterGroup and emits one on every edit. toApi3Hash turns it into the body _search takes.",
       "files": [
@@ -1196,7 +1182,6 @@
         "checkbox",
         "https://sg-widgets.dev/r/react/command.json",
         "popover",
-        "select",
         "https://sg-widgets.dev/r/react/filter-dialog.json"
       ],
       "docs": "Pass counts to compute the numbers with a _summarize grouping call; without it the bar tallies one page of rows.",
@@ -1249,8 +1234,7 @@
         "picker"
       ],
       "dependencies": [
-        "@sg-widgets/core",
-        "lucide-react"
+        "@sg-widgets/core"
       ],
       "registryDependencies": [
         "https://sg-widgets.dev/r/react/list-picker.json",
@@ -1394,10 +1378,8 @@
         "table",
         "checkbox",
         "skeleton",
-        "input",
         "button",
-        "dropdown-menu",
-        "select"
+        "dropdown-menu"
       ],
       "docs": "Takes an entity source and resolved columns from @sg-widgets/core. Sorting and grouping go through the server; an edit writes one field and re-reads the row.",
       "files": [
@@ -1427,9 +1409,7 @@
         "https://sg-widgets.dev/r/react/state-line.json",
         "https://sg-widgets.dev/r/react/entity-card.json",
         "skeleton",
-        "input",
-        "button",
-        "select"
+        "button"
       ],
       "docs": "Takes an entity source and draws every row as an EntityCard tile; the arrows walk the grid and scrolling to the end asks the source for the next page.",
       "files": [
@@ -1461,9 +1441,7 @@
         "https://sg-widgets.dev/r/react/thumbnail.json",
         "checkbox",
         "skeleton",
-        "input",
-        "button",
-        "select"
+        "button"
       ],
       "docs": "Groups the contiguous runs of the order the server produced, so the source is sorted on the same path.",
       "files": [
@@ -1494,8 +1472,8 @@
         "https://sg-widgets.dev/r/react/status-badge.json",
         "https://sg-widgets.dev/r/react/thumbnail.json",
         "checkbox",
-        "@shadcn/skeleton",
-        "@shadcn/input",
+        "skeleton",
+        "input",
         "https://sg-widgets.dev/r/react/match-text.json"
       ],
       "docs": "Expands one level per call through POST /hierarchy/_expand. seedPath opens the tree to a row on mount; checkboxes propagate both ways.",
@@ -1518,7 +1496,8 @@
       "dependencies": [
         "@sg-widgets/core",
         "@base-ui/react",
-        "cn"
+        "cn",
+        "lucide-react"
       ],
       "registryDependencies": [
         "https://sg-widgets.dev/r/react/picker-control.json",
@@ -1573,8 +1552,7 @@
         "picker"
       ],
       "dependencies": [
-        "@sg-widgets/core",
-        "lucide-react"
+        "@sg-widgets/core"
       ],
       "registryDependencies": [
         "https://sg-widgets.dev/r/react/entity-picker.json"
@@ -1597,8 +1575,7 @@
         "picker"
       ],
       "dependencies": [
-        "@sg-widgets/core",
-        "lucide-react"
+        "@sg-widgets/core"
       ],
       "registryDependencies": [
         "https://sg-widgets.dev/r/react/entity-multi-picker.json"
@@ -1621,8 +1598,7 @@
         "picker"
       ],
       "dependencies": [
-        "@sg-widgets/core",
-        "lucide-react"
+        "@sg-widgets/core"
       ],
       "registryDependencies": [
         "https://sg-widgets.dev/r/react/entity-picker.json"
@@ -1645,8 +1621,7 @@
         "picker"
       ],
       "dependencies": [
-        "@sg-widgets/core",
-        "lucide-react"
+        "@sg-widgets/core"
       ],
       "registryDependencies": [
         "https://sg-widgets.dev/r/react/entity-multi-picker.json"
@@ -1679,7 +1654,6 @@
         "https://sg-widgets.dev/r/react/entity-chip.json",
         "https://sg-widgets.dev/r/react/picker-row.json",
         "https://sg-widgets.dev/r/react/command.json",
-        "dialog",
         "button",
         "kbd"
       ],

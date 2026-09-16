@@ -5,8 +5,8 @@
   "aliases": {
     "components": "$lib/registry/components",
     "ui": "$lib/components/ui",
-    "hooks": "$lib/registry/hooks",
-    "lib": "$lib/registry/lib",
+    "hooks": "$lib/hooks",
+    "lib": "$lib",
     "utils": "$lib/utils"
   },
   "items": [
@@ -100,8 +100,7 @@
       ],
       "registryDependencies": [
         "dialog",
-        "input-group",
-        "separator"
+        "input-group"
       ],
       "files": [
         {
@@ -170,7 +169,9 @@
         "tailwind-merge",
         "tw-animate-css"
       ],
-      "registryDependencies": [],
+      "registryDependencies": [
+        "separator"
+      ],
       "files": [
         {
           "path": "src/lib/components/ui/select/index.ts",
@@ -385,7 +386,6 @@
       "description": "Any Flow Production Tracking attribute value, rendered for display by its data type.",
       "dependencies": [
         "@sg-widgets/core",
-        "@lucide/svelte",
         "clsx",
         "tailwind-merge"
       ],
@@ -470,7 +470,6 @@
       "title": "Search Skeleton",
       "description": "The rows a search widget draws while its read is in flight.",
       "dependencies": [
-        "@sg-widgets/core",
         "clsx",
         "tailwind-merge"
       ],
@@ -490,10 +489,11 @@
       "title": "Picker Classes",
       "description": "The control, popup, list and row classes every picker in this registry wears.",
       "dependencies": [
-        "@sg-widgets/core",
         "tw-animate-css"
       ],
-      "registryDependencies": [],
+      "registryDependencies": [
+        "local:leaf-classes"
+      ],
       "files": [
         {
           "path": "src/lib/registry/components/picker-classes.ts",
@@ -546,8 +546,7 @@
       "registryDependencies": [
         "local:search-skeleton",
         "local:state-line",
-        "local:command",
-        "skeleton"
+        "local:command"
       ],
       "docs": "The debounce, the ticket that drops a stale answer, the page and its load-more row, and the list with its error, loading and empty blocks.",
       "files": [
@@ -562,9 +561,7 @@
       "type": "registry:component",
       "title": "Leaf Classes",
       "description": "The ladder and the remove control every badge, chip and avatar in this registry wears.",
-      "dependencies": [
-        "@sg-widgets/core"
-      ],
+      "dependencies": [],
       "registryDependencies": [],
       "files": [
         {
@@ -579,7 +576,6 @@
       "title": "Entity Glyphs",
       "description": "A glyph per entity type, with the tag every unlisted type takes.",
       "dependencies": [
-        "@sg-widgets/core",
         "@lucide/svelte"
       ],
       "registryDependencies": [],
@@ -595,9 +591,7 @@
       "type": "registry:component",
       "title": "Control Classes",
       "description": "The height, inset and glyph ladder every non-picker control in this registry wears.",
-      "dependencies": [
-        "@sg-widgets/core"
-      ],
+      "dependencies": [],
       "registryDependencies": [],
       "files": [
         {
@@ -611,9 +605,7 @@
       "type": "registry:component",
       "title": "Field Error",
       "description": "The line a field editor shows under its control when a parse fails.",
-      "dependencies": [
-        "@sg-widgets/core"
-      ],
+      "dependencies": [],
       "registryDependencies": [],
       "files": [
         {
@@ -701,7 +693,8 @@
       "registryDependencies": [
         "local:picker-control",
         "local:picker-classes",
-        "local:checkbox"
+        "local:checkbox",
+        "local:leaf-classes"
       ],
       "files": [
         {
@@ -725,7 +718,8 @@
         "local:state-line",
         "popover",
         "local:command",
-        "skeleton"
+        "skeleton",
+        "local:picker-classes"
       ],
       "files": [
         {
@@ -785,7 +779,6 @@
       "description": "A text field as an input, or a textarea when the field is multi-line.",
       "dependencies": [
         "@sg-widgets/core",
-        "@lucide/svelte",
         "clsx",
         "tailwind-merge"
       ],
@@ -833,7 +826,6 @@
       "description": "A checkbox field as an editable switch.",
       "dependencies": [
         "@sg-widgets/core",
-        "@lucide/svelte",
         "clsx",
         "tailwind-merge"
       ],
@@ -934,9 +926,7 @@
       "type": "registry:component",
       "title": "List Select",
       "description": "Deprecated: the former name of list-picker, which it re-exports.",
-      "dependencies": [
-        "@sg-widgets/core"
-      ],
+      "dependencies": [],
       "registryDependencies": [
         "local:list-picker"
       ],
@@ -963,7 +953,8 @@
         "local:picker-control",
         "local:picker-row",
         "local:picker-classes",
-        "local:checkbox"
+        "local:checkbox",
+        "local:leaf-classes"
       ],
       "files": [
         {
@@ -977,9 +968,7 @@
       "type": "registry:component",
       "title": "List Multi Select",
       "description": "Deprecated: the former name of list-multi-picker, which it re-exports.",
-      "dependencies": [
-        "@sg-widgets/core"
-      ],
+      "dependencies": [],
       "registryDependencies": [
         "local:list-multi-picker"
       ],
@@ -997,7 +986,6 @@
       "description": "A url field as a web link: address and name.",
       "dependencies": [
         "@sg-widgets/core",
-        "@lucide/svelte",
         "clsx",
         "tailwind-merge"
       ],
@@ -1020,7 +1008,6 @@
       "description": "A color field as a swatch and a text input.",
       "dependencies": [
         "@sg-widgets/core",
-        "@lucide/svelte",
         "clsx",
         "tailwind-merge"
       ],
@@ -1043,7 +1030,6 @@
       "description": "One field, displayed or edited: the data type picks the editor and a toggle switches between the two.",
       "dependencies": [
         "@sg-widgets/core",
-        "@lucide/svelte",
         "clsx",
         "tailwind-merge"
       ],
@@ -1055,14 +1041,14 @@
         "local:checkbox-editor",
         "local:date-editor",
         "local:date-time-editor",
-        "local:list-select",
         "local:url-editor",
         "local:color-editor",
         "local:status-picker",
         "local:entity-picker",
         "local:entity-multi-picker",
         "button",
-        "popover"
+        "popover",
+        "local:list-picker"
       ],
       "files": [
         {
@@ -1114,13 +1100,13 @@
         "local:entity-multi-picker",
         "local:entity-picker",
         "local:field-picker",
-        "local:list-multi-select",
-        "local:list-select",
         "local:number-editor",
         "local:status-multi-picker",
         "local:status-picker",
         "local:text-editor",
-        "local:url-editor"
+        "local:url-editor",
+        "local:list-multi-picker",
+        "local:list-picker"
       ],
       "files": [
         {
@@ -1177,7 +1163,6 @@
         "local:checkbox",
         "local:command",
         "popover",
-        "local:select",
         "local:filter-dialog"
       ],
       "files": [
@@ -1222,7 +1207,6 @@
       "description": "One Flow Production Tracking status, picked from the codes a project offers.",
       "dependencies": [
         "@sg-widgets/core",
-        "@lucide/svelte",
         "clsx",
         "tailwind-merge"
       ],
@@ -1345,10 +1329,8 @@
         "table",
         "local:checkbox",
         "skeleton",
-        "input",
         "button",
-        "dropdown-menu",
-        "local:select"
+        "dropdown-menu"
       ],
       "files": [
         {
@@ -1374,9 +1356,7 @@
         "local:state-line",
         "local:entity-card",
         "skeleton",
-        "input",
-        "button",
-        "local:select"
+        "button"
       ],
       "files": [
         {
@@ -1404,9 +1384,7 @@
         "local:thumbnail",
         "local:checkbox",
         "skeleton",
-        "input",
-        "button",
-        "local:select"
+        "button"
       ],
       "files": [
         {
@@ -1452,7 +1430,8 @@
         "@sg-widgets/core",
         "bits-ui",
         "clsx",
-        "tailwind-merge"
+        "tailwind-merge",
+        "@lucide/svelte"
       ],
       "registryDependencies": [
         "local:picker-control",
@@ -1499,7 +1478,6 @@
       "description": "People and script accounts, chosen by server-side search across name, login and email.",
       "dependencies": [
         "@sg-widgets/core",
-        "@lucide/svelte",
         "clsx",
         "tailwind-merge"
       ],
@@ -1520,7 +1498,6 @@
       "description": "Several people and script accounts, chosen by server-side search across name, login and email.",
       "dependencies": [
         "@sg-widgets/core",
-        "@lucide/svelte",
         "clsx",
         "tailwind-merge"
       ],
@@ -1541,7 +1518,6 @@
       "description": "Projects, chosen by server-side search, with the project thumbnail and its status.",
       "dependencies": [
         "@sg-widgets/core",
-        "@lucide/svelte",
         "clsx",
         "tailwind-merge"
       ],
@@ -1562,7 +1538,6 @@
       "description": "Several projects, chosen by server-side search, with the project thumbnail and its status.",
       "dependencies": [
         "@sg-widgets/core",
-        "@lucide/svelte",
         "clsx",
         "tailwind-merge"
       ],
@@ -1593,7 +1568,6 @@
         "local:entity-chip",
         "local:picker-row",
         "local:command",
-        "dialog",
         "button",
         "kbd"
       ],

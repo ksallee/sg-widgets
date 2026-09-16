@@ -10,6 +10,8 @@
 	} from '@sg-widgets/core';
 	import EntityTable from '$lib/registry/components/entity-table.svelte';
 	import SortPicker from '$lib/registry/components/sort-picker.svelte';
+	import { CONTROL_BUTTON, type ControlSize } from '$lib/registry/components/control-classes.js';
+	import { Button } from '$lib/components/ui/button/index.js';
 	import { createDemoContext } from '../_shared/client';
 	import { setDemoContext } from '../_shared/svelte';
 	import { RESULT_PAGE_SIZE, scopeToProject } from '../_shared/results';
@@ -26,6 +28,7 @@
 		{ field: 'sg_status_list', direction: 'asc' },
 		{ field: 'code', direction: 'desc' }
 	];
+	const SIZES: ControlSize[] = ['sm', 'md', 'lg'];
 
 	/** The keys as the source takes them, read back out of the string the picker emits. */
 	function specs(sort: string): SortSpec[] {
@@ -85,5 +88,17 @@
 		{:catch error}
 			<p class="text-destructive text-sm">{error.message}</p>
 		{/await}
+	</section>
+
+	<section class="flex flex-col gap-2">
+		<h4 class={label}>Sizes, each beside a button of the same step</h4>
+		{#each SIZES as size (size)}
+			<div class="flex flex-wrap items-start gap-3" data-demo="size-{size}">
+				<div class="w-64">
+					<SortPicker entityType="Shot" {context} value={INITIAL} {size} />
+				</div>
+				<Button variant="outline" size={CONTROL_BUTTON[size]}>Button</Button>
+			</div>
+		{/each}
 	</section>
 </div>

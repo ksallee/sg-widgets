@@ -29,6 +29,8 @@
 	const LEAF: Record<EntityTreeSize, 'sm' | 'md'> = { sm: 'sm', md: 'sm', lg: 'md' };
 	/** A badge sits one step under the row it is in, on the chip ladder of `docs/design-rules.md`. */
 	const BADGE: Record<EntityTreeSize, StatusBadgeSize> = { sm: 'xs', md: 'sm', lg: 'md' };
+	/** The search input's trailing inset: room for the spinner, `end-2` either side of the glyph. */
+	const SEARCH_TRAIL: Record<EntityTreeSize, string> = { sm: 'pe-8', md: 'pe-8', lg: 'pe-9' };
 
 	/** `aria-checked` as a tree row spells it: `mixed` for a part-checked branch. */
 	function checkedAttr(state: TreeCheckState): 'true' | 'false' | 'mixed' {
@@ -64,6 +66,7 @@
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
+	import { CONTROL_BOX, CONTROL_GLYPH } from '$lib/registry/components/control-classes.js';
 	import FieldValue from '$lib/registry/components/field-value.svelte';
 	import MatchText from '$lib/registry/components/match-text.svelte';
 	import StateLine from '$lib/registry/components/state-line.svelte';
@@ -429,12 +432,15 @@
 				aria-label={searchPlaceholder}
 				aria-busy={snap.searching ? true : undefined}
 				data-slot="entity-tree-search"
-				class="h-8 px-3 pe-8"
+				class={cn(CONTROL_BOX[size], SEARCH_TRAIL[size])}
 			/>
 			{#if snap.searching}
 				<Loader
 					aria-hidden="true"
-					class="text-muted-foreground pointer-events-none absolute end-2 size-4 motion-safe:animate-spin"
+					class={cn(
+						'text-muted-foreground pointer-events-none absolute end-2 motion-safe:animate-spin',
+						CONTROL_GLYPH[size]
+					)}
 				/>
 			{/if}
 		</div>

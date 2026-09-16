@@ -28,6 +28,7 @@ import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { useLatest } from '@/registry/sg/components/collection-source';
+import { CONTROL_BOX, CONTROL_GLYPH } from '@/registry/sg/components/control-classes';
 import { FieldValue } from '@/registry/sg/components/field-value';
 import { MatchText } from '@/registry/sg/components/match-text';
 import { StateLine } from '@/registry/sg/components/state-line';
@@ -49,6 +50,8 @@ const GLYPH: Record<EntityTreeSize, string> = { sm: 'size-3.5', md: 'size-4', lg
 const LEAF: Record<EntityTreeSize, 'sm' | 'md'> = { sm: 'sm', md: 'sm', lg: 'md' };
 /** A badge sits one step under the row it is in, on the chip ladder of `docs/design-rules.md`. */
 const BADGE: Record<EntityTreeSize, StatusBadgeSize> = { sm: 'xs', md: 'sm', lg: 'md' };
+/** The search input's trailing inset: room for the spinner, `end-2` either side of the glyph. */
+const SEARCH_TRAIL: Record<EntityTreeSize, string> = { sm: 'pe-8', md: 'pe-8', lg: 'pe-9' };
 
 /** What a `row` render prop is handed. It draws a row's contents, not its chevron or its box. */
 export interface EntityTreeRowContext {
@@ -438,12 +441,15 @@ export function EntityTree({
             aria-label={searchPlaceholder}
             aria-busy={snap.searching ? true : undefined}
             data-slot="entity-tree-search"
-            className="h-8 px-3 pe-8"
+            className={cn(CONTROL_BOX[size], SEARCH_TRAIL[size])}
           />
           {snap.searching ? (
             <Loader
               aria-hidden="true"
-              className="text-muted-foreground pointer-events-none absolute end-2 size-4 motion-safe:animate-spin"
+              className={cn(
+                'text-muted-foreground pointer-events-none absolute end-2 motion-safe:animate-spin',
+                CONTROL_GLYPH[size],
+              )}
             />
           ) : null}
         </div>

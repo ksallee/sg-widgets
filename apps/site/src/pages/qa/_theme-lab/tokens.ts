@@ -98,7 +98,11 @@ export const GROUPS: readonly (readonly [string, readonly string[]])[] = [
   ],
 ];
 
-/** The surfaces each token is read against. A `-foreground` token is text and wants 4.5:1. */
+/**
+ * The surfaces each token is read against. A `-foreground` token is text and wants 4.5:1;
+ * `--ring` is a focus mark and wants 3:1 on the page, the rule `tools/drives/palette-contrast.js`
+ * asserts; a line and a selected row are read and not held to a number.
+ */
 export const CONTRAST: Readonly<Record<string, readonly string[]>> = {
   '--foreground': ['--background', '--card'],
   '--card-foreground': ['--card'],
@@ -116,9 +120,19 @@ export const CONTRAST: Readonly<Record<string, readonly string[]>> = {
   '--sidebar-accent-foreground': ['--sidebar-accent'],
   '--border': ['--background'],
   '--input': ['--background'],
+  '--ring': ['--background'],
+  '--accent': ['--background'],
 };
 
 export const TEXT_RATIO = 4.5;
+export const RING_RATIO = 3;
+
+/** The ratio a token is held to, or null for one that is only read. */
+export function wantedRatio(name: string): number | null {
+  if (name === '--foreground' || name.endsWith('-foreground')) return TEXT_RATIO;
+  if (name === '--ring') return RING_RATIO;
+  return null;
+}
 
 export function parseOklch(text: string): Oklch | null {
   const match = OKLCH.exec(text.trim());

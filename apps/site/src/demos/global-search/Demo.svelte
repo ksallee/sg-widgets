@@ -1,11 +1,14 @@
 <script lang="ts">
 	import type { EntityRef } from '@sg-widgets/core';
 	import GlobalSearch from '$lib/registry/components/global-search.svelte';
+	import { CONTROL_BUTTON, type ControlSize } from '$lib/registry/components/control-classes.js';
+	import { Button } from '$lib/components/ui/button/index.js';
 	import { createDemoContext } from '../_shared/client';
 
 	const context = createDemoContext();
 
 	const TYPES = ['Shot', 'Asset', 'Sequence', 'Task', 'Version', 'HumanUser', 'Project'];
+	const SIZES: ControlSize[] = ['sm', 'md', 'lg'];
 
 	/* Prefilled so the palette has something to show before a word is typed. */
 	let recents = $state<EntityRef[]>([
@@ -66,4 +69,16 @@
 			Nothing selected yet.
 		{/if}
 	</p>
+
+	<section class={group}>
+		<h4 class={label}>Sizes, each beside a button of the same step</h4>
+		{#each SIZES as size (size)}
+			<div class="flex flex-wrap items-start gap-3" data-demo="size-{size}">
+				<div class="w-64">
+					<GlobalSearch {context} entityTypes={TYPES} {size} label="Search the site" />
+				</div>
+				<Button variant="outline" size={CONTROL_BUTTON[size]}>Button</Button>
+			</div>
+		{/each}
+	</section>
 </div>

@@ -325,7 +325,7 @@ describe('an upload on the wire', () => {
   }
 
   /** A fetch that answers the three calls of the handshake in order. */
-  function uploading(): { client: RestClient; calls: Call[] } {
+  function uploading(completeUpload = '/api/v1/entity/shots/862/image/_upload'): { client: RestClient; calls: Call[] } {
     const calls: Call[] = [];
     const info = {
       timestamp: '2026-09-04T03:53:31Z',
@@ -340,7 +340,7 @@ describe('an upload on the wire', () => {
       calls.push({ url, method: init?.method ?? 'GET', headers: init?.headers as Record<string, string> | undefined, body: init?.body });
       if (url.includes('/_upload') && (init?.method ?? 'GET') === 'GET') {
         return new Response(
-          JSON.stringify({ data: info, links: { upload: 'https://storage.example.com/signed?sig=abc', complete_upload: '/api/v1/entity/shots/862/image/_upload' } }),
+          JSON.stringify({ data: info, links: { upload: 'https://storage.example.com/signed?sig=abc', complete_upload: completeUpload } }),
           { status: 200, headers: { 'content-type': 'application/json' } },
         );
       }
@@ -391,5 +391,11 @@ describe('an upload on the wire', () => {
     const { client, calls } = uploading();
     await client.upload('Version', 17055, { filename: 'workflow.json', data: new Uint8Array([123, 125]) });
     expect(calls[0]?.url).toBe('https://studio.example.com/api/v1/entity/versions/17055/_upload?filename=workflow.json');
+  });
+
+  it('calls an absolute complete_upload link as it is', async () => {
+    const { client, calls } = uploading('https://studio.example.com/api/v1/entity/shots/862/image/_upload');
+    await client.upload('Shot', 862, { filename: 'frame.png', data: new Uint8Array([1]), field: 'image' });
+    expect(calls[2]?.url).toBe('https://studio.example.com/api/v1/entity/shots/862/image/_upload');
   });
 });

@@ -137,7 +137,7 @@
 			field: null,
 			statuses: new Map()
 		});
-		// The field itself, for its `mandatory` flag.
+		// The field itself, for its display name and its `mandatory` flag.
 		const named = name === undefined ? schema.statusField(type) : schema.field(type, name);
 		Promise.all([optionsFor(type, ids, name), named, statusTable.byCode()]).then(
 			([options, found, statuses]) => {
@@ -271,6 +271,7 @@
 		{readonly}
 		{invalid}
 		clearable={clearableForField(clearable, query.field)}
+		controlProps={{ 'aria-label': query.field?.displayName, 'aria-required': query.field?.mandatory }}
 		{placeholder}
 		{searchPlaceholder}
 		bind:open

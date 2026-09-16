@@ -16,7 +16,7 @@ pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/filter-bar.json
 pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/filter-bar.json
 ```
 
-<Demo name="filter-bar" title="FilterBar: status, sequence and shot type over Shot, read state over Note" />
+<Demo name="filter-bar" title="FilterBar: status, sequence and shot type over Shot, seeded pills, read state over Note, and sizes" />
 
 An untouched facet is a quiet dashed pill naming its field. Ticking a value turns it into a pill
 reading the field and the values ticked, and opening the pill again reopens the checklist. A control
@@ -27,8 +27,7 @@ condition as text.
 
 A pill names `maxValues` of what is ticked, comma-joined, and reads the rest as `+n`. Its value is
 capped and truncated with the whole list in its `title`, so a facet with everything ticked never
-stretches the bar past the width it was given. A facet over a status field draws its values as badges
-instead, one beside the next.
+stretches the bar past the width it was given.
 
 A facet over a status field draws the site's own icon before each value in the checklist, with the
 matched runs of the search box bold, the way a picker lists its options. The pill draws its values as

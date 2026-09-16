@@ -599,11 +599,47 @@ describe('a facet on a field the API evaluates no `in` on', () => {
     expect(nodeAt(stripped, [0])).toMatchObject({ path: 'project' });
   });
 
-  it('keeps `in` off the editor menu for the field', () => {
+  it('offers the editor menu only the operators the field evaluates, the empty tests included', () => {
     const ids = operatorMenu('list', fieldOperators(readState)).flatMap((run) => run.presets.map((p) => p.id));
-    expect(ids).toEqual(['is', 'is_not', 'is_empty', 'is_not_empty']);
+    expect(ids).toEqual(['is', 'is_not']);
     expect(presetById('list', 'in', fieldOperators(readState))).toBeUndefined();
+    expect(presetById('list', 'is_empty', fieldOperators(readState))).toBeUndefined();
     expect(defaultCondition('read_by_current_user', 'list', fieldOperators(readState)).operator).toBe('is');
+    // A field with no narrowing keeps the type's whole menu, the empty tests included.
+    expect(presetsFor('list', fieldOperators({ dataType: 'list' })).map((p) => p.id)).toEqual(
+      presetsFor('list').map((p) => p.id),
+    );
+    expect(facetPresets('list', readState).map((p) => p.id)).toEqual(['in', 'not_in']);
+  });
+
+  it('finds a negated single value at the root at its own path, so it unticks and clears', () => {
+    const tree = group('and', [condition('read_by_current_user', 'is_not', 'read')]);
+    const found = findFacet(tree, 'read_by_current_user', readState);
+    expect(found).toMatchObject({ at: [0], operator: 'is_not', values: ['read'], checklist: true });
+    expect(found!.summary).toMatchObject({ operator: 'not_in', value: ['read'] });
+    expect(setFacet(tree, 'read_by_current_user', [], 'is_not', readState).conditions).toEqual([]);
+    const both = setFacet(tree, 'read_by_current_user', ['read', 'unread'], 'is_not', readState);
+    expect(nodeAt(both, [0])).toMatchObject({ kind: 'group', logicalOperator: 'and' });
+    expect(findFacet(both, 'read_by_current_user', readState)?.at).toEqual([0]);
+    // A group at the root holding one such condition is never the facet itself.
+    const alone = group('or', [condition('read_by_current_user', 'is', 'read')]);
+    expect(findFacet(alone, 'read_by_current_user', readState)?.at).toEqual([0]);
+  });
+
+  it('spells a facet by what the field evaluates, per data type', () => {
+    const shape = (dataType: string) => facetShape({ dataType });
+    expect(shape('list')).toEqual({ any: 'in', none: 'not_in', spread: false });
+    expect(shape('status_list')).toEqual({ any: 'in', none: 'not_in', spread: false });
+    expect(shape('entity')).toEqual({ any: 'in', none: 'not_in', spread: false });
+    expect(shape('multi_entity')).toEqual({ any: 'in', none: 'not_in', spread: false });
+    expect(shape('text')).toEqual({ any: 'in', none: 'not_in', spread: false });
+    expect(shape('checkbox')).toEqual({ any: 'is', none: 'is_not', spread: true });
+    expect(facetShape(readState)).toEqual({ any: 'is', none: 'is_not', spread: true });
+  });
+
+  it('leaves an emptied root as an empty group', () => {
+    const tree = group('and', [condition('read_by_current_user', 'is_not', 'read')]);
+    expect(withoutPaths(tree, ['read_by_current_user'])).toEqual({ kind: 'group', logicalOperator: 'and', conditions: [] });
   });
 
   it('names the ticked values as one comma-joined line', () => {

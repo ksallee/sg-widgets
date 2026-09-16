@@ -30,7 +30,6 @@ export default {
   ],
   slots: [
     { name: 'mark', receives: 'the option', draws: 'A row\'s leading mark. Given, every row carries one.' },
-    { name: 'optionLabel', receives: 'the option', draws: 'A row\'s main text, where an option is not text. A status is a badge.' },
     { name: 'valueChip', receives: 'the chosen string', draws: 'The control\'s value, in place of plain text.' },
     { name: 'errorMessage', receives: 'the message', draws: 'The line under the control.' },
   ],

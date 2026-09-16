@@ -4,12 +4,10 @@ import { statusGlyph } from '@sg-widgets/core';
 import { cn } from '@/lib/utils';
 
 /**
- * The stock sprite in dark. Its cells were drawn as dark strokes for a light page: they
- * read 2.31:1 against the dark ground at the median and 1.03:1 at the worst, so the mark
- * all but disappears. Inverting the cell and rotating its hue back reads 6.94:1 at the
- * median and leaves the four coloured cells on their own hue, a green tick still green.
- * The two steps compose into one `filter`, in either order. A site's own `image` icon is
- * sent ready for both schemes and the dot is a token, so neither takes this.
+ * The stock sprite was drawn for a light page, so a cell inverts and hue-rotates in
+ * dark: the mark reads against the page and a coloured cell keeps its hue. A site's
+ * own `image` icon is sent ready for both schemes and the dot is a token, so neither
+ * takes this.
  */
 const SPRITE_DARK = 'dark:invert dark:hue-rotate-180';
 

@@ -15,7 +15,7 @@ pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/status-badge.json
 pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/status-badge.json
 ```
 
-<Demo name="status-badge" title="StatusBadge: neutral and coloured, removable, labels, stock icons, unknown codes" />
+<Demo name="status-badge" title="StatusBadge: neutral and coloured, the bare glyph on the muted ground and on its colour, removable, labels, stock icons, unknown codes" />
 
 ## Props
 
@@ -29,9 +29,6 @@ inset, at the size a list row draws a glyph (4 at sm and md, 5 at lg). It is the
 whose label is a name, where a bordered pill reads as a second surface. The label stays as the
 accessible name and the tooltip, `color` has nothing to paint, and a status with no icon to draw takes
 a neutral dot.
-
-`query` draws the label's matched runs bold, so a badge standing as a row in a searched list reads as
-the rows beside it do.
 
 The stock sprite was drawn as dark strokes for a light page, so a cell of it is inverted and its hue
 rotated back on a dark page: the mark reads against the page in both schemes and a green tick stays

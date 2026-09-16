@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { StatusPicker } from '@/registry/sg/components/status-picker';
 import { getDemoContext } from '../_shared/client';
 
@@ -11,6 +11,8 @@ const label = 'text-muted-foreground text-xs font-medium tracking-wide uppercase
 const row = 'flex flex-wrap items-start gap-3';
 const box = 'w-64';
 const readout = 'text-muted-foreground font-mono text-xs tabular-nums';
+/** The types the cells pick a status on. */
+const TYPES = ['Version', 'Project', 'Note'];
 
 export default function StatusPickerDemo() {
   // The shared context: every picker on the page reads the Status table through it, once.
@@ -26,6 +28,20 @@ export default function StatusPickerDemo() {
   const [note, setNote] = useState<string | undefined>('opn');
   const [switching, setSwitching] = useState<string | undefined>('part');
   const [switchTo, setSwitchTo] = useState(otherProjectId);
+  /** Whether each type's status field is mandatory, read from the schema and written on the cells. */
+  const [mandatory, setMandatory] = useState<Record<string, boolean>>({});
+  useEffect(() => {
+    let live = true;
+    for (const type of TYPES) {
+      void context.schema.statusField(type).then((found) => {
+        if (live) setMandatory((was) => ({ ...was, [type]: typeof found !== 'string' && Boolean(found.mandatory) }));
+      });
+    }
+    return () => {
+      live = false;
+    };
+  }, [context]);
+  const flag = (type: string) => (type in mandatory ? String(mandatory[type]) : undefined);
 
   return (
     <div className="flex flex-col gap-4">
@@ -36,7 +52,7 @@ export default function StatusPickerDemo() {
             : `Version, in project ${projectId} and in project ${otherProjectId}`}
         </h4>
         <div className={row}>
-          <div className={box} data-demo="p70">
+          <div className={box} data-demo="p70" data-field-mandatory={flag('Version')}>
             <StatusPicker
               context={context}
               entityType="Version"
@@ -45,7 +61,7 @@ export default function StatusPickerDemo() {
               onValueChange={setInProjectA}
             />
           </div>
-          <div className={box} data-demo="p71">
+          <div className={box} data-demo="p71" data-field-mandatory={flag('Version')}>
             <StatusPicker
               context={context}
               entityType="Version"
@@ -60,7 +76,7 @@ export default function StatusPickerDemo() {
       <section className={group}>
         <h4 className={label}>The statuses both projects offer</h4>
         <div className={row}>
-          <div className={box} data-demo="both">
+          <div className={box} data-demo="both" data-field-mandatory={flag('Version')}>
             <StatusPicker
               context={context}
               entityType="Version"
@@ -76,7 +92,7 @@ export default function StatusPickerDemo() {
       <section className={group}>
         <h4 className={label}>Project, whose status field is a plain list with no icons</h4>
         <div className={row}>
-          <div className={box} data-demo="project">
+          <div className={box} data-demo="project" data-field-mandatory={flag('Project')}>
             <StatusPicker
               context={context}
               entityType="Project"
@@ -90,7 +106,7 @@ export default function StatusPickerDemo() {
       <section className={group}>
         <h4 className={label}>A mandatory field, which offers no clear</h4>
         <div className={row}>
-          <div className={box} data-demo="mandatory">
+          <div className={box} data-demo="mandatory" data-field-mandatory={flag('Note')}>
             <StatusPicker
               context={context}
               entityType="Note"
@@ -107,7 +123,7 @@ export default function StatusPickerDemo() {
           A code the field does not carry, rows without the code, and a secondary of the caller's own
         </h4>
         <div className={row}>
-          <div className={box} data-demo="unknown">
+          <div className={box} data-demo="unknown" data-field-mandatory={flag('Version')}>
             <StatusPicker
               context={context}
               entityType="Version"
@@ -116,7 +132,7 @@ export default function StatusPickerDemo() {
               onValueChange={setUnknown}
             />
           </div>
-          <div className={box} data-demo="no-code">
+          <div className={box} data-demo="no-code" data-field-mandatory={flag('Version')}>
             <StatusPicker
               context={context}
               entityType="Version"
@@ -126,7 +142,7 @@ export default function StatusPickerDemo() {
               clearable={false}
             />
           </div>
-          <div className={box} data-demo="own-secondary">
+          <div className={box} data-demo="own-secondary" data-field-mandatory={flag('Version')}>
             <StatusPicker
               context={context}
               entityType="Version"
@@ -142,7 +158,7 @@ export default function StatusPickerDemo() {
       <section className={group} data-demo="switch">
         <h4 className={label}>Switching project drops a status the new one hides</h4>
         <div className={row}>
-          <div className={box} data-demo="switching">
+          <div className={box} data-demo="switching" data-field-mandatory={flag('Version')}>
             <StatusPicker
               context={context}
               entityType="Version"

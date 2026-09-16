@@ -21,7 +21,7 @@ pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/list-picker.json
 pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/list-picker.json
 ```
 
-<Demo name="list-picker" title="ListPicker: valid values, labels, a project's hidden values removed, and a search box" />
+<Demo name="list-picker" title="ListPicker: valid values, labels, a project's hidden values removed, a search box, and a mandatory field" />
 
 ## Input
 
@@ -42,8 +42,7 @@ to the root element.
 
 A row is the row anatomy of the design rules: the label as the main text and, with `showCode`, the
 stored string right-aligned. A value has no picture and no fields of its own, so the row's leading
-slot is empty unless a caller fills it and its secondary is a function rather than a field name. A
-caller whose option is not text, as a status is, draws it through `optionLabel` in place of the label.
+slot is empty unless a caller fills it and its secondary is a function rather than a field name.
 
 The clear control follows the field. Left unset, `clearable` reads the field's schema, and a field
 the site flags mandatory offers no clear, since clearing it writes a value the site refuses.

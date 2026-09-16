@@ -6,10 +6,18 @@
 
 	/** The control ladder of `docs/design-rules.md`, which a condition's own controls stand on. */
 	const BOX: Record<FilterEditorSize, string> = { sm: 'h-7', md: 'h-8', lg: 'h-9' };
-	const INNER: Record<FilterEditorSize, 'sm' | 'md'> = { sm: 'sm', md: 'sm', lg: 'md' };
+	const ROW: Record<FilterEditorSize, string> = { sm: 'min-h-7', md: 'min-h-8', lg: 'min-h-9' };
+	/** Every control in a row stands on the row's own step, so one row has one height. */
+	const INNER: Record<FilterEditorSize, FilterEditorSize> = { sm: 'sm', md: 'md', lg: 'lg' };
 	/** A cross sits one step under the row's own control on the chip ladder. */
 	const CROSS: Record<FilterEditorSize, ChipSize> = { sm: 'xs', md: 'xs', lg: 'sm' };
-	const TOGGLE: Record<FilterEditorSize, 'sm' | 'default'> = { sm: 'sm', md: 'sm', lg: 'default' };
+	const TOGGLE: Record<FilterEditorSize, 'sm' | 'default' | 'lg'> = { sm: 'sm', md: 'default', lg: 'lg' };
+	/** The select trigger has two steps of its own; the third is its default step lifted to `h-9`. */
+	const SELECT: Record<FilterEditorSize, { size: 'sm' | 'default'; class?: string }> = {
+		sm: { size: 'sm' },
+		md: { size: 'default' },
+		lg: { size: 'default', class: 'data-[size=default]:h-9' }
+	};
 	import type {
 		ConditionValue,
 		EntityRef,
@@ -311,7 +319,7 @@
 		disabled={disabled || menu.length === 0}
 		onValueChange={(id) => pickPreset(path, node, id)}
 	>
-		<Select.Trigger class={cn(BOX[size], 'w-40 shrink-0')} data-slot="filter-operator">
+		<Select.Trigger size={SELECT[size].size} class={cn(SELECT[size].class, 'w-40 shrink-0')} data-slot="filter-operator">
 			{presetById(dataType, current, operators)?.label ?? current}
 		</Select.Trigger>
 		<Select.Content>
@@ -598,18 +606,18 @@
 {/snippet}
 
 <!--
-	A row is two bands: the field, the operator and the value on one 36px line, and
+	A row is two bands: the field, the operator and the value on one line of the row's own height, and
 	the remove button on its own. The remove sits outside the wrapping band, so it
 	holds the same vertical axis at every depth and never costs the row a line.
 -->
 {#snippet conditionRow(path: NodePath, node: FilterCondition)}
-	<div class="flex min-h-9 min-w-0 items-center gap-2" data-slot="filter-row" data-path={path.join('.')}>
+	<div class={cn('flex min-w-0 items-center gap-2', ROW[size])} data-slot="filter-row" data-path={path.join('.')}>
 		<div class="flex min-w-0 flex-1 flex-wrap items-center gap-2" data-slot="filter-row-content">
 			{@render fieldSlot(path, node)}
 			{@render operatorSlot(path, node)}
 			{@render valueSlot(path, node)}
 		</div>
-		<div class="flex h-9 shrink-0 items-center self-start">
+		<div class={cn('flex shrink-0 items-center self-start', BOX[size])}>
 			<button
 				type="button"
 				class={cn(REMOVE_CONTROL, 'disabled:pointer-events-none disabled:opacity-50')}
@@ -638,7 +646,7 @@
 		data-depth={depth}
 		data-logical-operator={node.logicalOperator}
 	>
-		<div class="flex min-h-9 min-w-0 items-center gap-2" data-slot="filter-group-header">
+		<div class={cn('flex min-w-0 items-center gap-2', ROW[size])} data-slot="filter-group-header">
 			<ToggleGroup.Root
 				type="single"
 				size={TOGGLE[size]}
@@ -654,7 +662,7 @@
 			</ToggleGroup.Root>
 			<span class="text-muted-foreground min-w-0 flex-1 truncate text-xs">of these match</span>
 			{#if depth > 0}
-				<div class="flex h-9 shrink-0 items-center self-start">
+				<div class={cn('flex shrink-0 items-center self-start', BOX[size])}>
 					<button
 						type="button"
 						class={cn(REMOVE_CONTROL, 'disabled:pointer-events-none disabled:opacity-50')}

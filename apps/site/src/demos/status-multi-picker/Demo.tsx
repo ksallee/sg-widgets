@@ -31,6 +31,7 @@ export default function StatusMultiPickerDemo() {
   const [shared, setShared] = useState<string[]>([]);
   const [project, setProject] = useState<string[]>(['Active', 'Bidding']);
   const [unknown, setUnknown] = useState<string[]>(['zz_retired', 'rev']);
+  const [note, setNote] = useState<string[]>(['opn']);
   /** One value per summary demo, so every control on the page takes an edit. */
   const [shown, setShown] = useState<Record<string, string[]>>({});
   const shownAt = (at: string) => shown[at] ?? FIVE;
@@ -96,6 +97,17 @@ export default function StatusMultiPickerDemo() {
               value={project}
               onValueChange={setProject}
             />
+          </div>
+        </div>
+      </section>
+
+      <section className={group}>
+        <h4 className={label}>A mandatory field, which offers no clear</h4>
+        <div className={stack}>
+          <div className={field} data-demo="mandatory">
+            <span className={caption}>Note&apos;s status, which the site flags mandatory</span>
+            <StatusMultiPicker context={context} entityType="Note" value={note} onValueChange={setNote} />
+            <span className={readout}>{note.join(', ') || '—'}</span>
           </div>
         </div>
       </section>

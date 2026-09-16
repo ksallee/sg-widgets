@@ -131,6 +131,9 @@
 	const tally = $derived(loadFacets(scope, fields, facets));
 	/** What the open facet's search box holds. */
 	let facetQuery = $state('');
+	/** The facet whose checklist is open, if any. */
+	let openFacet = $state<string | null>(null);
+	let searchEl = $state<HTMLInputElement | null>(null);
 	const activeCount = $derived(facets.filter((name) => Boolean(facetOf(name))).length);
 
 	async function loadFacets(
@@ -232,6 +235,8 @@
 			size={BADGE[size]}
 			siteUrl={context.siteUrl}
 		/>
+	{:catch}
+		<StatusBadge code={key} field={fields[name] ?? null} size={BADGE[size]} siteUrl={context.siteUrl} />
 	{/await}
 {/snippet}
 
@@ -248,6 +253,8 @@
 				fallback
 				class={LEAF_GLYPH[size]}
 			/>
+		{:catch}
+			<StatusGlyph siteUrl={context.siteUrl} fallback class={LEAF_GLYPH[size]} />
 		{/await}
 	{/if}
 	<MatchText text={label} query={facetQuery} class="truncate" />
@@ -266,7 +273,7 @@
 			title={shown.title}
 		>
 			{#if isStatus(name) && shown.values.length > 0}
-				{#each shown.values as scalar, i (i)}
+				{#each shown.values as scalar (keyOf(scalar as Scalar))}
 					<span class="flex min-w-0 items-center truncate">
 						{@render valueBadge(name, keyOf(scalar as Scalar))}
 					</span>
@@ -285,9 +292,17 @@
 
 {#snippet facetList(name: string)}
 	{@const selected = selectedOf(name)}
-	<Popover.Content strategy="fixed" class="w-64 p-0" align="start">
+	<Popover.Content
+		strategy="fixed"
+		class="w-64 p-0"
+		align="start"
+		onOpenAutoFocus={(event) => {
+			event.preventDefault();
+			searchEl?.focus({ preventScroll: true });
+		}}
+	>
 		<Command.Root shouldFilter={false}>
-			<Command.Input bind:value={facetQuery} placeholder="Search values…" />
+			<Command.Input bind:ref={searchEl} bind:value={facetQuery} placeholder="Search values…" />
 			<Command.List>
 				{#await tally}
 					<p class="text-muted-foreground py-6 text-center text-sm">Counting…</p>
@@ -367,7 +382,9 @@
 		{@const shown = found ? conditionValues(found.summary, field, maxValues) : null}
 		{#if !found || found.checklist}
 			<!-- One popover and one trigger across both looks, so the first tick does not close the list. -->
-			<Popover.Root>
+			<Popover.Root
+				bind:open={() => openFacet === name, (next) => (openFacet = next ? name : null)}
+			>
 				<div
 					data-slot="filter-pill"
 					data-field={name}
@@ -430,7 +447,7 @@
 					<span class="text-muted-foreground shrink-0">{parts.operator}</span>
 					{#if shown}{@render pillValues(name, shown)}{/if}
 				</span>
-				{@render remove(name, parts.field)}
+				{@render remove(name, labelOf(name))}
 			</div>
 		{/if}
 	{/each}

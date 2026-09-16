@@ -40,6 +40,8 @@
 	const GLYPH: Record<GroupedListSize, string> = { sm: 'size-3.5', md: 'size-4', lg: 'size-5' };
 	/** Row heights per density, so a virtualised list can be measured before it is drawn. */
 	const ROW_HEIGHT: Record<GroupedListDensity, number> = { compact: 30, default: 34 };
+	/** What a list given nothing to group on says. */
+	const GROUPING_REQUIRED = 'GroupedList needs groupBy or groupKey.';
 </script>
 
 <script lang="ts">
@@ -68,7 +70,6 @@
 		isCollapsed,
 		nextEnabledIndex,
 		NO_ROWS_LABEL,
-		sameCollapse,
 		stateLine,
 		toColumn,
 		toggleCollapsed
@@ -100,11 +101,12 @@
 		 * The value a row groups under, derived rather than read from a column: a
 		 * multi-entity field no site sorts on, or a value that comes from one field on
 		 * one type and another on another. The source's sort is left as the caller set
-		 * it, so the caller orders the rows so the runs come out whole. One of `groupBy`
-		 * and this is required.
+		 * it, so the caller orders the rows so the runs come out whole. Two values are one
+		 * run when their JSON text is the same, so the caller answers a stable shape. One
+		 * of `groupBy` and this is required.
 		 */
 		groupKey?: (row: EntityRow) => unknown;
-		/** The header's text for a derived key. Without it the key reads as its own display name. */
+		/** The header's text for a derived key; not read with `groupBy`. Without it the key reads as its own display name. */
 		groupLabel?: (value: unknown) => string;
 		/** Field holding the thumbnail URL. `false` leaves the leading slot to `leading`. */
 		thumbnail?: string | false;
@@ -220,6 +222,8 @@
 		...rest
 	}: Props = $props();
 
+	if (untrack(() => !groupBy && !groupKey)) throw new Error(GROUPING_REQUIRED);
+
 	const control = createCollectionControl({
 		source: () => source,
 		paging: () => paging,
@@ -267,28 +271,18 @@
 	const subColumn = $derived(subLabelField ? toColumn(subLabelField) : null);
 	const secondaryColumn = $derived(secondaryField ? toColumn(secondaryField) : null);
 
-	/** Which groups are shut. The `collapsed` prop holds the same state. */
-	let shut = $state<CollapseState>(expandAll());
-
 	// A page whose first rows carry the value the last group carries grows that group
 	// rather than opening a second one, and the key it is collapsed under stands.
 	const groups = $derived(groupRowsKeyed(rows, groupKey ?? groupBy?.path ?? ''));
 
-	/*
-	 * The collapsed keys, two-way: one effect out and one in, each reading the other
-	 * side untracked, so a change travels once and the two never write to each other.
-	 */
-	$effect(() => {
-		const state = shut;
-		if (sameCollapse(state, untrack(() => asCollapseState(collapsed)))) return;
-		collapsed = state;
-		onCollapsedChange?.(state);
-	});
-	$effect(() => {
-		const state = asCollapseState(collapsed);
-		if (sameCollapse(state, untrack(() => shut))) return;
-		shut = state;
-	});
+	/** Which groups are shut: the `collapsed` prop, read as a state. */
+	const shut = $derived(asCollapseState(collapsed));
+
+	function toggleGroup(key: string): void {
+		const next = toggleCollapsed(shut, key);
+		collapsed = next;
+		onCollapsedChange?.(next);
+	}
 
 	/* the lines ------------------------------------------------------------ */
 
@@ -435,7 +429,7 @@
 						<button
 							type="button"
 							aria-expanded={!closed}
-							onclick={() => (shut = toggleCollapsed(shut, group.key))}
+							onclick={() => toggleGroup(group.key)}
 							class={cn(
 								'bg-muted/50 focus-visible:ring-ring focus-visible:ring-offset-background border-border sticky top-0 z-10 flex w-full items-center gap-1.5 border-b px-2 py-1.5 text-left font-medium outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
 								TEXT[size]

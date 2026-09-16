@@ -72,8 +72,6 @@
 	type Props = PickerRowProps & {
 		/** Drawn in the leading slot when the row carries no picture. */
 		glyph?: Snippet;
-		/** The row's main text, where a row's label is not text: a status option is a badge. */
-		label?: Snippet;
 		/** What the indicator column holds: a tick, a checkbox, or nothing while the row is not taken. */
 		indicator?: Snippet;
 	};
@@ -93,7 +91,6 @@
 		context,
 		siteUrl,
 		glyph,
-		label,
 		indicator,
 		indicatorSlot,
 		indicatorAt = 'start'
@@ -155,8 +152,7 @@
 	caller learns the six props once.
 
 	The component draws the row's contents, not its box: the caller owns the list item,
-	its selection state and anything it puts in front, such as a checkbox. A row whose
-	label is not text gives one: a status option is a badge, which marks its own runs.
+	its selection state and anything it puts in front, such as a checkbox.
 -->
 {#snippet indicatorCell()}
 	<!-- Fixed whether or not the row is ticked, so the labels, or the secondaries before a trailing tick, sit at one x. -->
@@ -201,7 +197,7 @@
 
 <span data-slot="picker-row-text" class={cn('flex min-w-0 flex-1 flex-col', TEXT[size])}>
 	<span data-slot="picker-row-label" class="flex min-w-0 items-center gap-1.5" {title}>
-		{#if label}{@render label()}{:else}<span class="truncate"
+		<span class="truncate"
 			>{#each crumbs as crumb, i (i)}<span class="text-muted-foreground">{crumb}</span><span
 					aria-hidden="true"
 					class="text-muted-foreground">{' › '}</span
@@ -211,7 +207,7 @@
 				{query}
 				class={crumbs.length > 0 ? 'font-medium' : undefined}
 			/></span
-		>{/if}
+		>
 		{#if code}
 			<span data-slot="picker-row-code" class="text-muted-foreground shrink-0 font-mono text-xs">{code}</span>
 		{/if}

@@ -21,7 +21,6 @@ export default {
   ],
   slots: [
     { name: 'glyph', receives: 'nothing', draws: 'The leading slot when the row carries no picture. A row whose type is a person draws an avatar there instead.' },
-    { name: 'label', receives: 'nothing', draws: 'The row\'s main text, where a row\'s label is not text. A status option is a badge, and the badge marks its own runs.' },
     { name: 'indicator', receives: 'nothing', draws: 'The tick or the checkbox in the indicator column. The column is drawn only where a widget passes one, and as tall as the picture beside it.' },
   ],
 } satisfies PropsFile;

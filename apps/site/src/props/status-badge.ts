@@ -9,7 +9,6 @@ export default {
     { name: 'size', type: '`\'xs\' | \'sm\' | \'md\' | \'lg\'`', default: '`\'md\'`', meaning: 'Heights 5, 6, 8 and 10.' },
     { name: 'color', type: '`boolean`', default: '`false`', meaning: 'Paints the badge in the status colour instead of the neutral surface.' },
     { name: 'label', type: '`\'name\' | \'code\'`', default: '`\'name\'`', meaning: 'Which of the two the badge shows. The other one is the tooltip.' },
-    { name: 'query', type: '`string`', default: '`\'\'`', meaning: 'What was searched for, whose matched runs the label draws bold.' },
     { name: 'siteUrl', type: '`string`', default: '—', meaning: 'The site the stock sprite is served from. Needed only for a sprite cell outside the status icon set.' },
     { name: 'removable', type: '`boolean`', default: '`false`', meaning: 'Draws a remove control inside the pill, after the label. `variant="icon"` and `variant="glyph"` have no room for it and ignore this.' },
     { name: 'onRemove', type: '`(code: string) => void`', default: '—', meaning: 'Fires with the code when the remove control is pressed.' },

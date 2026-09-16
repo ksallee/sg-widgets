@@ -75,8 +75,6 @@ export interface ListPickerProps extends Omit<React.HTMLAttributes<HTMLDivElemen
   errorMessage?: (message: string) => ReactNode;
   /** A row's leading mark. Given, every row carries one. */
   mark?: (option: ListOption) => ReactNode;
-  /** A row's main text, where an option is not text: a status is a badge. */
-  optionLabel?: (option: ListOption) => ReactNode;
   /** The control's value. Drawn as plain text when the caller passes none. */
   valueChip?: (code: string) => ReactNode;
 }
@@ -125,7 +123,6 @@ export function ListPicker({
   onOpenChange,
   errorMessage,
   mark,
-  optionLabel,
   valueChip,
   className,
   ref,
@@ -192,7 +189,6 @@ export function ListPicker({
           secondary={secondaryOf(option)}
           size={size}
           glyph={mark?.(option)}
-          label={optionLabel?.(option)}
         />
       </ComboboxPrimitive.Item>
     );

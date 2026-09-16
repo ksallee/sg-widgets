@@ -276,7 +276,6 @@
       ],
       "registryDependencies": [
         "local:leaf-classes",
-        "local:match-text",
         "local:status-glyph"
       ],
       "files": [

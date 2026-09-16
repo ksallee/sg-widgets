@@ -140,6 +140,27 @@ describe('the writes', () => {
     await cache.search('Note', { fields: ['subject'] });
     expect(calls).toEqual(['search Note', 'create Note', 'search Note', 'upload Note 11030', 'search Note']);
   });
+
+  it('drops a cached thread after a reply, an upload and an update, within the ttl', async () => {
+    const { client, calls } = counting(new MockClient());
+    const cache = createQueryCache(client, { ttlMs: Number.POSITIVE_INFINITY });
+    const before = await cache.threadContents(11030);
+    const reply = await cache.create('Reply', { entity: { type: 'Note', id: 11030 }, content: 'Seen it.' });
+    const replied = await cache.threadContents(11030);
+    expect(replied).toHaveLength(before.length + 1);
+    expect(replied.at(-1)?.id).toBe(reply.id);
+
+    await cache.upload('Note', 11030, { filename: 'a.png', data: new Uint8Array([1]), field: 'attachments' });
+    const attached = await cache.threadContents(11030);
+    expect(attached.filter((row) => row.type === 'Attachment')).toHaveLength(
+      replied.filter((row) => row.type === 'Attachment').length + 1,
+    );
+
+    await cache.update('Note', 11030, { content: 'Edited.' });
+    const edited = await cache.threadContents(11030);
+    expect(edited[0]?.content).toBe('Edited.');
+    expect(calls.filter((c) => c.startsWith('threadContents'))).toHaveLength(4);
+  });
 });
 
 describe('deduping', () => {

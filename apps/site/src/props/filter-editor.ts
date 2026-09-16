@@ -9,7 +9,7 @@ export default {
     { name: 'projectId', type: '`number`', default: '—', meaning: 'Scopes the status pickers to the codes one project allows.' },
     { name: 'emptyLabel', type: '`string`', default: '`\'Nothing chosen\'`', meaning: 'Shown when a group holds no condition.' },
     { name: 'disabled', type: '`boolean`', default: '`false`', meaning: 'Dims the editor and blocks every control.' },
-    { name: 'size', type: '`\'sm\' | \'md\' | \'lg\'`', default: '`\'md\'`', meaning: 'Condition-row heights 7, 8 and 9, the control ladder.' },
+    { name: 'size', type: '`\'sm\' | \'md\' | \'lg\'`', default: '`\'md\'`', meaning: 'The control ladder: every control in a row stands at 28, 32 or 36, with a shadcn button of the same size.' },
     { name: 'class / className', type: '`string`', default: '—', meaning: 'Merged after the widget\'s own classes.' },
   ],
   events: [

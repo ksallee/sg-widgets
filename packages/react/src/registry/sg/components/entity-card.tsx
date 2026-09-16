@@ -517,7 +517,13 @@ export function EntityCard({
             </div>
           </div>
           {card.columns.length > 0 ? (
-            <dl className={cn('grid min-w-0 grid-cols-[minmax(0,auto)_minmax(0,1fr)] gap-x-3', ROWS[size])}>
+            /* The label is a size under the value, so a stretched row hangs it above the first line; one baseline holds them level. */
+            <dl
+              className={cn(
+                'grid min-w-0 grid-cols-[minmax(0,auto)_minmax(0,1fr)] items-baseline gap-x-3',
+                ROWS[size]
+              )}
+            >
               {card.columns.map((column) => (
                 <Fragment key={column.path}>
                   <dt className="text-muted-foreground truncate text-xs" title={column.label}>

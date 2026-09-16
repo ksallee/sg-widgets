@@ -695,13 +695,30 @@ describe('update', () => {
     expect(row.attributes['description']).toBeNull();
   });
 
-  it('refuses a read-only field and an unknown one', async () => {
+  it('refuses a read-only field, a create-only one and an unknown one', async () => {
     const c = client();
+    await expect(c.update('Shot', 862, { id: 1 })).rejects.toMatchObject({
+      status: 400,
+      message: 'API update() Shot.id is read only.',
+    });
+    // A timestamp is stored on create and refused on update (070_authored_timestamps).
     await expect(c.update('Shot', 862, { created_at: '2026-01-01T00:00:00Z' })).rejects.toMatchObject({
       status: 400,
-      message: 'API update() Shot.created_at is read only.',
+      message: 'API update() Shot.created_at is editable on create only.',
     });
     await expect(c.update('Shot', 862, { sg_not_a_field: 1 })).rejects.toBeInstanceOf(SgApiError);
+  });
+
+  it('refuses a bare id where an entity link hash is required', async () => {
+    const c = client();
+    await expect(c.update('Version', 17055, { entity: 862 })).rejects.toMatchObject({
+      status: 400,
+      message: /^API update\(\) Version\.entity expected \[Hash, .* but got Integer: 862$/,
+    });
+    await expect(c.update('Version', 17055, { entity: { id: 862 } })).rejects.toMatchObject({
+      status: 400,
+      message: `API update() invalid/missing entity hash string 'type': {"id":862}`,
+    });
   });
 
   it('404s on an id that is not there', async () => {
@@ -1000,9 +1017,43 @@ describe('create', () => {
     const note = await c.create('Note', { project: { type: 'Project', id: 70 } });
     expect(note.attributes['subject']).toBeNull();
     expect(note.attributes['cached_display_name']).toBe('');
-    // The defaults come back on the answer, so they are read off it.
+    // The defaults come back on the answer, so they are read off it (entity_types/Note).
     expect(note.attributes['sg_status_list']).toBe('opn');
-    expect(note.attributes['read_by_current_user']).toBeNull();
+    expect(note.attributes['read_by_current_user']).toBe('unread');
+    expect(note.attributes['publish_status']).toBe('published');
+  });
+
+  it('stores an authored created_at and updated_at, and has no updated_at on a Reply', async () => {
+    const c = client();
+    const project = { type: 'Project', id: 70 };
+    // Both are flagged `editable: false` and both are taken by a create (070_authored_timestamps).
+    const dated = await c.create('Note', { project, subject: 'Imported', created_at: '2019-03-04T05:06:07Z', updated_at: '2020-01-02T03:04:05Z' });
+    expect(dated.attributes['created_at']).toBe('2019-03-04T05:06:07Z');
+    expect(dated.attributes['updated_at']).toBe('2020-01-02T03:04:05Z');
+    await expect(c.create('Reply', { entity: { type: 'Note', id: 11030 }, updated_at: '2020-01-02T03:04:05Z' })).rejects.toMatchObject({
+      status: 400,
+      message: "API create() Reply.updated_at doesn't exist.",
+    });
+  });
+
+  it('takes this_file on an Attachment create and never after', async () => {
+    const c = client();
+    const project = { type: 'Project', id: 70 };
+    const link = { url: 'https://example.com/probe.png', name: 'probe.png' };
+    const made = await c.create('Attachment', { project, this_file: link });
+    expect(made.attributes['this_file']).toEqual(link);
+    await expect(c.update('Attachment', made.id, { this_file: link })).rejects.toMatchObject({
+      status: 400,
+      message: 'API update() Attachment.this_file is editable on create only.',
+    });
+  });
+
+  it('refuses a bare id where an entity link hash is required', async () => {
+    const c = client();
+    await expect(c.create('Reply', { entity: 11030, content: 'On it.' })).rejects.toMatchObject({
+      status: 400,
+      message: /^API create\(\) Reply\.entity expected \[Hash, .* but got Integer: 11030$/,
+    });
   });
 
   it('puts a Reply in the thread it names, and keeps one that names nothing', async () => {
@@ -1050,7 +1101,8 @@ describe('upload', () => {
     const result = await c.upload('Shot', 862, { filename: 'frame.png', data: bytes, field: 'image' });
     expect(result.uploadType).toBe('Thumbnail');
     const shot = (await c.search('Shot', { filters: only('id', 'is', 862), fields: ['image'] })).data[0];
-    expect(String(shot?.attributes['image'])).toMatch(/^\/images\/status\/transient\//);
+    // Absolute, on the site root (013_upload_media).
+    expect(String(shot?.attributes['image'])).toMatch(/^https:\/\/[^/]+\/images\/status\/transient\//);
   });
 
   it('leaves the size and the extension unset, as an uploaded row reads them', async () => {

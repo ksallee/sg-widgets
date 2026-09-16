@@ -89,6 +89,13 @@ interface FieldSpec {
   displayName: string;
   dataType: string;
   editable?: boolean;
+  /**
+   * Flagged `editable: false` and still taken by a create: `created_at` and
+   * `updated_at` are stored as sent on a `POST` and 400 on a `PUT` with
+   * `is editable on create only` (070_authored_timestamps), as `this_file` does
+   * (entity_types/Attachment).
+   */
+  createOnly?: boolean;
   mandatory?: boolean;
   unique?: boolean;
   validTypes?: string[];
@@ -154,8 +161,8 @@ const PROJECT_STATUSES = ['Active', 'Bidding', 'Complete', 'On Hold'];
 const AUDIT: Record<string, FieldSpec> = {
   id: { displayName: 'Id', dataType: 'number', editable: false },
   cached_display_name: { displayName: 'Display Name', dataType: 'text' },
-  created_at: { displayName: 'Date Created', dataType: 'date_time', editable: false },
-  updated_at: { displayName: 'Date Updated', dataType: 'date_time', editable: false },
+  created_at: { displayName: 'Date Created', dataType: 'date_time', editable: false, createOnly: true },
+  updated_at: { displayName: 'Date Updated', dataType: 'date_time', editable: false, createOnly: true },
   created_by: { displayName: 'Created by', dataType: 'entity', editable: false, validTypes: ['HumanUser', 'ApiUser'] },
   updated_by: { displayName: 'Updated by', dataType: 'entity', editable: false, validTypes: ['HumanUser', 'ApiUser'] },
 };
@@ -319,12 +326,12 @@ const SPECS: Record<string, Record<string, FieldSpec>> = {
     addressings_cc: { displayName: 'Cc', dataType: 'multi_entity', validTypes: ['Group', 'HumanUser'] },
   },
   // Site-wide: seven fields and no `project`, so a filter on one is 400
-  // `API read() Reply.project doesn't exist.` (entity_types/Reply).
+  // `API read() Reply.project doesn't exist.` (entity_types/Reply). `updated_at` is
+  // not among the seven: a create naming it is 400 `doesn't exist` (070_authored_timestamps).
   Reply: {
     id: AUDIT['id'] as FieldSpec,
     cached_display_name: AUDIT['cached_display_name'] as FieldSpec,
     created_at: AUDIT['created_at'] as FieldSpec,
-    updated_at: AUDIT['updated_at'] as FieldSpec,
     content: { displayName: 'Reply Text', dataType: 'text', mandatory: true },
     // Nearly every type on the site, which makes it a generic link and not a Note link.
     entity: { displayName: 'Link', dataType: 'entity', validTypes: ['Note', 'Version', 'Shot', 'Asset', 'Task'] },
@@ -341,7 +348,9 @@ const SPECS: Record<string, Record<string, FieldSpec>> = {
     filename: { displayName: 'File Name', dataType: 'text', editable: false },
     file_extension: { displayName: 'File Type', dataType: 'text', editable: false },
     file_size: { displayName: 'File Size', dataType: 'number', editable: false },
-    this_file: { displayName: 'Link', dataType: 'url', editable: false },
+    // A `{url, name}` hash on the create is the one body that makes a usable row; a
+    // second write is `is editable on create only` (entity_types/Attachment).
+    this_file: { displayName: 'Link', dataType: 'url', editable: false, createOnly: true },
     processing_status: { displayName: 'Processing Status', dataType: 'list', editable: false, validValues: ['thumbnail_pending', 'unverified', 'clean', 'infected'] },
     sg_status_list: statusSpec(ATTACHMENT_STATUSES, 'na'),
     project: { displayName: 'Project', dataType: 'entity', validTypes: ['Project'] },
@@ -495,6 +504,9 @@ function isoDateTime(dayOffset: number, seconds = 0): string {
 function thumb(slug: string, w = 96, h = 54): string {
   return `https://picsum.photos/seed/${slug}/${w}/${h}`;
 }
+
+/** The web root of the mock site, which is where a transcoding placeholder lives. */
+const MOCK_SITE_URL = 'https://mock.example.studio';
 
 /** Illustrated portraits from DiceBear's CC0 "lorelei" set, one per login, so no real face appears. */
 function portrait(login: string): string {
@@ -1345,11 +1357,13 @@ export class MockClient implements SgClient {
       // `API create() Reply.project doesn't exist.` is the create spelling of this 400
       // (entity_types/Reply); a write to a read-only field is `is read only.` (entity_types/Sequence).
       if (!field) throw new SgApiError(400, null, `API update() ${entityType}.${name} doesn't exist.`);
+      if (field.createOnly) throw new SgApiError(400, null, `API update() ${entityType}.${name} is editable on create only.`);
       if (field.editable === false) throw new SgApiError(400, null, `API update() ${entityType}.${name} is read only.`);
+      this.checkLink('update', entityType, name, field, value);
       // Writing "" to a text field stores null: the two are one value (field_types/text).
       row.values[name] = field.dataType === 'text' && value === '' ? null : value;
     }
-    if (Object.keys(patch).length > 0) row.values['updated_at'] = isoDateTime(0);
+    if (spec['updated_at'] && Object.keys(patch).length > 0) row.values['updated_at'] = isoDateTime(0);
     // A PUT answers the whole record, changed fields and untouched ones alike (024_read_after_write).
     return this.project(row, spec);
   }
@@ -1690,7 +1704,8 @@ export class MockClient implements SgClient {
     for (const [name, value] of Object.entries(body)) {
       const field = spec[name];
       if (!field) throw new SgApiError(400, null, `API create() ${entityType}.${name} doesn't exist.`);
-      if (field.editable === false) throw new SgApiError(400, null, `API create() ${entityType}.${name} is read only.`);
+      if (field.editable === false && !field.createOnly) throw new SgApiError(400, null, `API create() ${entityType}.${name} is read only.`);
+      this.checkLink('create', entityType, name, field, value);
       // Omitting the identity field and sending an empty one are different (entity_types/Shot).
       if (name === identity && value === '') {
         throw new SgApiError(400, null, `Create failed for [${entityType}]: Cannot set identifier field to empty. (${entityType})`);
@@ -1708,8 +1723,13 @@ export class MockClient implements SgClient {
     if (spec['created_by']) values['created_by'] = authored;
     if (spec['updated_by']) values['updated_by'] = authored;
     if (spec['user']) values['user'] = authored;
+    // The 201 echoes the server's defaults: a fresh Note is `unread` and `published`
+    // (entity_types/Note), and so is a Reply (entity_types/Reply).
+    if (spec['read_by_current_user']) values['read_by_current_user'] = 'unread';
+    if (spec['publish_status']) values['publish_status'] = 'published';
     values['created_at'] = isoDateTime(0);
-    values['updated_at'] = isoDateTime(0);
+    if (spec['updated_at']) values['updated_at'] = isoDateTime(0);
+    // An authored `created_at` or `updated_at` in the body is stored as sent (070_authored_timestamps).
     Object.assign(values, body, { id });
     if (identity && values[identity] === null && GENERATED_IDENTITY.has(entityType)) {
       values[identity] = `New ${DISPLAY_NAMES[entityType] ?? entityType} ${id}`;
@@ -1783,9 +1803,10 @@ export class MockClient implements SgClient {
     if (linkField !== undefined && field) {
       if (field.dataType === 'multi_entity') (target.values[linkField] as EntityRef[]).push(ref(attachment));
       else if (linkField === 'image') {
-        // A media field is not readable yet: it answers a placeholder under
-        // `/images/status/transient/` until the transcode lands (recipes/001).
-        target.values[linkField] = `/images/status/transient/${file.filename}`;
+        // A media field is not readable yet: it answers an absolute placeholder on the
+        // site root under `/images/status/transient/` until the transcode lands
+        // (013_upload_media, field_types/image).
+        target.values[linkField] = `${MOCK_SITE_URL}/images/status/transient/thumbnail_pending.png`;
       } else target.values[linkField] = String((attachment.values['this_file'] as { url: string }).url);
     }
     const uploadType = file.field === 'image' ? 'Thumbnail' : 'Attachment';
@@ -1802,6 +1823,26 @@ export class MockClient implements SgClient {
       // No bytes were moved, so there is no md5 receipt.
       etag: null,
     };
+  }
+
+  /**
+   * An entity link is a `{type, id}` hash. A bare id is refused naming the class it
+   * got (entity_types/Reply, field_types/entity) and a hash with no `type` naming the
+   * missing key (field_types/entity).
+   */
+  private checkLink(verb: 'create' | 'update', entityType: string, name: string, field: FieldSpec, value: unknown): void {
+    if (field.dataType !== 'entity' || value === null || value === undefined) return;
+    if (Number.isInteger(value) || typeof value === 'string') {
+      const got = typeof value === 'number' ? `Integer: ${value}` : `String: ${JSON.stringify(value)}`;
+      throw new SgApiError(
+        400,
+        null,
+        `API ${verb}() ${entityType}.${name} expected [Hash, ActiveSupport::HashWithIndifferentAccess, ActionDispatch::Http::Parameters, ActionDispatch::Http::ParamsHashWithIndifferentAccess, NilClass] data type(s) but got ${got}`,
+      );
+    }
+    if (typeof value === 'object' && !Array.isArray(value) && typeof (value as { type?: unknown }).type !== 'string') {
+      throw new SgApiError(400, null, `API ${verb}() invalid/missing entity hash string 'type': ${JSON.stringify(value)}`);
+    }
   }
 
   /** The next free id of a type, which is what a create takes. */

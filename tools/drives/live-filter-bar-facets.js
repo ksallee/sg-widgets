@@ -1,5 +1,7 @@
 // Live mode: the values a status facet counts come from the site, not the mock, and each
-// row reads as a glyph mark before its name with the count right-aligned.
+// row reads as a glyph mark before its name with the count right-aligned. The read-state
+// facet then answers two different totals for read and for unread, which is the proof the
+// site evaluated a filter that spelled `in` would leave at the caller's unread rows.
 //
 //   pnpm qa --start --live --path /widgets/filter-bar/ --framework both --drive tools/drives/live-filter-bar-facets.js
 const seen = {};
@@ -72,9 +74,96 @@ for (const framework of ['svelte', 'react']) {
   }
 }
 
+/** What the Note count line reads now, or null while it is on its way. */
+function noteTotal(pane) {
+  const text = $('[data-testid="note-count"]', pane)?.textContent.trim() ?? '';
+  const found = /^(\d+) Notes? match/.exec(text);
+  return found ? Number(found[1]) : null;
+}
+
+/** The filter the read-state bar emits, as text. */
+function noteFilter(pane) {
+  return $('[data-testid="note-filter-json"]', pane)?.textContent ?? '';
+}
+
+/** The total once the count line has moved off `was`. Boxed, since zero is an answer. */
+function settled(pane, was) {
+  const now = noteTotal(pane);
+  return now !== null && now !== was ? { total: now } : null;
+}
+
+function press(el) {
+  for (const kind of ['pointerdown', 'mousedown', 'pointerup', 'mouseup']) {
+    el.dispatchEvent(new PointerEvent(kind, { bubbles: true, cancelable: true, button: 0, pointerType: 'mouse' }));
+  }
+  el.click();
+}
+
+// The read-state facet: `read` and `unread` must answer different totals. `in` on this field
+// answers the caller's unread rows whatever the list holds, so an unfixed facet reads the
+// unread total twice.
+for (const framework of ['svelte', 'react']) {
+  const pane = $(`[data-pane="${framework}"]`);
+  if (!pane || pane.offsetParent === null) continue;
+  const pill = await until(() => $('[data-slot="filter-pill"][data-field="read_by_current_user"]', pane));
+  if (!pill) {
+    failures.push(`${framework}: the bar drew no read-state pill`);
+    continue;
+  }
+  const all = await until(() => settled(pane, null));
+  const trigger = $('[data-slot="filter-pill-trigger"]', pill);
+  // A tick redraws the checklist, so every row is found again rather than held from before.
+  const option = (key) => $$(`[data-option="${key}"]`).filter((row) => row.getClientRects().length > 0)[0] ?? null;
+  let listed = null;
+  for (let i = 0; i < 6 && !listed; i += 1) {
+    press(trigger);
+    listed = await until(() => option('read'), 6000);
+  }
+  if (!listed || !all) {
+    failures.push(`${framework}: the read-state facet listed no value, or the count line never answered`);
+    continue;
+  }
+
+  press(listed);
+  if (!(await until(() => noteFilter(pane).includes('"read"')))) {
+    failures.push(`${framework}: the bar emitted no condition for read`);
+    continue;
+  }
+  const read = await until(() => settled(pane, all.total), 30000);
+
+  // Untick `read` and tick `unread`, so the two totals are the two halves of the set.
+  press(await until(() => option('read'), 15000));
+  await until(() => !noteFilter(pane).includes('read_by_current_user'));
+  press(await until(() => option('unread'), 15000));
+  if (!(await until(() => noteFilter(pane).includes('"unread"')))) {
+    failures.push(`${framework}: the bar emitted no condition for unread`);
+    continue;
+  }
+  const unread = await until(() => settled(pane, read ? read.total : all.total), 30000);
+
+  seen[framework] = {
+    ...(seen[framework] ?? {}),
+    notes: { all: all.total, read: read?.total ?? null, unread: unread?.total ?? null },
+  };
+  if (!read || !unread || read.total === unread.total) {
+    failures.push(
+      `${framework}: the read-state facet answered ${read?.total ?? 'nothing'} for read and ${unread?.total ?? 'nothing'} for unread`,
+    );
+  }
+  for (let i = 0; i < 20 && $$('[data-option]').filter((r) => r.getClientRects().length > 0).length > 0; i += 1) {
+    (document.activeElement ?? document.body).dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }),
+    );
+    await wait(200);
+  }
+}
+
 if (Object.keys(seen).length === 0) failures.push('no framework pane was on show');
 
 return {
-  verdict: failures.length === 0 ? 'PASS the status facet counts the site and marks each row with its glyph' : `FAIL ${failures.join('; ')}`,
+  verdict:
+    failures.length === 0
+      ? 'PASS the status facet counts the site and marks each row with its glyph, and the read-state facet answers a different total for read and for unread'
+      : `FAIL ${failures.join('; ')}`,
   seen,
 };

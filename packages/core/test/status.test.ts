@@ -169,6 +169,7 @@ describe('the fields the schema types wrongly', () => {
       entityType: 'Note',
       dataType: 'list',
       validValues: ['unread', 'read'],
+      operators: ['is', 'is_not'],
       editable: false,
       mandatory: false,
       unique: false,

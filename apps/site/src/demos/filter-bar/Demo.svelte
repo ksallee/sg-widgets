@@ -23,6 +23,8 @@
 	setDemoContext(context);
 
 	let value = $state<FilterGroup>(emptyFilter());
+	/** The read-state bar, over a field the API evaluates only `is` and `is_not` on. */
+	let readState = $state<FilterGroup>(emptyFilter());
 
 	// The first tree goes in at construction, and the group path leads the sort, so the
 	// list's own first read is already the one it groups.
@@ -55,6 +57,18 @@
 			clearTimeout(timer);
 		};
 	});
+
+	const readWire = $derived(toApi3Hash(scopeToProject(context, readState)));
+	const readCounted = $derived(countNotes(readWire));
+
+	async function countNotes(filters: WireGroup | null): Promise<number | null> {
+		const summary = await context.client.summarize('Note', {
+			filters,
+			summaryFields: [{ field: 'id', type: 'count' }]
+		});
+		const total = summary.summaries['id'];
+		return typeof total === 'number' ? total : null;
+	}
 
 	async function load(): Promise<{ columns: CollectionColumn[]; statuses: Record<string, StatusRecord> }> {
 		const [columns, table] = await Promise.all([
@@ -98,5 +112,36 @@
 		{:catch error}
 			<p class="text-destructive text-sm">{error.message}</p>
 		{/await}
+	</section>
+
+	<section class="flex min-w-0 flex-col gap-2">
+		<h4 class="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+			Notes by read state
+		</h4>
+		<FilterBar
+			entityType="Note"
+			{context}
+			facets={['read_by_current_user']}
+			baseFilter={context.live
+				? group('and', [condition('project', 'is', { type: 'Project', id: context.projectId })])
+				: null}
+			bind:value={readState}
+		/>
+		<p class="text-muted-foreground text-sm tabular-nums" data-testid="note-count">
+			{#await readCounted}
+				Counting…
+			{:then total}
+				{total === null ? 'The site answered no count.' : `${total} Note${total === 1 ? '' : 's'} match${total === 1 ? 'es' : ''}`}
+			{:catch error}
+				{error.message}
+			{/await}
+		</p>
+		<pre
+			data-testid="note-filter-json"
+			class="border-border bg-muted text-foreground max-h-32 overflow-auto rounded-lg border p-3 font-mono text-xs">{JSON.stringify(
+				readWire,
+				null,
+				2
+			)}</pre>
 	</section>
 </div>

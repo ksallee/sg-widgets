@@ -98,6 +98,7 @@
 	import {
 		appendAt,
 		applyPreset,
+		fieldOperators,
 		condition as makeCondition,
 		conditionArity,
 		conditionList,
@@ -230,6 +231,11 @@
 		return fieldOf(path)?.dataType ?? '';
 	}
 
+	/** The operators the site answers on a path, which may be fewer than its data type takes. */
+	function operatorsOf(path: string): readonly Operator[] {
+		return fieldOperators(fieldOf(path) ?? { dataType: dataTypeOf(path) });
+	}
+
 	/** True while a dotted path is still being walked; its leaf decides the whole row. */
 	function unresolved(path: string): boolean {
 		return path.includes('.') && !(leafKey(path) in leaves);
@@ -246,14 +252,20 @@
 
 	async function pickField(path: NodePath, current: FilterCondition, chosen: string): Promise<void> {
 		const before = dataTypeOf(current.path);
-		const after = chosen.includes('.') ? ((await resolveLeaf(chosen))?.dataType ?? '') : dataTypeOf(chosen);
+		const leaf = chosen.includes('.') ? await resolveLeaf(chosen) : fieldOf(chosen);
+		const after = leaf?.dataType ?? '';
 		// The operator vocabulary is per data type, so moving to another type resets the row.
-		edit(path, before === after && current.path ? { ...current, path: chosen } : defaultCondition(chosen, after));
+		edit(
+			path,
+			before === after && current.path
+				? { ...current, path: chosen }
+				: defaultCondition(chosen, after, fieldOperators(leaf ?? { dataType: after }))
+		);
 	}
 
 	function pickPreset(path: NodePath, current: FilterCondition, id: string): void {
 		const dataType = dataTypeOf(current.path);
-		const preset = presetById(dataType, id);
+		const preset = presetById(dataType, id, operatorsOf(current.path));
 		if (preset) edit(path, applyPreset(current, preset, dataType));
 	}
 </script>
@@ -290,7 +302,8 @@
 
 {#snippet operatorSlot(path: NodePath, node: FilterCondition)}
 	{@const dataType = dataTypeOf(node.path)}
-	{@const menu = operatorMenu(dataType)}
+	{@const operators = operatorsOf(node.path)}
+	{@const menu = operatorMenu(dataType, operators)}
 	{@const current = presetIdOf(node, dataType)}
 	<Select.Root
 		type="single"
@@ -299,7 +312,7 @@
 		onValueChange={(id) => pickPreset(path, node, id)}
 	>
 		<Select.Trigger class={cn(BOX[size], 'w-40 shrink-0')} data-slot="filter-operator">
-			{presetById(dataType, current)?.label ?? current}
+			{presetById(dataType, current, operators)?.label ?? current}
 		</Select.Trigger>
 		<Select.Content>
 			{#each menu as run (run.label)}

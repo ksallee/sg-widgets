@@ -1,8 +1,8 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import type {
+  FacetCondition,
   FacetValue,
   FieldSchema,
-  FilterCondition,
   FilterGroup,
   Operator,
   Scalar,
@@ -11,13 +11,13 @@ import type {
   WireGroup,
 } from '@sg-widgets/core';
 import {
-  conditionArity,
   conditionParts,
   conditionValues,
   describeCondition,
   emptyFilter,
+  facetShape,
   facetValues,
-  findCondition,
+  findFacet,
   renderKindFor,
   setFacet,
   toApi3Hash,
@@ -200,19 +200,16 @@ export function FilterBar({
   /** True where the facet's values are status codes, which draw as badges rather than text. */
   const isStatus = (name: string): boolean => renderKindFor(fields[name]?.dataType ?? '') === 'status';
 
-  /** One value in a pill, where a status is a value: a badge on a status field, its label everywhere else. */
-  const valueLabel = (name: string, key: string, label: string): ReactNode =>
-    isStatus(name) ? (
-      <StatusBadge
-        code={key}
-        status={statuses[key] ?? null}
-        field={fields[name] ?? null}
-        size={BADGE[size]}
-        siteUrl={context.siteUrl}
-      />
-    ) : (
-      label
-    );
+  /** One value in a pill, where a status is a value: a status is a badge, and every other value is text. */
+  const valueBadge = (name: string, key: string): ReactNode => (
+    <StatusBadge
+      code={key}
+      status={statuses[key] ?? null}
+      field={fields[name] ?? null}
+      size={BADGE[size]}
+      siteUrl={context.siteUrl}
+    />
+  );
 
   /**
    * One checklist row: the status glyph as a leading mark before the label, the way a
@@ -240,17 +237,15 @@ export function FilterBar({
         className={cn('flex min-w-0 items-center gap-1.5 truncate', VALUE_WIDTH)}
         title={shown.title}
       >
-        {shown.values.length > 0
-          ? shown.shown.map((label, i) => (
-              <span key={keyOf(shown.values[i] as Scalar)} className="flex min-w-0 items-center truncate">
-                {valueLabel(name, keyOf(shown.values[i] as Scalar), label)}
-              </span>
-            ))
-          : shown.shown.map((label) => (
-              <span key={label} className="min-w-0 truncate">
-                {label}
-              </span>
-            ))}
+        {isStatus(name) && shown.values.length > 0 ? (
+          shown.values.map((scalar) => (
+            <span key={keyOf(scalar)} className="flex min-w-0 items-center truncate">
+              {valueBadge(name, keyOf(scalar))}
+            </span>
+          ))
+        ) : (
+          <span className="min-w-0 truncate">{shown.text}</span>
+        )}
         {shown.overflow > 0 ? (
           <span data-slot="filter-pill-overflow" className="text-muted-foreground shrink-0 tabular-nums">
             +{shown.overflow}
@@ -260,19 +255,20 @@ export function FilterBar({
     );
   };
 
-  const conditionOf = (name: string): FilterCondition | null => findCondition(value, name)?.condition ?? null;
+  /**
+   * The node this facet contributes. A field the API evaluates no `in` on holds an
+   * `or` of one-value conditions, which reads back as one checklist.
+   */
+  const facetOf = (name: string): FacetCondition | null => findFacet(value, name, fields[name]) ?? null;
 
-  const selectedOf = (name: string): Scalar[] => {
-    const found = conditionOf(name);
-    return found && Array.isArray(found.value) ? (found.value as Scalar[]) : [];
-  };
+  const selectedOf = (name: string): Scalar[] => facetOf(name)?.values ?? [];
 
   const keyOf = (v: Scalar): string => (v !== null && typeof v === 'object' ? `${v.type}:${v.id}` : String(v));
 
   /** The list operator the checklist writes: the one the pill already holds, else `in`. */
   const listOperator = (name: string): Operator => {
-    const found = conditionOf(name);
-    return found && Array.isArray(found.value) ? found.operator : 'in';
+    const found = facetOf(name);
+    return found?.checklist ? found.operator : facetShape(fields[name]).any;
   };
 
   function toggle(name: string, option: FacetValue) {
@@ -280,7 +276,7 @@ export function FilterBar({
     const next = selected.some((v) => keyOf(v) === option.key)
       ? selected.filter((v) => keyOf(v) !== option.key)
       : [...selected, option.value];
-    onChange?.(setFacet(value, name, next, listOperator(name)));
+    onChange?.(setFacet(value, name, next, listOperator(name), fields[name]));
   }
 
   const facetList = (name: string): ReactNode => {
@@ -338,7 +334,7 @@ export function FilterBar({
               size={CONTROL_BUTTON[size]}
               className="w-full"
               data-slot="filter-pill-clear"
-              onClick={() => onChange?.(setFacet(value, name, []))}
+              onClick={() => onChange?.(setFacet(value, name, [], 'in', fields[name]))}
             >
               Clear
             </Button>
@@ -348,7 +344,7 @@ export function FilterBar({
     );
   };
 
-  const activeCount = facets.filter((name) => Boolean(conditionOf(name))).length;
+  const activeCount = facets.filter((name) => Boolean(facetOf(name))).length;
 
   return (
     <div
@@ -359,9 +355,9 @@ export function FilterBar({
     >
       {facets.map((name) => {
         const field = fields[name];
-        const found = conditionOf(name);
-        const parts = found ? conditionParts(found, field) : null;
-        const shown = found ? conditionValues(found, field, maxValues) : null;
+        const found = facetOf(name);
+        const parts = found ? conditionParts(found.summary, field) : null;
+        const shown = found ? conditionValues(found.summary, field, maxValues) : null;
         const remove = (label: string) => (
           <button
             type="button"
@@ -374,7 +370,7 @@ export function FilterBar({
             <XIcon aria-hidden="true" className={CHIP_CROSS[CROSS[size]]} />
           </button>
         );
-        if (!found || !parts || conditionArity(found, field?.dataType ?? '') === 'many') {
+        if (!found || !parts || found.checklist) {
           // One popover and one trigger across both looks, so the first tick does not close the list.
           return (
             <Popover key={name}>
@@ -384,7 +380,7 @@ export function FilterBar({
                 data-size={size}
                 data-active={found ? 'true' : undefined}
                 role={found ? 'group' : undefined}
-                aria-label={found ? describeCondition(found, field) : undefined}
+                aria-label={found ? describeCondition(found.summary, field) : undefined}
                 className={cn(
                   'border-border inline-flex max-w-full min-w-0 items-center overflow-hidden rounded-lg border text-sm',
                   CONTROL_HEIGHT[size],
@@ -411,7 +407,9 @@ export function FilterBar({
                       <span data-slot="filter-pill-field" className="shrink-0 font-medium">
                         {labelOf(name)}
                       </span>
-                      {found.operator !== 'in' ? <span className="text-muted-foreground shrink-0">{parts.operator}</span> : null}
+                      {found.summary.operator !== 'in' ? (
+                        <span className="text-muted-foreground shrink-0">{parts.operator}</span>
+                      ) : null}
                       {pillValues(name, shown)}
                     </>
                   )}
@@ -431,7 +429,7 @@ export function FilterBar({
             data-size={size}
             data-active="true"
             role="group"
-            aria-label={describeCondition(found, field)}
+            aria-label={describeCondition(found.summary, field)}
             className={cn(
               'border-border bg-background inline-flex max-w-full min-w-0 items-center overflow-hidden rounded-lg border text-sm',
               CONTROL_HEIGHT[size],

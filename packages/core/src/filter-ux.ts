@@ -278,12 +278,22 @@ export function presetsFor(dataType: string, only?: readonly Operator[]): Operat
     }
   }
   // uuid spells its empty test `is ""`, which the tree reads as an unfilled row and
-  // drops, so the menu cannot offer it; every other type spells it `is null`.
-  if (empty === null && operators.includes('is') && operators.includes('is_not')) {
+  // drops, so the menu cannot offer it; every other type spells it `is null`. A field
+  // whose own `operators` narrows the type's vocabulary was measured on those operators
+  // with values, never on null: `Note.read_by_current_user` evaluates `is` and `is_not`
+  // against `read` and `unread` alone (068_note_read_state), so the empty tests follow
+  // the narrowing off the menu.
+  if (empty === null && !narrowed(dataType, only) && operators.includes('is') && operators.includes('is_not')) {
     out.push({ id: 'is_empty', label: 'is empty', operator: 'is', input: 'none', value: null });
     out.push({ id: 'is_not_empty', label: 'is not empty', operator: 'is_not', input: 'none', value: null });
   }
   return out;
+}
+
+/** True where `only` leaves out an operator the data type's own vocabulary holds. */
+function narrowed(dataType: string, only?: readonly Operator[]): boolean {
+  if (!only) return false;
+  return operatorsFor(dataType).some((operator) => !only.includes(operator));
 }
 
 export function presetById(dataType: string, id: string, operators?: readonly Operator[]): OperatorPreset | undefined {
@@ -878,7 +888,12 @@ export interface FacetCondition {
   checklist: boolean;
 }
 
-function facetValuesOf(node: FilterNode, path: string, shape: FacetShape, dataType: string): Scalar[] | null {
+/**
+ * The values a node holds as one checklist on `path`, or `null` where it is not one.
+ * A group qualifies only when every child is a one-value condition on the path; the
+ * root never does, since a facet writes into the root and never is it.
+ */
+function facetValuesOf(node: FilterNode, path: string, shape: FacetShape, dataType: string, root = false): Scalar[] | null {
   if (node.kind === 'condition') {
     if (node.path !== path || isPinned(node, dataType)) return null;
     if (node.operator === 'in' || node.operator === 'not_in') {
@@ -887,7 +902,7 @@ function facetValuesOf(node: FilterNode, path: string, shape: FacetShape, dataTy
     if (!shape.spread || (node.operator !== shape.any && node.operator !== shape.none)) return null;
     return [node.value as Scalar];
   }
-  if (!shape.spread || node.conditions.length === 0) return null;
+  if (root || !shape.spread || node.conditions.length === 0) return null;
   const wanted = node.logicalOperator === 'or' ? shape.any : shape.none;
   const values: Scalar[] = [];
   for (const child of node.conditions) {
@@ -917,7 +932,7 @@ export function findFacet(
   const shape = facetShape(field);
   const dataType = field?.dataType ?? '';
   const read = (node: FilterNode, where: NodePath): FacetCondition | undefined => {
-    const values = facetValuesOf(node, path, shape, dataType);
+    const values = facetValuesOf(node, path, shape, dataType, node === root);
     if (values) {
       const operator = facetOperatorOf(node, shape);
       const list = operator === shape.none || operator === 'not_in' ? 'not_in' : 'in';

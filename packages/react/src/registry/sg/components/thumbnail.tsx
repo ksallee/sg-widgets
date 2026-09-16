@@ -109,7 +109,7 @@ export function Thumbnail({
           <Hourglass aria-hidden="true" className={cn(GLYPH[size], 'motion-safe:animate-pulse')} />
         </span>
       ) : (
-        <span role="img" aria-label="No image" className="text-muted-foreground flex items-center justify-center opacity-70">
+        <span role="img" aria-label="No image" className="text-muted-foreground flex items-center justify-center">
           <Empty aria-hidden="true" className={GLYPH[size]} />
         </span>
       )}

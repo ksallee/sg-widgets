@@ -119,7 +119,7 @@
 		<span
 			role="img"
 			aria-label="No image"
-			class="text-muted-foreground flex items-center justify-center opacity-70"
+			class="text-muted-foreground flex items-center justify-center"
 		>
 			<Empty aria-hidden="true" class={GLYPH[size]} />
 		</span>

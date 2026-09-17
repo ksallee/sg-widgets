@@ -847,9 +847,12 @@ describe('summarize', () => {
     const summary = await c.summarize('Note', { grouping: [{ field: 'user' }] });
     expect(summary.groups.length).toBeGreaterThan(0);
     for (const group of summary.groups) {
-      expect(group.groupValue).toMatchObject({ type: 'HumanUser', id: expect.any(Number) });
+      expect(group.groupValue).toMatchObject({ type: 'HumanUser', id: expect.any(Number), name: group.groupName, valid: 'valid' });
       expect(group.groupName).not.toBe('');
     }
+    const links = await c.summarize('Note', { grouping: [{ field: 'addressings_to' }] });
+    expect(links.groups.length).toBeGreaterThan(0);
+    for (const group of links.groups) expect(group.groupValue).toMatchObject({ type: 'HumanUser', name: group.groupName });
   });
 
   it('refuses to group the read state and an image', async () => {

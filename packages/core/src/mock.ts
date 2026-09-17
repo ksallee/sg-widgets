@@ -1422,12 +1422,17 @@ export class MockClient implements SgClient {
     this.refuseGrouping(entityType, grouping.field);
 
     const buckets = new Map<string, { value: unknown; rows: Row[] }>();
-    for (const row of matched) {
-      const value = this.walk(row, grouping.field, false)[0] ?? null;
+    const put = (value: unknown, row: Row) => {
       const key = value === null || value === undefined ? '' : JSON.stringify(value);
       const bucket = buckets.get(key);
       if (bucket) bucket.rows.push(row);
       else buckets.set(key, { value, rows: [row] });
+    };
+    for (const row of matched) {
+      const raw = this.walk(row, grouping.field, false)[0] ?? null;
+      // A multi_entity row goes under each link it carries; the corpus has not measured that grouping.
+      const values = Array.isArray(raw) ? (raw.length === 0 ? [null] : raw) : [raw];
+      for (const one of values) put(this.groupValueOf(one), row);
     }
     const groups: SummaryGroup[] = [...buckets.entries()].map(([, bucket]) => ({
       groupName: bucket.value === null ? '' : groupLabel(bucket.value),
@@ -1437,6 +1442,12 @@ export class MockClient implements SgClient {
     groups.sort((a, b) => (a.groupName < b.groupName ? -1 : a.groupName > b.groupName ? 1 : 0));
     if (grouping.direction === 'desc') groups.reverse();
     return { summaries: summarize(matched), groups };
+  }
+
+  /** An entity group's value is the reference with its name and `valid` (020_summarize); a code is itself. */
+  private groupValueOf(value: unknown): unknown {
+    if (value === null || typeof value !== 'object' || !('type' in value)) return value;
+    return { ...(this.decorate(value) as EntityRef), valid: 'valid' };
   }
 
   /**

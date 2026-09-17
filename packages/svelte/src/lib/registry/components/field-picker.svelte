@@ -20,7 +20,7 @@
 
 <script lang="ts">
 	import type { HTMLAttributes } from 'svelte/elements';
-	import type { FieldHop, FieldOption, FieldSchema, SgContext } from '@sg-widgets/core';
+	import type { FieldHop, FieldOption, FieldPathOption, FieldSchema, SgContext } from '@sg-widgets/core';
 	import {
 		currentType,
 		deriveFieldOptions,
@@ -28,7 +28,9 @@
 		iconNameFor,
 		NO_MATCH_LABEL,
 		pickerKeyIntent,
+		resolveFieldPathOptions,
 		searchFieldOptions,
+		searchFieldPathOptions,
 		stateLine
 	} from '@sg-widgets/core';
 	import Braces from '@lucide/svelte/icons/braces';
@@ -73,6 +75,8 @@
 		context: SgContext;
 		/** The type the path starts on. */
 		entityType: string;
+		/** A fixed list of paths, offered flat. The list restrictions do not apply to it. */
+		options?: string[];
 		/** The dotted path, `field` or `field.Type.field…`. Empty when nothing is chosen. */
 		value?: string;
 		onValueChange?: (value: string) => void;
@@ -120,6 +124,7 @@
 	let {
 		context,
 		entityType,
+		options,
 		value = $bindable(''),
 		onValueChange,
 		deepLinks = false,
@@ -205,16 +210,35 @@ const ICONS: Record<string, typeof Type> = {
 	/** The field whose target type is being chosen, when it declares more than one. */
 	let choosing = $state<FieldOption | null>(null);
 	let loaded = $state<{ type: string; fields: Record<string, FieldSchema> } | null>(null);
+	/** The caller's fixed list, resolved. Keyed on what was asked for, so a change re-reads. */
+	let fixed = $state<{ key: string; rows: FieldPathOption[] } | null>(null);
 	let resolved = $state<{ path: string; label: string } | null>(null);
 	let failure = $state<string | null>(null);
 
 	const type = $derived(currentType(entityType, hops));
+	const fixedKey = $derived(options ? `${entityType}|${options.join(',')}` : null);
+
+	// Every path of the fixed list is resolved through the types it travels, once per list.
+	$effect(() => {
+		const service = schema;
+		const key = fixedKey;
+		const paths = options;
+		if (key === null || paths === undefined) return;
+		let live = true;
+		void resolveFieldPathOptions(service, entityType, paths).then((rows) => {
+			if (live) fixed = { key, rows };
+		});
+		return () => {
+			live = false;
+		};
+	});
 
 	// `/schema/<Type>/fields` is 48KB and ~330ms (probe 002); the schema service caches
 	// it, so a hop back to a type already visited costs nothing.
 	$effect(() => {
 		const service = schema;
 		const wanted = type;
+		if (options) return;
 		let live = true;
 		service
 			.fields(wanted)
@@ -251,8 +275,9 @@ const ICONS: Record<string, typeof Type> = {
 		};
 	});
 
+	const fixedRows = $derived(fixed?.key === fixedKey ? fixed.rows : null);
 	const fields = $derived(loaded?.type === type ? loaded.fields : null);
-	const options = $derived(
+	const nested = $derived(
 		fields
 			? deriveFieldOptions(fields, {
 					rootType: entityType,
@@ -269,21 +294,46 @@ const ICONS: Record<string, typeof Type> = {
 				})
 			: []
 	);
-	const rows = $derived(choosing ? [] : searchFieldOptions(options, search));
+	/** One shape for both lists, so a fixed row and a schema row draw the same. */
+	const rows = $derived(
+		fixedRows
+			? searchFieldPathOptions(fixedRows, search).map((row) => ({
+					path: row.path,
+					label: row.label,
+					code: row.name,
+					sub: row.subLabel,
+					dataType: row.dataType,
+					field: null as FieldOption | null
+				}))
+			: choosing
+				? []
+				: searchFieldOptions(nested, search).map((row) => ({
+						path: row.path,
+						label: row.displayName,
+						code: row.name,
+						sub: row.computed ? 'computed' : row.dataType,
+						dataType: row.dataType,
+						field: row as FieldOption | null
+					}))
+	);
 	const targets = $derived(choosing ? choosing.targets.filter((t) => matchesType(t)) : []);
 	/** Every row's value, in the order they are drawn: what the arrow keys walk. */
 	const values = $derived(choosing ? targets : rows.map((row) => row.path));
 	const cursor = $derived(values.includes(highlighted) ? highlighted : (values[0] ?? ''));
 	const computed = $derived(extraFields?.find((extra) => extra.name === value));
+	const offered = $derived(fixedRows?.find((row) => row.path === value));
 	const label = $derived(
 		computed
 			? (computed.displayName ?? computed.name)
-			: resolved?.path === value
-				? resolved.label
-				: null
+			: offered
+				? offered.label
+				: resolved?.path === value
+					? resolved.label
+					: null
 	);
+	const ready = $derived(options ? fixedRows !== null : fields !== null);
 	const showClear = $derived(clearable && value !== '' && !readonly && !disabled);
-	const breadcrumb = $derived(hops.length > 0 || choosing !== null);
+	const breadcrumb = $derived(!options && (hops.length > 0 || choosing !== null));
 
 	function matchesType(target: string): boolean {
 		return target.toLowerCase().includes(search.trim().toLowerCase());
@@ -302,9 +352,9 @@ const ICONS: Record<string, typeof Type> = {
 		highlighted = '';
 	}
 
-	function activate(row: FieldOption): void {
-		if (row.traversable && !row.selectable) {
-			descendInto(row);
+	function activate(row: { path: string; field: FieldOption | null }): void {
+		if (row.field?.traversable && !row.field.selectable) {
+			descendInto(row.field);
 			return;
 		}
 		emit(row.path);
@@ -363,7 +413,7 @@ const ICONS: Record<string, typeof Type> = {
 				}
 				return;
 			}
-			const row = rows.find((r) => r.path === cursor);
+			const row = rows.find((r) => r.path === cursor)?.field;
 			if (row?.traversable) {
 				event.preventDefault();
 				descendInto(row);
@@ -387,6 +437,9 @@ const ICONS: Record<string, typeof Type> = {
 	types asks which one first. `dataTypes` and `validTypes` bind what may be chosen,
 	not what may be walked through, so a picker restricted to dates still reaches a
 	date behind a link.
+
+	`options` replaces the schema list with a caller's own paths, flat: no links, no
+	descending, no breadcrumb, and the list restrictions do not apply.
 -->
 <div
 	bind:this={ref}
@@ -515,7 +568,7 @@ const ICONS: Record<string, typeof Type> = {
 								<ChevronRight aria-hidden="true" class="size-4 shrink-0 opacity-50" />
 							</Command.Item>
 						{/each}
-					{:else if fields === null}
+					{:else if !ready}
 						<div
 							data-slot="field-picker-loading"
 							class="flex flex-col"
@@ -539,32 +592,32 @@ const ICONS: Record<string, typeof Type> = {
 								value={row.path}
 								onSelect={() => activate(row)}
 								data-checked={row.path === value ? 'true' : undefined}
-								data-traversable={row.traversable ? 'true' : undefined}
+								data-traversable={row.field?.traversable ? 'true' : undefined}
 								class="items-start"
 							>
 								<Glyph aria-hidden="true" class="mt-0.5 size-4 shrink-0 opacity-70" />
 								<span class="flex min-w-0 flex-1 flex-col">
 									<span class="flex min-w-0 items-center gap-1.5">
-										<span class="truncate">{row.displayName}</span>
-										{#if showCode && row.name !== row.displayName}
-											<span class="text-muted-foreground shrink-0 font-mono text-xs">{row.name}</span>
+										<span class="truncate">{row.label}</span>
+										{#if showCode && row.code !== '' && row.code !== row.label}
+											<span class="text-muted-foreground shrink-0 font-mono text-xs">{row.code}</span>
 										{/if}
 									</span>
 									<span class="text-muted-foreground truncate text-xs">
-										{row.computed ? 'computed' : row.dataType}
+										{row.sub}
 									</span>
 								</span>
-								{#if row.traversable}
+								{#if row.field?.traversable}
 									<button
 										type="button"
 										tabindex={-1}
 										data-slot="field-picker-descend"
-										aria-label={`Open ${row.displayName}`}
+										aria-label={`Open ${row.label}`}
 										title="Open (Right arrow)"
 										onmousedown={(event) => event.preventDefault()}
 										onclick={(event) => {
 											event.stopPropagation();
-											descendInto(row);
+											if (row.field) descendInto(row.field);
 										}}
 										class="hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring focus-visible:ring-offset-background shrink-0 rounded-sm p-0.5 opacity-70 outline-none transition-colors duration-150 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-2 motion-safe:active:scale-[0.98]"
 									>

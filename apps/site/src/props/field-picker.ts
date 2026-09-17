@@ -6,6 +6,7 @@ export default {
     { name: 'entityType', type: '`string`', default: 'required', meaning: 'The type the path starts on.' },
     { name: 'value', type: '`string`', default: '`\'\'`', meaning: 'The dotted path. Empty when nothing is chosen.' },
     { name: 'onValueChange', type: '`(value: string) => void`', default: '—', meaning: 'Receives the new path, or the empty string on clear.' },
+    { name: 'options', type: '`string[]`', default: '—', meaning: 'A fixed list of paths, offered flat. Each row is labelled by its resolved path; the list restrictions below do not apply.' },
     { name: 'deepLinks', type: '`boolean`', default: '`false`', meaning: 'Allow descending through entity fields.' },
     { name: 'showCode', type: '`boolean`', default: '`false`', meaning: 'Show the programmatic name beside the display name in each row.' },
     { name: 'maxDepth', type: '`number`', default: '`2`', meaning: 'How many hops a path may take.' },

@@ -40,7 +40,8 @@ With the line in place, `shadcn add` names only the packages `package.json` lack
 succeeds and the files land. `shadcn-svelte add` writes the files first and then fails on its
 install call. Either way `package.json` is left as it was, `link:` included.
 
-This registry ships its own `command` for React, and its own `command`, `select` and `checkbox` for
-Svelte. A host that already has a primitive of that name is asked before it is overwritten. Accept,
-or pass `--overwrite`. A host that keeps its own `command` has no status part, and `search-control`
-fails to compile against it.
+This registry ships its own `command` and `popover` for React, and its own `command`, `select` and
+`checkbox` for Svelte. A host that already has a primitive of that name is asked before it is
+overwritten. Accept, or pass `--overwrite`. A host that keeps its own `command` has no status part,
+and `search-control` fails to compile against it; one that keeps its own `popover` has no
+`positionMethod`, and the date editors fail the same way.

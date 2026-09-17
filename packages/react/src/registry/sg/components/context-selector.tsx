@@ -78,10 +78,10 @@ export type ContextSelectorSize = ControlSize;
 const BOX: Record<ContextSelectorSize, string> = {
   sm: 'min-h-7 pr-2 pl-0.75 py-0.75 data-empty:pl-1.5 data-empty:py-0',
   md: 'min-h-8 pr-3 pl-0.75 py-0.75 data-empty:pl-2 data-empty:py-0',
-  lg: 'min-h-9 pr-3 pl-px py-px data-empty:pl-2 data-empty:py-0',
+  lg: 'min-h-9 pr-3 pl-[5px] py-[5px] data-empty:pl-2 data-empty:py-0',
 };
 /** A chip inside a control sits one step down the leaf ladder. */
-const CHIP: Record<ContextSelectorSize, 'xs' | 'sm' | 'md'> = { sm: 'xs', md: 'sm', lg: 'md' };
+const CHIP: Record<ContextSelectorSize, 'xs' | 'sm'> = { sm: 'xs', md: 'sm', lg: 'sm' };
 /** A skeleton stands in for a row, so its leading slot is the row's picture. */
 const LEAD: Record<ContextSelectorSize, string> = { sm: 'size-6', md: 'size-8', lg: 'size-10' };
 

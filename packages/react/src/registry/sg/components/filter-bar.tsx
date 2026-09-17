@@ -145,6 +145,8 @@ export function FilterBar({
   // The reader is read at call time, so a host's inline function never re-counts on its own.
   const countsRef = useRef(counts);
   countsRef.current = counts;
+  /** Fields the site refused to group, so it is asked once per field. */
+  const refused = useRef(new Set<string>());
 
   useEffect(() => {
     const present = facets.map((name) => fields[name]).filter((f): f is FieldSchema => Boolean(f));
@@ -156,6 +158,7 @@ export function FilterBar({
     const load = (): Promise<Record<string, FacetList>> =>
       facetLists(present, filters, {
         counts: countsRef.current,
+        refused: refused.current,
         sample: async (sampleFields, sampleFilters) =>
           (
             await context.client.search(entityType, {

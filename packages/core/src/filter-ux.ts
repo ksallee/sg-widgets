@@ -1028,6 +1028,11 @@ export interface FacetReads {
   counts?: FacetCounts | undefined;
   /** One page of rows carrying `fields`, under `filters`. */
   sample: (fields: readonly string[], filters: WireGroup | null) => Promise<readonly EntityRow[]>;
+  /**
+   * Fields the site refused to group, as `Type.field`, held by the caller across reads
+   * so the site is asked once per field. Filled here.
+   */
+  refused?: Set<string>;
 }
 
 function facetKey(value: Scalar): string {
@@ -1160,8 +1165,9 @@ export function isGroupingRefusal(error: unknown): boolean {
  *
  * With `counts`, a field's values come from the site's groups, and a field the site
  * refuses to group is tallied from one page of rows instead, with the schema's
- * vocabulary at zero and `sampled` saying how many rows. Without `counts` every
- * field is tallied that way. Facets sharing a scope share one page. Any other
+ * vocabulary at zero and `sampled` saying how many rows; the refusal is kept in
+ * `refused` so the next read tallies that field without asking. Without `counts`
+ * every field is tallied that way. Facets sharing a scope share one page. Any other
  * failure fails the read.
  */
 export async function facetLists(
@@ -1172,13 +1178,20 @@ export async function facetLists(
   const out: Record<string, FacetList> = {};
   const tallied: FieldSchema[] = [];
   const counts = reads.counts;
+  const refused = reads.refused ?? new Set<string>();
   if (counts) {
     await Promise.all(
       fields.map(async (field) => {
+        const known = `${field.entityType}.${field.name}`;
+        if (refused.has(known)) {
+          tallied.push(field);
+          return;
+        }
         try {
           out[field.name] = { values: facetValuesFromGroups(await counts(field.name, scopes[field.name] ?? null), field) };
         } catch (error) {
           if (!isGroupingRefusal(error)) throw error;
+          refused.add(known);
           tallied.push(field);
         }
       }),

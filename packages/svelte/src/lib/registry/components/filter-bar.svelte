@@ -130,6 +130,8 @@
 	// every value it could switch to while the other pills show what remains.
 	const base = $derived(asFilterGroup(baseFilter));
 	const scopes = $derived(facetScopes(value, base, facets));
+	/** Fields the site refused to group, so it is asked once per field. */
+	const refused = new Set<string>();
 	const tally = $derived(loadFacets(scopes, fields, facets));
 	/** What the open facet's search box holds. */
 	let facetQuery = $state('');
@@ -147,6 +149,7 @@
 		if (present.length === 0) return {};
 		return facetLists(present, filters, {
 			counts,
+			refused,
 			sample: async (sampleFields, sampleFilters) =>
 				(
 					await context.client.search(entityType, {

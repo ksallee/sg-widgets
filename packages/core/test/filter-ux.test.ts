@@ -853,6 +853,25 @@ describe('facetLists', () => {
     });
   });
 
+  it('asks the site once about a field it refused', async () => {
+    const asked: string[] = [];
+    const refused = new Set<string>();
+    const reads = {
+      counts: async (name: string) => {
+        asked.push(name);
+        throw refusal();
+      },
+      sample: async () => [note({ read_by_current_user: 'read' })],
+      refused,
+    };
+    const first = await facetLists([readState], { read_by_current_user: null }, reads);
+    const second = await facetLists([readState], { read_by_current_user: null }, reads);
+    expect(asked).toEqual(['read_by_current_user']);
+    expect(refused).toEqual(new Set(['Note.read_by_current_user']));
+    expect(second).toEqual(first);
+    expect(second['read_by_current_user']?.sampled).toBe(1);
+  });
+
   it('fails the read on anything but a refusal', async () => {
     const reads = { sample: async () => [] };
     await expect(

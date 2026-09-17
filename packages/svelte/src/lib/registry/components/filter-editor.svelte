@@ -279,8 +279,11 @@
 </script>
 
 {#snippet fieldSlot(path: NodePath, node: FilterCondition)}
-	<!-- The field is the row's widest cell: it takes 14rem, truncates, and gives the rest back. -->
-	<div data-slot="filter-field" class="min-w-24 max-w-56 grow basis-24">
+	<!--
+		The field is the row's widest cell: it takes 14rem, truncates, and gives the rest back.
+		It is one line tall whatever the value beside it grows to.
+	-->
+	<div data-slot="filter-field" class={cn('flex min-w-24 max-w-56 grow basis-24 items-center', ROW[size])}>
 		{#if fieldChooser}
 			{@render fieldChooser({
 				entityType,
@@ -313,26 +316,29 @@
 	{@const operators = operatorsOf(node.path)}
 	{@const menu = operatorMenu(dataType, operators)}
 	{@const current = presetIdOf(node, dataType)}
-	<Select.Root
-		type="single"
-		value={current}
-		disabled={disabled || menu.length === 0}
-		onValueChange={(id) => pickPreset(path, node, id)}
-	>
-		<Select.Trigger size={SELECT[size].size} class={cn(SELECT[size].class, 'w-40 shrink-0')} data-slot="filter-operator">
-			{presetById(dataType, current, operators)?.label ?? current}
-		</Select.Trigger>
-		<Select.Content>
-			{#each menu as run (run.label)}
-				<Select.Group>
-					<Select.GroupHeading>{run.label}</Select.GroupHeading>
-					{#each run.presets as preset (preset.id)}
-						<Select.Item value={preset.id} label={preset.label} data-preset={preset.id} />
-					{/each}
-				</Select.Group>
-			{/each}
-		</Select.Content>
-	</Select.Root>
+	<!-- The menu stands on the row's first line, beside the field, not in the middle of a grown value. -->
+	<div class={cn('flex shrink-0 items-center', ROW[size])}>
+		<Select.Root
+			type="single"
+			value={current}
+			disabled={disabled || menu.length === 0}
+			onValueChange={(id) => pickPreset(path, node, id)}
+		>
+			<Select.Trigger size={SELECT[size].size} class={cn(SELECT[size].class, 'w-40 shrink-0')} data-slot="filter-operator">
+				{presetById(dataType, current, operators)?.label ?? current}
+			</Select.Trigger>
+			<Select.Content>
+				{#each menu as run (run.label)}
+					<Select.Group>
+						<Select.GroupHeading>{run.label}</Select.GroupHeading>
+						{#each run.presets as preset (preset.id)}
+							<Select.Item value={preset.id} label={preset.label} data-preset={preset.id} />
+						{/each}
+					</Select.Group>
+				{/each}
+			</Select.Content>
+		</Select.Root>
+	</div>
 {/snippet}
 
 <!--
@@ -479,7 +485,7 @@
 	{@const kind = valueEditorFor(dataType, node.operator)}
 	{@const arity = conditionArity(node, dataType)}
 	{@const set = (v: ConditionValue) => edit(path, { ...node, value: v })}
-	<div class="flex min-w-40 flex-1 flex-wrap items-center gap-2" data-slot="filter-value">
+	<div class={cn('flex min-w-40 flex-1 flex-wrap items-start gap-2', ROW[size])} data-slot="filter-value">
 		{#if unresolved(node.path)}
 			<Skeleton class={cn(BOX[size], 'min-w-0 flex-1')} />
 		{:else if valueEditor}
@@ -609,10 +615,15 @@
 	A row is two bands: the field, the operator and the value on one line of the row's own height, and
 	the remove button on its own. The remove sits outside the wrapping band, so it
 	holds the same vertical axis at every depth and never costs the row a line.
+
+	Both bands hang off the row's first line. A multi-value operator grows the value into one line
+	per value and an add row, and the controls beside it belong to the row rather than to the list:
+	top-aligned, each on the axis of the first value line, so a list that grows pushes only the rows
+	under it. Each control cell stands the row's own control height, which is that axis.
 -->
 {#snippet conditionRow(path: NodePath, node: FilterCondition)}
-	<div class={cn('flex min-w-0 items-center gap-2', ROW[size])} data-slot="filter-row" data-path={path.join('.')}>
-		<div class="flex min-w-0 flex-1 flex-wrap items-center gap-2" data-slot="filter-row-content">
+	<div class={cn('flex min-w-0 items-start gap-2', ROW[size])} data-slot="filter-row" data-path={path.join('.')}>
+		<div class="flex min-w-0 flex-1 flex-wrap items-start gap-2" data-slot="filter-row-content">
 			{@render fieldSlot(path, node)}
 			{@render operatorSlot(path, node)}
 			{@render valueSlot(path, node)}

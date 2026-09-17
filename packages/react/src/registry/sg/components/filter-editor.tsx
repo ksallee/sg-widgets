@@ -422,11 +422,16 @@ function GroupNode({ ctx, path, node }: { ctx: EditorContext; path: NodePath; no
  * A row is two bands: the field, the operator and the value on one line of the row's own height, and
  * the remove button on its own. The remove sits outside the wrapping band, so it
  * holds the same vertical axis at every depth and never costs the row a line.
+ *
+ * Both bands hang off the row's first line. A multi-value operator grows the value into one line
+ * per value and an add row, and the controls beside it belong to the row rather than to the list:
+ * top-aligned, each on the axis of the first value line, so a list that grows pushes only the rows
+ * under it. Each control cell stands the row's own control height, which is that axis.
  */
 function ConditionRow({ ctx, path, node }: { ctx: EditorContext; path: NodePath; node: FilterCondition }) {
   return (
-    <div className={cn('flex min-w-0 items-center gap-2', ROW[ctx.size])} data-slot="filter-row" data-path={path.join('.')}>
-      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2" data-slot="filter-row-content">
+    <div className={cn('flex min-w-0 items-start gap-2', ROW[ctx.size])} data-slot="filter-row" data-path={path.join('.')}>
+      <div className="flex min-w-0 flex-1 flex-wrap items-start gap-2" data-slot="filter-row-content">
         <FieldSlot ctx={ctx} path={path} node={node} />
         <OperatorSlot ctx={ctx} path={path} node={node} />
         <ValueSlot ctx={ctx} path={path} node={node} />
@@ -450,7 +455,8 @@ function ConditionRow({ ctx, path, node }: { ctx: EditorContext; path: NodePath;
 function FieldSlot({ ctx, path, node }: { ctx: EditorContext; path: NodePath; node: FilterCondition }) {
   return (
     // The field is the row's widest cell: it takes 14rem, truncates, and gives the rest back.
-    <div data-slot="filter-field" className="min-w-24 max-w-56 grow basis-24">
+    // It is one line tall whatever the value beside it grows to.
+    <div data-slot="filter-field" className={cn('flex min-w-24 max-w-56 grow basis-24 items-center', ROW[ctx.size])}>
       {ctx.fieldChooser ? (
         ctx.fieldChooser({
           entityType: ctx.entityType,
@@ -486,27 +492,30 @@ function OperatorSlot({ ctx, path, node }: { ctx: EditorContext; path: NodePath;
   const menu = operatorMenu(dataType, operators);
   const current = presetIdOf(node, dataType);
   return (
-    <Select
-      value={current}
-      disabled={ctx.disabled || menu.length === 0}
-      onValueChange={(id) => ctx.pickPreset(path, node, id as string)}
-    >
-      <SelectTrigger size={SELECT[ctx.size].size} className={cn(SELECT[ctx.size].className, 'w-40 shrink-0')} data-slot="filter-operator">
-        {presetById(dataType, current, operators)?.label ?? current}
-      </SelectTrigger>
-      <SelectContent>
-        {menu.map((run) => (
-          <SelectGroup key={run.label}>
-            <SelectLabel>{run.label}</SelectLabel>
-            {run.presets.map((preset) => (
-              <SelectItem key={preset.id} value={preset.id} data-preset={preset.id}>
-                {preset.label}
-              </SelectItem>
-            ))}
-          </SelectGroup>
-        ))}
-      </SelectContent>
-    </Select>
+    // The menu stands on the row's first line, beside the field, not in the middle of a grown value.
+    <div className={cn('flex shrink-0 items-center', ROW[ctx.size])}>
+      <Select
+        value={current}
+        disabled={ctx.disabled || menu.length === 0}
+        onValueChange={(id) => ctx.pickPreset(path, node, id as string)}
+      >
+        <SelectTrigger size={SELECT[ctx.size].size} className={cn(SELECT[ctx.size].className, 'w-40 shrink-0')} data-slot="filter-operator">
+          {presetById(dataType, current, operators)?.label ?? current}
+        </SelectTrigger>
+        <SelectContent>
+          {menu.map((run) => (
+            <SelectGroup key={run.label}>
+              <SelectLabel>{run.label}</SelectLabel>
+              {run.presets.map((preset) => (
+                <SelectItem key={preset.id} value={preset.id} data-preset={preset.id}>
+                  {preset.label}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
   );
 }
 
@@ -520,7 +529,7 @@ function ValueSlot({ ctx, path, node }: { ctx: EditorContext; path: NodePath; no
   const args: ValueEditorArgs = { field, dataType, operator: node.operator, value: node.value, arity, disabled, onChange: set };
 
   return (
-    <div className="flex min-w-40 flex-1 flex-wrap items-center gap-2" data-slot="filter-value">
+    <div className={cn('flex min-w-40 flex-1 flex-wrap items-start gap-2', ROW[ctx.size])} data-slot="filter-value">
       {ctx.unresolved(node.path) ? (
         <Skeleton className={cn(BOX[ctx.size], 'min-w-0 flex-1')} />
       ) : ctx.valueEditor ? (

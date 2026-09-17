@@ -1098,27 +1098,29 @@ export function facetValues(rows: readonly EntityRow[], field: FieldSchema): Fac
  * field. A group is keyed on `group_value`, which on an entity field is the reference
  * itself, so two people sharing a display name stay two rows, and `group_name` is the
  * label. The `''` group, the rows with nothing in the field, is left out: the empty
- * tests belong to the dialog (020_summarize).
+ * tests belong to the dialog (020_summarize). A multi_entity group's value is the
+ * row's set of links as an array of references, and it counts towards each of them;
+ * the corpus has not measured that grouping.
  */
 export function facetValuesFromGroups(groups: readonly SummaryGroup[], field: FieldSchema): FacetValue[] {
   const tally = new FacetTally(field);
   for (const groupRow of groups) {
-    const value = groupScalar(groupRow.groupValue, groupRow.groupName);
-    if (value !== null) tally.add(value, groupCount(groupRow));
+    for (const value of groupScalars(groupRow.groupValue, groupRow.groupName)) tally.add(value, groupCount(groupRow));
   }
   return tally.values();
 }
 
-/** `group_value` as the value a condition sends: an entity as `{type, id, name}`, a code as itself. */
-function groupScalar(value: unknown, name: string): Scalar | null {
-  if (value === null || value === undefined || value === '') return null;
+/** `group_value` as the values a condition sends: an entity as `{type, id, name}`, a code as itself. */
+function groupScalars(value: unknown, name: string): Scalar[] {
+  if (value === null || value === undefined || value === '') return [];
+  if (Array.isArray(value)) return value.flatMap((one) => groupScalars(one, name));
   if (typeof value === 'object') {
     const ref = value as { type?: unknown; id?: unknown; name?: unknown };
-    if (typeof ref.type !== 'string' || typeof ref.id !== 'number') return null;
-    return { type: ref.type, id: ref.id, name: typeof ref.name === 'string' ? ref.name : name };
+    if (typeof ref.type !== 'string' || typeof ref.id !== 'number') return [];
+    return [{ type: ref.type, id: ref.id, name: typeof ref.name === 'string' ? ref.name : name }];
   }
-  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return value;
-  return null;
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return [value];
+  return [];
 }
 
 /** The `id count` of a group, or the first summary the call asked for. */

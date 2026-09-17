@@ -1430,12 +1430,13 @@ export class MockClient implements SgClient {
     };
     for (const row of matched) {
       const raw = this.walk(row, grouping.field, false)[0] ?? null;
-      // A multi_entity row goes under each link it carries; the corpus has not measured that grouping.
-      const values = Array.isArray(raw) ? (raw.length === 0 ? [null] : raw) : [raw];
-      for (const one of values) put(this.groupValueOf(one), row);
+      // A multi_entity row is grouped on its whole set of links, as an array of references;
+      // the corpus has not measured that grouping.
+      const value = Array.isArray(raw) ? (raw.length === 0 ? null : raw.map((one) => this.groupValueOf(one))) : this.groupValueOf(raw);
+      put(value, row);
     }
     const groups: SummaryGroup[] = [...buckets.entries()].map(([, bucket]) => ({
-      groupName: bucket.value === null ? '' : groupLabel(bucket.value),
+      groupName: bucket.value === null ? '' : Array.isArray(bucket.value) ? bucket.value.map(groupLabel).join(', ') : groupLabel(bucket.value),
       groupValue: bucket.value,
       summaries: summarize(bucket.rows),
     }));

@@ -759,6 +759,15 @@ describe('facetValuesFromGroups', () => {
     ]);
   });
 
+  it('counts a multi_entity group towards each link it holds', () => {
+    const to = field({ name: 'addressings_to', displayName: 'To', dataType: 'multi_entity', entityType: 'Note', validTypes: ['HumanUser'] });
+    const values = facetValuesFromGroups(groupsOf(['Ada Lovelace', [ada], 3], ['Ada Lovelace, Anna van der Meer', [ada, other], 2]), to);
+    expect(values.map((v) => [v.key, v.label, v.count])).toEqual([
+      ['HumanUser:385', 'Ada Lovelace', 5],
+      ['HumanUser:412', 'Ada Lovelace', 2],
+    ]);
+  });
+
   it('keeps a list vocabulary at zero and labels a code by its display value', () => {
     const values = facetValuesFromGroups(groupsOf(['fin', 'fin', 2], ['ip', 'ip', 1]), status);
     expect(values.map((v) => [v.key, v.label, v.count])).toEqual([

@@ -1,11 +1,20 @@
 // A status facet marks its values with the status glyph before the label, a facet takes
-// the caller's name, and a pill holds its width with everything ticked.
+// the caller's name, a pill holds its width with everything ticked, each facet is counted
+// under the other facets alone, and an entity facet counts through the site's groups.
 //
 //   pnpm qa --start --path /widgets/filter-bar/ --framework both --drive tools/drives/filter-bar-facets.js
 //
-// The status pill is opened and every one of its values ticked, which is the worst case
-// the bar has: the pill then names two of them, reads `+n` for the rest, carries the
+// Two statuses are ticked first: the Kind facet then counts the rows under them, and the
+// status facet still lists every status at the counts it had, since no other facet is
+// ticked.
+//
+// The status pill is then opened and every one of its values ticked, which is the worst
+// case the bar has: the pill then names two of them, reads `+n` for the rest, carries the
 // whole list in its title, and stays inside the cap.
+//
+// The Note bar counts through `counts`: the From facet lists the mock's people by name
+// with the site's own counts and no sample line, and the read-state facet, which the mock
+// refuses to group, is tallied from a page of rows and says so under its list.
 //
 // The read-state facet is the other shape: the API evaluates no `in` on its field, so one
 // ticked value emits `is` and two emit an `or` of `is`, and its pill names them comma-joined.
@@ -36,9 +45,93 @@ async function until(read, timeoutMs = 8000) {
   }
 }
 
+/** The rows of the open checklist, with the count each one carries. */
+function listed() {
+  const rows = [...document.querySelectorAll('[data-option]')].filter((row) => row.getClientRects().length > 0);
+  return rows.length > 0
+    ? rows.map((row) => ({
+        key: row.dataset.option,
+        label: row.querySelector('[title]')?.getAttribute('title') ?? '',
+        count: Number(row.querySelector('[data-slot="facet-count"]')?.textContent.trim() ?? NaN),
+      }))
+    : null;
+}
+
+/** The sample line under the open checklist, if it says one. */
+const sampleLine = () =>
+  [...document.querySelectorAll('[data-slot="facet-sample"]')].find((el) => el.getClientRects().length > 0)?.textContent.trim() ?? null;
+
+/** A total a demo line reads, boxed, since zero is an answer. */
+function totalOn(framework, testId, noun) {
+  const text = pane(framework)?.querySelector(`[data-testid="${testId}"]`)?.textContent.trim() ?? '';
+  const found = new RegExp(`^(\\d+) ${noun}s? match`).exec(text);
+  return found ? { n: Number(found[1]) } : null;
+}
+
+async function closeList() {
+  for (let i = 0; i < 20 && listed(); i += 1) {
+    (document.activeElement ?? document.body).dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    await wait(200);
+  }
+}
+
 if (drawn.length === 0) return { verdict: 'FAIL no framework pane was drawn' };
 if (!(await until(() => drawn.every((f) => pill(f, 'sg_status_list'))))) {
   return { verdict: 'FAIL the bar drew no status pill' };
+}
+
+// Counts are scoped per facet: two statuses ticked narrow the Kind facet to the rows
+// under them, and the status facet keeps every status at the counts it had.
+for (const framework of drawn) {
+  const all = await until(() => totalOn(framework, 'result-count', 'Shot'), 15000);
+  if (!all) return { verdict: `FAIL ${framework} never counted the unfiltered Shots`, notes };
+  press(pill(framework, 'sg_status_list').querySelector('[data-slot="filter-pill-trigger"]'));
+  const before = await until(listed);
+  if (!before) return { verdict: `FAIL ${framework} listed no value under the status facet`, notes };
+  const [first, second] = before;
+  if (!second || first.count === 0 || second.count === 0) {
+    return { verdict: `FAIL ${framework} has fewer than two statuses with rows to tick`, notes };
+  }
+  for (const [i, key] of [first.key, second.key].entries()) {
+    const row = await until(() => document.querySelector(`[data-option="${CSS.escape(key)}"]`), 15000);
+    if (!row) return { verdict: `FAIL ${framework} lost the row for "${key}"`, notes };
+    press(row);
+    const took = await until(() => {
+      const held = pill(framework, 'sg_status_list')?.querySelector('[data-slot="filter-pill-values"]')?.getAttribute('title') ?? '';
+      return held.split(', ').filter(Boolean).length === i + 1 ? held : null;
+    }, 15000);
+    if (!took) return { verdict: `FAIL ${framework} did not take the tick on "${key}"`, notes };
+  }
+  // The status facet is counted under the other facets alone, and none is ticked.
+  const after = await until(() => {
+    const rows = listed();
+    return rows && rows.length === before.length && rows.every((r) => Number.isFinite(r.count)) ? rows : null;
+  }, 15000);
+  if (!after || JSON.stringify(after) !== JSON.stringify(before)) {
+    return { verdict: `FAIL ${framework} changed the status facet's own counts: ${JSON.stringify(after)} from ${JSON.stringify(before)}`, notes };
+  }
+  await closeList();
+
+  // The Kind facet counts the rows under the two statuses, which the result line also counts.
+  await wait(400);
+  const under = await until(() => totalOn(framework, 'result-count', 'Shot'), 15000);
+  if (!under) return { verdict: `FAIL ${framework} never counted the Shots under the status filter`, notes };
+  press(pill(framework, 'sg_shot_type').querySelector('[data-slot="filter-pill-trigger"]'));
+  const kinds = await until(() => {
+    const rows = listed();
+    return rows && rows.every((r) => Number.isFinite(r.count)) ? rows : null;
+  }, 15000);
+  if (!kinds) return { verdict: `FAIL ${framework} listed no value under the Kind facet`, notes };
+  const sum = kinds.reduce((n, r) => n + r.count, 0);
+  notes.push(`${framework}: ${all.n} Shots, ${under.n} under "${first.key}" and "${second.key}", the Kind facet sums to ${sum}`);
+  if (sum !== under.n) return { verdict: `FAIL ${framework} counted the Kind facet at ${sum}, the status filter matches ${under.n}`, notes };
+  if (sum >= all.n) return { verdict: `FAIL ${framework} did not narrow the Kind facet under the status filter`, notes };
+  await closeList();
+
+  press(pane(framework).querySelector('[data-slot="filter-clear-all"]'));
+  if (!(await until(() => !pane(framework).querySelector('[data-slot="filter-pill"][data-active]'), 15000))) {
+    return { verdict: `FAIL ${framework} did not clear the ticked facets`, notes };
+  }
 }
 
 for (const framework of drawn) {
@@ -137,9 +230,45 @@ function emitted(framework, path) {
   }
 }
 
+// The Note bar counts through `counts`. The From facet lists the mock's people from the
+// site's groups, by name with a count and no sample line, and its counts sum to the Note
+// total; the read-state facet, which the mock refuses to group, is tallied from a page of
+// rows and says so.
+const READ = 'read_by_current_user';
+for (const framework of drawn) {
+  const total = await until(() => totalOn(framework, 'note-count', 'Note'), 15000);
+  if (!total) return { verdict: `FAIL ${framework} never counted the Notes`, notes };
+  const from = await until(() => pill(framework, 'user'));
+  if (!from) return { verdict: `FAIL ${framework} drew no From pill`, notes };
+  press(from.querySelector('[data-slot="filter-pill-trigger"]'));
+  const people = await until(() => {
+    const rows = listed();
+    return rows && rows.every((r) => Number.isFinite(r.count)) ? rows : null;
+  }, 15000);
+  if (!people) return { verdict: `FAIL ${framework} listed nobody under the From facet`, notes };
+  const unnamed = people.filter((r) => !r.label || /^HumanUser #/.test(r.label) || !r.key.startsWith('HumanUser:'));
+  if (unnamed.length > 0) return { verdict: `FAIL ${framework} listed ${JSON.stringify(unnamed)} without a name under From`, notes };
+  const sum = people.reduce((n, r) => n + r.count, 0);
+  notes.push(`${framework}: From lists ${people.map((r) => `${r.label} ${r.count}`).join(', ')} over ${total.n} Notes`);
+  if (people.some((r) => r.count < 1)) return { verdict: `FAIL ${framework} listed a person with no Note under From`, notes };
+  if (sum !== total.n) return { verdict: `FAIL ${framework} counted From at ${sum} over ${total.n} Notes`, notes };
+  if (sampleLine()) return { verdict: `FAIL ${framework} read the From facet as a sample: "${sampleLine()}"`, notes };
+  await closeList();
+
+  press(pill(framework, READ).querySelector('[data-slot="filter-pill-trigger"]'));
+  if (!(await until(() => document.querySelector('[data-option="read"]')))) {
+    return { verdict: `FAIL ${framework} listed no value under the read-state facet`, notes };
+  }
+  const sample = await until(sampleLine);
+  notes.push(`${framework}: the read-state facet reads "${sample}"`);
+  if (sample !== `Counts from a sample of ${total.n} rows`) {
+    return { verdict: `FAIL ${framework} read "${sample}" under the read-state facet, expected a sample of ${total.n} rows`, notes };
+  }
+  await closeList();
+}
+
 // The read-state facet: only `is` and `is_not` are evaluated on the field, so the checklist
 // spells its values out rather than sending an `in` that answers the caller's unread rows.
-const READ = 'read_by_current_user';
 for (const framework of drawn) {
   const readPill = await until(() => pill(framework, READ));
   if (!readPill) return { verdict: `FAIL ${framework} drew no read-state pill`, notes };
@@ -190,6 +319,6 @@ await wait(400);
 
 return {
   verdict:
-    'PASS status facets mark their values with the glyph, the pill badges what it holds, a facet takes the caller name, a full pill holds its width, and the read-state facet emits `is` and an `or` of `is` under a comma-joined pill',
+    'PASS each facet is counted under the other facets alone, status facets mark their values with the glyph, the pill badges what it holds, a facet takes the caller name, a full pill holds its width, the From facet lists people with the site counts, the read-state facet says it is a sample, and it emits `is` and an `or` of `is` under a comma-joined pill',
   notes,
 };

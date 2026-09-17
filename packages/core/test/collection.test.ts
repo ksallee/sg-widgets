@@ -13,7 +13,7 @@ import {
 import { createSchemaService } from '../src/schema-service.js';
 import { condition, group } from '../src/filter.js';
 import type { EntitySource } from '../src/collection.js';
-import type { EntityRow } from '../src/client.js';
+import type { EntityRow, SearchOptions, SearchResult } from '../src/client.js';
 
 function source(over: Partial<Parameters<typeof createEntitySource>[0]> = {}): EntitySource {
   return createEntitySource({
@@ -190,6 +190,120 @@ describe('updateRow', () => {
     const before = s.rows;
     await expect(s.updateRow({ type: 'Version', id: row.id }, { created_at: 'x' })).rejects.toMatchObject({ status: 400 });
     expect(s.rows).toBe(before);
+    expect(s.status).toBe('ready');
+  });
+});
+
+/** A mock that counts its reads and can withhold rows the site no longer answers. */
+class WatchingClient extends MockClient {
+  searches = 0;
+  hidden = new Set<number>();
+
+  override async search(entityType: string, options: SearchOptions): Promise<SearchResult> {
+    this.searches += 1;
+    const result = await super.search(entityType, options);
+    return { ...result, data: result.data.filter((row) => !this.hidden.has(row.id)) };
+  }
+}
+
+describe('rereadRows', () => {
+  it('takes the new attributes and leaves every row where it was', async () => {
+    const client = new MockClient();
+    const s = source({ client, fields: ['code', 'description', 'entity.Shot.code'] });
+    await s.load();
+    const before = s.rows.map((r) => r.id);
+    const row = s.rows[3];
+    if (!row) throw new Error('no row');
+    await client.update('Version', row.id, { description: 'read again' });
+
+    await s.rereadRows([row.id]);
+    expect(s.rows.map((r) => r.id)).toEqual(before);
+    expect(s.rows[3]?.attributes['description']).toBe('read again');
+    // The re-read carries the projection, dotted path and all.
+    expect(s.rows[3]?.attributes['entity.Shot.code']).toBe(row.attributes['entity.Shot.code']);
+  });
+
+  it('reads a row that moved out of the filter back into its place', async () => {
+    const client = new MockClient();
+    const s = source({ client, fields: ['code', 'sg_status_list'] });
+    await s.setFilters(group('and', [condition('sg_status_list', 'is', 'ip')]));
+    const row = s.rows[1];
+    if (!row) throw new Error('no row');
+    await client.update('Version', row.id, { sg_status_list: 'fin' });
+
+    await s.rereadRows([row.id]);
+    expect(s.rows[1]?.id).toBe(row.id);
+    expect(s.rows[1]?.attributes['sg_status_list']).toBe('fin');
+  });
+
+  it('drops a row the site no longer answers and keeps the rest', async () => {
+    const client = new WatchingClient();
+    const s = source({ client, fields: ['code'] });
+    await s.load();
+    const gone = s.rows[2];
+    const kept = s.rows[3];
+    if (!gone || !kept) throw new Error('no row');
+    client.hidden.add(gone.id);
+
+    await s.rereadRows([gone.id, kept.id]);
+    expect(s.rows.length).toBe(9);
+    expect(s.rows.map((r) => r.id)).not.toContain(gone.id);
+    expect(s.rows[2]?.id).toBe(kept.id);
+  });
+
+  it('ignores an id that is not on screen and asks the site nothing', async () => {
+    const client = new WatchingClient();
+    const s = source({ client, fields: ['code'] });
+    await s.load();
+    const reads = client.searches;
+    const before = s.rows;
+
+    await s.rereadRows([-1, 999999]);
+    expect(client.searches).toBe(reads);
+    expect(s.rows).toBe(before);
+  });
+
+  it('asks the site nothing for an empty list', async () => {
+    const client = new WatchingClient();
+    const s = source({ client, fields: ['code'] });
+    await s.load();
+    const reads = client.searches;
+
+    await s.rereadRows([]);
+    expect(client.searches).toBe(reads);
+  });
+
+  it('leaves the status, the paging and the total alone', async () => {
+    const client = new MockClient({ latencyMs: 5 });
+    const s = source({ client, mode: 'pages', pageSize: 25, fields: ['code'] });
+    await s.load();
+    expect(s.status).toBe('ready');
+    expect(s.total).toBe(60);
+    const row = s.rows[0];
+    if (!row) throw new Error('no row');
+
+    const reading = s.rereadRows([row.id]);
+    // Nothing dims while the rows are in the air.
+    expect(s.status).toBe('ready');
+    await reading;
+    expect(s.status).toBe('ready');
+    expect(s.hasMore).toBe(true);
+    expect(s.total).toBe(60);
+    expect(s.page).toBe(1);
+    expect(s.rows.length).toBe(25);
+  });
+
+  it('does not cancel or wait for a page already in flight', async () => {
+    const client = new MockClient({ latencyMs: 5 });
+    const s = source({ client, fields: ['code'] });
+    await s.load();
+    const row = s.rows[0];
+    if (!row) throw new Error('no row');
+
+    const more = s.loadMore();
+    await s.rereadRows([row.id]);
+    await more;
+    expect(s.rows.length).toBe(20);
     expect(s.status).toBe('ready');
   });
 });

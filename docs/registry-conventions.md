@@ -13,7 +13,7 @@ One kebab-case name per widget, **identical in both registries**: `status-badge`
 
 Every item is `type: "registry:component"`, with one exception: a shadcn primitive this repo has
 replaced ships as its own `registry:ui` item under the primitive's own name, so a consumer installing
-a widget gets this repo's version rather than the upstream one. React's `command` is that item;
+a widget gets this repo's version rather than the upstream one. React's are `command` and `popover`;
 Svelte's are `command`, `select` and `checkbox`. Every item that named the plain upstream name names
 this registry's item instead. Files inside such an item are `type: "registry:ui"` so they install to
 the consumer's `ui` alias, which is what `@/components/ui/<name>` and `$lib/components/ui/<name>`

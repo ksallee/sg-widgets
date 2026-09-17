@@ -17,6 +17,7 @@
       ],
       "registryDependencies": [
         "https://sg-widgets.dev/r/react/command.json",
+        "https://sg-widgets.dev/r/react/popover.json",
         "https://sg-widgets.dev/r/react/status-glyph.json",
         "https://sg-widgets.dev/r/react/status-badge.json",
         "https://sg-widgets.dev/r/react/entity-chip.json",
@@ -104,6 +105,29 @@
       "files": [
         {
           "path": "src/components/ui/command.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "popover",
+      "type": "registry:ui",
+      "title": "Popover",
+      "description": "A popover whose content takes positionMethod, over Base UI.",
+      "categories": [
+        "flow-production-tracking",
+        "atom"
+      ],
+      "dependencies": [
+        "@base-ui/react",
+        "cn",
+        "tw-animate-css"
+      ],
+      "registryDependencies": [],
+      "docs": "The popup the date editors, the field picker, the sort picker, the filter bar and the context selector open. Content positioned fixed escapes a cell that clips.",
+      "files": [
+        {
+          "path": "src/components/ui/popover.tsx",
           "type": "registry:ui"
         }
       ]
@@ -660,7 +684,7 @@
       ],
       "registryDependencies": [
         "https://sg-widgets.dev/r/react/state-line.json",
-        "popover",
+        "https://sg-widgets.dev/r/react/popover.json",
         "https://sg-widgets.dev/r/react/command.json",
         "skeleton",
         "https://sg-widgets.dev/r/react/picker-classes.json"
@@ -828,7 +852,7 @@
         "input",
         "button",
         "calendar",
-        "popover"
+        "https://sg-widgets.dev/r/react/popover.json"
       ],
       "docs": "Takes YYYY-MM-DD and validates the day. A timestamp is never a date on this type.",
       "files": [
@@ -859,7 +883,7 @@
         "input",
         "button",
         "calendar",
-        "popover"
+        "https://sg-widgets.dev/r/react/popover.json"
       ],
       "docs": "The zone the typed time is read in is named under the control.",
       "files": [
@@ -1180,7 +1204,7 @@
         "button",
         "checkbox",
         "https://sg-widgets.dev/r/react/command.json",
-        "popover",
+        "https://sg-widgets.dev/r/react/popover.json",
         "https://sg-widgets.dev/r/react/filter-dialog.json"
       ],
       "docs": "Pass counts to compute the numbers with a _summarize grouping call; without it the bar tallies one page of rows.",
@@ -1209,7 +1233,7 @@
         "https://sg-widgets.dev/r/react/leaf-classes.json",
         "https://sg-widgets.dev/r/react/state-line.json",
         "button",
-        "popover",
+        "https://sg-widgets.dev/r/react/popover.json",
         "separator",
         "toggle-group",
         "https://sg-widgets.dev/r/react/field-picker.json",
@@ -1716,7 +1740,7 @@
         "https://sg-widgets.dev/r/react/picker-row.json",
         "https://sg-widgets.dev/r/react/hierarchical-search.json",
         "https://sg-widgets.dev/r/react/state-line.json",
-        "popover"
+        "https://sg-widgets.dev/r/react/popover.json"
       ],
       "docs": "Installs HierarchicalSearch alongside it. Assigned tasks are one search on Task filtered by task_assignees.",
       "files": [

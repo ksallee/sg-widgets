@@ -1,7 +1,9 @@
 // Live mode: the values a status facet counts come from the site, not the mock, and each
-// row reads as a glyph mark before its name with the count right-aligned. The read-state
-// facet then answers two different totals for read and for unread, which is the proof the
-// site evaluated a filter that spelled `in` would leave at the caller's unread rows.
+// row reads as a glyph mark before its name with the count right-aligned. The Note bar's
+// From facet, counted through the site's groups, lists at least one person by name with a
+// count; what the To and read-state facets answered is recorded. The read-state facet then
+// answers two different totals for read and for unread, which is the proof the site
+// evaluated a filter that spelled `in` would leave at the caller's unread rows.
 //
 //   pnpm qa --start --live --path /widgets/filter-bar/ --framework both --drive tools/drives/live-filter-bar-facets.js
 const seen = {};
@@ -71,6 +73,74 @@ for (const framework of ['svelte', 'react']) {
       new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }),
     );
     await wait(200);
+  }
+}
+
+/** The rows of the open checklist, or null while there are none. */
+function listed() {
+  const rows = $$('[data-option]').filter((row) => row.getClientRects().length > 0);
+  return rows.length > 0
+    ? rows.map((row) => ({
+        key: row.dataset.option,
+        label: row.querySelector('[title]')?.getAttribute('title') ?? '',
+        count: Number(row.querySelector('[data-slot="facet-count"]')?.textContent.trim() ?? NaN),
+      }))
+    : null;
+}
+
+/** The sample line under the open checklist, if it says one. */
+const sampleLine = () =>
+  $$('[data-slot="facet-sample"]').find((el) => el.getClientRects().length > 0)?.textContent.trim() ?? null;
+
+async function closeList() {
+  for (let i = 0; i < 20 && listed(); i += 1) {
+    (document.activeElement ?? document.body).dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    await wait(200);
+  }
+}
+
+/** Open one facet of the Note bar and read what it lists, pressing again while the island hydrates. */
+async function openFacet(pane, field) {
+  const pill = await until(() => $(`[data-slot="filter-pill"][data-field="${field}"]`, pane));
+  if (!pill) return null;
+  const trigger = $('[data-slot="filter-pill-trigger"]', pill);
+  let rows = null;
+  for (let i = 0; i < 6 && !rows; i += 1) {
+    for (const kind of ['pointerdown', 'mousedown', 'pointerup', 'mouseup']) {
+      trigger.dispatchEvent(new PointerEvent(kind, { bubbles: true, cancelable: true, button: 0, pointerType: 'mouse' }));
+    }
+    trigger.click();
+    rows = await until(() => {
+      const found = listed();
+      return found && found.every((r) => Number.isFinite(r.count)) ? found : null;
+    }, 8000);
+  }
+  const error = $('[data-slot="filter-bar-error"]')?.textContent.trim() ?? null;
+  return { rows: rows ?? [], sample: sampleLine(), error };
+}
+
+// The Note bar counts through the site's groups. The From facet lists people by name with
+// a count; the To and read-state facets are recorded as the site answered them.
+for (const framework of ['svelte', 'react']) {
+  const pane = $(`[data-pane="${framework}"]`);
+  if (!pane || pane.offsetParent === null) continue;
+  const facets = {};
+  for (const field of ['user', 'addressings_to', 'read_by_current_user']) {
+    const found = await openFacet(pane, field);
+    facets[field] = found
+      ? { values: found.rows.length, first: found.rows.slice(0, 3), sample: found.sample, error: found.error }
+      : null;
+    await closeList();
+  }
+  seen[framework] = { ...(seen[framework] ?? {}), facets };
+  const from = facets['user'];
+  if (!from || from.values === 0) {
+    failures.push(`${framework}: the From facet listed nobody`);
+  } else {
+    const named = from.first.every((r) => r.key.startsWith('HumanUser:') || r.key.startsWith('ApiUser:'));
+    const counted = from.first.every((r) => r.label && r.count >= 1);
+    if (!named || !counted) failures.push(`${framework}: the From facet listed ${JSON.stringify(from.first)}`);
+    if (from.sample) failures.push(`${framework}: the From facet was tallied from a sample: "${from.sample}"`);
   }
 }
 
@@ -178,7 +248,7 @@ if (Object.keys(seen).length === 0) failures.push('no framework pane was on show
 return {
   verdict:
     failures.length === 0
-      ? 'PASS the status facet counts the site and marks each row with its glyph, and the read-state facet answers a different total for read and for unread'
+      ? 'PASS the status facet counts the site and marks each row with its glyph, the From facet lists people with the site counts, and the read-state facet answers a different total for read and for unread'
       : `FAIL ${failures.join('; ')}`,
   seen,
 };

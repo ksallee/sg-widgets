@@ -59,12 +59,24 @@ None. The dialog behind More filters takes the editor's slots.
 
 `POST /entity/<type>/_summarize` answers one group per distinct value with a count, and its
 `group_value` is the raw value while `group_name` is the server's rendering, which is not unique on
-an entity field (020_summarize). Pass `counts` to use it. Without it the bar reads one page of rows
-and tallies them, so a value outside that page is missing and the numbers are counts of what was
-read.
+an entity field (020_summarize). `counts` takes that call's groups for one field, and the reader to
+pass is one line:
 
-Counts are taken against the tree with every facet's own conditions stripped, so ticking one value
-does not empty its neighbours.
+```ts
+counts={facetCounts(context.client, 'Note')}
+```
+
+With it an entity facet lists the entities the rows carry, by name and keyed by id, and a list or
+status facet lists its codes, each with the site's own count. A field the site refuses to group
+answers 400 `Grouping is not allowed for field <Type>.<field>.` (field_types/image,
+field_types/summary), and the bar tallies that facet from one page of `sampleSize` rows instead,
+with the schema's vocabulary at zero and a line under the list saying how many rows it read. Without
+`counts` every facet is tallied that way, so a value outside the page is missing and the numbers are
+counts of what was read.
+
+Each facet is counted against the whole filter, the base filter, the dialog's conditions and every
+other facet, less its own condition. Ticking two statuses narrows the other pills to the rows under
+them, while the status pill keeps every status it could switch to.
 
 A status or list value is the raw code, never the display label, and a code outside `valid_values`
 matches nothing rather than erroring (field_types/status_list). An entity value is a `{type, id}`

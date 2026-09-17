@@ -841,6 +841,28 @@ describe('summarize', () => {
     expect(total).toBe(summary.summaries['id']);
     for (const group of summary.groups) expect(typeof group.groupValue).toBe('string');
   });
+
+  it('groups an entity field on the reference, with the name as the label', async () => {
+    const c = client();
+    const summary = await c.summarize('Note', { grouping: [{ field: 'user' }] });
+    expect(summary.groups.length).toBeGreaterThan(0);
+    for (const group of summary.groups) {
+      expect(group.groupValue).toMatchObject({ type: 'HumanUser', id: expect.any(Number), name: group.groupName, valid: 'valid' });
+      expect(group.groupName).not.toBe('');
+    }
+    const links = await c.summarize('Note', { grouping: [{ field: 'addressings_to' }] });
+    expect(links.groups.length).toBeGreaterThan(0);
+    for (const group of links.groups) expect(group.groupValue).toEqual([{ type: 'HumanUser', id: expect.any(Number), name: group.groupName, valid: 'valid' }]);
+  });
+
+  it('refuses to group the read state and an image', async () => {
+    const c = client();
+    await expect(c.summarize('Note', { grouping: [{ field: 'read_by_current_user' }] })).rejects.toMatchObject({
+      status: 400,
+      message: 'Grouping is not allowed for field Note.read_by_current_user.',
+    });
+    await expect(c.summarize('Version', { grouping: [{ field: 'image' }] })).rejects.toMatchObject({ status: 400 });
+  });
 });
 
 describe('a note thread', () => {

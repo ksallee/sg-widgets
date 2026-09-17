@@ -1,6 +1,8 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type {
   FacetCondition,
+  FacetCounts,
+  FacetList,
   FacetValue,
   FieldSchema,
   FilterGroup,
@@ -15,14 +17,13 @@ import {
   conditionValues,
   describeCondition,
   emptyFilter,
+  facetLists,
+  facetScopes,
   facetShape,
-  facetValues,
   findFacet,
   renderKindFor,
   setFacet,
-  toApi3Hash,
   asFilterGroup,
-  group,
   matchesTokens,
   withoutPaths,
 } from '@sg-widgets/core';
@@ -81,14 +82,15 @@ export interface FilterBarProps extends Omit<React.HTMLAttributes<HTMLDivElement
   hidePaths?: string[];
   size?: FilterBarSize;
   disabled?: boolean;
-  /**
-   * Counts per value for one facet. Wire it to a `_summarize` grouping call.
-   * Without it the bar reads one page of rows and tallies them.
-   */
   /** Conditions every facet query carries, such as a project scope. Never edited by the bar. */
   baseFilter?: FilterGroup | WireGroup | null;
-  counts?: (field: string, filters: WireGroup | null) => Promise<Record<string, number>>;
-  /** Rows read for the tally when `counts` is not given. */
+  /**
+   * The groups of a `_summarize` call grouped on one facet's field, which is
+   * `facetCounts(context.client, entityType)`. Without it the bar reads one page of
+   * rows and tallies them, as it does for a field the site refuses to group.
+   */
+  counts?: FacetCounts;
+  /** Rows read for a tally. */
   sampleSize?: number;
   onChange?: (value: FilterGroup) => void;
   className?: string;
@@ -103,9 +105,10 @@ export interface FilterBarProps extends Omit<React.HTMLAttributes<HTMLDivElement
  * the same tree in the full editor, so the two edit one value: a condition the editor
  * wrote on an operator the checklist cannot hold reads as text in its pill.
  *
- * Counts come from a `_summarize` grouping call when one is wired to `counts`, and
- * otherwise from tallying one page of rows, which makes them as complete as the page
- * size allowed.
+ * Each facet is counted against the whole filter less its own condition. With `counts`
+ * a facet's values are the site's own groups, an entity facet among them; a field the
+ * site refuses to group, and every field without `counts`, is tallied from one page of
+ * rows, and its list says so.
  */
 export function FilterBar({
   entityType,
@@ -126,7 +129,7 @@ export function FilterBar({
   ...rest
 }: FilterBarProps) {
   const fields = useEntityFields(context, entityType);
-  const [tally, setTally] = useState<Record<string, FacetValue[]>>({});
+  const [tally, setTally] = useState<Record<string, FacetList>>({});
   /** The `Status` rows, for a facet over a status field (probe 010). */
   const [statuses, setStatuses] = useState<Record<string, StatusRecord>>({});
   /** What the open facet's search box holds. */
@@ -135,10 +138,15 @@ export function FilterBar({
   /** What a failed tally said, shown in place of the values. */
   const [failure, setFailure] = useState<string | null>(null);
 
-  // Counts are read against the filter with every facet's own condition stripped, so
-  // ticking one value does not empty its neighbours. One read serves every pill.
+  // A facet is counted against the whole filter less its own condition, so it keeps
+  // every value it could switch to while the other pills show what remains.
   const base = asFilterGroup(baseFilter);
-  const scope = JSON.stringify(toApi3Hash(base ? group('and', [base, withoutPaths(value, facets)]) : withoutPaths(value, facets)));
+  const scopes = JSON.stringify(facetScopes(value, base, facets));
+  // The reader is read at call time, so a host's inline function never re-counts on its own.
+  const countsRef = useRef(counts);
+  countsRef.current = counts;
+  /** Fields the site refused to group, so it is asked once per field. */
+  const refused = useRef(new Set<string>());
 
   useEffect(() => {
     const present = facets.map((name) => fields[name]).filter((f): f is FieldSchema => Boolean(f));
@@ -146,24 +154,20 @@ export function FilterBar({
     let live = true;
     setCounting(true);
     setFailure(null);
-    const filters = JSON.parse(scope) as WireGroup | null;
-    const load = async (): Promise<Record<string, FacetValue[]>> => {
-      const out: Record<string, FacetValue[]> = {};
-      if (counts) {
-        for (const field of present) {
-          const found = await counts(field.name, filters);
-          out[field.name] = facetValues([], field).map((v) => ({ ...v, count: found[v.key] ?? 0 }));
-        }
-        return out;
-      }
-      const rows = await context.client.search(entityType, {
-        filters,
-        fields: present.map((f) => f.name),
-        page: { size: sampleSize },
+    const filters = JSON.parse(scopes) as Record<string, WireGroup | null>;
+    const load = (): Promise<Record<string, FacetList>> =>
+      facetLists(present, filters, {
+        counts: countsRef.current,
+        refused: refused.current,
+        sample: async (sampleFields, sampleFilters) =>
+          (
+            await context.client.search(entityType, {
+              filters: sampleFilters,
+              fields: [...sampleFields],
+              page: { size: sampleSize },
+            })
+          ).data,
       });
-      for (const field of present) out[field.name] = facetValues(rows.data, field);
-      return out;
-    };
     void load()
       .then((found) => {
         if (live) setTally(found);
@@ -178,7 +182,7 @@ export function FilterBar({
       live = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [context.client, entityType, fields, facets.join(','), scope, sampleSize, counts]);
+  }, [context.client, entityType, fields, facets.join(','), scopes, sampleSize]);
 
   useEffect(() => {
     let live = true;
@@ -283,7 +287,8 @@ export function FilterBar({
     const selected = selectedOf(name);
     // The box matches what it was given rather than what a read answered, so the rows
     // drawn are the rows the list holds.
-    const shown = (tally[name] ?? []).filter((option) => matchesTokens(facetQuery, option.label, option.key));
+    const shown = (tally[name]?.values ?? []).filter((option) => matchesTokens(facetQuery, option.label, option.key));
+    const sampled = tally[name]?.sampled;
     return (
       <PopoverContent className="w-64 p-0" align="start">
         <Command
@@ -327,6 +332,15 @@ export function FilterBar({
             )}
           </CommandList>
         </Command>
+        {/* A tally is as complete as the page it read, and the list says so. */}
+        {!counting && !failure && sampled !== undefined ? (
+          <p
+            data-slot="facet-sample"
+            className="text-muted-foreground border-border border-t px-2 py-1.5 text-xs tabular-nums"
+          >
+            Counts from a sample of {sampled} rows
+          </p>
+        ) : null}
         {selected.length > 0 ? (
           <div className="border-border border-t p-1">
             <Button

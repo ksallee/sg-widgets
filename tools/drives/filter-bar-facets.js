@@ -128,8 +128,10 @@ for (const framework of drawn) {
   if (sum >= all.n) return { verdict: `FAIL ${framework} did not narrow the Kind facet under the status filter`, notes };
   await closeList();
 
-  press(pane(framework).querySelector('[data-slot="filter-clear-all"]'));
-  if (!(await until(() => !pane(framework).querySelector('[data-slot="filter-pill"][data-active]'), 15000))) {
+  // Clear all on this bar alone; the seeded bars under it keep their ticks.
+  const bar = pill(framework, 'sg_status_list').closest('[data-slot="filter-bar"]');
+  press(bar.querySelector('[data-slot="filter-clear-all"]'));
+  if (!(await until(() => !bar.querySelector('[data-slot="filter-pill"][data-active]'), 15000))) {
     return { verdict: `FAIL ${framework} did not clear the ticked facets`, notes };
   }
 }

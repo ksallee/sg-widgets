@@ -35,6 +35,8 @@
 	import XIcon from '@lucide/svelte/icons/x';
 	import type {
 		FacetCondition,
+		FacetCounts,
+		FacetList,
 		FacetValue,
 		FieldSchema,
 		FilterGroup,
@@ -48,14 +50,13 @@
 		conditionValues,
 		describeCondition,
 		emptyFilter,
+		facetLists,
+		facetScopes,
 		facetShape,
-		facetValues,
 		findFacet,
 		renderKindFor,
 		setFacet,
-		toApi3Hash,
 		asFilterGroup,
-		group,
 		matchesTokens,
 		withoutPaths
 	} from '@sg-widgets/core';
@@ -86,14 +87,15 @@
 		hidePaths?: string[];
 		size?: FilterBarSize;
 		disabled?: boolean;
-		/**
-		 * Counts per value for one facet. Wire it to a `_summarize` grouping call.
-		 * Without it the bar reads one page of rows and tallies them.
-		 */
 		/** Conditions every facet query carries, such as a project scope. Never edited by the bar. */
 		baseFilter?: FilterGroup | WireGroup | null;
-		counts?: (field: string, filters: WireGroup | null) => Promise<Record<string, number>>;
-		/** Rows read for the tally when `counts` is not given. */
+		/**
+		 * The groups of a `_summarize` call grouped on one facet's field, which is
+		 * `facetCounts(context.client, entityType)`. Without it the bar reads one page of
+		 * rows and tallies them, as it does for a field the site refuses to group.
+		 */
+		counts?: FacetCounts;
+		/** Rows read for a tally. */
 		sampleSize?: number;
 		onChange?: (value: FilterGroup) => void;
 		class?: string;
@@ -124,11 +126,11 @@
 	);
 	const fields = $derived(schemaFields.current);
 
-	// Counts are read against the filter with every facet's own condition stripped, so
-	// ticking one value does not empty its neighbours. One read serves every pill.
+	// A facet is counted against the whole filter less its own condition, so it keeps
+	// every value it could switch to while the other pills show what remains.
 	const base = $derived(asFilterGroup(baseFilter));
-	const scope = $derived(toApi3Hash(base ? group('and', [base, withoutPaths(value, facets)]) : withoutPaths(value, facets)));
-	const tally = $derived(loadFacets(scope, fields, facets));
+	const scopes = $derived(facetScopes(value, base, facets));
+	const tally = $derived(loadFacets(scopes, fields, facets));
 	/** What the open facet's search box holds. */
 	let facetQuery = $state('');
 	/** The facet whose checklist is open, if any. */
@@ -137,28 +139,23 @@
 	const activeCount = $derived(facets.filter((name) => Boolean(facetOf(name))).length);
 
 	async function loadFacets(
-		filters: WireGroup | null,
+		filters: Record<string, WireGroup | null>,
 		schemaFields: Record<string, FieldSchema>,
 		names: string[]
-	): Promise<Record<string, FacetValue[]>> {
+	): Promise<Record<string, FacetList>> {
 		const present = names.map((name) => schemaFields[name]).filter((f): f is FieldSchema => Boolean(f));
 		if (present.length === 0) return {};
-		if (counts) {
-			const out: Record<string, FacetValue[]> = {};
-			for (const field of present) {
-				const found = await counts(field.name, filters);
-				out[field.name] = facetValues([], field).map((v) => ({ ...v, count: found[v.key] ?? 0 }));
-			}
-			return out;
-		}
-		const rows = await context.client.search(entityType, {
-			filters,
-			fields: present.map((f) => f.name),
-			page: { size: sampleSize }
+		return facetLists(present, filters, {
+			counts,
+			sample: async (sampleFields, sampleFilters) =>
+				(
+					await context.client.search(entityType, {
+						filters: sampleFilters,
+						fields: [...sampleFields],
+						page: { size: sampleSize }
+					})
+				).data
 		});
-		const out: Record<string, FacetValue[]> = {};
-		for (const field of present) out[field.name] = facetValues(rows.data, field);
-		return out;
 	}
 
 	/** The `Status` rows, for a facet over a status field (probe 010). */
@@ -311,7 +308,7 @@
 						<StateLine state="empty" icon={SearchXIcon} label="No value." pad="none" />
 					</Command.Empty>
 					<!-- The box matches what it was given rather than what a read answered, so the rows drawn are the rows the list holds. -->
-					{#each (found[name] ?? []).filter((option) => matchesTokens(facetQuery, option.label, option.key)) as option (option.key)}
+					{#each (found[name]?.values ?? []).filter((option) => matchesTokens(facetQuery, option.label, option.key)) as option (option.key)}
 						<Command.Item
 							value={option.key}
 							data-option={option.key}
@@ -340,6 +337,17 @@
 				{/await}
 			</Command.List>
 		</Command.Root>
+		<!-- A tally is as complete as the page it read, and the list says so. -->
+		{#await tally then found}
+			{#if found[name]?.sampled !== undefined}
+				<p
+					data-slot="facet-sample"
+					class="text-muted-foreground border-border border-t px-2 py-1.5 text-xs tabular-nums"
+				>
+					Counts from a sample of {found[name].sampled} rows
+				</p>
+			{/if}
+		{/await}
 		{#if selected.length > 0}
 			<div class="border-border border-t p-1">
 				<Button
@@ -365,9 +373,10 @@
 	the same tree in the full editor, so the two edit one value: a condition the editor
 	wrote on an operator the checklist cannot hold reads as text in its pill.
 
-	Counts come from a `_summarize` grouping call when one is wired to `counts`, and
-	otherwise from tallying one page of rows, which makes them as complete as the page
-	size allowed.
+	Each facet is counted against the whole filter less its own condition. With `counts`
+	a facet's values are the site's own groups, an entity facet among them; a field the
+	site refuses to group, and every field without `counts`, is tallied from one page of
+	rows, and its list says so.
 -->
 <div
 	bind:this={ref}

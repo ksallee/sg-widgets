@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CollectionColumn, FilterGroup, StatusRecord, WireGroup } from '@sg-widgets/core';
-import { condition, createEntitySource, emptyFilter, group, resolveColumns, toApi3Hash } from '@sg-widgets/core';
+import { condition, createEntitySource, emptyFilter, facetCounts, group, resolveColumns, toApi3Hash } from '@sg-widgets/core';
 import { Button } from '@/components/ui/button';
 import { FilterBar, type FilterBarSize } from '@/registry/sg/components/filter-bar';
 import { GroupedList } from '@/registry/sg/components/grouped-list';
@@ -42,8 +42,9 @@ interface Loaded {
 export default function FilterBarDemo() {
   const context = useMemo(() => createDemoContext(), []);
   const [value, setValue] = useState<FilterGroup>(emptyFilter);
-  /** The read-state bar, over a field the API evaluates only `is` and `is_not` on. */
+  /** The Note bar: two entity facets counted by the site's groups, and the read state, which it refuses to group. */
   const [readState, setReadState] = useState<FilterGroup>(emptyFilter);
+  const noteCounts = useMemo(() => facetCounts(context.client, 'Note'), [context]);
   const [seeded, setSeeded] = useState<FilterGroup>(seededTree);
   const [every, setEvery] = useState<FilterGroup>(everyTree);
   const [sized, setSized] = useState<Record<FilterBarSize, FilterGroup>>({ sm: seededTree(), md: seededTree(), lg: seededTree() });
@@ -180,11 +181,13 @@ export default function FilterBarDemo() {
         </section>
 
         <section className={section}>
-          <h4 className={label}>Notes by read state</h4>
+          <h4 className={label}>Notes by sender, recipient and read state, counted by the site</h4>
           <FilterBar
             entityType="Note"
             context={context}
-            facets={['read_by_current_user']}
+            facets={['user', 'addressings_to', 'read_by_current_user']}
+            labels={{ user: 'From' }}
+            counts={noteCounts}
             baseFilter={scope}
             value={readState}
             onChange={setReadState}

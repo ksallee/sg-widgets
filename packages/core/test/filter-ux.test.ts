@@ -12,10 +12,15 @@ import {
   conditionValues,
   describeCondition,
   emptyValueFor,
+  facetCounts,
+  facetLists,
   facetPresets,
+  facetScopes,
   facetShape,
   facetValues,
+  facetValuesFromGroups,
   fieldOperators,
+  isGroupingRefusal,
   findFacet,
   filterableFields,
   findCondition,
@@ -51,6 +56,7 @@ import {
   withRelativeWindow,
   withoutPaths,
 } from '../src/filter-ux.js';
+import { SgApiError } from '../src/client.js';
 import type { FieldSchema } from '../src/schema.js';
 import { normalizeFields } from '../src/schema.js';
 
@@ -734,6 +740,197 @@ describe('facetValues', () => {
       ['false', 'No', 1],
       ['true', 'Yes', 0],
     ]);
+  });
+});
+
+describe('facetValuesFromGroups', () => {
+  const author = field({ name: 'user', displayName: 'Author', dataType: 'entity', entityType: 'Note', validTypes: ['HumanUser'] });
+  const ada = { type: 'HumanUser', id: 385, name: 'Ada Lovelace', valid: 'valid' };
+  const other = { type: 'HumanUser', id: 412, name: 'Ada Lovelace', valid: 'valid' };
+  const groupsOf = (...rows: Array<[string, unknown, number]>) =>
+    rows.map(([groupName, groupValue, count]) => ({ groupName, groupValue, summaries: { id: count } }));
+
+  it('lists the entities the groups carry, keyed on id, with the name and the count', () => {
+    // Two people sharing a display name are two groups, and the `''` group is the rows with nobody (020_summarize).
+    const values = facetValuesFromGroups(groupsOf(['Ada Lovelace', ada, 3], ['Ada Lovelace', other, 5], ['', null, 2]), author);
+    expect(values).toEqual([
+      { key: 'HumanUser:412', label: 'Ada Lovelace', value: { type: 'HumanUser', id: 412, name: 'Ada Lovelace' }, count: 5 },
+      { key: 'HumanUser:385', label: 'Ada Lovelace', value: { type: 'HumanUser', id: 385, name: 'Ada Lovelace' }, count: 3 },
+    ]);
+  });
+
+  it('counts a multi_entity group towards each link it holds', () => {
+    const to = field({ name: 'addressings_to', displayName: 'To', dataType: 'multi_entity', entityType: 'Note', validTypes: ['HumanUser'] });
+    const values = facetValuesFromGroups(groupsOf(['Ada Lovelace', [ada], 3], ['Ada Lovelace, Anna van der Meer', [ada, other], 2]), to);
+    expect(values.map((v) => [v.key, v.label, v.count])).toEqual([
+      ['HumanUser:385', 'Ada Lovelace', 5],
+      ['HumanUser:412', 'Ada Lovelace', 2],
+    ]);
+  });
+
+  it('keeps a list vocabulary at zero and labels a code by its display value', () => {
+    const values = facetValuesFromGroups(groupsOf(['fin', 'fin', 2], ['ip', 'ip', 1]), status);
+    expect(values.map((v) => [v.key, v.label, v.count])).toEqual([
+      ['fin', 'Final', 2],
+      ['ip', 'In Progress', 1],
+      ['apr', 'Approved', 0],
+      ['wtg', 'Waiting to Start', 0],
+    ]);
+  });
+
+  it('answers an empty result as the vocabulary alone', () => {
+    expect(facetValuesFromGroups([], status).map((v) => v.count)).toEqual([0, 0, 0, 0]);
+    expect(facetValuesFromGroups([], author)).toEqual([]);
+  });
+});
+
+describe('facetScopes', () => {
+  const facets = ['sg_status_list', 'sg_shot_type'];
+  const base = group('and', [condition('project', 'is', { type: 'Project', id: 70 })]);
+
+  it('counts every facet against the whole tree when none is ticked', () => {
+    const scopes = facetScopes(group('and', []), null, facets);
+    expect(scopes).toEqual({ sg_status_list: null, sg_shot_type: null });
+    const scoped = facetScopes(group('and', []), base, facets);
+    expect(scoped['sg_status_list']).toEqual(toApi3Hash(base));
+    expect(scoped['sg_shot_type']).toEqual(scoped['sg_status_list']);
+  });
+
+  it('drops a ticked facet from its own scope and keeps it in the others', () => {
+    const tree = group('and', [condition('sg_status_list', 'in', ['ip', 'fin'])]);
+    const scopes = facetScopes(tree, null, facets);
+    expect(scopes['sg_status_list']).toBeNull();
+    expect(scopes['sg_shot_type']).toEqual(toApi3Hash(tree));
+  });
+
+  it('gives two ticked facets each other and nothing of themselves', () => {
+    const statuses = condition('sg_status_list', 'in', ['ip']);
+    const kinds = condition('sg_shot_type', 'in', ['VFX']);
+    const scopes = facetScopes(group('and', [statuses, kinds]), base, facets);
+    expect(scopes['sg_status_list']).toEqual(toApi3Hash(group('and', [base, group('and', [kinds])])));
+    expect(scopes['sg_shot_type']).toEqual(toApi3Hash(group('and', [base, group('and', [statuses])])));
+  });
+
+  it('drops an editor condition on the facet field from that facet alone', () => {
+    const written = condition('sg_status_list', 'is_not', 'omt');
+    const scopes = facetScopes(group('and', [written]), null, facets);
+    expect(scopes['sg_status_list']).toBeNull();
+    expect(scopes['sg_shot_type']).toEqual(toApi3Hash(group('and', [written])));
+  });
+});
+
+describe('facetLists', () => {
+  const author = field({ name: 'user', displayName: 'Author', dataType: 'entity', entityType: 'Note', validTypes: ['HumanUser'] });
+  const readState = field({
+    name: 'read_by_current_user',
+    displayName: 'Read by Current User',
+    dataType: 'list',
+    entityType: 'Note',
+    validValues: ['unread', 'read'],
+    operators: ['is', 'is_not'],
+  });
+  const ada = { type: 'HumanUser', id: 385, name: 'Ada Lovelace' };
+  const note = (values: Record<string, unknown>) =>
+    ({ type: 'Note', id: 1, attributes: values, relationships: { user: { data: ada } } }) as never;
+  const refusal = () => new SgApiError(400, null, 'Grouping is not allowed for field Note.read_by_current_user.');
+
+  it('lists an entity facet from the groups and a refused field from a page of rows', async () => {
+    const asked: Array<[string, unknown]> = [];
+    const sampled: Array<[readonly string[], unknown]> = [];
+    const lists = await facetLists([author, readState], { user: null, read_by_current_user: null }, {
+      counts: async (name, filters) => {
+        asked.push([name, filters]);
+        if (name === 'read_by_current_user') throw refusal();
+        return [{ groupName: 'Ada Lovelace', groupValue: ada, summaries: { id: 4 } }];
+      },
+      sample: async (names, filters) => {
+        sampled.push([names, filters]);
+        return [note({ read_by_current_user: 'read' }), note({ read_by_current_user: 'unread' }), note({ read_by_current_user: 'unread' })];
+      },
+    });
+    expect(asked.map(([name]) => name)).toEqual(['user', 'read_by_current_user']);
+    expect(sampled).toEqual([[['read_by_current_user'], null]]);
+    expect(lists['user']).toEqual({
+      values: [{ key: 'HumanUser:385', label: 'Ada Lovelace', value: ada, count: 4 }],
+    });
+    expect(lists['read_by_current_user']).toEqual({
+      values: [
+        { key: 'unread', label: 'unread', value: 'unread', count: 2 },
+        { key: 'read', label: 'read', value: 'read', count: 1 },
+      ],
+      sampled: 3,
+    });
+  });
+
+  it('asks the site once about a field it refused', async () => {
+    const asked: string[] = [];
+    const refused = new Set<string>();
+    const reads = {
+      counts: async (name: string) => {
+        asked.push(name);
+        throw refusal();
+      },
+      sample: async () => [note({ read_by_current_user: 'read' })],
+      refused,
+    };
+    const first = await facetLists([readState], { read_by_current_user: null }, reads);
+    const second = await facetLists([readState], { read_by_current_user: null }, reads);
+    expect(asked).toEqual(['read_by_current_user']);
+    expect(refused).toEqual(new Set(['Note.read_by_current_user']));
+    expect(second).toEqual(first);
+    expect(second['read_by_current_user']?.sampled).toBe(1);
+  });
+
+  it('fails the read on anything but a refusal', async () => {
+    const reads = { sample: async () => [] };
+    await expect(
+      facetLists([author], { user: null }, { ...reads, counts: async () => { throw new SgApiError(500, null, 'Shotgun Server Error'); } }),
+    ).rejects.toThrow('Shotgun Server Error');
+    await expect(
+      facetLists([author], { user: null }, { ...reads, counts: async () => { throw new TypeError('Failed to fetch'); } }),
+    ).rejects.toThrow('Failed to fetch');
+    expect(isGroupingRefusal(refusal())).toBe(true);
+    expect(isGroupingRefusal(new SgApiError(500, null))).toBe(false);
+  });
+
+  it('tallies every facet from rows without counts, one page per scope', async () => {
+    const sampled: Array<[readonly string[], unknown]> = [];
+    const kinds = toApi3Hash(group('and', [condition('sg_shot_type', 'in', ['VFX'])]));
+    const lists = await facetLists([status, sequence], { sg_status_list: kinds, sg_sequence: kinds }, {
+      sample: async (names, filters) => {
+        sampled.push([names, filters]);
+        return [];
+      },
+    });
+    expect(sampled).toEqual([[['sg_status_list', 'sg_sequence'], kinds]]);
+    expect(lists['sg_status_list']?.sampled).toBe(0);
+    expect(lists['sg_status_list']?.values.map((v) => v.count)).toEqual([0, 0, 0, 0]);
+    expect(lists['sg_sequence']).toEqual({ values: [], sampled: 0 });
+
+    sampled.length = 0;
+    await facetLists([status, sequence], { sg_status_list: null, sg_sequence: kinds }, {
+      sample: async (names, filters) => {
+        sampled.push([names, filters]);
+        return [];
+      },
+    });
+    expect(sampled).toEqual([
+      [['sg_status_list'], null],
+      [['sg_sequence'], kinds],
+    ]);
+  });
+
+  it('reads counts as one grouped summarize call', async () => {
+    const calls: unknown[] = [];
+    const client = {
+      summarize: async (entityType: string, options: unknown) => {
+        calls.push([entityType, options]);
+        return { summaries: { id: 1 }, groups: [{ groupName: 'ip', groupValue: 'ip', summaries: { id: 1 } }] };
+      },
+    };
+    const groups = await facetCounts(client, 'Note')('sg_status_list', null);
+    expect(calls).toEqual([['Note', { filters: null, grouping: [{ field: 'sg_status_list' }] }]]);
+    expect(groups).toHaveLength(1);
   });
 });
 

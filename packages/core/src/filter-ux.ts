@@ -11,8 +11,8 @@
  * Operator legality per type comes from the corpus (`findings/017_filter_operators.md`
  * and `findings/field_types/*`) through `operatorsFor`.
  */
-import type { ConditionValue, FilterCondition, FilterGroup, FilterNode, Scalar } from './filter.js';
-import { condition as makeCondition, group as makeGroup, isBlankCondition } from './filter.js';
+import type { ConditionValue, FilterCondition, FilterGroup, FilterNode, Scalar, WireGroup } from './filter.js';
+import { condition as makeCondition, group as makeGroup, isBlankCondition, toApi3Hash } from './filter.js';
 import type { DataType, Operator, TimeUnit, ValueShape } from './field-types.js';
 import {
   isFilterable,
@@ -25,7 +25,8 @@ import {
   TIME_UNITS,
   VALUE_SHAPE,
 } from './field-types.js';
-import type { EntityRow } from './client.js';
+import type { EntityRow, SgClient, SummaryGroup } from './client.js';
+import { SgApiError } from './client.js';
 import type { FieldSchema } from './schema.js';
 
 /* -------------------------------------------------------------------------- */
@@ -999,7 +1000,7 @@ export function setFacetPreset(
 /* facets                                                                     */
 /* -------------------------------------------------------------------------- */
 
-/** One value a facet offers, with how many of the rows read hold it. */
+/** One value a facet offers, with how many rows hold it. */
 export interface FacetValue {
   /** Stable identity for the UI. An entity is `Type:id`; everything else is its own string. */
   key: string;
@@ -1007,6 +1008,31 @@ export interface FacetValue {
   /** The value an `in` condition sends. */
   value: Scalar;
   count: number;
+}
+
+/** What one facet lists, and where its counts came from. */
+export interface FacetList {
+  values: FacetValue[];
+  /**
+   * The rows the counts were tallied from, where they came from a page of rows rather
+   * than the site's groups. Absent where every count is the site's own.
+   */
+  sampled?: number;
+}
+
+/** The groups of a `_summarize` call grouped on `field` under `filters`. */
+export type FacetCounts = (field: string, filters: WireGroup | null) => Promise<SummaryGroup[]>;
+
+/** What a facet reads: the site's groups, and one page of rows for a field it cannot group. */
+export interface FacetReads {
+  counts?: FacetCounts | undefined;
+  /** One page of rows carrying `fields`, under `filters`. */
+  sample: (fields: readonly string[], filters: WireGroup | null) => Promise<readonly EntityRow[]>;
+  /**
+   * Fields the site refused to group, as `Type.field`, held by the caller across reads
+   * so the site is asked once per field. Filled here.
+   */
+  refused?: Set<string>;
 }
 
 function facetKey(value: Scalar): string {
@@ -1025,8 +1051,36 @@ function rowValues(row: EntityRow, field: FieldSchema): Scalar[] {
   return value === null || value === undefined ? [] : [value as Scalar];
 }
 
+/** The values a facet always offers, at zero: a list's vocabulary and a checkbox's two states. */
+function facetVocabulary(field: FieldSchema): Scalar[] {
+  const codes: Scalar[] = [...(field.validValues ?? [])];
+  if (field.dataType === 'checkbox') codes.push(true, false);
+  return codes;
+}
+
+/** A tally, most common first. */
+class FacetTally {
+  private readonly found = new Map<string, FacetValue>();
+
+  constructor(private readonly field: FieldSchema) {
+    for (const code of facetVocabulary(field)) this.add(code, 0);
+  }
+
+  add(value: Scalar, count: number, label = facetLabel(value, this.field)): void {
+    const key = facetKey(value);
+    if (key === '') return;
+    const at = this.found.get(key);
+    if (at) at.count += count;
+    else this.found.set(key, { key, label, value, count });
+  }
+
+  values(): FacetValue[] {
+    return [...this.found.values()].sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
+  }
+}
+
 /**
- * The values a facet offers, most common first.
+ * The values a facet offers, tallied from a page of rows.
  *
  * The site vocabulary of a `list` or `status_list` field comes from the schema so
  * a value nobody holds still appears at zero; every other type can only be
@@ -1034,21 +1088,136 @@ function rowValues(row: EntityRow, field: FieldSchema): Scalar[] {
  * size allowed.
  */
 export function facetValues(rows: readonly EntityRow[], field: FieldSchema): FacetValue[] {
-  const found = new Map<string, FacetValue>();
-  const add = (value: Scalar, count: number) => {
-    const key = facetKey(value);
-    if (key === '') return;
-    const at = found.get(key);
-    if (at) at.count += count;
-    else found.set(key, { key, label: facetLabel(value, field), value, count });
-  };
-  for (const code of field.validValues ?? []) add(code, 0);
-  if (field.dataType === 'checkbox') {
-    add(true, 0);
-    add(false, 0);
+  const tally = new FacetTally(field);
+  for (const row of rows) for (const value of rowValues(row, field)) tally.add(value, 1);
+  return tally.values();
+}
+
+/**
+ * The values a facet offers, from the groups of a `_summarize` call grouped on its
+ * field. A group is keyed on `group_value`, which on an entity field is the reference
+ * itself, so two people sharing a display name stay two rows, and `group_name` is the
+ * label. The `''` group, the rows with nothing in the field, is left out: the empty
+ * tests belong to the dialog (020_summarize). A multi_entity group's value is the
+ * row's set of links as an array of references, and it counts towards each of them;
+ * the corpus has not measured that grouping.
+ */
+export function facetValuesFromGroups(groups: readonly SummaryGroup[], field: FieldSchema): FacetValue[] {
+  const tally = new FacetTally(field);
+  for (const groupRow of groups) {
+    for (const value of groupScalars(groupRow.groupValue, groupRow.groupName)) tally.add(value, groupCount(groupRow));
   }
-  for (const row of rows) for (const value of rowValues(row, field)) add(value, 1);
-  return [...found.values()].sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
+  return tally.values();
+}
+
+/** `group_value` as the values a condition sends: an entity as `{type, id, name}`, a code as itself. */
+function groupScalars(value: unknown, name: string): Scalar[] {
+  if (value === null || value === undefined || value === '') return [];
+  if (Array.isArray(value)) return value.flatMap((one) => groupScalars(one, name));
+  if (typeof value === 'object') {
+    const ref = value as { type?: unknown; id?: unknown; name?: unknown };
+    if (typeof ref.type !== 'string' || typeof ref.id !== 'number') return [];
+    return [{ type: ref.type, id: ref.id, name: typeof ref.name === 'string' ? ref.name : name }];
+  }
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return [value];
+  return [];
+}
+
+/** The `id count` of a group, or the first summary the call asked for. */
+function groupCount(groupRow: SummaryGroup): number {
+  const count = groupRow.summaries['id'] ?? Object.values(groupRow.summaries)[0];
+  return typeof count === 'number' ? count : 0;
+}
+
+/** The `counts` reader over a client: one `_summarize` call grouped on the field. */
+export function facetCounts(client: Pick<SgClient, 'summarize'>, entityType: string): FacetCounts {
+  return async (field, filters) => (await client.summarize(entityType, { filters, grouping: [{ field }] })).groups;
+}
+
+/**
+ * The filter each facet counts against: the base filter and the whole tree, less the
+ * facet's own conditions, so a facet keeps every value it could switch to while the
+ * others show what remains. Keyed by facet name; a facet nobody ticked shares the
+ * whole tree with its neighbours.
+ */
+export function facetScopes(
+  value: FilterGroup,
+  base: FilterGroup | null,
+  facets: readonly string[],
+): Record<string, WireGroup | null> {
+  const out: Record<string, WireGroup | null> = {};
+  for (const name of facets) {
+    const own = withoutPaths(value, [name]);
+    out[name] = toApi3Hash(!base ? own : own.conditions.length === 0 ? base : makeGroup('and', [base, own]));
+  }
+  return out;
+}
+
+/**
+ * True where the site refused to group the field: a 4xx. The measured refusal is
+ * 400 `Grouping is not allowed for field <Type>.<field>.` (field_types/image,
+ * field_types/summary); the status decides, never the wording.
+ */
+export function isGroupingRefusal(error: unknown): boolean {
+  return error instanceof SgApiError && error.status >= 400 && error.status < 500;
+}
+
+/**
+ * What every facet lists, each counted under its own scope.
+ *
+ * With `counts`, a field's values come from the site's groups, and a field the site
+ * refuses to group is tallied from one page of rows instead, with the schema's
+ * vocabulary at zero and `sampled` saying how many rows; the refusal is kept in
+ * `refused` so the next read tallies that field without asking. Without `counts`
+ * every field is tallied that way. Facets sharing a scope share one page. Any other
+ * failure fails the read.
+ */
+export async function facetLists(
+  fields: readonly FieldSchema[],
+  scopes: Record<string, WireGroup | null>,
+  reads: FacetReads,
+): Promise<Record<string, FacetList>> {
+  const out: Record<string, FacetList> = {};
+  const tallied: FieldSchema[] = [];
+  const counts = reads.counts;
+  const refused = reads.refused ?? new Set<string>();
+  if (counts) {
+    await Promise.all(
+      fields.map(async (field) => {
+        const known = `${field.entityType}.${field.name}`;
+        if (refused.has(known)) {
+          tallied.push(field);
+          return;
+        }
+        try {
+          out[field.name] = { values: facetValuesFromGroups(await counts(field.name, scopes[field.name] ?? null), field) };
+        } catch (error) {
+          if (!isGroupingRefusal(error)) throw error;
+          refused.add(known);
+          tallied.push(field);
+        }
+      }),
+    );
+  } else {
+    tallied.push(...fields);
+  }
+  const pages = new Map<string, FieldSchema[]>();
+  for (const field of tallied) {
+    const key = JSON.stringify(scopes[field.name] ?? null);
+    const page = pages.get(key);
+    if (page) page.push(field);
+    else pages.set(key, [field]);
+  }
+  await Promise.all(
+    [...pages.values()].map(async (page) => {
+      const rows = await reads.sample(
+        page.map((f) => f.name),
+        scopes[(page[0] as FieldSchema).name] ?? null,
+      );
+      for (const field of page) out[field.name] = { values: facetValues(rows, field), sampled: rows.length };
+    }),
+  );
+  return out;
 }
 
 /**

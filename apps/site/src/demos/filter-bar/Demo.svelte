@@ -1,6 +1,14 @@
 <script lang="ts">
 	import type { CollectionColumn, FilterGroup, StatusRecord, WireGroup } from '@sg-widgets/core';
-	import { condition, createEntitySource, emptyFilter, group, resolveColumns, toApi3Hash } from '@sg-widgets/core';
+	import {
+		condition,
+		createEntitySource,
+		emptyFilter,
+		facetCounts,
+		group,
+		resolveColumns,
+		toApi3Hash
+	} from '@sg-widgets/core';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import FilterBar, { type FilterBarSize } from '$lib/registry/components/filter-bar.svelte';
 	import GroupedList from '$lib/registry/components/grouped-list.svelte';
@@ -38,8 +46,9 @@
 	setDemoContext(context);
 
 	let value = $state<FilterGroup>(emptyFilter());
-	/** The read-state bar, over a field the API evaluates only `is` and `is_not` on. */
+	/** The Note bar: two entity facets counted by the site's groups, and the read state, which it refuses to group. */
 	let readState = $state<FilterGroup>(emptyFilter());
+	const noteCounts = facetCounts(context.client, 'Note');
 	let seeded = $state<FilterGroup>(seededTree());
 	let every = $state<FilterGroup>(everyTree());
 	let sized = $state<Record<FilterBarSize, FilterGroup>>({ sm: seededTree(), md: seededTree(), lg: seededTree() });
@@ -160,11 +169,13 @@
 	</section>
 
 	<section class={section}>
-		<h4 class={label}>Notes by read state</h4>
+		<h4 class={label}>Notes by sender, recipient and read state, counted by the site</h4>
 		<FilterBar
 			entityType="Note"
 			{context}
-			facets={['read_by_current_user']}
+			facets={['user', 'addressings_to', 'read_by_current_user']}
+			labels={{ user: 'From' }}
+			counts={noteCounts}
 			baseFilter={scope}
 			bind:value={readState}
 		/>

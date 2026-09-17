@@ -1419,23 +1419,49 @@ export class MockClient implements SgClient {
 
     const grouping = options.grouping?.[0];
     if (!grouping) return { summaries: summarize(matched), groups: [] };
+    this.refuseGrouping(entityType, grouping.field);
 
     const buckets = new Map<string, { value: unknown; rows: Row[] }>();
-    for (const row of matched) {
-      const value = this.walk(row, grouping.field, false)[0] ?? null;
+    const put = (value: unknown, row: Row) => {
       const key = value === null || value === undefined ? '' : JSON.stringify(value);
       const bucket = buckets.get(key);
       if (bucket) bucket.rows.push(row);
       else buckets.set(key, { value, rows: [row] });
+    };
+    for (const row of matched) {
+      const raw = this.walk(row, grouping.field, false)[0] ?? null;
+      // A multi_entity row is grouped on its whole set of links, as an array of references;
+      // the corpus has not measured that grouping.
+      const value = Array.isArray(raw) ? (raw.length === 0 ? null : raw.map((one) => this.groupValueOf(one))) : this.groupValueOf(raw);
+      put(value, row);
     }
     const groups: SummaryGroup[] = [...buckets.entries()].map(([, bucket]) => ({
-      groupName: bucket.value === null ? '' : groupLabel(bucket.value),
+      groupName: bucket.value === null ? '' : Array.isArray(bucket.value) ? bucket.value.map(groupLabel).join(', ') : groupLabel(bucket.value),
       groupValue: bucket.value,
       summaries: summarize(bucket.rows),
     }));
     groups.sort((a, b) => (a.groupName < b.groupName ? -1 : a.groupName > b.groupName ? 1 : 0));
     if (grouping.direction === 'desc') groups.reverse();
     return { summaries: summarize(matched), groups };
+  }
+
+  /** An entity group's value is the reference with its name and `valid` (020_summarize); a code is itself. */
+  private groupValueOf(value: unknown): unknown {
+    if (value === null || typeof value !== 'object' || !('type' in value)) return value;
+    return { ...(this.decorate(value) as EntityRef), valid: 'valid' };
+  }
+
+  /**
+   * A field the server cannot group is 400 `Grouping is not allowed for field
+   * <Type>.<field>.` on `image` and `summary` (field_types/image, field_types/summary),
+   * and a `pivot_column` is 500 (field_types/pivot_column). `Note.read_by_current_user`,
+   * the per-person read state, is refused the same way; the corpus has not measured it.
+   */
+  private refuseGrouping(entityType: string, field: string): void {
+    const dataType = SPECS[entityType]?.[field]?.dataType;
+    if (dataType === 'pivot_column') throw new SgApiError(500, null, 'Shotgun Server Error');
+    const refused = dataType === 'image' || dataType === 'summary' || (entityType === 'Note' && field === 'read_by_current_user');
+    if (refused) throw new SgApiError(400, null, `Grouping is not allowed for field ${entityType}.${field}.`);
   }
 
   /**

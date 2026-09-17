@@ -12,9 +12,12 @@ import {
   matchesTokens,
   moveFieldPath,
   pathTypes,
+  resolveFieldPathOptions,
   searchFieldOptions,
+  searchFieldPathOptions,
   toggleFieldPath,
   traversalTargets,
+  UNRESOLVED_PATH_LABEL,
   type FieldHop,
 } from '../src/pickers.js';
 
@@ -286,5 +289,54 @@ describe('moveFieldPath', () => {
     expect(moveFieldPath(paths, 2, 3)).toEqual(paths);
     expect(moveFieldPath(paths, 1, 1)).toEqual(paths);
     expect(moveFieldPath([], 0, 0)).toEqual([]);
+  });
+});
+
+describe('resolveFieldPathOptions', () => {
+  const paths = ['code', 'entity.Shot.sg_turnover_date', 'sg_nope.Thing.code'];
+
+  it('keeps the order it was given and labels a plain path by its field', async () => {
+    const options = await resolveFieldPathOptions(schema, 'Version', paths);
+    expect(pathsOf(options)).toEqual(paths);
+    expect(options[0]).toMatchObject({ label: 'Version Name', name: 'code', dataType: 'text', resolved: true });
+  });
+
+  it('labels a dotted path by every display name it travels', async () => {
+    const [dotted] = await resolveFieldPathOptions(schema, 'Version', ['entity.Shot.sg_turnover_date']);
+    expect(dotted).toMatchObject({
+      label: 'Link › Shot › Turnover Date',
+      name: 'sg_turnover_date',
+      dataType: 'date',
+      subLabel: 'date',
+      resolved: true,
+    });
+  });
+
+  it('keeps a path the schema does not hold, marked in its sub-label', async () => {
+    const options = await resolveFieldPathOptions(schema, 'Version', paths);
+    expect(options[2]).toEqual({
+      path: 'sg_nope.Thing.code',
+      label: 'sg_nope.Thing.code',
+      name: '',
+      dataType: '',
+      subLabel: UNRESOLVED_PATH_LABEL,
+      resolved: false,
+    });
+  });
+
+  it('carries the leaf code a row shows under showCode', async () => {
+    const options = await resolveFieldPathOptions(schema, 'Version', ['sg_status_list', 'entity.Shot.sg_turnover_date']);
+    expect(options.map((o) => o.name)).toEqual(['sg_status_list', 'sg_turnover_date']);
+  });
+});
+
+describe('searchFieldPathOptions', () => {
+  it('matches the label and the path, and leaves an empty query alone', async () => {
+    const options = await resolveFieldPathOptions(schema, 'Version', ['code', 'entity.Shot.sg_turnover_date', 'sg_nope']);
+    expect(pathsOf(searchFieldPathOptions(options, 'turnover'))).toEqual(['entity.Shot.sg_turnover_date']);
+    expect(pathsOf(searchFieldPathOptions(options, 'entity.Shot'))).toEqual(['entity.Shot.sg_turnover_date']);
+    expect(pathsOf(searchFieldPathOptions(options, 'sg_nope'))).toEqual(['sg_nope']);
+    expect(searchFieldPathOptions(options, '   ')).toHaveLength(3);
+    expect(searchFieldPathOptions(options, 'zzznope')).toHaveLength(0);
   });
 });

@@ -40,6 +40,8 @@
 		hidePaths?: string[];
 		/** Only these paths are offered; a link stays in the list while a path runs through it. */
 		paths?: string[];
+		/** Exactly these paths, offered flat: no links and no descending. */
+		options?: string[];
 		size?: SortPickerSize;
 		disabled?: boolean;
 		/** Both the keys and the `sort` string they serialise to. */
@@ -56,6 +58,7 @@
 		value = $bindable([]),
 		hidePaths = [],
 		paths,
+		options,
 		size = 'md',
 		disabled = false,
 		onChange,
@@ -100,6 +103,8 @@
 	}
 
 	const chosen = $derived(value.map((k) => k.field));
+	/** A flat list offers no `exclude`, so a key already held is dropped here. */
+	const flat = $derived(options?.filter((path) => !chosen.includes(path)));
 	const label = $derived(
 		value.length === 0 ? 'Sort' : value.map((k) => nameOf(k.field)).join(', ')
 	);
@@ -161,6 +166,9 @@
 	`project.Project.name` under `-` (026_result_order), so the field picker descends
 	through links. An unsortable or unknown field is a silent 200 no-op with the rows
 	in default order, so only types that sort are offered.
+
+	`options` hands the field picker a flat list instead: a table's toolbar offers
+	exactly the columns it shows, a linked one included, with no descending.
 -->
 <div
 	bind:this={ref}
@@ -272,6 +280,7 @@
 				{context}
 				{entityType}
 				{hidePaths}
+				options={flat}
 				{disabled}
 				{size}
 				bind:value={adding}

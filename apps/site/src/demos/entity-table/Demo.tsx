@@ -11,6 +11,7 @@ import { DemoContextProvider } from '../_shared/react';
 const WIDTHS: Record<string, number> = {
   code: 260,
   entity: 150,
+  'entity.Shot.sg_turnover_date': 170,
   sg_status_list: 150,
   image: 90,
   description: 260,
@@ -19,7 +20,7 @@ const WIDTHS: Record<string, number> = {
   updated_at: 170,
 };
 const PATHS = Object.keys(WIDTHS);
-const SHOWN = ['code', 'entity', 'sg_status_list', 'image', 'description', 'user'];
+const SHOWN = ['code', 'entity', 'entity.Shot.sg_turnover_date', 'sg_status_list', 'image', 'description', 'user'];
 const FACETS = ['sg_status_list'];
 const PLACEMENTS: Array<{ value: EditorPlacement; label: string }> = [
   { value: 'popover', label: 'Popover editor' },
@@ -193,8 +194,8 @@ export default function EntityTableDemo() {
                       context={context}
                       entityType="Version"
                       size="sm"
-                      deepLinks={false}
-                      filter={(_field, path) => PATHS.includes(path)}
+                      deepLinks
+                      filter={(_field, path) => PATHS.includes(path) || PATHS.some((p) => p.startsWith(`${path}.`))}
                       placeholder="Add a column"
                       value={columns.map((column) => column.path)}
                       onValueChange={pickColumns}
@@ -205,7 +206,7 @@ export default function EntityTableDemo() {
             </>
           }
           toolbarEnd={
-            <SortPicker entityType="Version" context={context} size="sm" paths={columns.map((column) => column.path)} value={sortKeys} onChange={setSortKeys} />
+            <SortPicker entityType="Version" context={context} size="sm" options={columns.map((column) => column.path)} value={sortKeys} onChange={setSortKeys} />
           }
         />
       </div>

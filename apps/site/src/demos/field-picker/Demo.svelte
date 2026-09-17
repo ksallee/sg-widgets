@@ -8,6 +8,9 @@
 	let dated = $state('');
 	let preset = $state('entity.Shot.sg_turnover_date');
 	let computed = $state('');
+	let fixed = $state('');
+
+	const FIXED = ['code', 'sg_status_list', 'entity.Shot.sg_turnover_date'];
 
 	const label = 'text-muted-foreground text-xs';
 	const path = 'text-muted-foreground font-mono text-xs';
@@ -67,6 +70,20 @@
 			onValueChange={(next) => (computed = next)}
 		/>
 		<span class={path}>{computed || '—'}</span>
+	</div>
+
+	<div class="flex flex-col gap-2" data-demo="fixed">
+		<span class={label}>Fixed options: three paths, flat, one of them through a link</span>
+		<FieldPicker
+			{context}
+			entityType="Version"
+			options={FIXED}
+			showCode
+			value={fixed}
+			onValueChange={(next) => (fixed = next)}
+			placeholder="Sort on"
+		/>
+		<span class={path}>{fixed || '—'}</span>
 	</div>
 
 	<div class="flex flex-col gap-2">

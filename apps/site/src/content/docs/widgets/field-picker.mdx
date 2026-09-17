@@ -23,7 +23,7 @@ pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/field-picker.json
 pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/field-picker.json
 ```
 
-<Demo name="field-picker" title="FieldPicker: drill-down, restrictions, computed columns and states" />
+<Demo name="field-picker" title="FieldPicker: drill-down, restrictions, computed columns, a fixed list and states" />
 
 ## Props
 
@@ -50,6 +50,13 @@ alone.
 A link that declares one target type descends at once. One declaring several replaces the list with
 one row per type and asks which. A type already on the path is not offered again, and the path stops
 at `maxDepth`.
+
+`options` fills the list a second way: the paths you name, flat, in the order you give them, each
+labelled by its resolved path with its data-type glyph and, under `showCode`, its code. A path the
+schema cannot resolve keeps its place, shown as it was written and marked in its sub-label. With
+`options` set the list does not nest, so `deepLinks`, `maxDepth`, `hidePaths`, `exclude`,
+`dataTypes`, `validTypes`, `filterableOnly`, `extraFields` and `filter` do not apply and the
+breadcrumb never shows. The search box narrows the flat list on the label and on the path.
 
 The closed control shows the friendly path, the display names joined with a chevron, never the raw
 one.

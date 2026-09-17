@@ -20,6 +20,7 @@
 	const WIDTHS: Record<string, number> = {
 		code: 260,
 		entity: 150,
+		'entity.Shot.sg_turnover_date': 170,
 		sg_status_list: 150,
 		image: 90,
 		description: 260,
@@ -28,7 +29,7 @@
 		updated_at: 170
 	};
 	const PATHS = Object.keys(WIDTHS);
-	const SHOWN = ['code', 'entity', 'sg_status_list', 'image', 'description', 'user'];
+	const SHOWN = ['code', 'entity', 'entity.Shot.sg_turnover_date', 'sg_status_list', 'image', 'description', 'user'];
 	const FACETS = ['sg_status_list'];
 	const PAGING: Array<{ value: PagingMode; label: string }> = [
 		{ value: 'pages', label: 'Pages' },
@@ -169,8 +170,8 @@
 								{context}
 								entityType="Version"
 								size="sm"
-								deepLinks={false}
-								filter={(_field, path) => PATHS.includes(path)}
+								deepLinks
+								filter={(_field, path) => PATHS.includes(path) || PATHS.some((p) => p.startsWith(`${path}.`))}
 								placeholder="Add a column"
 								value={columns.map((column) => column.path)}
 								onValueChange={(paths) => void pickColumns(paths)}
@@ -180,7 +181,7 @@
 				</div>
 			{/snippet}
 			{#snippet toolbarEnd()}
-				<SortPicker entityType="Version" {context} size="sm" paths={columns.map((column) => column.path)} bind:value={sortKeys} />
+				<SortPicker entityType="Version" {context} size="sm" options={columns.map((column) => column.path)} bind:value={sortKeys} />
 			{/snippet}
 		</EntityTable>
 	</div>

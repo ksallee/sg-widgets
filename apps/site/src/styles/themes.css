@@ -273,8 +273,11 @@
   --muted-foreground: oklch(0.7122 0 0);
   --accent: oklch(0.3132 0 0);
   --accent-foreground: oklch(0.9851 0 0);
-  --destructive: oklch(0.3123 0.0852 29.7877);
-  --destructive-foreground: oklch(0.9368 0.0045 34.3092);
+  /* tweakcn gives this preset a destructive of L 0.31 at low chroma, which on a page of
+     L 0.18 reads as a disabled control and is illegible as an ink; it takes the step the
+     shadcn dark destructive sits on, at this preset's own hue. */
+  --destructive: oklch(0.6368 0.2078 29.7877);
+  --destructive-foreground: oklch(0.9934 0.0032 17.2118);
   --success: oklch(0.3123 0.0852 145);
   --success-foreground: oklch(0.9368 0.0045 34.3092);
   --warning: oklch(0.3123 0.0621 75);

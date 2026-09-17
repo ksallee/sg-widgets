@@ -1419,6 +1419,7 @@ export class MockClient implements SgClient {
 
     const grouping = options.grouping?.[0];
     if (!grouping) return { summaries: summarize(matched), groups: [] };
+    this.refuseGrouping(entityType, grouping.field);
 
     const buckets = new Map<string, { value: unknown; rows: Row[] }>();
     for (const row of matched) {
@@ -1436,6 +1437,19 @@ export class MockClient implements SgClient {
     groups.sort((a, b) => (a.groupName < b.groupName ? -1 : a.groupName > b.groupName ? 1 : 0));
     if (grouping.direction === 'desc') groups.reverse();
     return { summaries: summarize(matched), groups };
+  }
+
+  /**
+   * A field the server cannot group is 400 `Grouping is not allowed for field
+   * <Type>.<field>.` on `image` and `summary` (field_types/image, field_types/summary),
+   * and a `pivot_column` is 500 (field_types/pivot_column). `Note.read_by_current_user`,
+   * the per-person read state, is refused the same way; the corpus has not measured it.
+   */
+  private refuseGrouping(entityType: string, field: string): void {
+    const dataType = SPECS[entityType]?.[field]?.dataType;
+    if (dataType === 'pivot_column') throw new SgApiError(500, null, 'Shotgun Server Error');
+    const refused = dataType === 'image' || dataType === 'summary' || (entityType === 'Note' && field === 'read_by_current_user');
+    if (refused) throw new SgApiError(400, null, `Grouping is not allowed for field ${entityType}.${field}.`);
   }
 
   /**

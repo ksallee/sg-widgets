@@ -3,9 +3,9 @@
 //   pnpm qa --start --path /widgets/filter-editor/ --framework svelte --shot shots/x.png \
 //     --drive tools/drives/filter-editor-values.js
 //
-// The nested any-of holds a list of values, a colour and two relative windows, so the
-// list editor, ListMultiPicker, ColorEditor and the count-and-unit pair are all on the
-// page at once.
+// The catalogue tree holds one raw list of values, one list field on many values, a colour
+// pair and two relative windows, so the list editor, ListMultiPicker, ColorEditor and the
+// count-and-unit pair are all on the page at once.
 async function until(test, tries = 200) {
   for (let i = 0; i < tries && !test(); i += 1) await wait(50);
   return test();
@@ -41,7 +41,7 @@ for (const pane of panes()) {
   if (seen.lists !== 1) failures.push(`${framework}: ${seen.lists} list editors, wanted 1`);
   if (seen.listValues !== 2) failures.push(`${framework}: ${seen.listValues} list values, wanted 2`);
   if (seen.multiSelects !== 1) failures.push(`${framework}: ${seen.multiSelects} multi selects, wanted 1`);
-  if (seen.colours !== 1) failures.push(`${framework}: ${seen.colours} colour editors, wanted 1`);
+  if (seen.colours !== 2) failures.push(`${framework}: ${seen.colours} colour editors, wanted 2`);
   if (seen.windows !== 2) failures.push(`${framework}: ${seen.windows} relative windows, wanted 2`);
   if (seen.counts.join(',') !== '3,2') failures.push(`${framework}: counts read ${seen.counts.join(',')}, wanted 3,2`);
   if (!/months/i.test(seen.units[0] ?? '')) failures.push(`${framework}: the first unit reads "${seen.units[0]}"`);
@@ -56,7 +56,7 @@ await wait(400);
 return {
   verdict:
     failures.length === 0
-      ? `PASS the list editor, the multi select, the colour editor and both windows in ${report.length} pane(s)`
+      ? `PASS the list editor, the multi select, both colour editors and both windows in ${report.length} pane(s)`
       : `FAIL ${failures.join('; ')}`,
   panes: report,
 };

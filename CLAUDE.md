@@ -16,6 +16,15 @@ Monorepo: `packages/core` (headless TS, npm), `packages/react` (shadcn registry,
 - A new widget page is added to its category in `apps/site/astro.config.mjs` (Foundations, Display, Pickers, Queries and collections); the sidebar is explicit so URLs stay flat.
 - Registry conventions are in `docs/registry-conventions.md` (React items in `packages/react/src/registry/sg/components/<name>.tsx`, Svelte in `packages/svelte/src/lib/registry/components/<name>.svelte`, same kebab name in both). `pnpm registry:build` emits to `apps/site/public/r/{react,svelte}`.
 
+## Process
+
+- A change starts as a short issue: one paragraph, edited in place when scope changes.
+- Branch from `dev` (`feat/<issue>-slug`, `fix/slug`). PR onto `dev`, squash-merged, once
+  `pnpm check` and `pnpm test` are green. Merging needs Kevin's say in the session.
+- `main` is promoted by a PR from `dev`, merge commit, after Kevin QAs `dev`.
+- The failing test lands first, in the same commit as the code that makes it pass. Docs and
+  CSS-only changes carry screenshots instead.
+
 ## Verifying UI
 
 - Use `pnpm qa` (`tools/qa.mjs`) to drive the docs site headless: `--start` launches an isolated dev

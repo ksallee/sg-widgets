@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useState, type KeyboardEvent } from 'react';
-import type { FieldHop, FieldOption, FieldSchema, SgContext } from '@sg-widgets/core';
+import type { FieldHop, FieldOption, FieldPathOption, FieldSchema, SgContext } from '@sg-widgets/core';
 import {
   currentType,
   deriveFieldOptions,
@@ -7,7 +7,9 @@ import {
   iconNameFor,
   NO_MATCH_LABEL,
   pickerKeyIntent,
+  resolveFieldPathOptions,
   searchFieldOptions,
+  searchFieldPathOptions,
   stateLine,
 } from '@sg-widgets/core';
 import {
@@ -114,6 +116,8 @@ export interface FieldPickerProps extends React.HTMLAttributes<HTMLDivElement> {
   context: SgContext;
   /** The type the path starts on. */
   entityType: string;
+  /** A fixed list of paths, offered flat. The list restrictions do not apply to it. */
+  options?: string[];
   /** The dotted path, `field` or `field.Type.field…`. Empty when nothing is chosen. */
   value?: string;
   onValueChange?: (value: string) => void;
@@ -168,10 +172,14 @@ export interface FieldPickerProps extends React.HTMLAttributes<HTMLDivElement> {
  * types asks which one first. `dataTypes` and `validTypes` bind what may be chosen,
  * not what may be walked through, so a picker restricted to dates still reaches a
  * date behind a link.
+ *
+ * `options` replaces the schema list with a caller's own paths, flat: no links, no
+ * descending, no breadcrumb, and the list restrictions do not apply.
  */
 export function FieldPicker({
   context,
   entityType,
+  options,
   value = '',
   onValueChange,
   deepLinks = false,
@@ -220,15 +228,34 @@ export function FieldPicker({
   /** The field whose target type is being chosen, when it declares more than one. */
   const [choosing, setChoosing] = useState<FieldOption | null>(null);
   const [loaded, setLoaded] = useState<{ type: string; fields: Record<string, FieldSchema> } | null>(null);
+  /** The caller's fixed list, resolved. Keyed on what was asked for, so a change re-reads. */
+  const [fixed, setFixed] = useState<{ key: string; rows: FieldPathOption[] } | null>(null);
   const [resolved, setResolved] = useState<{ path: string; label: string } | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
 
   const type = currentType(entityType, hops);
   const computed = extraFields?.find((extra) => extra.name === value);
+  /** The list is a fresh array on every render, so the read is keyed on what it holds. */
+  const fixedKey = options ? `${entityType}|${options.join(',')}` : null;
+
+  // Every path of the fixed list is resolved through the types it travels, once per list.
+  useEffect(() => {
+    if (fixedKey === null) return;
+    const cut = fixedKey.indexOf('|');
+    const joined = fixedKey.slice(cut + 1);
+    let live = true;
+    void resolveFieldPathOptions(schema, fixedKey.slice(0, cut), joined === '' ? [] : joined.split(',')).then((rows) => {
+      if (live) setFixed({ key: fixedKey, rows });
+    });
+    return () => {
+      live = false;
+    };
+  }, [schema, fixedKey]);
 
   // `/schema/<Type>/fields` is 48KB and ~330ms (probe 002); the schema service caches
   // it, so a hop back to a type already visited costs nothing.
   useEffect(() => {
+    if (fixedKey !== null) return;
     let live = true;
     schema
       .fields(type)
@@ -241,7 +268,7 @@ export function FieldPicker({
     return () => {
       live = false;
     };
-  }, [schema, type]);
+  }, [schema, type, fixedKey]);
 
   // The closed control shows the friendly path, never the raw one, so the label is
   // resolved through the schema of every type the path travels.
@@ -263,8 +290,9 @@ export function FieldPicker({
     };
   }, [schema, entityType, value, synthetic]);
 
+  const fixedRows = fixed?.key === fixedKey ? fixed.rows : null;
   const fields = loaded?.type === type ? loaded.fields : null;
-  const options = fields
+  const derived = fields
     ? deriveFieldOptions(fields, {
         rootType: entityType,
         hops,
@@ -280,18 +308,42 @@ export function FieldPicker({
       })
     : [];
   const query = search.trim().toLowerCase();
-  const rows = choosing ? [] : searchFieldOptions(options, search);
+  /** One shape for both lists, so a fixed row and a schema row draw the same. */
+  const rows: { path: string; label: string; code: string; sub: string; dataType: string; field: FieldOption | null }[] =
+    fixedRows
+      ? searchFieldPathOptions(fixedRows, search).map((row) => ({
+          path: row.path,
+          label: row.label,
+          code: row.name,
+          sub: row.subLabel,
+          dataType: row.dataType,
+          field: null,
+        }))
+      : choosing
+        ? []
+        : searchFieldOptions(derived, search).map((row) => ({
+            path: row.path,
+            label: row.displayName,
+            code: row.name,
+            sub: row.computed ? 'computed' : row.dataType,
+            dataType: row.dataType,
+            field: row,
+          }));
   const targets = choosing ? choosing.targets.filter((t) => t.toLowerCase().includes(query)) : [];
   /** Every row's value, in the order they are drawn: what the arrow keys walk. */
   const values = choosing ? targets : rows.map((row) => row.path);
   const cursor = values.includes(highlighted) ? highlighted : (values[0] ?? '');
+  const offered = fixedRows?.find((row) => row.path === value);
   const label = computed
     ? (computed.displayName ?? computed.name)
-    : resolved?.path === value
-      ? resolved.label
-      : null;
+    : offered
+      ? offered.label
+      : resolved?.path === value
+        ? resolved.label
+        : null;
+  const ready = options ? fixedRows !== null : fields !== null;
   const showClear = clearable && value !== '' && !readonly && !disabled;
-  const breadcrumb = hops.length > 0 || choosing !== null;
+  const breadcrumb = !options && (hops.length > 0 || choosing !== null);
 
   /** Every hop clears the search box; nothing is remounted, so focus stays in the input. */
   function descend(field: FieldOption, through: string): void {
@@ -311,9 +363,9 @@ export function FieldPicker({
     }
   }
 
-  function activate(row: FieldOption): void {
-    if (row.traversable && !row.selectable) {
-      descendInto(row);
+  function activate(row: { path: string; field: FieldOption | null }): void {
+    if (row.field?.traversable && !row.field.selectable) {
+      descendInto(row.field);
       return;
     }
     onValueChange?.(row.path);
@@ -361,7 +413,7 @@ export function FieldPicker({
         }
         return;
       }
-      const row = rows.find((r) => r.path === cursor);
+      const row = rows.find((r) => r.path === cursor)?.field;
       if (row?.traversable) {
         event.preventDefault();
         descendInto(row);
@@ -502,7 +554,7 @@ export function FieldPicker({
                     </CommandItem>
                   ))}
                 </>
-              ) : fields === null ? (
+              ) : !ready ? (
                 <div
                   data-slot="field-picker-loading"
                   className="flex flex-col"
@@ -529,34 +581,32 @@ export function FieldPicker({
                         value={row.path}
                         onSelect={() => activate(row)}
                         data-checked={row.path === value ? 'true' : undefined}
-                        data-traversable={row.traversable ? 'true' : undefined}
+                        data-traversable={row.field?.traversable ? 'true' : undefined}
                         className="items-start"
                       >
                         <Glyph aria-hidden="true" className="mt-0.5 size-4 shrink-0 opacity-70" />
                         <span className="flex min-w-0 flex-1 flex-col">
                           <span className="flex min-w-0 items-center gap-1.5">
-                            <span className="truncate">{row.displayName}</span>
-                            {showCode && row.name !== row.displayName ? (
+                            <span className="truncate">{row.label}</span>
+                            {showCode && row.code !== '' && row.code !== row.label ? (
                               <span className="text-muted-foreground shrink-0 font-mono text-xs">
-                                {row.name}
+                                {row.code}
                               </span>
                             ) : null}
                           </span>
-                          <span className="text-muted-foreground truncate text-xs">
-                            {row.computed ? 'computed' : row.dataType}
-                          </span>
+                          <span className="text-muted-foreground truncate text-xs">{row.sub}</span>
                         </span>
-                        {row.traversable ? (
+                        {row.field?.traversable ? (
                           <button
                             type="button"
                             tabIndex={-1}
                             data-slot="field-picker-descend"
-                            aria-label={`Open ${row.displayName}`}
+                            aria-label={`Open ${row.label}`}
                             title="Open (Right arrow)"
                             onMouseDown={(event) => event.preventDefault()}
                             onClick={(event) => {
                               event.stopPropagation();
-                              descendInto(row);
+                              if (row.field) descendInto(row.field);
                             }}
                             className="hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring focus-visible:ring-offset-background shrink-0 rounded-sm p-0.5 opacity-70 outline-none transition-colors duration-150 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-2 motion-safe:active:scale-[0.98]"
                           >

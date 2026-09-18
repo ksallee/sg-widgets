@@ -10,6 +10,7 @@ const COMPUTED = [
   { name: 'row_number', displayName: 'Row Number' },
   { name: 'note_count', displayName: 'Note Count' },
 ];
+const FIXED = ['code', 'sg_status_list', 'entity.Shot.sg_turnover_date'];
 
 function Pickers() {
   const context = useSgContext();
@@ -17,6 +18,7 @@ function Pickers() {
   const [dated, setDated] = useState('');
   const [preset, setPreset] = useState('entity.Shot.sg_turnover_date');
   const [computed, setComputed] = useState('');
+  const [fixed, setFixed] = useState('');
 
   return (
     <div className="flex flex-col gap-4">
@@ -76,6 +78,20 @@ function Pickers() {
           onValueChange={setComputed}
         />
         <span className={path}>{computed || '—'}</span>
+      </div>
+
+      <div className="flex flex-col gap-2" data-demo="fixed">
+        <span className={label}>Fixed options: three paths, flat, one of them through a link</span>
+        <FieldPicker
+          context={context}
+          entityType="Version"
+          options={FIXED}
+          showCode
+          value={fixed}
+          onValueChange={setFixed}
+          placeholder="Sort on"
+        />
+        <span className={path}>{fixed || '—'}</span>
       </div>
 
       <div className="flex flex-col gap-2">

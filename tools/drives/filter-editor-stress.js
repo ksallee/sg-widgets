@@ -166,7 +166,10 @@ async function setPreset(row, id) {
 }
 
 async function clearTree(pane) {
-  for (let i = 0; i < 40; i++) {
+  // Every editor on the page is emptied, and the demo's first tree is a catalogue: the
+  // cap is the rows now drawn, with room for the group headers between them.
+  const tries = rowsOf(pane).length * 2 + 20;
+  for (let i = 0; i < tries; i++) {
     const button = $('[data-slot="filter-row"] [data-slot="filter-remove"], [data-slot="filter-group"] [data-slot="filter-group"] [data-slot="filter-remove"]', pane);
     if (!button) break;
     press(button);

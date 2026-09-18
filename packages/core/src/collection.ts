@@ -105,6 +105,14 @@ export interface EntitySource {
   count(): Promise<number | null>;
   /** Write the named fields of one row and put the re-read row back in place. */
   updateRow(ref: EntityRef, patch: Record<string, unknown>): Promise<EntityRow>;
+  /**
+   * Read these rows again with the source's own projection and swap them in place.
+   * A row the site no longer answers (retired, or moved out of reach) leaves the list.
+   * The filter is not applied, as on `updateRow`: a row that moved out of the filter
+   * still comes back so the view can show what changed. Ids not on screen are ignored.
+   * Neither status nor order changes, so nothing dims and nothing jumps.
+   */
+  rereadRows(ids: readonly number[]): Promise<void>;
   /** The current state object, stable between changes. */
   snapshot(): EntitySourceState;
   subscribe(listener: () => void): () => void;
@@ -356,6 +364,31 @@ export function createEntitySource(options: EntitySourceOptions): EntitySource {
       const key = rowKey(ref);
       set({ rows: state.rows.map((row) => (rowKey(row) === key ? fresh : row)) });
       return fresh;
+    },
+
+    async rereadRows(ids: readonly number[]): Promise<void> {
+      const onScreen = new Set(state.rows.map((row) => row.id));
+      const wanted = [...new Set(ids)].filter((id) => onScreen.has(id));
+      if (wanted.length === 0) return;
+      // One read for the whole list: `page[size]` reached no cap at 5000 rows
+      // (endpoints/get_entity_type). It carries no filter and no sort, so a row that moved
+      // out of either still comes back, as on `updateRow`.
+      const result = await client.search(entityType, {
+        filters: { logical_operator: 'and', conditions: [['id', 'in', wanted]] },
+        fields,
+        page: { size: wanted.length, number: 1 },
+      });
+      const fresh = new Map(result.data.map((row) => [row.id, row]));
+      const asked = new Set(wanted);
+      // A row the site did not answer for is gone; every other row keeps its place, and
+      // nothing here touches the status, the paging or the total.
+      set({
+        rows: state.rows.flatMap((row) => {
+          if (!asked.has(row.id)) return [row];
+          const next = fresh.get(row.id);
+          return next ? [next] : [];
+        }),
+      });
     },
 
     snapshot(): EntitySourceState {

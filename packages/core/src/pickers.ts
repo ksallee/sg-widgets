@@ -8,8 +8,9 @@
  */
 import type { EntityTypeInfo } from './client.js';
 import { isFilterable } from './field-types.js';
+import { pathLabel, type PathLabelOptions } from './presentation.js';
 import type { FieldSchema } from './schema.js';
-import type { PathSegment } from './schema-service.js';
+import type { PathSegment, SchemaService } from './schema-service.js';
 
 /* -------------------------------------------------------------------------- */
 /* search                                                                     */
@@ -279,4 +280,66 @@ export function moveFieldPath(paths: readonly string[], from: number, to: number
   const [moved] = next.splice(from, 1);
   next.splice(to, 0, moved as string);
   return next;
+}
+
+/* -------------------------------------------------------------------------- */
+/* fixed field paths                                                          */
+/* -------------------------------------------------------------------------- */
+
+/** The sub-label of a row whose path the schema does not hold. */
+export const UNRESOLVED_PATH_LABEL = 'not in the schema';
+
+/** One row of a fixed list of paths: what a caller offered, read through the schema. */
+export interface FieldPathOption {
+  /** The path as the caller wrote it. This is the emitted value. */
+  path: string;
+  /** The resolved path, display names joined, or the raw path where the schema has no such path. */
+  label: string;
+  /** Code of the leaf field, empty where the path does not resolve. */
+  name: string;
+  /** Data type of the leaf field, empty where the path does not resolve. */
+  dataType: string;
+  /** The muted line under the label: the leaf's data type, or that the schema has no such path. */
+  subLabel: string;
+  /** The schema resolved the path. */
+  resolved: boolean;
+}
+
+/**
+ * A caller's fixed list of paths as flat rows, in the order given.
+ *
+ * Each path is resolved through every type it travels and labelled as the picker
+ * labels a chosen value. A path the schema does not hold keeps its place and is
+ * marked, so a list of columns never comes back shorter than it went in.
+ */
+export async function resolveFieldPathOptions(
+  schema: Pick<SchemaService, 'resolvePath'>,
+  rootType: string,
+  paths: readonly string[],
+  options: PathLabelOptions = {},
+): Promise<FieldPathOption[]> {
+  return Promise.all(
+    paths.map(async (path) => {
+      try {
+        const segments = await schema.resolvePath(rootType, path);
+        const leaf = segments[segments.length - 1] as PathSegment;
+        return {
+          path,
+          label: pathLabel(segments, options),
+          name: leaf.name,
+          dataType: leaf.dataType,
+          subLabel: leaf.dataType,
+          resolved: true,
+        };
+      } catch {
+        return { path, label: path, name: '', dataType: '', subLabel: UNRESOLVED_PATH_LABEL, resolved: false };
+      }
+    }),
+  );
+}
+
+/** Rows matching the search box, read on what the row shows and on the path behind it. */
+export function searchFieldPathOptions(options: readonly FieldPathOption[], query: string): FieldPathOption[] {
+  if (!query.trim()) return [...options];
+  return options.filter((option) => matchesTokens(query, option.label, option.path));
 }

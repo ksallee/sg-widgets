@@ -58,8 +58,9 @@ The goal is one system: a page mixing ten of our widgets must read as one hand.
   Icons inside controls are `size-4` for sm/md and `size-5` for lg. Thumbnails in list rows are
   `size-6` (sm), `size-8` (md), `size-10` (lg); cards and detail panes use `xl` (h-16) and `2xl` (h-24).
   Avatars follow the first three sizes.
-- A chip or a badge sits one step under the control it is in: `xs` (h-5) in sm, `sm` (h-6) in md and `md`
-  (h-8) in lg, at medium weight, with a `size-3`, `size-3.5` or `size-4` glyph. Its inline padding is
+- A chip or a badge sits one step under the control it is in: `xs` (h-5) in sm and `sm` (h-6) in md. An lg
+  picker keeps the `sm` chip, since an `md` (h-8) chip would leave 1px under its 36px control. A chip
+  reads at medium weight, with a `size-3` or `size-3.5` glyph, and its inline padding is
   optically aligned: the edge beside a glyph takes a step less than a bare text edge (`xs`: `px-1.5`
   bare, `pl-1` beside a glyph), and the edge beside a cross matches the room above the cross, so its
   box sits as far from the right as from the top. The glyph sits `gap-1` from the label at `xs` and `sm` and

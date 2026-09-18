@@ -19,14 +19,14 @@ export type PickerSize = 'sm' | 'md' | 'lg';
  * controls.
  *
  * The inset is what the chip and the control's own border leave under the ladder, halved:
- * 20 and 2 under 28 at sm, 24 and 2 under 32 at md leave 3 each, and 32 and 2 under 36 at
- * lg leave 1. Each step is then exact on one line. Anything more and a filled control
- * overruns the ladder.
+ * 20 and 2 under 28 at sm and 24 and 2 under 32 at md leave 3 each. lg keeps md's 24px chip,
+ * which leaves 5 under 36, where a 32px chip would leave 1. Each step is then exact on one
+ * line. Anything more and a filled control overruns the ladder.
  */
 export const PICKER_BOX: Record<PickerSize, string> = {
 	sm: 'min-h-7 pr-2 pl-0.75 py-0.75 data-empty:pl-1.5 data-empty:py-0',
 	md: 'min-h-8 pr-3 pl-0.75 py-0.75 data-empty:pl-2 data-empty:py-0',
-	lg: 'min-h-9 pr-3 pl-px py-px data-empty:pl-2 data-empty:py-0'
+	lg: 'min-h-9 pr-3 pl-[5px] py-[5px] data-empty:pl-2 data-empty:py-0'
 };
 
 /**
@@ -54,8 +54,8 @@ export const PICKER_TRAILING: Record<PickerSize, string> = {
 /** The glyphs inside a control. */
 export const PICKER_GLYPH: Record<PickerSize, string> = { sm: 'size-4', md: 'size-4', lg: 'size-5' };
 
-/** A chip or a badge sits inside the control, so it takes the step below it. */
-export const PICKER_CHIP: Record<PickerSize, ChipSize> = { sm: 'xs', md: 'sm', lg: 'md' };
+/** A chip or a badge sits a step under the control; lg keeps md's, so a 36px control has room round it. */
+export const PICKER_CHIP: Record<PickerSize, ChipSize> = { sm: 'xs', md: 'sm', lg: 'sm' };
 
 /** The bordered field the chips and the query input sit in. */
 export const PICKER_CONTROL =
@@ -158,8 +158,8 @@ export const PICKER_TEXT_CHIP =
 export const PICKER_TEXT_CHIP_BOX: Record<PickerSize, string> = {
 	sm: `${CHIP_BOX.xs} ${CHIP_PAD.xs.text} ${CHIP_SPACING.xs.cross} has-[>button]:pr-px`,
 	md: `${CHIP_BOX.sm} ${CHIP_PAD.sm.text} ${CHIP_SPACING.sm.cross} has-[>button]:pr-0.5`,
-	lg: `${CHIP_BOX.md} ${CHIP_PAD.md.text} ${CHIP_SPACING.md.cross} has-[>button]:pr-[5px]`
+	lg: `${CHIP_BOX.sm} ${CHIP_PAD.sm.text} ${CHIP_SPACING.sm.cross} has-[>button]:pr-0.5`
 };
 
 /** The cross inside a code's chip, on the chip step the control gives it. */
-export const PICKER_TEXT_CHIP_CROSS: Record<PickerSize, string> = { sm: CHIP_CROSS.xs, md: CHIP_CROSS.sm, lg: CHIP_CROSS.md };
+export const PICKER_TEXT_CHIP_CROSS: Record<PickerSize, string> = { sm: CHIP_CROSS.xs, md: CHIP_CROSS.sm, lg: CHIP_CROSS.sm };

@@ -1,10 +1,14 @@
 /**
  * The three status roles a shadcn theme does not carry, derived from the one it does.
  *
- * The rule is the one src/styles/themes.css states and its presets were written with:
- * the palette's own `--destructive` turned to green, amber and blue at the chroma each
- * hue allows, read on that palette's own `--destructive-foreground`, and darkened or
- * lightened from there only as far as AA needs.
+ * A role is the palette's own `--destructive` with its hue turned to green, amber or
+ * blue: the same lightness, the same chroma, capped only by what the new hue holds at
+ * that lightness. So the three sit on the step the theme put its destructive on and
+ * read in the theme's own voice, whether that is a pastel or an ink.
+ *
+ * Contrast is information, not a constraint: `meetAA` walks a role away from the ink it
+ * is read on until it clears 4.5:1, and that walk is what the presets in
+ * src/styles/themes.css were written with.
  */
 import { maxChroma, parseColor, ratio, type Oklch } from './color';
 import { colorOf, type Mode, type Tokens } from './theme';
@@ -19,13 +23,12 @@ export const STATUS_HUES: Readonly<Record<StatusRole, number>> = { success: 145,
 export const AA = 4.5;
 
 /**
- * The share of the hue's sRGB maximum a status colour takes. It is the share the presets
- * in themes.css sit on, and it keeps the colour off the edge of the gamut, where a
- * browser's own mapping would move it.
+ * The share of the hue's sRGB maximum a status colour takes. It keeps the colour off the
+ * edge of the gamut, where a browser's own mapping would move it.
  */
 const CHROMA_SHARE = 0.9165;
 
-/** Lightness moves in this step, so a role lands on a round value rather than the exact threshold. */
+/** Lightness moves in this step, so a walked role lands on a round value rather than the exact threshold. */
 const STEP = 0.004;
 
 /** Below this chroma a destructive is an ink, which cannot tell three hues apart. */
@@ -42,24 +45,43 @@ const FALLBACK: Readonly<Record<Mode, Oklch>> = {
 
 const clampL = (l: number) => Math.min(0.98, Math.max(0.02, l));
 
-/** The role at this lightness: its own hue, at the chroma the hue holds, never above the destructive's. */
-function at(l: number, hue: number, destructive: Oklch): Oklch {
-  return { l, c: Math.min(destructive.c, CHROMA_SHARE * maxChroma(l, hue)), h: hue, a: 1 };
+/** The hue at this lightness, at the chroma it holds, never above the ceiling. */
+const at = (l: number, hue: number, ceiling: number): Oklch => ({
+  l,
+  c: Math.min(ceiling, CHROMA_SHARE * maxChroma(l, hue)),
+  h: hue,
+  a: 1,
+});
+
+/** The destructive a role is turned from: the theme's own, or the fallback when it is an ink. */
+const sourceOf = (destructive: Oklch, mode: Mode): Oklch => (destructive.c < INK ? FALLBACK[mode] : destructive);
+
+/** One status colour, from the destructive of the same mode. */
+export function deriveRole(role: StatusRole, destructive: Oklch, mode: Mode = 'light'): Oklch {
+  const from = sourceOf(destructive, mode);
+  return at(clampL(from.l), STATUS_HUES[role], from.c);
 }
 
-/** One status colour, from the destructive pair of the same mode. */
-export function deriveRole(role: StatusRole, destructive: Oklch, foreground: Oklch, mode: Mode = 'light'): Oklch {
-  const from = destructive.c < INK ? FALLBACK[mode] : destructive;
-  const hue = STATUS_HUES[role];
+/**
+ * The colour walked away from the ink it is read on, in steps of lightness, until it
+ * clears AA. Its hue holds; its chroma follows what the hue allows, never above the
+ * ceiling, which is the colour's own unless a wider one is named.
+ */
+export function meetAA(color: Oklch, foreground: Oklch, ceiling: number = color.c): Oklch {
   // Away from the foreground: a light ink wants a darker colour under it, a dark ink a lighter one.
-  const direction = foreground.l > from.l ? -1 : 1;
-  let color = at(clampL(from.l), hue, from);
-  for (let step = 1; step <= 200 && ratio(color, foreground) < AA; step++) {
-    const l = clampL(from.l + direction * step * STEP);
-    if (l === color.l) break;
-    color = at(l, hue, from);
+  const direction = foreground.l > color.l ? -1 : 1;
+  let walked = color;
+  for (let step = 1; step <= 200 && ratio(walked, foreground) < AA; step++) {
+    const l = clampL(color.l + direction * step * STEP);
+    if (l === walked.l) break;
+    walked = at(l, color.h, ceiling);
   }
-  return color;
+  return walked;
+}
+
+/** A role derived and then walked to AA on the foreground it is read on. */
+export function roleMeetingAA(role: StatusRole, destructive: Oklch, foreground: Oklch, mode: Mode = 'light'): Oklch {
+  return meetAA(deriveRole(role, destructive, mode), foreground, sourceOf(destructive, mode).c);
 }
 
 export interface Status {
@@ -79,7 +101,7 @@ export function deriveStatus(tokens: Tokens, mode: Mode): Record<StatusRole, Sta
     parseColor(mode === 'dark' ? 'oklch(0.145 0 0)' : 'oklch(1 0 0)')!;
   const out = {} as Record<StatusRole, Status>;
   for (const role of STATUS_ROLES) {
-    const color = deriveRole(role, destructive, foreground, mode);
+    const color = deriveRole(role, destructive, mode);
     out[role] = { color, foreground, ratio: ratio(color, foreground), aa: ratio(color, foreground) >= AA };
   }
   return out;

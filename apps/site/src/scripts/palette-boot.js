@@ -73,7 +73,8 @@
       };
       link('sg-fonts-preconnect', 'preconnect', 'https://fonts.googleapis.com', false);
       link('sg-fonts-preconnect-files', 'preconnect', 'https://fonts.gstatic.com', true);
-      link('sg-theme-fonts', 'stylesheet', fonts, false);
+      // One request per family, plain and weighted, the way src/theme/fonts.ts writes them.
+      fonts.split(/\s+/).filter(Boolean).forEach((href, index) => link(index === 0 ? 'sg-theme-fonts' : 'sg-theme-fonts-' + index, 'stylesheet', href, false));
     }
   } catch {
     /* Blocked storage or a value this version cannot read: the page wears a shipped palette. */

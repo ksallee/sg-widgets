@@ -34,14 +34,28 @@ describe('the family a stack is drawn with', () => {
 });
 
 describe('the Google Fonts request', () => {
-  it('names each family once, with the weights the site uses', () => {
+  it('asks for each family on its own, plain first and then with the weights the site uses', () => {
+    // One request per family: Google refuses a whole request when any family in it lacks a
+    // weight, and the plain request serves the regular face whatever weights the family has.
     expect(googleFontsHref(['Poppins', 'Lora', 'Poppins'])).toBe(
-      'https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap',
+      [
+        'https://fonts.googleapis.com/css2?family=Lora&display=swap',
+        'https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600;700&display=swap',
+        'https://fonts.googleapis.com/css2?family=Poppins&display=swap',
+        'https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap',
+      ].join(' '),
     );
   });
 
   it('writes a two-word family with a plus', () => {
     expect(googleFontsHref(['Fira Code'])).toContain('family=Fira+Code:wght@400;500;600;700');
+  });
+
+  it('skips a family the machine serves, which Google Fonts does not carry', () => {
+    expect(familyOf('Georgia, serif')).toBeNull();
+    expect(familyOf("'Courier New', monospace")).toBeNull();
+    expect(familyOf('Times New Roman, serif')).toBeNull();
+    expect(googleFontsHref([])).toBeNull();
   });
 
   it('is nothing when a theme names no family to fetch', () => {
@@ -55,9 +69,14 @@ describe('a pasted theme', () => {
     expect(themeFamilies(bubblegum)).toEqual(['Poppins', 'Lora', 'Fira Code']);
   });
 
-  it('asks for them in one request', () => {
-    expect(themeFontsHref(bubblegum)).toBe(
-      'https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Lora:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap',
-    );
+  it('asks for them one family at a time', () => {
+    expect(themeFontsHref(bubblegum)?.split(' ')).toEqual([
+      'https://fonts.googleapis.com/css2?family=Fira+Code&display=swap',
+      'https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&display=swap',
+      'https://fonts.googleapis.com/css2?family=Lora&display=swap',
+      'https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600;700&display=swap',
+      'https://fonts.googleapis.com/css2?family=Poppins&display=swap',
+      'https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap',
+    ]);
   });
 });

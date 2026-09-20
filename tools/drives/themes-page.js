@@ -270,9 +270,10 @@ for (const [role, hue] of Object.entries(HUES)) {
 }
 
 // The theme's type, fetched from Google Fonts and worn by the stage.
-const link = document.getElementById('sg-theme-fonts');
-notes.push(`font request: ${link?.href ?? 'none'}`);
-if (!link || !/fonts\.googleapis\.com\/css2\?.*family=Poppins/.test(link.href)) {
+// One link per request: `sg-theme-fonts`, `sg-theme-fonts-1`, ... (src/theme/fonts.ts).
+const links = [...document.querySelectorAll('link[id^="sg-theme-fonts"]')];
+notes.push(`font requests: ${links.map((one) => one.href).join(' ') || 'none'}`);
+if (!links.some((one) => /fonts\.googleapis\.com\/css2\?.*family=Poppins/.test(one.href))) {
   return { verdict: 'FAIL the page asked for no Poppins', notes };
 }
 await document.fonts.ready;

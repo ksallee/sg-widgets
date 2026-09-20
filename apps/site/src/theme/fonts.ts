@@ -40,6 +40,31 @@ const GENERIC = new Set([
   'unset',
 ]);
 
+/** A family the machine serves and Google Fonts does not carry, so a request for it finds nothing. */
+const SYSTEM = new Set([
+  'arial',
+  'helvetica',
+  'helvetica neue',
+  'verdana',
+  'tahoma',
+  'trebuchet ms',
+  'segoe ui',
+  'times',
+  'times new roman',
+  'georgia',
+  'palatino',
+  'courier',
+  'courier new',
+  'menlo',
+  'monaco',
+  'consolas',
+  'lucida console',
+  'sf mono',
+  'sf pro',
+  'sf pro text',
+  'sf pro display',
+]);
+
 /** A family name is letters, digits, spaces and hyphens; anything else is a stack this cannot read. */
 const NAME = /^[a-z\d][a-z\d -]*$/i;
 
@@ -52,7 +77,7 @@ export function familyOf(stack: string): string | null {
   const family = first.trim().replace(/^['"]|['"]$/g, '').replace(/\s+/g, ' ').trim();
   if (!NAME.test(family)) return null;
   const lower = family.toLowerCase();
-  if (GENERIC.has(lower)) return null;
+  if (GENERIC.has(lower) || SYSTEM.has(lower)) return null;
   // The self-hosted faces are named with and without the `Variable` the fontsource package adds.
   if (SELF_HOSTED.includes(lower.replace(/ variable$/, ''))) return null;
   return family;
@@ -77,13 +102,25 @@ export function themeFamilies(theme: Theme): string[] {
  */
 const WEIGHTS = '400;500;600;700';
 
-/** The Google Fonts stylesheet for these families, or null when a theme names none. */
+/**
+ * The Google Fonts stylesheets for these families, space-separated, or null when a theme
+ * names none. Each family is its own request, plain and then weighted: Google refuses a
+ * whole request when any family in it lacks a weight, and the plain request serves the
+ * regular face whatever weights the family has, so a theme drawn in a one-weight face
+ * still shows in it.
+ */
 export function googleFontsHref(families: string[]): string | null {
   const names = [...new Set(families)].sort();
   if (names.length === 0) return null;
-  const query = names.map((name) => `family=${name.replace(/ /g, '+')}:wght@${WEIGHTS}`).join('&');
-  return `https://fonts.googleapis.com/css2?${query}&display=swap`;
+  const hrefs = names.flatMap((name) => {
+    const family = name.replace(/ /g, '+');
+    return [
+      `https://fonts.googleapis.com/css2?family=${family}&display=swap`,
+      `https://fonts.googleapis.com/css2?family=${family}:wght@${WEIGHTS}&display=swap`,
+    ];
+  });
+  return hrefs.join(' ');
 }
 
-/** The request a theme's type needs, or null when it names nothing to fetch. */
+/** The requests a theme's type needs, or null when it names nothing to fetch. */
 export const themeFontsHref = (theme: Theme): string | null => googleFontsHref(themeFamilies(theme));

@@ -38,12 +38,11 @@ export function themesCss(theme: Theme, slug: string): string {
 }
 
 /**
- * The theme on the two preview stages, each pinned to its own mode. The doubled
- * attribute outranks the palette block the stage would otherwise wear.
+ * The theme on the preview stages, by the mode each stage is in, the pair of selectors a
+ * shipped palette takes. The repeated attribute outranks the palette block the stage
+ * would otherwise wear, and the dark rule outranks the light one.
  */
 export function previewCss(theme: Theme): string {
-  return [
-    rule(`[data-theme-lock='light'] [data-stage][data-stage]`, theme.light),
-    rule(`[data-theme-lock='dark'] [data-stage][data-stage]`, theme.dark),
-  ].join('\n\n');
+  const stage = `[data-stage][data-stage][data-stage]`;
+  return [rule(stage, theme.light), rule(`${stage}.dark`, theme.dark)].join('\n\n');
 }

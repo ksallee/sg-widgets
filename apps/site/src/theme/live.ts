@@ -17,23 +17,31 @@ const PRECONNECT: readonly { id: string; href: string; anonymous: boolean }[] = 
 
 /** A font request the page holds under one id, repointed in place; null takes it off. */
 export function applyFontLink(id: string, href: string | null): void {
-  const held = document.getElementById(id);
-  if (href === null) {
-    held?.remove();
-    return;
+  // One stylesheet link per request, `id`, `id-1`, `id-2`...; a shorter list drops the tail.
+  const hrefs = href === null ? [] : href.split(/\s+/).filter((one) => one.length > 0);
+  for (let index = 0; ; index++) {
+    const linkId = index === 0 ? id : `${id}-${index}`;
+    const held = document.getElementById(linkId);
+    if (index >= hrefs.length) {
+      if (!held) break;
+      held.remove();
+      continue;
+    }
+    if (index === 0) {
+      for (const origin of PRECONNECT) {
+        if (document.getElementById(origin.id)) continue;
+        const hint = document.createElement('link');
+        hint.id = origin.id;
+        hint.rel = 'preconnect';
+        hint.href = origin.href;
+        if (origin.anonymous) hint.crossOrigin = '';
+        document.head.append(hint);
+      }
+    }
+    const link = held instanceof HTMLLinkElement ? held : document.createElement('link');
+    link.id = linkId;
+    link.rel = 'stylesheet';
+    if (link.getAttribute('href') !== hrefs[index]) link.href = hrefs[index]!;
+    if (!link.isConnected) document.head.append(link);
   }
-  for (const origin of PRECONNECT) {
-    if (document.getElementById(origin.id)) continue;
-    const hint = document.createElement('link');
-    hint.id = origin.id;
-    hint.rel = 'preconnect';
-    hint.href = origin.href;
-    if (origin.anonymous) hint.crossOrigin = '';
-    document.head.append(hint);
-  }
-  const link = held instanceof HTMLLinkElement ? held : document.createElement('link');
-  link.id = id;
-  link.rel = 'stylesheet';
-  if (link.getAttribute('href') !== href) link.href = href;
-  if (!link.isConnected) document.head.append(link);
 }

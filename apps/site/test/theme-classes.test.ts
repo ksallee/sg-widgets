@@ -224,3 +224,80 @@ describe('the type and the letter spacing a theme names', () => {
     expect(reset).toMatch(/letter-spacing:\s*var\(--tracking-normal,[^)]*\)/);
   });
 });
+
+const reactWidgets = join(root, 'packages/react/src/registry/sg/components');
+const svelteWidgets = join(root, 'packages/svelte/src/lib/registry/components');
+
+/**
+ * A widget part that draws chrome of its own rather than composing a primitive, and the
+ * class its shadcn twin carries there: a bordered field is an input, a raised container
+ * is a card, and a leaf laid on either is a badge, which carries none.
+ */
+interface WidgetPart {
+  name: string;
+  /** The file under each package's registry, React first. */
+  files: [string, string];
+  anchor: string;
+  /** The class the part has to carry, or null where it carries no shadow at all. */
+  wears: string | null;
+}
+
+const WIDGET_SHADOWS: WidgetPart[] = [
+  {
+    name: "the colour editor's swatch, a field beside its input",
+    files: ['color-editor.tsx', 'color-editor.svelte'],
+    anchor: 'focus-within:ring-offset-background',
+    wears: 'shadow-xs',
+  },
+  {
+    // A card wears the border and the radius a theme names and no shadow: the rendered
+    // reference paints none on one, whatever class its own card carries.
+    name: "the entity card's tile, a card surface",
+    files: ['entity-card.tsx', 'entity-card.svelte'],
+    anchor: 'group/tile',
+    wears: null,
+  },
+  {
+    name: 'the status badge',
+    files: ['status-badge.tsx', 'status-badge.svelte'],
+    anchor: 'border-border inline-flex',
+    wears: null,
+  },
+  {
+    name: 'the entity chip',
+    files: ['entity-chip.tsx', 'entity-chip.svelte'],
+    anchor: 'bg-secondary text-secondary-foreground',
+    wears: null,
+  },
+  {
+    name: 'the thumbnail, a picture in the page flow',
+    files: ['thumbnail.tsx', 'thumbnail.svelte'],
+    anchor: 'relative isolate inline-flex',
+    wears: null,
+  },
+  {
+    name: 'the avatar, a picture too',
+    files: ['user-avatar.tsx', 'user-avatar.svelte'],
+    anchor: 'ring-border flex size-full',
+    wears: null,
+  },
+];
+
+describe('the widget parts that draw their own chrome', () => {
+  for (const part of WIDGET_SHADOWS) {
+    const [react, svelte] = part.files;
+    const what = part.wears === null ? 'carries no shadow' : `carries ${part.wears}`;
+    it(`${part.name} ${what}, in both frameworks`, () => {
+      for (const path of [join(reactWidgets, react), join(svelteWidgets, svelte)]) {
+        for (const value of parts(path, part.anchor)) {
+          const classes = value.split(/\s+/);
+          if (part.wears === null) {
+            expect(classes.filter((one) => one.startsWith('shadow-')), `${path}: ${part.name}`).toHaveLength(0);
+          } else {
+            expect(classes, `${path}: ${part.name}`).toContain(part.wears);
+          }
+        }
+      }
+    });
+  }
+});

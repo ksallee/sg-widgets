@@ -4,6 +4,7 @@ description: The ordered sort keys of a query, and the sort string they serialis
 ---
 
 import Demo from '../../../components/Demo.astro';
+import Install from '../../../components/Install.astro';
 import Props from '../../../components/Props.astro';
 
 An ordered list of sort keys. Each is a field and a direction; the list serialises to the `sort`
@@ -16,10 +17,7 @@ the same, and `tools/drives/picker-contract.js` is the proof.
 
 ## Install
 
-```sh
-pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/sort-picker.json
-pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/sort-picker.json
-```
+<Install item="sort-picker" />
 
 <Demo name="sort-picker" title="SortPicker: two keys over Shot, with the rows they order, and the three sizes beside a button" />
 

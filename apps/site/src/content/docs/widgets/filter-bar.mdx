@@ -4,6 +4,7 @@ description: Quick facet pills over one entity type, bound to a filter tree.
 ---
 
 import Demo from '../../../components/Demo.astro';
+import Install from '../../../components/Install.astro';
 import Props from '../../../components/Props.astro';
 
 A row of facet pills. Each lists one field's values with a count and ticking them adds a condition to
@@ -11,10 +12,7 @@ the bound tree. A More filters pill opens the same tree in the full editor.
 
 ## Install
 
-```sh
-pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/filter-bar.json
-pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/filter-bar.json
-```
+<Install item="filter-bar" />
 
 <Demo name="filter-bar" title="FilterBar: status, sequence and shot type over Shot, seeded pills, read state over Note, and sizes" />
 

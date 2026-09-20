@@ -4,6 +4,7 @@ description: A lazy tree over a project's navigation hierarchy.
 ---
 
 import Demo from '../../../components/Demo.astro';
+import Install from '../../../components/Install.astro';
 import Props from '../../../components/Props.astro';
 
 Walks the navigation tree the web interface draws, one level per call, from a project down to its
@@ -11,10 +12,7 @@ shots and assets.
 
 ## Install
 
-```sh
-pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/entity-tree.json
-pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/entity-tree.json
-```
+<Install item="entity-tree" />
 
 <Demo name="entity-tree" title="Entity Tree: a project seeded open to one shot, with checkboxes, a search, a thumbnail variant, and the three sizes beside a button" />
 

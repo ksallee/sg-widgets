@@ -1,0 +1,87 @@
+---
+/**
+ * One install command, under a React | Svelte tab.
+ *
+ * `<Install item="status-badge" />` writes the two registry lines; `react` and `svelte`
+ * take a command of their own. The tabs and every demo toolbar on the site share
+ * `sg-demo:framework`, so a tab here moves the demos on the page, holds for the next
+ * page, and follows a toolbar segment back.
+ */
+import { Code } from '@astrojs/starlight/components';
+import { group as groupClass, segment as segmentClass } from './controls';
+import { defaultFramework } from './demo-prefs';
+
+interface Props {
+  /** Registry item, for the two `shadcn add` lines. */
+  item?: string;
+  /** The React command, when it is not a registry add. */
+  react?: string;
+  /** The Svelte command, when it is not a registry add. */
+  svelte?: string;
+}
+
+const { item, react, svelte } = Astro.props;
+
+if (!item && !(react && svelte)) {
+  throw new Error('<Install> needs `item`, or a `react` and a `svelte` command.');
+}
+
+const panes = [
+  { framework: 'react', label: 'React', command: react ?? `pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/${item}.json` },
+  { framework: 'svelte', label: 'Svelte', command: svelte ?? `pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/${item}.json` },
+];
+---
+
+<div class="not-content flex flex-col gap-2" data-sg-install>
+  <!-- `sg-demo` hands the buttons the preflight the rest of the site's chrome has. -->
+  <div class={`sg-demo self-start ${groupClass}`} role="group" aria-label="Framework">
+    {
+      panes.map((pane) => (
+        <button
+          type="button"
+          class={segmentClass}
+          data-install-pick={pane.framework}
+          aria-pressed={String(pane.framework === defaultFramework)}
+        >
+          {pane.label}
+        </button>
+      ))
+    }
+  </div>
+
+  {panes.map((pane) => <div data-install-pane={pane.framework}><Code code={pane.command} lang="sh" /></div>)}
+</div>
+
+<style>
+  /*
+   * The pane and the pressed segment follow `:root[data-sg-framework]`, which
+   * src/scripts/palette-boot.js writes before the first paint, so a page opens on the
+   * reader's framework instead of switching once the script below runs. A browser
+   * running no script shows both commands, which is the honest answer.
+   */
+  :global(:root[data-sg-framework='react']) [data-install-pane='svelte'],
+  :global(:root[data-sg-framework='svelte']) [data-install-pane='react'] {
+    display: none;
+  }
+
+  :global(:root[data-sg-framework='react']) [data-install-pick='react'],
+  :global(:root[data-sg-framework='svelte']) [data-install-pick='svelte'],
+  :global(:root[data-sg-framework='both']) [data-install-pick] {
+    background-color: var(--accent);
+    color: var(--accent-foreground);
+    font-weight: 500;
+  }
+</style>
+
+<script>
+  /** Wires every install tab on the page. The demos read the key themselves. */
+  import { applyPrefs, setPref, watchPrefs } from './demo-prefs';
+
+  document.addEventListener('click', (event) => {
+    const pick = (event.target as HTMLElement | null)?.closest<HTMLElement>('[data-install-pick]');
+    if (pick?.dataset.installPick) setPref('framework', pick.dataset.installPick);
+  });
+
+  applyPrefs();
+  watchPrefs();
+</script>

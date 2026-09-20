@@ -4,6 +4,7 @@ description: The control box and popup shell every picker is built on.
 ---
 
 import Demo from '../../../components/Demo.astro';
+import Install from '../../../components/Install.astro';
 import Props from '../../../components/Props.astro';
 
 The box a picker's value sits in, and the popup its rows come from. A picker built on it supplies its
@@ -11,10 +12,7 @@ query, its rows, its row renderer and its chip.
 
 ## Install
 
-```sh
-pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/picker-control.json
-pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/picker-control.json
-```
+<Install item="picker-control" />
 
 <Demo name="picker-control" title="PickerControl: every shape a picker comes in, over one static list of departments" />
 

@@ -4,6 +4,7 @@ description: The columns of a grid as a field picker over the ordered list it fi
 ---
 
 import Demo from '../../../components/Demo.astro';
+import Install from '../../../components/Install.astro';
 import Props from '../../../components/Props.astro';
 
 Chooses the columns of a grid. A field picker sits over the list of chosen paths; picking a field
@@ -18,10 +19,7 @@ array of paths ordered by drag, where the field picker takes one path.
 
 ## Install
 
-```sh
-pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/column-picker.json
-pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/column-picker.json
-```
+<Install item="column-picker" />
 
 <Demo name="column-picker" title="ColumnPicker: the default list, a picker restricted to dates, the dual layout, disabled and read-only" />
 

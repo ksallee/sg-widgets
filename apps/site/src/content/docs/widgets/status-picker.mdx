@@ -4,6 +4,7 @@ description: One Flow Production Tracking status, picked from the codes a projec
 ---
 
 import Demo from '../../../components/Demo.astro';
+import Install from '../../../components/Install.astro';
 import Props from '../../../components/Props.astro';
 
 Picks one status code for an entity type, offering only the codes the project it is scoped to allows.
@@ -15,10 +16,7 @@ Single and multi: [StatusMultiPicker](/widgets/status-multi-picker/) takes sever
 
 ## Install
 
-```sh
-pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/status-picker.json
-pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/status-picker.json
-```
+<Install item="status-picker" />
 
 <Demo name="status-picker" title="StatusPicker: per-project options, unknown codes, states and sizes" />
 

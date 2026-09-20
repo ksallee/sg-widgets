@@ -7,19 +7,11 @@
  * on one example holds for every other example on the page, for the next page, and for
  * a second tab. What the demos read lives in the header, under Connect.
  */
-import { radii } from './demo-prefs';
+import { group as groupClass, segment as segmentClass, toggle as toggleClass } from './controls';
+import { defaultFramework, frameworks, radii } from './demo-prefs';
 
-const control =
-  'inline-flex h-8 items-center justify-center px-2 text-sm text-muted-foreground select-none ' +
-  'transition-[color,background-color,opacity,transform] duration-150 ease-out ' +
-  'hover:bg-accent hover:text-accent-foreground ' +
-  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ' +
-  'active:scale-[0.98] ' +
-  'aria-pressed:bg-accent aria-pressed:text-accent-foreground aria-pressed:font-medium';
-
-const segmentClass = `${control} border-l border-border first:border-l-0`;
-const toggleClass = `${control} rounded-md border border-border bg-background`;
-const groupClass = 'inline-flex h-8 items-center overflow-hidden rounded-md border border-border bg-background';
+/** The segment a framework is named on. `both` is the development-only two-pane stage. */
+const frameworkLabels: Record<string, string> = { svelte: 'Svelte', react: 'React', both: 'Both' };
 
 // The native chevron is not a token, so it is drawn from `currentColor` alongside.
 const selectWrapClass = 'group relative inline-flex items-center text-muted-foreground';
@@ -44,15 +36,18 @@ const { title } = Astro.props;
   <span class="min-w-0 flex-1 basis-48 truncate text-xs text-muted-foreground" title={title}>{title}</span>
 
   <div class={groupClass} role="group" aria-label="Framework">
-    <button type="button" class={segmentClass} data-framework-pick="svelte" aria-pressed="false">
-      Svelte
-    </button>
-    <button type="button" class={segmentClass} data-framework-pick="react" aria-pressed="false">
-      React
-    </button>
-    <button type="button" class={segmentClass} data-framework-pick="both" aria-pressed="true">
-      Both
-    </button>
+    {
+      frameworks.map((framework) => (
+        <button
+          type="button"
+          class={segmentClass}
+          data-framework-pick={framework}
+          aria-pressed={String(framework === defaultFramework)}
+        >
+          {frameworkLabels[framework]}
+        </button>
+      ))
+    }
   </div>
 
   <button type="button" class={toggleClass} data-motion-toggle aria-pressed="false">Reduce motion</button>

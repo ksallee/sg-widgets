@@ -4,6 +4,7 @@ description: Several projects, chosen by server-side search, with the project th
 ---
 
 import Demo from '../../../components/Demo.astro';
+import Install from '../../../components/Install.astro';
 import Props from '../../../components/Props.astro';
 
 Searches projects on the server, showing each one's thumbnail and status, and binds the ones you
@@ -13,10 +14,7 @@ Single and multi: [ProjectPicker](/widgets/project-picker/) takes one project.
 
 ## Install
 
-```sh
-pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/project-multi-picker.json
-pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/project-multi-picker.json
-```
+<Install item="project-multi-picker" />
 
 <Demo name="project-multi-picker" title="ProjectMultiPicker: chips, archived projects, hydration, summary modes, sizes, states" />
 

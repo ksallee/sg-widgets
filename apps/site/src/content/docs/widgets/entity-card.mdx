@@ -4,6 +4,7 @@ description: One Flow Production Tracking row as a card, or as a thumbnail-first
 ---
 
 import Demo from '../../../components/Demo.astro';
+import Install from '../../../components/Install.astro';
 import Props from '../../../components/Props.astro';
 
 Renders one row as a card: its thumbnail, name, type, status and a grid of the field paths you name.
@@ -14,10 +15,7 @@ same row picture first, and is what EntityGrid lays out.
 
 Installing this pulls StatusBadge and Thumbnail with it.
 
-```sh
-pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/entity-card.json
-pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/entity-card.json
-```
+<Install item="entity-card" />
 
 <Demo name="entity-card" title="EntityCard: three sizes from a row, one card reading a picked reference, and the tile variant" />
 

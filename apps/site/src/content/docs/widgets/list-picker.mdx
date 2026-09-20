@@ -4,6 +4,7 @@ description: One value of a list field, picked from the set its schema declares.
 ---
 
 import Demo from '../../../components/Demo.astro';
+import Install from '../../../components/Install.astro';
 import Props from '../../../components/Props.astro';
 
 Edits a list field, offering the vocabulary its schema declares.
@@ -16,10 +17,7 @@ Single and multi: [ListMultiPicker](/widgets/list-multi-picker/) takes several v
 
 ## Install
 
-```sh
-pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/list-picker.json
-pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/list-picker.json
-```
+<Install item="list-picker" />
 
 <Demo name="list-picker" title="ListPicker: valid values, labels, a project's hidden values removed, a search box, and a mandatory field" />
 

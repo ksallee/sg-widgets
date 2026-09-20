@@ -4,6 +4,7 @@ description: One field, displayed or edited, with the editor chosen by the data 
 ---
 
 import Demo from '../../../components/Demo.astro';
+import Install from '../../../components/Install.astro';
 import Props from '../../../components/Props.astro';
 
 Shows a field value and turns it into the right editor for its data type.
@@ -12,10 +13,7 @@ Shows a field value and turns it into the right editor for its data type.
 
 Installing this pulls FieldValue, the eight typed editors and the three pickers with it.
 
-```sh
-pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/field-editor.json
-pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/field-editor.json
-```
+<Install item="field-editor" />
 
 <Demo name="field-editor" title="FieldEditor: every data type, with a display and edit toggle" />
 

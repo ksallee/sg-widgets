@@ -4,6 +4,7 @@ description: A Flow Production Tracking filter tree, edited as rows and nested g
 ---
 
 import Demo from '../../../components/Demo.astro';
+import Install from '../../../components/Install.astro';
 import Props from '../../../components/Props.astro';
 
 Edits a filter tree. A row is a field, an operator and a value; groups nest under All or Any. The
@@ -13,10 +14,7 @@ to the body `_search` takes.
 
 ## Install
 
-```sh
-pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/filter-editor.json
-pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/filter-editor.json
-```
+<Install item="filter-editor" />
 
 <Demo name="filter-editor" title="FilterEditor: a catalogue of Version filters, one group per data type, with its serialised filter, a Note read-state row, and sizes" />
 

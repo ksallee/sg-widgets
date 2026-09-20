@@ -8,6 +8,12 @@
 // --start builds nothing: it runs `astro dev` on a free port with its own .astro dir, so two agents
 // never share a server. Without it, --url (or --path on --base, default http://127.0.0.1:4321) is used.
 //
+// --framework both needs PUBLIC_SG_DEMO_BOTH=1: the Both segment, the `both` value and the two-pane
+// stage are development-only, and the value resolves to react without it. --start spawns astro dev
+// with this process's environment, and astro reads the repo root's .env.local, so either
+// `PUBLIC_SG_DEMO_BOTH=1 node tools/qa.mjs ...` or the line in .env.local (see .env.example) reaches
+// the server.
+//
 // The drive file is the body of an async function receiving ({wait, $, $$, harness}). `harness.set`
 // writes the demo view's localStorage keys (framework: svelte|react|both, theme: light|dark,
 // motion: normal|reduced, palette: default|nova|..., radius: default|none|sm|md|lg|xl) and the

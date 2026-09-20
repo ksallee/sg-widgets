@@ -6,6 +6,7 @@
  */
 import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { applyStyle } from '../../../theme/live';
 import {
   CONTRAST,
   GROUPS,
@@ -142,13 +143,7 @@ function Lab({ blocks }: { blocks: Record<Mode, Block> }) {
   }, [saved]);
 
   useEffect(() => {
-    let tag = document.getElementById(STYLE_ID);
-    if (!tag) {
-      tag = document.createElement('style');
-      tag.id = STYLE_ID;
-      document.head.appendChild(tag);
-    }
-    tag.textContent = overrideCss({ light: resolved.light.values(), dark: resolved.dark.values() }, radiusChanged ? radiusValue : null);
+    applyStyle(STYLE_ID, overrideCss({ light: resolved.light.values(), dark: resolved.dark.values() }, radiusChanged ? radiusValue : null));
   }, [resolved, radiusChanged, radiusValue]);
 
   useEffect(() => {

@@ -1,0 +1,203 @@
+---
+/**
+ * Themes: paste a shadcn theme, see the widgets wearing it in light and dark, keep it as
+ * the palette every page wears, and copy it back out with the three status roles the
+ * widgets need.
+ *
+ * The page sits outside Starlight, like the QA lab, because the editor and the two
+ * preview columns want the window rather than the docs column. Starlight's header takes
+ * no props and reads route data this page has none of, so the bar below carries the
+ * palette select, a light/dark toggle written against the key Starlight's own select
+ * holds, and the link back to the docs.
+ */
+import '../styles/global.css';
+import Demo from '../components/Demo.astro';
+import SiteControls from '../components/SiteControls.astro';
+import Wordmark from '../components/Wordmark.astro';
+import ThemeEditor from './_themes/ThemeEditor.tsx';
+
+const demos = [
+  { name: 'filter-bar', title: 'Filter bar' },
+  { name: 'status-badge', title: 'Status badges' },
+  { name: 'entity-card', title: 'Entity card' },
+];
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Themes</title>
+    <meta name="description" content="Paste a shadcn theme, see the widgets wearing it, and take it away with its status roles." />
+    <link rel="icon" href="/favicon.svg" />
+    <script is:inline>
+      // Starlight's key, so the mode this page is left in is the mode the docs open in.
+      try {
+        const stored = localStorage.getItem('starlight-theme');
+        document.documentElement.dataset.theme = stored === 'dark' || stored === 'light' ? stored : 'light';
+      } catch {
+        document.documentElement.dataset.theme = 'light';
+      }
+    </script>
+  </head>
+  <body class="sg-demo bg-background text-foreground">
+    <header class="th-bar">
+      <div class="th-home">
+        <a href="/widgets/"><Wordmark /></a>
+        <h1 class="th-title">Themes</h1>
+      </div>
+      <div class="th-controls">
+        <SiteControls />
+        <button class="th-toggle" type="button" data-theme-toggle aria-pressed="false">Dark</button>
+      </div>
+    </header>
+
+    <div class="th-page">
+      <aside class="th-side">
+        <ThemeEditor client:only="react" />
+      </aside>
+
+      <main class="th-preview">
+        {
+          ['light', 'dark'].map((lock) => (
+            <section class="th-column" data-theme-lock={lock}>
+              <h2 class="th-column-title">{lock === 'light' ? 'Light' : 'Dark'}</h2>
+              {demos.map((demo) => (
+                <Demo name={demo.name} title={demo.title} />
+              ))}
+            </section>
+          ))
+        }
+      </main>
+    </div>
+
+    <script>
+      /** The page's own light/dark, on the key Starlight's select holds. */
+      const root = document.documentElement;
+      const toggle = document.querySelector<HTMLButtonElement>('[data-theme-toggle]');
+
+      function paint(): void {
+        const dark = root.dataset.theme === 'dark';
+        root.classList.toggle('dark', dark);
+        root.style.colorScheme = dark ? 'dark' : 'light';
+        toggle?.setAttribute('aria-pressed', String(dark));
+        if (toggle) toggle.textContent = dark ? 'Light' : 'Dark';
+      }
+
+      toggle?.addEventListener('click', () => {
+        const next = root.dataset.theme === 'dark' ? 'light' : 'dark';
+        root.dataset.theme = next;
+        try {
+          localStorage.setItem('starlight-theme', next);
+        } catch {
+          // The mode holds for this page either way.
+        }
+        paint();
+      });
+
+      paint();
+    </script>
+
+    <style is:global>
+      /* The page's own chrome, in plain CSS on the tokens. */
+      .th-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: 0.75rem 1.5rem;
+        border-bottom: 1px solid var(--border);
+        background: var(--background);
+      }
+      .th-home { display: flex; align-items: baseline; gap: 0.75rem; font-size: 1.125rem; }
+      .th-home a { color: var(--foreground); text-decoration: none; }
+      .th-title { color: var(--muted-foreground); font-size: 0.875rem; font-weight: 500; }
+      .th-controls { display: flex; align-items: center; gap: 1rem; }
+      .th-toggle {
+        height: 2rem;
+        padding: 0 0.75rem;
+        border: 1px solid var(--border);
+        border-radius: calc(var(--radius) * 0.8);
+        color: var(--foreground);
+        font-size: 0.8125rem;
+      }
+      .th-toggle:hover { background: var(--accent); color: var(--accent-foreground); }
+      .th-toggle:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--background), 0 0 0 4px var(--ring); }
+
+      .th-page { display: grid; grid-template-columns: minmax(0, 26rem) minmax(0, 1fr); align-items: start; }
+      .th-side {
+        position: sticky;
+        top: 0;
+        max-height: 100vh;
+        overflow-y: auto;
+        border-right: 1px solid var(--border);
+        background: var(--background);
+      }
+      .th-preview { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.5rem; min-width: 0; padding: 1.5rem; }
+      .th-column { display: flex; flex-direction: column; gap: 1rem; min-width: 0; }
+      .th-column-title { font-size: 0.75rem; font-weight: 500; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted-foreground); }
+      @media (max-width: 75rem) {
+        .th-page { grid-template-columns: minmax(0, 1fr); }
+        .th-side { position: static; max-height: none; border-right: 0; border-bottom: 1px solid var(--border); }
+        .th-preview { grid-template-columns: minmax(0, 1fr); }
+      }
+
+      .th-editor { display: flex; flex-direction: column; font-size: 0.875rem; }
+      .th-lead { padding: 1rem 1rem 0; color: var(--muted-foreground); font-size: 0.8125rem; }
+      .th-lead a { color: var(--foreground); text-decoration: underline; text-underline-offset: 2px; }
+      .th-group { display: flex; flex-direction: column; gap: 0.75rem; padding: 1rem; border-bottom: 1px solid var(--border); }
+      .th-h { font-size: 0.875rem; font-weight: 600; }
+      .th-label, .th-value, .th-ratio { color: var(--muted-foreground); font-size: 0.75rem; }
+      .th-role { text-transform: capitalize; }
+      .th-value { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .th-ratio[data-fail] { color: var(--destructive); }
+      .th-field { display: flex; flex-direction: column; gap: 0.375rem; min-width: 0; }
+      .th-two { display: grid; grid-template-columns: 6rem minmax(0, 1fr); align-items: center; gap: 0.5rem; }
+      .th-inline { display: grid; grid-template-columns: 6rem 2rem minmax(0, 1fr) auto; align-items: center; gap: 0.5rem; }
+      .th-slider { display: grid; grid-template-columns: 6rem minmax(0, 1fr) 4rem; align-items: center; gap: 0.5rem; }
+      .th-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+      .th-between { justify-content: space-between; }
+      .th-seg { display: flex; gap: 0.375rem; }
+      .th-error { color: var(--destructive); font-size: 0.75rem; }
+
+      .th-in {
+        width: 100%;
+        min-width: 0;
+        padding: 0.25rem 0.5rem;
+        border: 1px solid var(--input);
+        border-radius: calc(var(--radius) * 0.8);
+        background: var(--background);
+        color: var(--foreground);
+        font: inherit;
+        font-size: 0.8125rem;
+      }
+      .th-in:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--background), 0 0 0 4px var(--ring); }
+      .th-paste { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.75rem; resize: vertical; }
+      .th-color { width: 2rem; height: 1.75rem; padding: 0; border: 1px solid var(--border); border-radius: calc(var(--radius) * 0.6); background: transparent; }
+      .th-range { -webkit-appearance: none; appearance: none; width: 100%; height: 0.5rem; border-radius: 999px; background: var(--muted); }
+      .th-range::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 1rem;
+        height: 1rem;
+        border: 2px solid var(--foreground);
+        border-radius: 50%;
+        background: var(--background);
+        cursor: pointer;
+      }
+      .th-range::-moz-range-thumb { width: 1rem; height: 1rem; border: 2px solid var(--foreground); border-radius: 50%; background: var(--background); cursor: pointer; }
+      .th-range:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--background), 0 0 0 4px var(--ring); }
+      .th-out {
+        max-height: 14rem;
+        padding: 0.75rem;
+        overflow: auto;
+        border: 1px solid var(--input);
+        border-radius: var(--radius);
+        background: var(--muted);
+        color: var(--foreground);
+        font-size: 0.6875rem;
+        line-height: 1.5;
+        white-space: pre;
+      }
+    </style>
+  </body>
+</html>

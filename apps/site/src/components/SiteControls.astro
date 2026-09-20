@@ -37,13 +37,24 @@ import { defaultPalette, palettes } from './demo-prefs';
    * Connect owns the source, the site, the login and the project.
    */
   import { mount } from 'svelte';
-  import { applyPrefs, setPref, watchPrefs } from './demo-prefs';
+  import { applyPrefs, customPalette, setPref, watchPrefs } from './demo-prefs';
+  import { readCustom } from '../theme/custom';
   import ConnectPanel from './ConnectPanel.svelte';
 
   document.addEventListener('change', (event) => {
     const select = (event.target as HTMLElement | null)?.closest<HTMLSelectElement>('.sg-palette select');
     if (select) setPref('palette', select.value);
   });
+
+  // A theme saved on /themes joins the list, on every page, under the name it was saved with.
+  const custom = readCustom();
+  const select = document.querySelector<HTMLSelectElement>('.sg-palette select');
+  if (custom && select && !select.querySelector(`option[value='${customPalette}']`)) {
+    const option = document.createElement('option');
+    option.value = customPalette;
+    option.textContent = custom.label;
+    select.append(option);
+  }
 
   applyPrefs();
   watchPrefs();

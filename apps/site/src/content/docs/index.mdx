@@ -13,3 +13,10 @@ hero:
       link: /start/introduction/
       icon: right-arrow
 ---
+
+import { CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+<CardGrid>
+  <LinkCard title="Widgets" href="/widgets/" description="Every widget, in both frameworks, with its props and its keyboard map." />
+  <LinkCard title="Themes" href="/themes/" description="Paste a shadcn theme, see the widgets wearing it, and take it away with its status roles." />
+</CardGrid>

@@ -13,11 +13,12 @@ import { palettes } from '../../components/demo-prefs';
 import { formatOklch, ratio, toHex } from '../../theme/color';
 import { adjust, backgroundHue, backgroundTint, noAdjustments, radiusOf, withStatus, type Adjustments } from '../../theme/adjust';
 import { clearCustom, readCustom, saveCustom } from '../../theme/custom';
-import { applyStyle } from '../../theme/live';
+import { FONT_LINK, themeFontsHref } from '../../theme/fonts';
+import { applyFontLink, applyStyle } from '../../theme/live';
 import { ThemeParseError, parseTheme } from '../../theme/parse';
 import { presetTheme } from '../../theme/presets';
 import { previewCss, shadcnCss, slugify, themesCss } from '../../theme/serialise';
-import { AA, STATUS_ROLES, type StatusRole } from '../../theme/status';
+import { AA, STATUS_ROLES, meetAA, type StatusRole } from '../../theme/status';
 import { MODES, colorOf, type Mode, type Theme } from '../../theme/theme';
 
 /** The style tag the two preview stages read. */
@@ -49,6 +50,7 @@ export default function ThemeEditor() {
 
   useEffect(() => {
     applyStyle(PREVIEW_STYLE, previewCss(theme));
+    applyFontLink(FONT_LINK, themeFontsHref(theme));
   }, [theme]);
 
   const start = (next: Theme, from: string): void => {
@@ -71,6 +73,17 @@ export default function ThemeEditor() {
   const editStatus = (role: StatusRole, hex: string): void =>
     setEdits((current) => ({ ...current, status: { ...current.status, [mode]: { ...current.status[mode], [role]: hex } } }));
 
+  /** The three roles of this mode, each walked until it clears AA on the ink it is read on. */
+  const walkToAA = (): void => {
+    const walked: Partial<Record<StatusRole, string>> = {};
+    for (const role of STATUS_ROLES) {
+      const color = colorOf(theme[mode], `--${role}`);
+      const foreground = colorOf(theme[mode], `--${role}-foreground`);
+      if (color && foreground) walked[role] = formatOklch(meetAA(color, foreground));
+    }
+    setEdits((current) => ({ ...current, status: { ...current.status, [mode]: { ...current.status[mode], ...walked } } }));
+  };
+
   const exports: [string, string][] = [
     ['For a host stylesheet', shadcnCss(theme)],
     ['For src/styles/themes.css', themesCss(theme, slug)],
@@ -89,8 +102,9 @@ export default function ThemeEditor() {
   return (
     <div className="th-editor" data-th="editor">
       <p className="th-lead">
-        Design a theme in <a href="https://tweakcn.com">tweakcn</a> or read{' '}
-        <a href="https://ui.shadcn.com/docs/theming">shadcn's theming guide</a>, then paste it here.
+        Design a theme in <a href="https://tweakcn.com">tweakcn</a>. Press Code at the top right of its editor, copy the whole
+        stylesheet, and paste it here. <a href="https://ui.shadcn.com/docs/theming">shadcn's theming guide</a> says what the
+        tokens are.
       </p>
 
       <section className="th-group">
@@ -123,6 +137,10 @@ export default function ThemeEditor() {
             value={paste}
             onChange={(event) => setPaste(event.target.value)}
           />
+          <span className="th-label">
+            The preview reads the colours, the radius, the fonts and the shadows. Every other token in the paste is kept and
+            comes back in the export.
+          </span>
         </label>
         <div className="th-row">
           <Button size="sm" data-th="use" onClick={use}>
@@ -195,7 +213,12 @@ export default function ThemeEditor() {
           readout={edits.radius ?? radiusOf(base)}
         />
 
-        <h3 className="th-label">Status roles, from the destructive colour</h3>
+        <div className="th-row th-between">
+          <h3 className="th-label">Status roles, from the destructive colour</h3>
+          <Button size="sm" variant="outline" data-th="meet-aa" onClick={walkToAA}>
+            Meet AA
+          </Button>
+        </div>
         {STATUS_ROLES.map((role) => (
           <StatusRow key={role} role={role} theme={theme} mode={mode} onChange={(hex) => editStatus(role, hex)} />
         ))}

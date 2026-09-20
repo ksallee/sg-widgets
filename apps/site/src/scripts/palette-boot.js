@@ -46,12 +46,34 @@
    */
   try {
     const stored = localStorage.getItem('sg-theme:custom');
-    const css = stored ? JSON.parse(stored).css : null;
+    const saved = stored ? JSON.parse(stored) : null;
+    const css = saved ? saved.css : null;
     if (typeof css === 'string') {
       const tag = document.createElement('style');
       tag.id = 'sg-custom-palette';
       tag.textContent = css;
       document.head.appendChild(tag);
+    }
+    /*
+     * The typefaces the theme names, from Google Fonts. The site self-hosts the families
+     * its own palettes name, so this request is only ever a pasted theme's. The three
+     * links carry the ids src/theme/live.ts holds them under, so the Themes page repoints
+     * them rather than adding a second set.
+     */
+    const fonts = saved ? saved.fonts : null;
+    if (typeof fonts === 'string') {
+      const link = (id, rel, href, anonymous) => {
+        if (document.getElementById(id)) return;
+        const tag = document.createElement('link');
+        tag.id = id;
+        tag.rel = rel;
+        tag.href = href;
+        if (anonymous) tag.crossOrigin = '';
+        document.head.appendChild(tag);
+      };
+      link('sg-fonts-preconnect', 'preconnect', 'https://fonts.googleapis.com', false);
+      link('sg-fonts-preconnect-files', 'preconnect', 'https://fonts.gstatic.com', true);
+      link('sg-theme-fonts', 'stylesheet', fonts, false);
     }
   } catch {
     /* Blocked storage or a value this version cannot read: the page wears a shipped palette. */

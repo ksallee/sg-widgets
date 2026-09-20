@@ -117,7 +117,8 @@ export function StatusBadge({
         bare
           ? cn('inline-flex shrink-0 items-center justify-center align-middle', LEAF_GLYPH[size === 'xs' ? 'sm' : size])
           : cn(
-              'border-border bg-background inline-flex max-w-full min-w-0 items-center rounded-md border align-middle',
+              // A badge paints no surface of its own: it wears the card, popover or page it sits on.
+              'border-border inline-flex max-w-full min-w-0 items-center rounded-md border align-middle',
               showRemove ? CHIP_SPACING[size].cross : CHIP_SPACING[size].glyph,
               CHIP_BOX[size],
               variant === 'icon'

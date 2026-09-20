@@ -127,7 +127,7 @@ export function FilterDialog({
           data-slot="filter-launch"
           data-size={size}
           className={cn(
-            'border-border bg-background hover:bg-muted focus-visible:border-ring focus-visible:ring-ring/50 inline-flex shrink-0 items-center gap-1.5 rounded-lg border text-sm font-medium outline-none focus-visible:ring-3 disabled:pointer-events-none disabled:opacity-50',
+            'border-border bg-background hover:bg-muted focus-visible:border-ring focus-visible:ring-ring/50 inline-flex shrink-0 items-center gap-1.5 rounded-lg border text-sm font-medium shadow-xs outline-none focus-visible:ring-3 disabled:pointer-events-none disabled:opacity-50',
             CONTROL_BOX[size],
           )}
         >

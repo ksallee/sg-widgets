@@ -170,7 +170,7 @@ export function SortPicker({
           data-slot="sort-trigger"
           data-size={size}
           className={cn(
-            'border-border bg-background hover:bg-muted focus-visible:border-ring focus-visible:ring-ring/50 inline-flex min-w-0 items-center gap-1.5 rounded-lg border text-sm font-medium outline-none focus-visible:ring-3 disabled:pointer-events-none disabled:opacity-50',
+            'border-border bg-background hover:bg-muted focus-visible:border-ring focus-visible:ring-ring/50 inline-flex min-w-0 items-center gap-1.5 rounded-lg border text-sm font-medium shadow-xs outline-none focus-visible:ring-3 disabled:pointer-events-none disabled:opacity-50',
             BOX[size],
           )}
         >

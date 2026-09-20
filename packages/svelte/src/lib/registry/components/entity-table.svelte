@@ -895,7 +895,7 @@
 							{@const groupColumn = byPath.get(item.groupColumnId)}
 							<Table.Row
 								data-slot="entity-table-group"
-								class="bg-muted/50 hover:bg-muted/50"
+								class="bg-muted hover:bg-muted"
 								style={body.virtualized ? `height:${rowHeight}px` : undefined}
 							>
 								<Table.Cell colspan={layout.length} class="p-0">

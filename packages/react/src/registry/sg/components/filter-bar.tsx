@@ -64,6 +64,13 @@ const BADGE: Record<FilterBarSize, StatusBadgeSize> = { sm: 'xs', md: 'sm', lg: 
  * otherwise run the bar past the width it was given (`docs/design-rules.md` rule 2).
  */
 const VALUE_WIDTH = 'max-w-64';
+/**
+ * A pill is the outline button: a bordered control on the height ladder that presses
+ * to open a list, so it wears the button's border, radius and shadow rather than a
+ * badge's flat surface.
+ */
+const PILL =
+  'border-border inline-flex max-w-full min-w-0 items-center overflow-hidden rounded-lg border text-sm shadow-xs';
 
 export interface FilterBarProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange'> {
   /** The root element. */
@@ -396,7 +403,7 @@ export function FilterBar({
                 role={found ? 'group' : undefined}
                 aria-label={found ? describeCondition(found.summary, field) : undefined}
                 className={cn(
-                  'border-border inline-flex max-w-full min-w-0 items-center overflow-hidden rounded-lg border text-sm',
+                  PILL,
                   CONTROL_HEIGHT[size],
                   found && parts && CROSS_PAD[size],
                   found ? 'bg-background' : 'text-muted-foreground max-w-72 border-dashed',
@@ -444,11 +451,7 @@ export function FilterBar({
             data-active="true"
             role="group"
             aria-label={describeCondition(found.summary, field)}
-            className={cn(
-              'border-border bg-background inline-flex max-w-full min-w-0 items-center overflow-hidden rounded-lg border text-sm',
-              CONTROL_HEIGHT[size],
-              CROSS_PAD[size],
-            )}
+            className={cn(PILL, 'bg-background', CONTROL_HEIGHT[size], CROSS_PAD[size])}
           >
             <span
               className={cn('inline-flex min-w-0 items-center gap-1.5', CONTROL_HEIGHT[size], CONTROL_PAD[size])}

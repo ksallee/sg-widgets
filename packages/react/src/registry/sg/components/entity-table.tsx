@@ -850,7 +850,7 @@ export function EntityTable({
                       <TableRow
                         key={modelRow.id}
                         data-slot="entity-table-group"
-                        className="bg-muted/50 hover:bg-muted/50"
+                        className="bg-muted hover:bg-muted"
                         style={body.virtualized ? { height: `${rowHeight}px` } : undefined}
                       >
                         <TableCell colSpan={leafColumns.length} className="p-0">

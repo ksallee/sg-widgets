@@ -7,6 +7,8 @@
 	let many = $state<string[]>(['Version']);
 
 	const PRODUCTION = ['Project', 'Sequence', 'Shot', 'Asset', 'Version', 'Task'];
+	/** Types whose code and display name differ, so the code line has something to show. */
+	const MIXED = ['Shot', 'Version', 'HumanUser', 'ApiUser', 'Step'];
 	const SUMMARIES = ['chips', 'ellipsis', 'count'] as const;
 
 	/** One value per summary demo, so every control on the page takes an edit. */
@@ -68,11 +70,11 @@
 		<div class={stack}>
 			<div class={field}>
 				<span class={label}>With the code</span>
-				<EntityTypeMultiPicker {context} value={['Version']} allow={PRODUCTION} />
+				<EntityTypeMultiPicker {context} value={['Version']} allow={MIXED} />
 			</div>
 			<div class={field}>
 				<span class={label}>Without it</span>
-				<EntityTypeMultiPicker {context} value={['Version']} allow={PRODUCTION} showCode={false} />
+				<EntityTypeMultiPicker {context} value={['Version']} allow={MIXED} showCode={false} />
 			</div>
 		</div>
 	</div>

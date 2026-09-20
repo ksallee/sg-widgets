@@ -176,7 +176,7 @@ export default function EntityPickerDemo() {
             />
           </div>
           <div className={field}>
-            <span className={caption}>A sub-label, and the code beside the name</span>
+            <span className={caption}>Everything: thumbnail, sub-label, secondary and the code beside the name</span>
             <EntityPicker
               context={context}
               entityTypes={['Version']}

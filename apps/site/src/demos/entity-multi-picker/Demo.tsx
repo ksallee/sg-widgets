@@ -40,6 +40,7 @@ export default function EntityMultiPickerDemo() {
 
   const [shots, setShots] = useState<EntityRef[]>([]);
   const [withStatus, setWithStatus] = useState<EntityRef[]>([]);
+  const [anatomy, setAnatomy] = useState<EntityRef[]>([]);
   const [anything, setAnything] = useState<EntityRef[]>([]);
   const [custom, setCustom] = useState<EntityRef[]>([]);
   // Bare references: type and id, no name. Resolved on mount, one read per type.
@@ -96,6 +97,22 @@ export default function EntityMultiPickerDemo() {
             secondaryField="sg_status_list"
             value={withStatus}
             onValueChange={setWithStatus}
+            clearable
+          />
+        </div>
+      </section>
+
+      <section className={group} data-demo-case="anatomy">
+        <h4 className={label}>Everything on a row: thumbnail, sub-label, secondary and the code beside the name</h4>
+        <div className={field}>
+          <EntityMultiPicker
+            context={context}
+            entityTypes={['Version']}
+            subLabelField="sg_status_list"
+            secondaryField="id"
+            showCode
+            value={anatomy}
+            onValueChange={setAnatomy}
             clearable
           />
         </div>

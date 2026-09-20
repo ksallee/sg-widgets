@@ -3,6 +3,8 @@ import { EntityTypePicker } from '@/registry/sg/components/entity-type-picker';
 import { DemoContextProvider, useSgContext } from '../_shared/react';
 
 const PRODUCTION = ['Project', 'Sequence', 'Shot', 'Asset', 'Version', 'Task'];
+/** Types whose code and display name differ, so the code line has something to show. */
+const MIXED = ['Shot', 'Version', 'HumanUser', 'ApiUser', 'Step'];
 
 const group = 'flex flex-col gap-3';
 /** One control per row, at the pane's full width, with its caption above it. */
@@ -40,11 +42,11 @@ function Pickers() {
         <div className={stack}>
           <div className={field}>
             <span className={label}>With the code</span>
-            <EntityTypePicker context={context} value="Version" allow={PRODUCTION} />
+            <EntityTypePicker context={context} value="Version" allow={MIXED} />
           </div>
           <div className={field}>
             <span className={label}>Without it</span>
-            <EntityTypePicker context={context} value="Version" allow={PRODUCTION} showCode={false} />
+            <EntityTypePicker context={context} value="Version" allow={MIXED} showCode={false} />
           </div>
         </div>
       </div>

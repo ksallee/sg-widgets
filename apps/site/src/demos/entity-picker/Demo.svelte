@@ -156,7 +156,7 @@
 				<EntityPicker {context} entityTypes={['Shot']} thumbnail={false} bind:value={plain} clearable />
 			</div>
 			<div class={field}>
-				<span class={caption}>A sub-label, and the code beside the name</span>
+				<span class={caption}>Everything: thumbnail, sub-label, secondary and the code beside the name</span>
 				<EntityPicker
 					{context}
 					entityTypes={['Version']}

@@ -8,6 +8,8 @@
 	let any = $state<string | null>(null);
 
 	const PRODUCTION = ['Project', 'Sequence', 'Shot', 'Asset', 'Version', 'Task'];
+	/** Types whose code and display name differ, so the code line has something to show. */
+	const MIXED = ['Shot', 'Version', 'HumanUser', 'ApiUser', 'Step'];
 
 	const group = 'flex flex-col gap-3';
 	/** One control per row, at the pane's full width, with its caption above it. */
@@ -35,11 +37,11 @@
 		<div class={stack}>
 			<div class={field}>
 				<span class={label}>With the code</span>
-				<EntityTypePicker {context} value="Version" allow={PRODUCTION} />
+				<EntityTypePicker {context} value="Version" allow={MIXED} />
 			</div>
 			<div class={field}>
 				<span class={label}>Without it</span>
-				<EntityTypePicker {context} value="Version" allow={PRODUCTION} showCode={false} />
+				<EntityTypePicker {context} value="Version" allow={MIXED} showCode={false} />
 			</div>
 		</div>
 	</div>

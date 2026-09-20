@@ -9,6 +9,7 @@
 
 	let shots = $state<EntityRef[]>([]);
 	let withStatus = $state<EntityRef[]>([]);
+	let anatomy = $state<EntityRef[]>([]);
 	let anything = $state<EntityRef[]>([]);
 	let custom = $state<EntityRef[]>([]);
 	// Bare references: type and id, no name. Resolved on mount, one read per type.
@@ -84,6 +85,21 @@
 				entityTypes={['Shot']}
 				secondaryField="sg_status_list"
 				bind:value={withStatus}
+				clearable
+			/>
+		</div>
+	</section>
+
+	<section class={group} data-demo-case="anatomy">
+		<h4 class={label}>Everything on a row: thumbnail, sub-label, secondary and the code beside the name</h4>
+		<div class={field}>
+			<EntityMultiPicker
+				{context}
+				entityTypes={['Version']}
+				subLabelField="sg_status_list"
+				secondaryField="id"
+				showCode
+				bind:value={anatomy}
 				clearable
 			/>
 		</div>

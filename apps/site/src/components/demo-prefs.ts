@@ -168,12 +168,9 @@ export function applyPrefs(): void {
     // Palette and radius land on the stage, never on the figure: the frame reads the
     // page's own tokens, which the root attributes above already carry. The stage's
     // palette attribute is `data-theme` because that is the hook themes.css selects on.
-    // A stage inside a `data-theme-lock` holds the mode that wrapper names, whatever the
-    // page wears: the Themes page shows light and dark side by side.
-    const lock = root.closest<HTMLElement>('[data-theme-lock]')?.dataset.themeLock;
     const stage = root.querySelector<HTMLElement>('[data-stage]');
     if (stage) {
-      stage.classList.toggle('dark', lock ? lock === 'dark' : prefs.theme === 'dark');
+      stage.classList.toggle('dark', prefs.theme === 'dark');
       stage.dataset.theme = prefs.palette;
       stage.dataset.radius = prefs.radius;
     }

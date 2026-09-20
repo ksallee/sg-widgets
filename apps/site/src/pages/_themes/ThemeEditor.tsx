@@ -3,8 +3,8 @@
  * few values that carry a theme, and take it away as CSS or keep it as the palette every
  * page wears.
  *
- * The preview stages beside it wear the theme through one style tag, rewritten on every
- * change. Nothing here writes a file.
+ * The preview column beside it wears the theme through one style tag, rewritten on every
+ * change, in the mode the page's own light/dark toggle holds. Nothing here writes a file.
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -19,9 +19,9 @@ import { ThemeParseError, parseTheme } from '../../theme/parse';
 import { presetTheme } from '../../theme/presets';
 import { previewCss, shadcnCss, slugify, themesCss } from '../../theme/serialise';
 import { AA, STATUS_ROLES, meetAA, type StatusRole } from '../../theme/status';
-import { MODES, colorOf, type Mode, type Theme } from '../../theme/theme';
+import { colorOf, type Mode, type Theme } from '../../theme/theme';
 
-/** The style tag the two preview stages read. */
+/** The style tag the preview stages read. */
 const PREVIEW_STYLE = 'sg-theme-preview';
 
 const REM = /^([\d.]+)rem$/;
@@ -38,7 +38,7 @@ export default function ThemeEditor() {
   const [preset, setPreset] = useState(stored ? 'custom' : 'default');
   const [base, setBase] = useState<Theme>(() => withStatus(stored?.theme ?? presetTheme('default')));
   const [edits, setEdits] = useState<Adjustments>(noAdjustments);
-  const [mode, setMode] = useState<Mode>('light');
+  const mode = usePageMode();
   const [paste, setPaste] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [name, setName] = useState(stored?.label ?? 'My theme');
@@ -157,20 +157,9 @@ export default function ThemeEditor() {
       <section className="th-group">
         <div className="th-row th-between">
           <h2 className="th-h">Adjust</h2>
-          <div className="th-seg" role="group" aria-label="Mode">
-            {MODES.map((one) => (
-              <Button
-                key={one}
-                size="sm"
-                variant={one === mode ? 'default' : 'outline'}
-                aria-pressed={one === mode}
-                data-th={`mode-${one}`}
-                onClick={() => setMode(one)}
-              >
-                {one === 'light' ? 'Light' : 'Dark'}
-              </Button>
-            ))}
-          </div>
+          <span className="th-label" data-th="mode">
+            {mode === 'light' ? 'Light tokens' : 'Dark tokens'}
+          </span>
         </div>
 
         <label className="th-field th-inline">
@@ -278,6 +267,23 @@ export default function ThemeEditor() {
       </section>
     </div>
   );
+}
+
+/**
+ * The mode the page is in, which is the mode the preview column shows and the mode the
+ * controls above adjust. The bar's light/dark toggle is the only switch.
+ */
+function usePageMode(): Mode {
+  const [mode, setMode] = useState<Mode>('light');
+  useEffect(() => {
+    const root = document.documentElement;
+    const read = (): void => setMode(root.dataset.theme === 'dark' ? 'dark' : 'light');
+    const watch = new MutationObserver(read);
+    watch.observe(root, { attributeFilter: ['data-theme'] });
+    read();
+    return () => watch.disconnect();
+  }, []);
+  return mode;
 }
 
 function Slider({

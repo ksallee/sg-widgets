@@ -1,4 +1,5 @@
-// The Themes page: a pasted theme keeps its character, meets AA on request, and wears its
+// The Themes page: one preview column at the docs width, switched by the bar's toggle,
+// wearing a pasted theme that keeps its character, meets AA on request, and carries its
 // own type and shadows.
 //
 //   pnpm qa --start --path /themes/ --drive tools/drives/themes-page.js
@@ -10,7 +11,9 @@
 
 const notes = [];
 const th = (name) => document.querySelector(`[data-th="${name}"]`);
-const stage = (mode) => document.querySelector(`[data-theme-lock="${mode}"] [data-stage]`);
+const stages = () => [...document.querySelectorAll('[data-stage]')];
+const stage = () => stages()[0];
+const tokenOn = (element, name) => getComputedStyle(element).getPropertyValue(name).trim();
 
 /** A React field takes a value through its own setter, or the island never sees it. */
 function type(element, value) {
@@ -198,18 +201,34 @@ const DESTRUCTIVE = { l: 0.7091, c: 0.1697 };
 const HUES = { success: 145, warning: 75, info: 240 };
 const AA = 4.5;
 
+// Bubblegum's dark background, which the toggle has to bring up.
+const DARK_BACKGROUND = 'oklch(0.2497 0.0305 234.1628)';
+// The docs column, `--sl-content-width` in src/styles/global.css.
+const DOCS_WIDTH = 800;
+
 for (let i = 0; i < 80 && !th('editor'); i += 1) await wait(100);
 if (!th('editor')) return { verdict: 'FAIL the editor island never mounted' };
 
+// One preview column, no wider than a demo stands on its widget page.
+const column = document.querySelector('.th-column');
+if (!column) return { verdict: 'FAIL the page has no preview column', notes };
+const columnWidth = column.getBoundingClientRect().width;
+notes.push(`preview column: ${columnWidth}px, ${stages().length} stages`);
+if (columnWidth > DOCS_WIDTH) return { verdict: `FAIL the preview column is ${columnWidth}px wide`, notes };
+if (document.querySelector('[data-theme-lock]')) return { verdict: 'FAIL a stage is still pinned to a mode', notes };
+if (document.documentElement.scrollWidth > window.innerWidth + 1) {
+  return { verdict: `FAIL the page scrolls sideways: ${document.documentElement.scrollWidth}px`, notes };
+}
+
 // The shipped default, before the paste: the value Tailwind's own scale gives `shadow-sm`,
-// on the first widget of the light column wearing that class. The demos read the mock, so
-// wait for one to arrive.
+// on the first widget on a stage wearing that class. The demos read the mock, so wait for
+// one to arrive.
 const shadowSm = () =>
-  [...document.querySelectorAll('[data-theme-lock="light"] [data-stage] [class*="shadow-"]')].find((el) =>
+  [...document.querySelectorAll('[data-stage] [class*="shadow-"]')].find((el) =>
     /(^|\s)shadow-sm(\s|$)/.test(el.getAttribute('class') ?? ''),
   );
-for (let i = 0; i < 80 && !shadowSm(); i += 1) await wait(100);
-if (!shadowSm()) return { verdict: 'FAIL no widget on the light stage carries a shadow', notes };
+for (let i = 0; i < 120 && !shadowSm(); i += 1) await wait(100);
+if (!shadowSm()) return { verdict: 'FAIL no widget on a stage carries a shadow', notes };
 const shipped = getComputedStyle(shadowSm()).boxShadow;
 notes.push(`default shadow-sm: ${shipped}`);
 if (!/rgba\(0, 0, 0, 0\.1\) 0px 1px 3px 0px/.test(shipped)) {
@@ -258,16 +277,39 @@ if (!link || !/fonts\.googleapis\.com\/css2\?.*family=Poppins/.test(link.href)) 
 }
 await document.fonts.ready;
 await document.fonts.load('16px Poppins');
-const family = getComputedStyle(stage('light')).fontFamily;
-notes.push(`light stage font-family: ${family}, Poppins loaded: ${document.fonts.check('16px Poppins')}`);
+const family = getComputedStyle(stage()).fontFamily;
+notes.push(`stage font-family: ${family}, Poppins loaded: ${document.fonts.check('16px Poppins')}`);
 if (!document.fonts.check('16px Poppins')) return { verdict: 'FAIL Poppins never loaded', notes };
-if (!/Poppins/.test(family)) return { verdict: `FAIL the light stage reads ${family}`, notes };
+if (!/Poppins/.test(family)) return { verdict: `FAIL the stage reads ${family}`, notes };
 
 // The theme's shadow, on the widget that carried the default one.
 const shadow = shadowSm() ? getComputedStyle(shadowSm()).boxShadow : '';
 notes.push(`pasted shadow-sm: ${shadow}`);
 if (shadow === shipped) return { verdict: 'FAIL the stage kept the default shadow', notes };
 if (!/3px 3px 0px 0px/.test(shadow)) return { verdict: `FAIL the stage reads box-shadow ${shadow}`, notes };
+
+// The bar's toggle takes every stage to dark, and the theme's dark tokens come with it.
+const lightBackground = tokenOn(stage(), '--background');
+notes.push(`light stage --background: ${lightBackground}`);
+document.querySelector('[data-theme-toggle]').click();
+await wait(300);
+const darkBackground = tokenOn(stage(), '--background');
+notes.push(`dark stage --background: ${darkBackground}, editing ${th('mode')?.textContent?.trim()}`);
+if (!stages().every((one) => one.classList.contains('dark'))) {
+  return { verdict: 'FAIL the toggle left a stage in light', notes };
+}
+if (darkBackground !== DARK_BACKGROUND) {
+  return { verdict: `FAIL the dark stage reads --background ${darkBackground}`, notes };
+}
+// The editor adjusts the mode on show: one switch, not two.
+if (th('mode')?.textContent?.trim() !== 'Dark tokens') {
+  return { verdict: `FAIL the editor is still on ${th('mode')?.textContent?.trim()}`, notes };
+}
+document.querySelector('[data-theme-toggle]').click();
+await wait(300);
+if (tokenOn(stage(), '--background') !== lightBackground) {
+  return { verdict: `FAIL the stage did not come back to light: ${tokenOn(stage(), '--background')}`, notes };
+}
 
 // Save, and the theme is the custom palette, type and all.
 type(th('name'), 'QA theme');
@@ -312,4 +354,8 @@ if (!/348\.1385|87\.667/.test(wears)) return { verdict: `FAIL the widget page re
 if (!option.includes('custom')) return { verdict: 'FAIL the header select does not offer the saved theme', notes };
 if (!/Poppins/.test(innerFamily)) return { verdict: `FAIL the widget page reads ${innerFamily}`, notes };
 
-return { verdict: 'PASS the pasted theme keeps its character, meets AA on request, and carries its type and shadows', notes };
+return {
+  verdict:
+    'PASS one preview column at the docs width, switched by the bar, wearing a pasted theme that keeps its character, meets AA on request, and carries its type and shadows',
+  notes,
+};

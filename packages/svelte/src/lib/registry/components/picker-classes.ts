@@ -57,9 +57,13 @@ export const PICKER_GLYPH: Record<PickerSize, string> = { sm: 'size-4', md: 'siz
 /** A chip or a badge sits a step under the control; lg keeps md's, so a 36px control has room round it. */
 export const PICKER_CHIP: Record<PickerSize, ChipSize> = { sm: 'xs', md: 'sm', lg: 'sm' };
 
-/** The bordered field the chips and the query input sit in. */
+/**
+ * The bordered field the chips and the query input sit in. It stands where the `Input`
+ * primitive would, so it wears what that primitive wears: the border token, the radius
+ * step and `shadow-xs`, which is the class a pasted theme's shadow lands on.
+ */
 export const PICKER_CONTROL =
-	'border-input bg-background hover:bg-muted/30 has-[:focus-visible]:ring-ring has-[:focus-visible]:ring-offset-background has-aria-invalid:border-destructive has-aria-invalid:ring-destructive/20 dark:has-aria-invalid:ring-destructive/40 data-invalid:border-destructive data-invalid:ring-destructive/20 dark:data-invalid:ring-destructive/40 relative flex w-full min-w-0 flex-wrap items-center gap-1.5 rounded-lg border text-sm transition-colors duration-150 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-offset-2 has-aria-invalid:ring-2 data-invalid:ring-2';
+	'border-input bg-background hover:bg-muted/30 has-[:focus-visible]:ring-ring has-[:focus-visible]:ring-offset-background has-aria-invalid:border-destructive has-aria-invalid:ring-destructive/20 dark:has-aria-invalid:ring-destructive/40 data-invalid:border-destructive data-invalid:ring-destructive/20 dark:data-invalid:ring-destructive/40 relative flex w-full min-w-0 flex-wrap items-center gap-1.5 rounded-lg border text-sm shadow-xs transition-colors duration-150 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-offset-2 has-aria-invalid:ring-2 data-invalid:ring-2';
 
 /** The combobox input of a single picker: no box of its own, it borrows the control's. */
 export const PICKER_INPUT =

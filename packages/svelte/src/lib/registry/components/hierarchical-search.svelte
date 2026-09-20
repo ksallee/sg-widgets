@@ -356,7 +356,7 @@
 		bind:query
 		request={level.path}
 		readsEmpty
-		commandClass="border-border rounded-lg border"
+		commandClass="border-input rounded-lg border shadow-xs"
 		onkeydown={onKeydown}
 		{placeholder}
 		emptyLabel={searching ? noMatchLabel : emptyLabel}

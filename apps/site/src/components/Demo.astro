@@ -64,20 +64,20 @@ if (!svelteDemos[`../demos/${name}/Demo.svelte`] || !reactDemos[`../demos/${name
   <DemoToolbar title={title} />
 
   <div class="sg-demo grid gap-px bg-border" data-stage data-theme={defaultPalette} data-radius="default">
-    <section class="min-w-0 bg-background p-4" data-pane="svelte">
-      <h3 class="pb-3 text-xs font-medium tracking-wide text-muted-foreground uppercase" data-pane-title>
-        Svelte
-      </h3>
-      <div data-island="svelte">
-        <p class="text-sm text-muted-foreground">Loading the Svelte demo&hellip;</p>
-      </div>
-    </section>
     <section class="min-w-0 bg-background p-4" data-pane="react">
       <h3 class="pb-3 text-xs font-medium tracking-wide text-muted-foreground uppercase" data-pane-title>
         React
       </h3>
       <div data-island="react">
         <p class="text-sm text-muted-foreground">Loading the React demo&hellip;</p>
+      </div>
+    </section>
+    <section class="min-w-0 bg-background p-4" data-pane="svelte">
+      <h3 class="pb-3 text-xs font-medium tracking-wide text-muted-foreground uppercase" data-pane-title>
+        Svelte
+      </h3>
+      <div data-island="svelte">
+        <p class="text-sm text-muted-foreground">Loading the Svelte demo&hellip;</p>
       </div>
     </section>
   </div>

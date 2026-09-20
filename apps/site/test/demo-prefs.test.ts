@@ -27,7 +27,7 @@ afterEach(() => {
 describe('the framework pick', () => {
   it('offers the two frameworks and opens on React', async () => {
     const { frameworks, defaultFramework, prefs } = await load(false);
-    expect(frameworks).toEqual(['svelte', 'react']);
+    expect(frameworks).toEqual(['react', 'svelte']);
     expect(defaultFramework).toBe('react');
     expect(prefs.framework).toBe('react');
   });
@@ -50,7 +50,7 @@ describe('the framework pick', () => {
 
   it('adds `both` when PUBLIC_SG_DEMO_BOTH is set', async () => {
     const { frameworks, defaultFramework, prefs } = await load(true, { 'sg-demo:framework': 'both' });
-    expect(frameworks).toEqual(['svelte', 'react', 'both']);
+    expect(frameworks).toEqual(['react', 'svelte', 'both']);
     expect(defaultFramework).toBe('both');
     expect(prefs.framework).toBe('both');
   });

@@ -63,7 +63,7 @@ export const radii = [
  */
 export const bothPanes = import.meta.env.PUBLIC_SG_DEMO_BOTH === '1';
 
-export const frameworks = bothPanes ? ['svelte', 'react', 'both'] : ['svelte', 'react'];
+export const frameworks = bothPanes ? ['react', 'svelte', 'both'] : ['react', 'svelte'];
 
 const KEYS = {
   framework: 'sg-demo:framework',

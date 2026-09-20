@@ -38,4 +38,22 @@
   // `PUBLIC_SG_DEMO_BOTH` gates and is never the value a page opens on, so it resolves
   // here rather than painting a column width the build may not allow.
   root.dataset.sgFramework = read('framework', 'react') === 'svelte' ? 'svelte' : 'react';
+
+  /*
+   * The theme saved on /themes, as the `custom` palette. The stored value carries the
+   * block themes.css would hold, written for that name, so the page wears it from the
+   * first paint the way it wears a shipped palette.
+   */
+  try {
+    const stored = localStorage.getItem('sg-theme:custom');
+    const css = stored ? JSON.parse(stored).css : null;
+    if (typeof css === 'string') {
+      const tag = document.createElement('style');
+      tag.id = 'sg-custom-palette';
+      tag.textContent = css;
+      document.head.appendChild(tag);
+    }
+  } catch {
+    /* Blocked storage or a value this version cannot read: the page wears a shipped palette. */
+  }
 })();

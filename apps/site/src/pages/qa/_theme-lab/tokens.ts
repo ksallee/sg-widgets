@@ -5,18 +5,13 @@
  * Nothing here writes a file.
  */
 import source from '../../../styles/global.css?raw';
+import { contrast, formatOklch, over, parseOklch, toSrgb, type Oklch, type Rgb } from '../../../theme/color';
+
+export { contrast, formatOklch, over, parseOklch, toSrgb };
+export type { Oklch, Rgb };
 
 export type Mode = 'light' | 'dark';
 export const MODES: readonly Mode[] = ['light', 'dark'];
-
-export type Rgb = [number, number, number];
-
-export interface Oklch {
-  l: number;
-  c: number;
-  h: number;
-  a: number;
-}
 
 export interface Token {
   name: string;
@@ -75,8 +70,6 @@ const BLOCK: Record<Mode, RegExp> = {
 
 const LINE = /^(\s*)(--[a-z0-9-]+)(:\s*)([^;]*?)(\s*;.*)$/;
 
-const OKLCH = /^oklch\(\s*([\d.]+)(%?)\s+([\d.]+)(%?)\s+([\d.]+)(?:deg)?\s*(?:\/\s*([\d.]+)(%?))?\s*\)$/i;
-
 /** Status, focus and chart colours keep their own hue unless a row is ticked. */
 const OWN_HUE = /^--(?:(?:destructive|success|warning|info)(?:-foreground)?|(?:sidebar-)?ring|chart-\d+)$/;
 
@@ -134,26 +127,6 @@ export function wantedRatio(name: string): number | null {
   return null;
 }
 
-export function parseOklch(text: string): Oklch | null {
-  const match = OKLCH.exec(text.trim());
-  if (!match) return null;
-  const [, l, lPct, c, cPct, h, a, aPct] = match;
-  const color: Oklch = {
-    l: Number(l) / (lPct ? 100 : 1),
-    c: cPct ? (Number(c) / 100) * 0.4 : Number(c),
-    h: Number(h),
-    a: a === undefined ? 1 : Number(a) / (aPct ? 100 : 1),
-  };
-  return Object.values(color).every(Number.isFinite) ? color : null;
-}
-
-const trimmed = (n: number, digits: number) => String(Number(n.toFixed(digits)));
-
-export function formatOklch({ l, c, h, a }: Oklch): string {
-  const alpha = a < 1 ? ` / ${trimmed(a, 3)}` : '';
-  return `oklch(${trimmed(l, 4)} ${trimmed(c, 4)} ${trimmed(h, 4)}${alpha})`;
-}
-
 export function readBlocks(css: string = source): Record<Mode, Block> {
   const blocks = {} as Record<Mode, Block>;
   for (const mode of MODES) {
@@ -186,6 +159,8 @@ export function renderBlock(block: Block, values: ReadonlyMap<string, string>): 
 }
 
 const REM = /^([\d.]+)rem$/;
+
+const trimmed = (n: number, digits: number) => String(Number(n.toFixed(digits)));
 
 /** The theme radius as global.css writes it, in rem; null when it is not a plain rem length. */
 export function readRadius(blocks: Record<Mode, Block>): { source: string; rem: number } | null {
@@ -245,38 +220,4 @@ export function overrideCss(rows: Record<Mode, Iterable<Resolved>>, radius: stri
     // The radius holds in both modes, and a stage the demo toolbar gave its own radius keeps it.
     radius === null ? '' : `:root:root,\n[data-stage][data-stage][data-radius='default'] {\n  --radius: ${radius};\n}`,
   ].join('\n');
-}
-
-export function toSrgb({ l, c, h }: Oklch): { rgb: Rgb; inGamut: boolean } {
-  const angle = (h * Math.PI) / 180;
-  const a = c * Math.cos(angle);
-  const b = c * Math.sin(angle);
-  const lms = [
-    (l + 0.3963377774 * a + 0.2158037573 * b) ** 3,
-    (l - 0.1055613458 * a - 0.0638541728 * b) ** 3,
-    (l - 0.0894841775 * a - 1.291485548 * b) ** 3,
-  ] as const;
-  const linear: Rgb = [
-    4.0767416621 * lms[0] - 3.3077115913 * lms[1] + 0.2309699292 * lms[2],
-    -1.2684380046 * lms[0] + 2.6097574011 * lms[1] - 0.3413193965 * lms[2],
-    -0.0041960863 * lms[0] - 0.7034186147 * lms[1] + 1.707614701 * lms[2],
-  ];
-  const inGamut = linear.every((v) => v > -0.001 && v < 1.001);
-  const rgb = linear.map((v) => {
-    const x = Math.min(1, Math.max(0, v));
-    return x <= 0.0031308 ? 12.92 * x : 1.055 * x ** (1 / 2.4) - 0.055;
-  }) as Rgb;
-  return { rgb, inGamut };
-}
-
-const toLinear = (v: number) => (v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
-const luminance = ([r, g, b]: Rgb) => 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
-
-export function over(top: Rgb, alpha: number, under: Rgb): Rgb {
-  return [0, 1, 2].map((i) => alpha * top[i]! + (1 - alpha) * under[i]!) as Rgb;
-}
-
-export function contrast(one: Rgb, two: Rgb): number {
-  const [light, dark] = [luminance(one), luminance(two)].sort((x, y) => y - x) as [number, number];
-  return (light + 0.05) / (dark + 0.05);
 }

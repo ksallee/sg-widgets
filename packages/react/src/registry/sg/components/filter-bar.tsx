@@ -64,6 +64,8 @@ const BADGE: Record<FilterBarSize, StatusBadgeSize> = { sm: 'xs', md: 'sm', lg: 
  * otherwise run the bar past the width it was given (`docs/design-rules.md` rule 2).
  */
 const VALUE_WIDTH = 'max-w-64';
+/** One row of whole badges: a status value wraps past the cap and the rows below are clipped. */
+const VALUE_ROW: Record<FilterBarSize, string> = { sm: 'max-h-5', md: 'max-h-6', lg: 'max-h-8' };
 /**
  * A pill is the outline button: a bordered control on the height ladder that presses
  * to open a list, so it wears the button's border, radius and shadow rather than a
@@ -245,12 +247,16 @@ export function FilterBar({
     return (
       <span
         data-slot="filter-pill-values"
-        className={cn('flex min-w-0 items-center gap-1.5 truncate', VALUE_WIDTH)}
+        className={cn(
+          'flex min-w-0 items-center gap-1.5',
+          VALUE_WIDTH,
+          isStatus(name) && shown.values.length > 0 ? `flex-wrap content-start overflow-hidden ${VALUE_ROW[size]}` : 'truncate',
+        )}
         title={shown.title}
       >
         {isStatus(name) && shown.values.length > 0 ? (
           shown.values.map((scalar) => (
-            <span key={keyOf(scalar)} className="flex min-w-0 items-center truncate">
+            <span key={keyOf(scalar)} className="flex shrink-0 items-center">
               {valueBadge(name, keyOf(scalar))}
             </span>
           ))

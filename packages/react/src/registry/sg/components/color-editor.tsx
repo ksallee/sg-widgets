@@ -93,7 +93,7 @@ export function ColorEditor({
           title={disabled || readonly ? undefined : 'Pick a colour'}
           style={rgb ? { backgroundColor: rgbToCss(rgb) } : undefined}
           className={cn(
-            'border-input focus-within:ring-ring focus-within:ring-offset-background relative shrink-0 overflow-hidden rounded-lg border transition-shadow duration-150 focus-within:ring-2 focus-within:ring-offset-2',
+            'border-input focus-within:ring-ring focus-within:ring-offset-background relative shrink-0 overflow-hidden rounded-lg border shadow-xs transition-shadow duration-150 focus-within:ring-2 focus-within:ring-offset-2',
             SWATCH[size],
             rgb ? undefined : 'bg-muted',
             disabled || readonly ? 'cursor-default' : 'cursor-pointer',

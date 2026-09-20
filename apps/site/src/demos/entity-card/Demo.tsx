@@ -108,6 +108,7 @@ export default function EntityCardDemo() {
               context={context}
               row={rows[index % rows.length]!}
               variant="tile"
+              subLabelField="sg_status_list"
               secondaryField="user"
               size={size}
             />
@@ -116,6 +117,7 @@ export default function EntityCardDemo() {
             context={context}
             row={row}
             variant="tile"
+            subLabelField="sg_status_list"
             secondaryField="user"
             actions={
               <button type="button" className={action} aria-label="More">

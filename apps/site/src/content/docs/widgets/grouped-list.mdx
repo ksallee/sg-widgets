@@ -70,6 +70,11 @@ const [group, sub, secondary] = await resolveColumns(context.schema, 'Task', [
 ]);
 ```
 
+`groupBy` takes a resolved column. `subLabelField` and `secondaryField` take one too, or a bare
+path, which the list resolves against the source's type through the context: either way the value
+draws by its data type, so a status reads the name the site gives its code rather than the code.
+Without a context a bare path draws as the text it is stored as.
+
 ## Props
 
 <Props name="grouped-list" />

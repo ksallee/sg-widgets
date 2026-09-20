@@ -171,7 +171,7 @@
 				groupKey={(row) => cellValue(row, 'entity')}
 				groupLabel={(record) => displayNameOf(record as Record<string, unknown>)}
 				labelField="code"
-				subLabelField="description"
+				subLabelField="sg_status_list"
 				{statuses}
 				bind:collapsed
 				bind:sort={derivedSort}

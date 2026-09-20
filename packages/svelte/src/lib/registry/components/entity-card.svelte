@@ -35,6 +35,7 @@
 		cellValue,
 		contextFromClient,
 		describeEntityCard,
+		entityCardSlot,
 		entityDetailUrl,
 		fieldText,
 		imageState,
@@ -200,13 +201,6 @@
 		});
 	}
 
-	/** The column behind a metadata slot, when it resolved to something worth a line. */
-	function slotColumn(card: EntityCardModel, path: string): EntityCardColumn | null {
-		if (path.length === 0) return null;
-		const column = card.columns.find((c) => c.path === path) ?? null;
-		return column && !isEmptyValue(column.value) ? column : null;
-	}
-
 	function nameOf(card: EntityCardModel): string {
 		if (!labelField) return card.name;
 		return String(cellValue(card.row, labelField) ?? '');
@@ -310,8 +304,8 @@
 			{@const code = codeOf(card)}
 			{@const sub = subLabel ? subLabel(card.row) : ''}
 			{@const right = secondary ? secondary(card.row) : ''}
-			{@const subColumn = slotColumn(card, subPath)}
-			{@const secondaryColumn = slotColumn(card, secondaryPath)}
+			{@const subColumn = entityCardSlot(card, subLabelField)}
+			{@const secondaryColumn = entityCardSlot(card, secondaryField)}
 			<div data-slot="entity-card-media" class="relative w-full">
 				<Thumbnail
 					src={card.thumbnail}

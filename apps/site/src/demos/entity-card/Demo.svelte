@@ -103,6 +103,7 @@
 						{context}
 						row={loaded[index % loaded.length]!}
 						variant="tile"
+						subLabelField="sg_status_list"
 						secondaryField="user"
 						{size}
 					/>
@@ -111,6 +112,7 @@
 					{context}
 					{row}
 					variant="tile"
+					subLabelField="sg_status_list"
 					secondaryField="user"
 					actions={tileActions}
 					selectable

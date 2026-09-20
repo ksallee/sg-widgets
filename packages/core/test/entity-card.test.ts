@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { MockClient } from '../src/mock.js';
 import { createSgContext } from '../src/context.js';
-import { describeEntityCard, entityCardFields, loadEntityCard } from '../src/entity-card.js';
+import { toColumn } from '../src/collection.js';
+import type { EntityCardModel } from '../src/entity-card.js';
+import { describeEntityCard, entityCardFields, entityCardSlot, loadEntityCard } from '../src/entity-card.js';
 
 function context(): ReturnType<typeof createSgContext> {
   return createSgContext({ client: new MockClient(), siteUrl: 'https://example.shotgunstudio.com' });
@@ -124,5 +126,44 @@ describe('describeEntityCard', () => {
     const sg = context();
     const card = await describeEntityCard(sg, { type: 'Shot', id: 4242, attributes: {}, relationships: {} });
     expect(card.name).toBe('Shot #4242');
+  });
+});
+
+describe('entityCardSlot', () => {
+  async function versionCard(fields: string[]): Promise<EntityCardModel> {
+    const sg = context();
+    const first = (await sg.client.search('Version', { fields: ['code'], page: { size: 1 } })).data[0];
+    return loadEntityCard(sg, { type: 'Version', id: first?.id ?? 0 }, { fields });
+  }
+
+  it("draws the row's own status, which the grid leaves to the header", async () => {
+    const card = await versionCard(['sg_status_list']);
+    expect(card.columns).toEqual([]);
+    const slot = entityCardSlot(card, 'sg_status_list');
+    expect(slot?.dataType).toBe('status_list');
+    expect(slot?.value).toBe(card.status?.code);
+    expect(slot?.field?.displayValues?.[card.status?.code ?? '']).toBeTruthy();
+  });
+
+  it("reads a bare path off the card's own columns, resolved by its data type", async () => {
+    const card = await versionCard(['user']);
+    expect(entityCardSlot(card, 'user')?.dataType).toBe('entity');
+  });
+
+  it('takes a resolved column at its own word', async () => {
+    const card = await versionCard([]);
+    const slot = entityCardSlot(card, { ...toColumn('sg_status_list'), dataType: 'status_list', header: 'Status' });
+    expect(slot?.dataType).toBe('status_list');
+    expect(slot?.label).toBe('Status');
+  });
+
+  it('answers nothing for no field, an unread path or an empty value', async () => {
+    const sg = context();
+    const row = { type: 'Shot', id: 4243, attributes: { code: 'sh_4243', description: null }, relationships: {} };
+    const card = await describeEntityCard(sg, row, { fields: ['description'] });
+    expect(entityCardSlot(card, null)).toBeNull();
+    expect(entityCardSlot(card, '')).toBeNull();
+    expect(entityCardSlot(card, 'sg_nonesuch')).toBeNull();
+    expect(entityCardSlot(card, 'description')).toBeNull();
   });
 });

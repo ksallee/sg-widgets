@@ -34,9 +34,15 @@ if (demo !== columnWidth) fails.push(`demo ${demo}px, column ${columnWidth}px`);
 if ($('[data-framework-pick="both"]')) fails.push('the Both segment is on the toolbar');
 if ($('[data-sg-demo]').dataset.framework === 'both') fails.push('the stage opened on both panes');
 
-/** What the visible install command needs, against the room the column gives it. */
+/**
+ * The visible install command against the room the column gives it, and the line boxes
+ * it takes. One code line is one `.ec-line`, so its height over the line height counts
+ * the boxes a wrap drew.
+ */
 function measure(framework) {
   const pre = $(`[data-install-pane="${framework}"] pre`);
+  const line = pre.querySelector('.ec-line') ?? pre;
+  const lineHeight = parseFloat(getComputedStyle(line).lineHeight);
   return {
     framework,
     font: getComputedStyle(pre.querySelector('code') ?? pre).fontSize,
@@ -44,6 +50,7 @@ function measure(framework) {
     room: round(pre.clientWidth),
     needs: round(pre.scrollWidth),
     scrolls: round(pre.scrollWidth - pre.clientWidth),
+    lines: Math.round(line.getBoundingClientRect().height / lineHeight),
   };
 }
 
@@ -72,18 +79,22 @@ if ($('[data-install-pick="react"]').getAttribute('aria-pressed') !== 'true') {
   fails.push('the install tab did not follow the toolbar segment');
 }
 
+// The install block wraps, so nothing in it scrolls sideways at any framework.
 for (const command of commands) {
-  if (command.scrolls > 0) {
-    notes.push(
-      `the ${command.framework} install line (${command.characters} characters) overruns the column by ${command.scrolls}px and scrolls`,
+  if (command.scrolls !== 0) {
+    fails.push(
+      `the ${command.framework} install line scrolls by ${command.scrolls}px (${command.needs}px in ${command.room}px)`,
     );
   }
+  notes.push(`${command.framework}: ${command.characters} characters on ${command.lines} line(s)`);
 }
+
+// The longest line on the site is 95 characters against a column that reads 87.
+const svelte = commands.find((command) => command.framework === 'svelte');
+if (svelte.lines !== 2) fails.push(`the Svelte install line drew ${svelte.lines} line boxes, expected 2`);
 
 const verdict = fails.length
   ? `FAIL ${fails.join('; ')}`
-  : `PASS one 50rem column, centred in its pane; prose, install and demo share it; no Both segment; a tab and a toolbar segment share the pick${
-      notes.length ? `. Measured: ${notes.join('; ')}` : '; no install line scrolls'
-    }`;
+  : `PASS one 50rem column, centred in its pane; prose, install and demo share it; no install line scrolls, the long Svelte one wraps to two; no Both segment; a tab and a toolbar segment share the pick (${notes.join('; ')})`;
 
 return { verdict, columnWidth, gaps: { left, right }, commands };

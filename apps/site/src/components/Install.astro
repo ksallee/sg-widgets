@@ -49,7 +49,10 @@ const panes = [
     }
   </div>
 
-  {panes.map((pane) => <div data-install-pane={pane.framework}><Code code={pane.command} lang="sh" /></div>)}
+  <!-- `wrap`: the longest registry line is 95 characters and the column reads 87, and a
+       command is read and copied whole. Only this block wraps; every other code block on
+       the site scrolls. -->
+  {panes.map((pane) => <div data-install-pane={pane.framework}><Code code={pane.command} lang="sh" wrap /></div>)}
 </div>
 
 <style>

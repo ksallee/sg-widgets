@@ -4,6 +4,7 @@ description: A row's thumbnail, with an explicit placeholder and a play overlay.
 ---
 
 import Demo from '../../../components/Demo.astro';
+import Install from '../../../components/Install.astro';
 import Props from '../../../components/Props.astro';
 
 Renders the value of an image field at a fixed aspect ratio, with the row's own glyph standing in
@@ -11,10 +12,7 @@ whenever there is no picture to show.
 
 ## Install
 
-```sh
-pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/thumbnail.json
-pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/thumbnail.json
-```
+<Install item="thumbnail" />
 
 <Demo name="thumbnail" title="Thumbnail: sizes, aspects, play overlay, missing and failed images" />
 

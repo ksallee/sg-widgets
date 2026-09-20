@@ -4,6 +4,7 @@ description: One field of an entity type, chosen through a searchable list that 
 ---
 
 import Demo from '../../../components/Demo.astro';
+import Install from '../../../components/Install.astro';
 import Props from '../../../components/Props.astro';
 
 Picks one field of an entity type and emits its dotted path, descending through linked types on the
@@ -18,10 +19,7 @@ ordered multi, an array of paths ordered by drag.
 
 ## Install
 
-```sh
-pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/field-picker.json
-pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/field-picker.json
-```
+<Install item="field-picker" />
 
 <Demo name="field-picker" title="FieldPicker: drill-down, restrictions, computed columns, a fixed list and states" />
 

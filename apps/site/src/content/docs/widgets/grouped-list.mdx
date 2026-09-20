@@ -4,6 +4,7 @@ description: Dense Flow Production Tracking rows under collapsible group headers
 ---
 
 import Demo from '../../../components/Demo.astro';
+import Install from '../../../components/Install.astro';
 import Props from '../../../components/Props.astro';
 
 Renders rows from an entity source as one line each, under collapsible headers of a shared value.
@@ -49,10 +50,7 @@ is not read.
 
 ## Install
 
-```sh
-pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/grouped-list.json
-pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/grouped-list.json
-```
+<Install item="grouped-list" />
 
 <Demo name="grouped-list" title="Grouped List: Tasks by pipeline step, then Versions under the record each is of, from a derived key" />
 

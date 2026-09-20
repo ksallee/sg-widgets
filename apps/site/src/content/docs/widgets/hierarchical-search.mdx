@@ -4,6 +4,7 @@ description: A drill-down over the Flow Production Tracking navigation tree, wit
 ---
 
 import Demo from '../../../components/Demo.astro';
+import Install from '../../../components/Install.astro';
 import Props from '../../../components/Props.astro';
 
 Walks the navigation tree level by level, or searches it, and emits the row you pick with the path
@@ -12,10 +13,7 @@ debounce and the list.
 
 ## Install
 
-```sh
-pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/hierarchical-search.json
-pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/hierarchical-search.json
-```
+<Install item="hierarchical-search" />
 
 <Demo name="hierarchical-search" title="HierarchicalSearch: browse a project, or search it and read the path" />
 

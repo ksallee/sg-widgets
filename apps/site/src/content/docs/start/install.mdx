@@ -3,12 +3,11 @@ title: Install
 description: How a host app installs the widgets, and the one line it runs by hand.
 ---
 
+import Install from '../../../components/Install.astro';
+
 One command installs every item of a registry.
 
-```sh
-pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/sg-widgets.json
-pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/sg-widgets.json
-```
+<Install item="sg-widgets" />
 
 A widget page names its own item, for a host that wants one widget rather than the set.
 
@@ -19,19 +18,16 @@ Every item names `@sg-widgets/core`. That package is not on npm. The CLI install
 in one call, and the call fails on that name, so it installs nothing. Run the line for your
 framework before `add`, with core pointed at a local checkout.
 
-```sh
-pnpm add @sg-widgets/core@link:../sg-widgets/packages/core \
-  @base-ui/react lucide-react class-variance-authority \
-  @tanstack/react-table @tanstack/react-virtual \
-  cn react-day-picker date-fns tw-animate-css
-```
-
-```sh
-pnpm add @sg-widgets/core@link:../sg-widgets/packages/core \
-  bits-ui @lucide/svelte @internationalized/date \
-  @tanstack/svelte-table @tanstack/virtual-core \
-  clsx tailwind-merge tailwind-variants tw-animate-css
-```
+<Install
+  react={`pnpm add @sg-widgets/core@link:../sg-widgets/packages/core \\
+  @base-ui/react lucide-react class-variance-authority \\
+  @tanstack/react-table @tanstack/react-virtual \\
+  cn react-day-picker date-fns tw-animate-css`}
+  svelte={`pnpm add @sg-widgets/core@link:../sg-widgets/packages/core \\
+  bits-ui @lucide/svelte @internationalized/date \\
+  @tanstack/svelte-table @tanstack/virtual-core \\
+  clsx tailwind-merge tailwind-variants tw-animate-css`}
+/>
 
 Each line is the union of what the items name and what the shadcn primitives they pull import. A
 host installing one widget needs less.

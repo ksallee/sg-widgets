@@ -4,6 +4,7 @@ description: One project, chosen by server-side search, with the project thumbna
 ---
 
 import Demo from '../../../components/Demo.astro';
+import Install from '../../../components/Install.astro';
 import Props from '../../../components/Props.astro';
 
 Searches projects on the server, showing each one's thumbnail and status.
@@ -12,10 +13,7 @@ Single and multi: [ProjectMultiPicker](/widgets/project-multi-picker/) takes sev
 
 ## Install
 
-```sh
-pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/project-picker.json
-pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/project-picker.json
-```
+<Install item="project-picker" />
 
 The item installs the single picker alone. A caller who installed it for `ProjectMultiPicker` takes
 the `project-multi-picker` item instead; this note stands for one release.

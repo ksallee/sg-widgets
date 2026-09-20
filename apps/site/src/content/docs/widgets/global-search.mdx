@@ -4,6 +4,7 @@ description: A command palette that searches Flow Production Tracking by name ac
 ---
 
 import Demo from '../../../components/Demo.astro';
+import Install from '../../../components/Install.astro';
 import Props from '../../../components/Props.astro';
 
 Searches several entity types at once by name and emits the row you pick. It is a wrapper over
@@ -11,10 +12,7 @@ Searches several entity types at once by name and emits the row you pick. It is 
 
 ## Install
 
-```sh
-pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/global-search.json
-pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/global-search.json
-```
+<Install item="global-search" />
 
 <Demo name="global-search" title="GlobalSearch: palette with a hotkey, the inline variant scoped to a project, and the three sizes beside a button" />
 

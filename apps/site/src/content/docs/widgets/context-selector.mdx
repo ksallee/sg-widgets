@@ -4,6 +4,7 @@ description: The project, row and task a user is working on, changed from recent
 ---
 
 import Demo from '../../../components/Demo.astro';
+import Install from '../../../components/Install.astro';
 import Props from '../../../components/Props.astro';
 
 Shows the project, the linked row and the task the user is working on, and changes them from one
@@ -12,10 +13,7 @@ own.
 
 ## Install
 
-```sh
-pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/context-selector.json
-pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/context-selector.json
-```
+<Install item="context-selector" />
 
 <Demo name="context-selector" title="ContextSelector: recents, assigned tasks and the tree in one popover, and the three sizes beside a button" />
 

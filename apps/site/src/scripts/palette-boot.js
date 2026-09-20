@@ -1,8 +1,8 @@
 /*
- * The palette and the radius on `:root`, before the first paint.
+ * The palette, the radius and the framework on `:root`, before the first paint.
  *
  * Starlight's chrome reads the shadcn tokens through `--sl-*`, and the tokens follow
- * `data-sg-palette` and `data-sg-radius`. `demo-prefs.ts` writes both from then on;
+ * `data-sg-palette` and `data-sg-radius`. `demo-prefs.ts` writes all three from then on;
  * this copy runs inline in the head, beside Starlight's own theme script, so a reload
  * lands on the stored palette instead of flashing the default one.
  *
@@ -34,4 +34,8 @@
   const root = document.documentElement;
   root.dataset.sgPalette = read('palette', 'default');
   root.dataset.sgRadius = read('radius', 'default');
+  // The install tabs show the pane this names. `both` is the two-pane stage
+  // `PUBLIC_SG_DEMO_BOTH` gates and is never the value a page opens on, so it resolves
+  // here rather than painting a column width the build may not allow.
+  root.dataset.sgFramework = read('framework', 'react') === 'svelte' ? 'svelte' : 'react';
 })();

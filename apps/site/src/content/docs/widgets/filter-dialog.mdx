@@ -4,16 +4,14 @@ description: The launcher that opens the filter editor and applies its result in
 ---
 
 import Demo from '../../../components/Demo.astro';
+import Install from '../../../components/Install.astro';
 import Props from '../../../components/Props.astro';
 
 A button that opens the filter editor in a dialog. Edits are staged: only Apply emits.
 
 ## Install
 
-```sh
-pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/filter-dialog.json
-pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/filter-dialog.json
-```
+<Install item="filter-dialog" />
 
 <Demo name="filter-dialog" title="FilterDialog: empty, two filters applied, a Note read-state row, and sizes" />
 

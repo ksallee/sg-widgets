@@ -487,15 +487,33 @@ body {
   }
 }
 
-/* Content column widens with the viewport so a two-pane demo has room; prose stays at reading width. */
+/*
+ * One column at every viewport, centred in its pane. Prose, install blocks and demos
+ * share its width, so a page reads down one edge. Starlight leaves the column against
+ * the table of contents; `margin-inline` puts it in the middle of the room it has.
+ */
 @layer starlight {
+  :root {
+    --sl-content-width: 50rem;
+  }
+
+  .content-panel > .sl-container {
+    margin-inline: auto;
+  }
+
+  /*
+   * Two panes need more than a page reads at, and they exist only under
+   * `PUBLIC_SG_DEMO_BOTH`, so the wide column comes with the pick rather than with the
+   * viewport. See src/components/demo-prefs.ts.
+   */
   @media (min-width: 80rem) {
-    :root { --sl-content-width: 56rem; }
+    :root[data-sg-framework='both'] {
+      --sl-content-width: 56rem;
+    }
   }
   @media (min-width: 100rem) {
-    :root { --sl-content-width: 70rem; }
-  }
-  .sl-markdown-content > :not(.sg-demo-chrome) {
-    max-width: 45rem;
+    :root[data-sg-framework='both'] {
+      --sl-content-width: 70rem;
+    }
   }
 }

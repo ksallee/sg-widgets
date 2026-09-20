@@ -4,6 +4,7 @@ description: A page of Flow Production Tracking rows as a sortable, selectable, 
 ---
 
 import Demo from '../../../components/Demo.astro';
+import Install from '../../../components/Install.astro';
 import Props from '../../../components/Props.astro';
 
 Renders rows from an entity source as a table whose columns come from the schema, with server-side
@@ -12,10 +13,7 @@ pinning and grouping, and inline edit.
 
 ## Install
 
-```sh
-pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/entity-table.json
-pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/entity-table.json
-```
+<Install item="entity-table" />
 
 <Demo name="entity-table" title="Entity Table: 320 Versions in pages of 25, with a filter bar, a column picker and a sort picker in the toolbar. Pages, Load more and Scroll switch how the set is walked. An editable cell lights up under the pointer; a double-click or Enter opens its editor in a popover; Popover editor and Inline editor switch where every editor opens." />
 

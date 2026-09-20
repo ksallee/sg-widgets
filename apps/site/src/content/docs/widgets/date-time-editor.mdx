@@ -4,6 +4,7 @@ description: A date_time field as a picker button, shown local and stored UTC.
 ---
 
 import Demo from '../../../components/Demo.astro';
+import Install from '../../../components/Install.astro';
 import Props from '../../../components/Props.astro';
 
 Edits a date_time field in the viewer's wall-clock time and emits the UTC instant the field stores.
@@ -13,10 +14,7 @@ the popover under it holds a typed day, the calendar and the time, in that order
 
 ## Install
 
-```sh
-pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/date-time-editor.json
-pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/date-time-editor.json
-```
+<Install item="date-time-editor" />
 
 <Demo name="date-time-editor" title="DateTimeEditor: three sizes, a second zone, unset, and the three marked states" />
 

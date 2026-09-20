@@ -1,21 +1,22 @@
 import type * as React from 'react';
 import { Fragment, useEffect, useState } from 'react';
 import type {
-  FieldSchema,
   FieldSpec,
   PickerRow as PickerRowData,
+  RowAnatomy,
+  RowFieldPlan,
   SgContext,
-  StatusRecord,
 } from '@sg-widgets/core';
 import {
   isEmptyValue,
   pathOf,
-  renderKindFor,
+  resolveRowFields,
   rowCode,
   rowSecondary,
   rowSubLabel,
   rowThumbnail,
   secondaryType,
+  subLabelType,
 } from '@sg-widgets/core';
 import { cn } from '@/lib/utils';
 import { FieldValue } from '@/registry/sg/components/field-value';
@@ -58,7 +59,7 @@ export interface PickerRowProps {
   /** Right-aligned text of the caller's own making. Wins over `secondaryField`. */
   secondary?: string;
   size?: PickerRowSize;
-  /** The widget context. The secondary's schema and the status table are read through it. */
+  /** The widget context. The two fields' schemas and the status table are read through it. */
   context?: SgContext;
   /** The site the status sprite is served from. Defaults to the context's. */
   siteUrl?: string;
@@ -75,46 +76,42 @@ export interface PickerRowProps {
   indicatorAt?: 'start' | 'end';
 }
 
-interface SecondaryPlan {
-  field: FieldSchema | null;
-  /** `Status` rows by code, read only when the field is a status (probe 010). */
-  statuses: Record<string, StatusRecord> | null;
+/** The field a resolved column carries, which costs no schema read. */
+function columnField(spec: FieldSpec | null | undefined) {
+  return spec && typeof spec !== 'string' ? spec.field : null;
 }
 
 /**
- * What the secondary column draws with. A resolved column already carries its field,
- * so only a bare path costs a schema read, and that read is the context's cached one.
+ * What the sub-label and the secondary draw with: their fields and, when either is a
+ * status, the one status table behind both. A resolved column already carries its
+ * field, so only a bare path costs a schema read, and that read is the context's
+ * cached one.
  */
-function useSecondaryPlan(
-  type: string,
-  spec: FieldSpec | null | undefined,
-  context: SgContext | undefined,
-): SecondaryPlan {
-  const resolved = spec && typeof spec !== 'string' ? spec : null;
-  const [plan, setPlan] = useState<SecondaryPlan>({ field: resolved?.field ?? null, statuses: null });
-  const path = pathOf(spec);
-  const declared = resolved?.dataType;
+function useRowFieldPlan(type: string, anatomy: RowAnatomy, context: SgContext | undefined): RowFieldPlan {
+  const [plan, setPlan] = useState<RowFieldPlan>({
+    subLabel: columnField(anatomy.subLabelField),
+    secondary: columnField(anatomy.secondaryField),
+    statuses: null,
+  });
+  const subPath = pathOf(anatomy.subLabelField);
+  const secondaryPath = pathOf(anatomy.secondaryField);
+  const declaredSub = subLabelType(anatomy);
+  const declaredSecondary = secondaryType(anatomy);
   useEffect(() => {
-    if (!context || path.length === 0 || path === 'id') return;
+    if (!context) return;
     let live = true;
-    void Promise.resolve(resolved ? (resolved.field ?? undefined) : context.schema.field(type, path))
-      .then(async (found) => {
-        if (!live) return;
-        const dataType = declared ?? found?.dataType;
-        const statuses =
-          dataType && renderKindFor(dataType) === 'status'
-            ? Object.fromEntries(await context.statuses.byCode())
-            : null;
-        if (live) setPlan({ field: found ?? null, statuses });
+    void resolveRowFields(context.schema, context.statuses, type, anatomy)
+      .then((found) => {
+        if (live) setPlan(found);
       })
       .catch(() => {
-        // A secondary the schema cannot answer renders as text, which is always readable.
+        // A field the schema cannot answer renders as text, which is always readable.
       });
     return () => {
       live = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [context, type, path, declared]);
+  }, [context, type, subPath, secondaryPath, declaredSub, declaredSecondary]);
   return plan;
 }
 
@@ -149,7 +146,13 @@ export function PickerRow({
   const anatomy = { thumbnail, subLabelField, secondaryField, showCode };
   const site = siteUrl ?? context?.siteUrl;
   const picture = rowThumbnail(row.values, anatomy);
-  const sub = subLabel ?? rowSubLabel(row.values, anatomy);
+  const plan = useRowFieldPlan(row.type, anatomy, context);
+  const sub =
+    subLabel ??
+    rowSubLabel(row.values, anatomy, {
+      dataType: subLabelType(anatomy, plan.subLabel?.dataType),
+      statuses: plan.statuses,
+    });
   const code = rowCode(row.values, row.name, showCode);
   const raw = rowSecondary(row, anatomy);
   const secondaryPath = pathOf(secondaryField);
@@ -157,8 +160,7 @@ export function PickerRow({
   const secondaryIsId = secondaryPath === 'id';
   const person = PEOPLE.includes(row.type);
   const title = [...crumbs, row.name].join(' › ');
-  const plan = useSecondaryPlan(row.type, secondaryField, context);
-  const dataType = secondaryType(anatomy, plan.field?.dataType);
+  const dataType = secondaryType(anatomy, plan.secondary?.dataType);
   // Fixed whether or not the row is ticked, so the labels, or the secondaries before a trailing
   // tick, sit at one x down the list.
   const indicatorCell =
@@ -256,7 +258,7 @@ export function PickerRow({
           <FieldValue
             value={raw}
             dataType={dataType}
-            field={plan.field}
+            field={plan.secondary}
             statuses={plan.statuses}
             context={context}
             siteUrl={site}

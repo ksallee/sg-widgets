@@ -9,7 +9,7 @@ export default {
     { name: 'thumbnail', type: '`string | false`', default: '`\'image\'`', meaning: 'Field holding the thumbnail URL. `false` hides the leading slot.' },
     { name: 'roundThumbnail', type: '`boolean`', default: '`false`' },
     { name: 'showCode', type: '`boolean`', default: '`false`', meaning: 'Show the row\'s code beside the label when the two differ.' },
-    { name: 'subLabelField', type: '`FieldSpec | null`', default: '`null`', meaning: 'The muted line under the label: a path, or a resolved column.' },
+    { name: 'subLabelField', type: '`FieldSpec | null`', default: '`null`', meaning: 'The muted line under the label, drawn by its data type: a status reads its display name.' },
     { name: 'subLabel', type: '`string`', default: '—', meaning: 'The muted line of the caller\'s own making. Wins over `subLabelField`.' },
     { name: 'secondaryField', type: '`FieldSpec | null`', default: '`null`', meaning: 'The right-aligned value: a path, or a resolved column so it renders by its type.' },
     { name: 'secondary', type: '`string`', default: '—', meaning: 'Right-aligned text of the caller\'s own making. Wins over `secondaryField`.' },

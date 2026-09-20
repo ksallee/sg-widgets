@@ -935,12 +935,20 @@ export interface TreeFieldPlan {
   status: Record<string, FieldSchema | null>;
   /** The secondary column's field, per type. */
   secondary: Record<string, FieldSchema | null>;
+  /** The sub-label field's, per type, so the line reads by its data type. */
+  subLabel: Record<string, FieldSchema | null>;
   /** `Status` rows by code, read once and only when a status is on show (probe 010). */
   statuses: Record<string, StatusRecord> | null;
 }
 
+/** The row-anatomy fields a tree resolves per type, as bare paths. */
+export interface TreeFieldNames {
+  secondary?: string | undefined;
+  subLabel?: string | undefined;
+}
+
 /**
- * The status field and the secondary field of every type a tree shows.
+ * The status field, the secondary field and the sub-label field of every type a tree shows.
  *
  * A type's status field is whichever field is a `status_list`. Project's
  * `sg_status` is a plain `list` with no Status row behind its values, so it
@@ -950,20 +958,23 @@ export async function resolveTreeFields(
   schema: SchemaService,
   statusTable: StatusService,
   types: readonly string[],
-  secondaryField?: string,
+  names: TreeFieldNames = {},
 ): Promise<TreeFieldPlan> {
-  const plan: TreeFieldPlan = { status: {}, secondary: {}, statuses: null };
+  const plan: TreeFieldPlan = { status: {}, secondary: {}, subLabel: {}, statuses: null };
   await Promise.all(
     types.map(async (type) => {
       const fields = await schema.fields(type);
       const status = statusFieldFor(type, fields);
       plan.status[type] = typeof status === 'string' || status.dataType !== 'status_list' ? null : status;
-      plan.secondary[type] = secondaryField ? (fields[secondaryField] ?? null) : null;
+      plan.secondary[type] = names.secondary ? (fields[names.secondary] ?? null) : null;
+      plan.subLabel[type] = names.subLabel ? (fields[names.subLabel] ?? null) : null;
     }),
   );
   const onShow =
     Object.values(plan.status).some((field) => field !== null) ||
-    Object.values(plan.secondary).some((field) => field?.dataType === 'status_list');
+    [...Object.values(plan.secondary), ...Object.values(plan.subLabel)].some(
+      (field) => field?.dataType === 'status_list',
+    );
   if (onShow) plan.statuses = Object.fromEntries(await statusTable.byCode());
   return plan;
 }

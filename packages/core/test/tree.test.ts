@@ -631,8 +631,19 @@ describe('what a row draws with', () => {
 
   it('reads no Status table when nothing on show is a status', async () => {
     const client = new MockClient();
-    const plan = await resolveTreeFields(createSchemaService(client), createStatusService(client), ['Project'], 'code');
+    const plan = await resolveTreeFields(createSchemaService(client), createStatusService(client), ['Project'], {
+      secondary: 'code',
+    });
     expect(plan.secondary['Project']?.name).toBe('code');
     expect(plan.statuses).toBeNull();
+  });
+
+  it('resolves the sub-label field too, so its line reads by its data type', async () => {
+    const client = new MockClient();
+    const plan = await resolveTreeFields(createSchemaService(client), createStatusService(client), ['Shot'], {
+      subLabel: 'sg_status_list',
+    });
+    expect(plan.subLabel['Shot']?.dataType).toBe('status_list');
+    expect(plan.statuses?.['ip']?.name.length).toBeGreaterThan(0);
   });
 });

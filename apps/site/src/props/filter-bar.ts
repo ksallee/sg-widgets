@@ -7,7 +7,7 @@ export default {
     { name: 'context', type: '`SgContext`', default: 'required', meaning: 'The widget context. Every read goes through it, so widgets on a page share one cache.' },
     { name: 'facets', type: '`string[]`', default: 'required', meaning: 'Field names to offer as pills, in order.' },
     { name: 'labels', type: '`Record<string, string>`', default: '`{}`', meaning: 'A name per facet, for a field whose schema label is not what the page calls it.' },
-    { name: 'maxValues', type: '`number`', default: '`2`', meaning: 'Values a pill names before the rest reads as `+n`. `0` names every one.' },
+    { name: 'maxValues', type: '`number`', default: '`2`', meaning: 'Values a pill names before the rest reads as `+n`, at least one.' },
     { name: 'value', type: '`FilterGroup`', default: '`emptyFilter()`', meaning: 'The tree the pills write into. Two-way in Svelte through `bind:value`.' },
     { name: 'counts', type: '`FacetCounts`', default: '—', meaning: 'The groups of a `_summarize` call grouped on one facet\'s field. Pass `facetCounts(context.client, entityType)`.' },
     { name: 'sampleSize', type: '`number`', default: '`200`', meaning: 'Rows read for a tally: every facet without `counts`, and a facet the site refuses to group.' },

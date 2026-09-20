@@ -30,9 +30,6 @@ const seededTree = () =>
     condition('sg_shot_type', 'in', ['VFX', '2D', 'Full CG']),
   ]);
 
-/** Every status ticked, on a bar that names every value: the pill holds its cap. */
-const everyTree = () => group('and', [condition(GROUP, 'in', ['wtg', 'ip', 'rev', 'apr', 'fin', 'hld', 'omt'])]);
-
 interface Loaded {
   columns: CollectionColumn[];
   statuses: Record<string, StatusRecord>;
@@ -46,7 +43,6 @@ export default function FilterBarDemo() {
   const [readState, setReadState] = useState<FilterGroup>(emptyFilter);
   const noteCounts = useMemo(() => facetCounts(context.client, 'Note'), [context]);
   const [seeded, setSeeded] = useState<FilterGroup>(seededTree);
-  const [every, setEvery] = useState<FilterGroup>(everyTree);
   const [sized, setSized] = useState<Record<FilterBarSize, FilterGroup>>({ sm: seededTree(), md: seededTree(), lg: seededTree() });
   const scope = context.live ? group('and', [condition('project', 'is', { type: 'Project', id: context.projectId })]) : null;
 
@@ -164,19 +160,6 @@ export default function FilterBarDemo() {
             baseFilter={scope}
             value={seeded}
             onChange={setSeeded}
-          />
-        </section>
-
-        <section className={section} data-demo="every-value">
-          <h4 className={label}>Every status ticked, every value named</h4>
-          <FilterBar
-            entityType="Shot"
-            context={context}
-            facets={['sg_status_list']}
-            maxValues={0}
-            baseFilter={scope}
-            value={every}
-            onChange={setEvery}
           />
         </section>
 

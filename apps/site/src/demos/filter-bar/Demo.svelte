@@ -38,10 +38,6 @@
 			condition('sg_shot_type', 'in', ['VFX', '2D', 'Full CG'])
 		]);
 
-	/** Every status ticked, on a bar that names every value: the pill holds its cap. */
-	const everyTree = () =>
-		group('and', [condition(GROUP, 'in', ['wtg', 'ip', 'rev', 'apr', 'fin', 'hld', 'omt'])]);
-
 	const context = createDemoContext();
 	setDemoContext(context);
 
@@ -50,7 +46,6 @@
 	let readState = $state<FilterGroup>(emptyFilter());
 	const noteCounts = facetCounts(context.client, 'Note');
 	let seeded = $state<FilterGroup>(seededTree());
-	let every = $state<FilterGroup>(everyTree());
 	let sized = $state<Record<FilterBarSize, FilterGroup>>({ sm: seededTree(), md: seededTree(), lg: seededTree() });
 	const scope = context.live
 		? group('and', [condition('project', 'is', { type: 'Project', id: context.projectId })])
@@ -153,18 +148,6 @@
 			labels={{ sg_shot_type: 'Kind' }}
 			baseFilter={scope}
 			bind:value={seeded}
-		/>
-	</section>
-
-	<section class={section} data-demo="every-value">
-		<h4 class={label}>Every status ticked, every value named</h4>
-		<FilterBar
-			entityType="Shot"
-			{context}
-			facets={['sg_status_list']}
-			maxValues={0}
-			baseFilter={scope}
-			bind:value={every}
 		/>
 	</section>
 

@@ -97,8 +97,6 @@
 @source '../../src';
 
 @theme inline {
-  --font-sans: 'Geist Variable', sans-serif;
-  --font-heading: var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -160,6 +158,26 @@
 }
 
 /*
+ * The rest of what a tweakcn export maps, which has to stay out of the block above:
+ * `inline` writes the value into the utility, and these have to be read from the element,
+ * where a palette may have moved them.
+ *
+ * The families are Tailwind's own keys and so need no entry here at all -- the utility
+ * already reads `var(--font-sans)` and the token block below names the three. The letter
+ * spacing a theme carries sits on `--tracking-normal`, and tweakcn derives the other five
+ * steps from it; Tailwind's own values are what those calls come to when a theme names no
+ * spacing. `--font-heading` is this site's, and follows the sans.
+ */
+@theme {
+  --font-heading: var(--font-sans);
+  --tracking-tighter: calc(var(--tracking-normal) - 0.05em);
+  --tracking-tight: calc(var(--tracking-normal) - 0.025em);
+  --tracking-wide: calc(var(--tracking-normal) + 0.025em);
+  --tracking-wider: calc(var(--tracking-normal) + 0.05em);
+  --tracking-widest: calc(var(--tracking-normal) + 0.1em);
+}
+
+/*
  * The one copy of the shadcn tokens: the default palette, drawn from Autodesk's Weave.
  *
  * Weave is Autodesk's design system, the successor to the HIG, and
@@ -217,6 +235,19 @@
   --chart-5: oklch(0.5999 0 0); /* reference.base #808080 */
   /* flyout.borderRadius and modal.shell.borderRadius are 4px, which is the lg step. */
   --radius: 0.5rem;
+  /*
+   * The type and the letter spacing, the other three things a tweakcn theme names. Weave
+   * names ArtifaktElement, which Autodesk does not publish, so the sans is the site's
+   * Geist; the mono and the serif are Tailwind's own stacks, and the spacing is its
+   * `normal`. They sit here rather than in the Tailwind block so the stage carries them
+   * on the element, as it does the colours, and a stage wearing its own palette does not
+   * read the page's type.
+   */
+  --font-sans: 'Geist Variable', sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
+    monospace;
+  --font-serif: ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif;
+  --tracking-normal: 0em;
   --sidebar: oklch(1 0 0); /* surface.level100 */
   --sidebar-foreground: oklch(0.3562 0.004 241.9);
   --sidebar-primary: oklch(0.5154 0.4 241.9);
@@ -393,6 +424,8 @@
  */
 body {
   font-size: var(--sl-text-body);
+  /* The rule a tweakcn export carries in its own `@layer base`, on the same token. */
+  letter-spacing: var(--tracking-normal, 0em);
 }
 
 /*
@@ -430,6 +463,8 @@ body {
     background-color: var(--background);
     color: var(--foreground);
     font-family: var(--font-sans);
+    /* The body rule again: a stage wears a palette of its own and inherits the page's. */
+    letter-spacing: var(--tracking-normal, 0em);
     font-size: 1rem;
     line-height: 1.5;
     -webkit-font-smoothing: antialiased;

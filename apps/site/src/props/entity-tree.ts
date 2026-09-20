@@ -15,7 +15,7 @@ export default {
     { name: 'expandDepth', type: '`number`', default: '`3`', meaning: 'Levels a whole-branch expansion opens.' },
     { name: 'thumbnail', type: '`string | false`', default: '`false`', meaning: 'The image field to draw a thumbnail from.' },
     { name: 'labelField', type: '`string`', default: '—', meaning: 'Field shown as the label, in place of the tree\'s own.' },
-    { name: 'subLabelField', type: '`string | CollectionColumn | null`', default: '`null`', meaning: 'Field shown under the label. A resolved column renders it by type.' },
+    { name: 'subLabelField', type: '`string | CollectionColumn | null`', default: '`null`', meaning: 'Field shown under the label, drawn by its data type: a status reads its display name.' },
     { name: 'subLabel', type: '`(node) => string`', default: '—', meaning: 'Muted line under the label. Wins over `subLabelField`.' },
     { name: 'secondaryField', type: '`string | CollectionColumn | null`', default: '`null`', meaning: 'Right-aligned field, drawn by its data type. A resolved column renders it by type.' },
     { name: 'secondary', type: '`(node) => string`', default: '—', meaning: 'Right-aligned text. Wins over `secondaryField`.' },

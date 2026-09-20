@@ -43,7 +43,15 @@
 <script lang="ts">
 	import { untrack, type Snippet } from 'svelte';
 	import type { HTMLAttributes } from 'svelte/elements';
-	import type { EntityRef, FieldSpec, SgContext, TreeFieldPlan, TreeRow, TreeSelectionMode } from '@sg-widgets/core';
+	import type {
+		EntityRef,
+		FieldSpec,
+		SgContext,
+		TreeFieldNames,
+		TreeFieldPlan,
+		TreeRow,
+		TreeSelectionMode
+	} from '@sg-widgets/core';
 	import {
 		createTree,
 		hierarchyLoader,
@@ -53,6 +61,8 @@
 		NO_ROWS_LABEL,
 		pathOf,
 		resolveTreeFields,
+		rowSubLabel,
+		subLabelType,
 		sameIds,
 		stateLine,
 		TREE_STATUS_FIELDS
@@ -273,19 +283,23 @@
 	 * through the cached schema service. The read hangs off the props through a
 	 * derived and never off an effect with a "last seen" key.
 	 */
-	function loadPlan(seen: string, name: string | undefined): TreeFieldPlan {
-		const plan = $state<TreeFieldPlan>({ status: {}, secondary: {}, statuses: null });
+	function loadPlan(seen: string, names: TreeFieldNames): TreeFieldPlan {
+		const plan = $state<TreeFieldPlan>({ status: {}, secondary: {}, subLabel: {}, statuses: null });
 		const types = seen.split(',').filter(Boolean);
-		void resolveTreeFields(schema, statusTable, types, name).then((found) => {
+		void resolveTreeFields(schema, statusTable, types, names).then((found) => {
 			plan.status = found.status;
 			plan.secondary = found.secondary;
+			plan.subLabel = found.subLabel;
 			plan.statuses = found.statuses;
 		}, onError);
 		return plan;
 	}
 
 	const secondaryPath = $derived(pathOf(secondaryField));
-	const plan = $derived(loadPlan(typeKey, secondaryPath || undefined));
+	const subPath = $derived(pathOf(subLabelField));
+	const plan = $derived(
+		loadPlan(typeKey, { secondary: secondaryPath || undefined, subLabel: subPath || undefined })
+	);
 	const hasSubLabel = $derived(Boolean(subLabelField || subLabel));
 	/** An id is a code, and codes are the mono treatment of `docs/design-rules.md`. */
 	const secondaryIsId = $derived(secondaryPath === 'id');
@@ -302,10 +316,11 @@
 
 	function subLabelOf(node: TreeNode): string {
 		if (subLabel) return subLabel(node);
-		const path = pathOf(subLabelField);
-		if (!path) return '';
-		const raw = node.values[path];
-		return raw === null || raw === undefined ? '' : String(raw);
+		const field = node.entity ? plan.subLabel[node.entity.type] : null;
+		return rowSubLabel(node.values, { subLabelField }, {
+			dataType: subLabelType({ subLabelField }, field?.dataType),
+			statuses: plan.statuses
+		});
 	}
 
 	function thumbOf(node: TreeNode): string | null {

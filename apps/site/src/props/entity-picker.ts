@@ -10,7 +10,7 @@ export default {
     { name: 'searchFields', type: '`string[] | ((query) => string[])`', default: '`[]`', meaning: 'Fields matched on top of the display-name chain. A function is called with the query.' },
     { name: 'secondaryField', type: '`string | CollectionColumn | null`', default: '`null`', meaning: 'Field shown right-aligned, drawn by its data type. A resolved column renders it by type.' },
     { name: 'secondary', type: '`(row) => string`', default: '—', meaning: 'Right-aligned text of your own. Wins over `secondaryField`.' },
-    { name: 'subLabelField', type: '`string | CollectionColumn | null`', default: '`null`', meaning: 'Field shown under the label. A resolved column renders it by type.' },
+    { name: 'subLabelField', type: '`string | CollectionColumn | null`', default: '`null`', meaning: 'Field shown under the label, drawn by its data type: a status reads its display name.' },
     { name: 'subLabel', type: '`(row) => string`', default: 'the type, when several are searched', meaning: 'Computes the sub-label.' },
     { name: 'thumbnail', type: '`string | false`', default: '`\'image\'`', meaning: 'Field holding the thumbnail URL. `false` hides the leading slot.' },
     { name: 'roundThumbnail', type: '`boolean`', default: '`false`', meaning: 'Draws the thumbnail as a circle.' },

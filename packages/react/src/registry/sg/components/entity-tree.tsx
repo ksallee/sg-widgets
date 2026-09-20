@@ -18,8 +18,10 @@ import {
   NO_ROWS_LABEL,
   pathOf,
   resolveTreeFields,
+  rowSubLabel,
   sameIds,
   stateLine,
+  subLabelType,
   TREE_STATUS_FIELDS,
 } from '@sg-widgets/core';
 import { ChevronRight, CircleAlert, Inbox, Loader, Search } from 'lucide-react';
@@ -131,7 +133,7 @@ export interface EntityTreeProps extends DivProps {
   density?: EntityTreeDensity;
 }
 
-const EMPTY_PLAN: TreeFieldPlan = { status: {}, secondary: {}, statuses: null };
+const EMPTY_PLAN: TreeFieldPlan = { status: {}, secondary: {}, subLabel: {}, statuses: null };
 const DEBOUNCE_MS = 250;
 
 /** `aria-checked` as a tree row spells it: `mixed` for a part-checked branch. */
@@ -298,15 +300,18 @@ export function EntityTree({
   useEffect(() => {
     let live = true;
     const types = typeKey.split(',').filter(Boolean);
-    void resolveTreeFields(schema, statusTable, types, secondaryPath || undefined).then((found) => {
+    void resolveTreeFields(schema, statusTable, types, {
+      secondary: secondaryPath || undefined,
+      subLabel: subPath || undefined,
+    }).then((found) => {
       if (live) setPlan(found);
     }, onError);
     return () => {
       live = false;
     };
-    // The callback is the caller's; the types on show and the secondary field are what move.
+    // The callback is the caller's; the types on show and the two fields are what move.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [schema, statusTable, typeKey, secondaryPath]);
+  }, [schema, statusTable, typeKey, secondaryPath, subPath]);
 
   const hasSubLabel = Boolean(subLabelField || subLabel);
   /** An id is a code, and codes are the mono treatment of `docs/design-rules.md`. */
@@ -324,9 +329,12 @@ export function EntityTree({
 
   function subLabelOf(node: TreeNode): string {
     if (subLabel) return subLabel(node);
-    if (!subPath) return '';
-    const raw = node.values[subPath];
-    return raw === null || raw === undefined ? '' : String(raw);
+    const field = node.entity ? plan.subLabel[node.entity.type] : null;
+    return rowSubLabel(
+      node.values,
+      { subLabelField },
+      { dataType: subLabelType({ subLabelField }, field?.dataType), statuses: plan.statuses },
+    );
   }
 
   function thumbOf(node: TreeNode): string | null {

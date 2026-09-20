@@ -315,7 +315,7 @@ export function GlobalSearch({
       query={query}
       onQueryChange={setQuery}
       shell={inline ? 'command' : 'dialog'}
-      commandClass="border-border rounded-lg border"
+      commandClass="border-input rounded-lg border shadow-xs"
       open={open}
       onOpenChange={setOpen}
       title="Search"

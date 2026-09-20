@@ -390,7 +390,7 @@ export function HierarchicalSearch({
         onQueryChange={setQuery}
         request={level.path}
         readsEmpty
-        commandClass="border-border rounded-lg border"
+        commandClass="border-input rounded-lg border shadow-xs"
         onKeyDown={onKeydown}
         placeholder={placeholder}
         emptyLabel={searching ? noMatchLabel : emptyLabel}

@@ -101,7 +101,7 @@
 	const typeCell = 'text-muted-foreground w-28 px-3 py-2 align-top font-mono text-xs';
 	const valueCell = 'text-muted-foreground truncate font-mono text-xs';
 	const toggle =
-		'inline-flex h-8 shrink-0 items-center justify-center rounded-md border border-border bg-background px-2 text-sm whitespace-nowrap ' +
+		'inline-flex h-8 shrink-0 items-center justify-center rounded-md border border-input bg-background px-2 text-sm shadow-xs whitespace-nowrap ' +
 		'text-muted-foreground transition-colors duration-150 ease-out hover:bg-accent hover:text-accent-foreground ' +
 		'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ' +
 		'focus-visible:ring-offset-background active:scale-[0.98]';

@@ -300,7 +300,7 @@
 		{load}
 		bind:query
 		shell={inline ? 'command' : 'dialog'}
-		commandClass="border-border rounded-lg border"
+		commandClass="border-input rounded-lg border shadow-xs"
 		bind:open={() => open, setOpen}
 		title="Search"
 		description="Search across the site by name."

@@ -40,7 +40,7 @@ const demos = [
       }
     </script>
   </head>
-  <body class="sg-demo bg-background text-foreground">
+  <body class="bg-background text-foreground">
     <header class="th-bar">
       <div class="th-home">
         <a href="/widgets/"><Wordmark /></a>
@@ -52,7 +52,7 @@ const demos = [
       </div>
     </header>
 
-    <div class="th-page">
+    <div class="th-page sg-demo">
       <aside class="th-side">
         <ThemeEditor client:only="react" />
       </aside>
@@ -99,7 +99,9 @@ const demos = [
     </script>
 
     <style is:global>
-      /* The page's own chrome, in plain CSS on the tokens. */
+      /* The page's own chrome, in plain CSS on the tokens. The stage reset starts below the
+       * bar: the palette select is Starlight's, and the reset would strip its padding. */
+      body { margin: 0; font-family: var(--font-sans); line-height: 1.5; -webkit-font-smoothing: antialiased; }
       .th-bar {
         display: flex;
         align-items: center;
@@ -111,10 +113,13 @@ const demos = [
       }
       .th-home { display: flex; align-items: baseline; gap: 0.75rem; font-size: 1.125rem; }
       .th-home a { color: var(--foreground); text-decoration: none; }
-      .th-title { color: var(--muted-foreground); font-size: 0.875rem; font-weight: 500; }
+      .th-title { margin: 0; color: var(--muted-foreground); font-size: 0.875rem; font-weight: 500; }
       .th-controls { display: flex; align-items: center; gap: 1rem; }
       .th-toggle {
         height: 2rem;
+        font: inherit;
+        background: transparent;
+        cursor: pointer;
         padding: 0 0.75rem;
         border: 1px solid var(--border);
         border-radius: calc(var(--radius) * 0.8);

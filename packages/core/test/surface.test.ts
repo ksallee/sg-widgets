@@ -12,4 +12,9 @@ describe('the root entry', () => {
   it('keeps the url spelling of an entity type to itself', () => {
     expect(Object.keys(core)).not.toContain('pluralPath');
   });
+
+  it('names the search rule once', () => {
+    for (const name of ['queryTokens', 'highlightRuns']) expect(Object.keys(core)).not.toContain(name);
+    for (const name of ['searchWords', 'matchRuns']) expect(Object.keys(core)).toContain(name);
+  });
 });

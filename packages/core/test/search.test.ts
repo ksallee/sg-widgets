@@ -57,13 +57,15 @@ describe('matchRuns', () => {
   });
 
   it('rebuilds the label exactly, whatever the query', () => {
-    const label = 'sh010_0010 comp';
-    for (const query of ['', 'sh', 'sh 00 comp', 'zzz', '0']) {
-      expect(
-        matchRuns(label, query)
-          .map((r) => r.text)
-          .join(''),
-      ).toBe(label);
+    // The runs are text, never markup: a label that looks like markup comes back whole.
+    for (const label of ['sh010_0010 comp', 'A <b>bold</b> & brassy name']) {
+      for (const query of ['', 'sh', 'sh 00 comp', 'zzz', '0', 'bold &']) {
+        expect(
+          matchRuns(label, query)
+            .map((r) => r.text)
+            .join(''),
+        ).toBe(label);
+      }
     }
   });
 

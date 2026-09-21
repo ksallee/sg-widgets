@@ -1,6 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createQueryCache } from '../src/query.js';
-import { matchRuns, searchWords } from '../src/search.js';
 import { MockClient } from '../src/mock.js';
 import type { WireGroup } from '../src/filter.js';
 import { condition, group, toApi3Hash } from '../src/filter.js';
@@ -12,7 +11,6 @@ import {
   entityKey,
   fitChips,
   flattenRow,
-  highlightRuns,
   isBareRef,
   mergeFilters,
   nameSearchFilter,
@@ -20,7 +18,6 @@ import {
   PROJECT_PICKER_FIELDS,
   projectPickerFilters,
   pruneFilterToFields,
-  queryTokens,
   summariseSelection,
   USER_PICKER_FIELDS,
   userPickerFilters,
@@ -43,14 +40,6 @@ async function until<T>(read: () => T | null | undefined, timeoutMs = 2000): Pro
     await tick(5);
   }
 }
-
-describe('queryTokens', () => {
-  it('is the one tokenizer under its picker name', () => {
-    expect(queryTokens).toBe(searchWords);
-    expect(queryTokens('  pub   an \n x ')).toEqual(['pub', 'an', 'x']);
-    expect(queryTokens('   ')).toEqual([]);
-  });
-});
 
 describe('nameSearchFilter', () => {
   it('requires every word, on one field', () => {
@@ -228,62 +217,6 @@ describe('pruneFilterToFields', () => {
   it('drops a group left with nothing in it', () => {
     const filter = group('and', [group('or', [condition('archived', 'is', false)])]);
     expect(pruneFilterToFields(filter, new Set(['code']))).toBeNull();
-  });
-});
-
-describe('highlightRuns', () => {
-  it('is the one splitting, under the name the pickers use', () => {
-    expect(highlightRuns).toBe(matchRuns);
-    for (const [label, query] of [
-      ['Published Anna', 'pub an'],
-      ['abcdef', 'abc bcd'],
-      ['', 'x'],
-      ['Ada Lovelace', ''],
-    ] as const) {
-      expect(highlightRuns(label, query)).toEqual(matchRuns(label, query));
-      // The runs rebuild the label exactly, whatever the query was.
-      expect(highlightRuns(label, query).map((run) => run.text).join('')).toBe(label);
-    }
-  });
-
-  it('marks every occurrence of every word', () => {
-    expect(highlightRuns('Published Anna', 'pub an')).toEqual([
-      { text: 'Pub', match: true },
-      { text: 'lished ', match: false },
-      { text: 'An', match: true },
-      { text: 'na', match: false },
-    ]);
-  });
-
-  it('merges overlapping words into one run', () => {
-    expect(highlightRuns('abcdef', 'abc bcd')).toEqual([
-      { text: 'abcd', match: true },
-      { text: 'ef', match: false },
-    ]);
-  });
-
-  it('matches case-insensitively and repeats', () => {
-    expect(highlightRuns('shot sh010', 'SH')).toEqual([
-      { text: 'sh', match: true },
-      { text: 'ot ', match: false },
-      { text: 'sh', match: true },
-      { text: '010', match: false },
-    ]);
-  });
-
-  it('is one unmatched run with no query, and empty for an empty label', () => {
-    expect(highlightRuns('sh010_0010', '  ')).toEqual([{ text: 'sh010_0010', match: false }]);
-    expect(highlightRuns('sh010', 'zzz')).toEqual([{ text: 'sh010', match: false }]);
-    expect(highlightRuns('', 'sh')).toEqual([]);
-  });
-
-  it('rebuilds the label exactly, so nothing is lost or escaped', () => {
-    const label = 'A <b>bold</b> & brassy name';
-    expect(
-      highlightRuns(label, 'bold &')
-        .map((run) => run.text)
-        .join(''),
-    ).toBe(label);
   });
 });
 

@@ -1,5 +1,5 @@
 <script lang="ts" module>
-	import type { CollectionColumn, EntityRow } from '@sg-widgets/core';
+	import type { CollectionColumn, EntityRow } from 'sg-widgets-core';
 
 	export type GroupedListDensity = 'compact' | 'default';
 	export type GroupedListSize = 'sm' | 'md' | 'lg';
@@ -59,7 +59,7 @@
 		SortSpec,
 		SourceFilters,
 		StatusRecord
-	} from '@sg-widgets/core';
+	} from 'sg-widgets-core';
 	import {
 		asCollapseState,
 		cellValue,
@@ -74,7 +74,7 @@
 		stateLine,
 		toColumn,
 		toggleCollapsed
-	} from '@sg-widgets/core';
+	} from 'sg-widgets-core';
 	import ChevronRight from '@lucide/svelte/icons/chevron-right';
 	import CircleAlert from '@lucide/svelte/icons/circle-alert';
 	import Inbox from '@lucide/svelte/icons/inbox';

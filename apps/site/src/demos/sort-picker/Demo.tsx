@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { CollectionColumn, SortKey, StatusRecord } from '@sg-widgets/core';
+import type { CollectionColumn, SortKey, StatusRecord } from 'sg-widgets-core';
 import {
   createEntitySource,
   emptyFilter,
@@ -7,7 +7,7 @@ import {
   resolveColumns,
   serializeSort,
   toSortString,
-} from '@sg-widgets/core';
+} from 'sg-widgets-core';
 import { Button } from '@/components/ui/button';
 import { CONTROL_BUTTON, type ControlSize } from '@/registry/sg/components/control-classes';
 import { EntityTable } from '@/registry/sg/components/entity-table';

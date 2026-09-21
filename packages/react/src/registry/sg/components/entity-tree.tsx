@@ -8,7 +8,7 @@ import type {
   TreeNode,
   TreeRow,
   TreeSelectionMode,
-} from '@sg-widgets/core';
+} from 'sg-widgets-core';
 import {
   createTree,
   hierarchyLoader,
@@ -24,7 +24,7 @@ import {
   stateLine,
   subLabelType,
   TREE_STATUS_FIELDS,
-} from '@sg-widgets/core';
+} from 'sg-widgets-core';
 import { ChevronRight, CircleAlert, Inbox, Loader, Search } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';

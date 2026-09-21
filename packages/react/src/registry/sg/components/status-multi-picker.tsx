@@ -7,8 +7,8 @@ import type {
   SgContext,
   StatusOption,
   StatusRecord,
-} from '@sg-widgets/core';
-import { clearableForField, errorText, matchesEveryWord, NO_MATCH_LABEL } from '@sg-widgets/core';
+} from 'sg-widgets-core';
+import { clearableForField, errorText, matchesEveryWord, NO_MATCH_LABEL } from 'sg-widgets-core';
 import { Combobox as ComboboxPrimitive } from '@base-ui/react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';

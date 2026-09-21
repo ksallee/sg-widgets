@@ -1,5 +1,5 @@
 import { Fragment, useState } from 'react';
-import type { EntityRef } from '@sg-widgets/core';
+import type { EntityRef } from 'sg-widgets-core';
 import { EntityMultiPicker } from '@/registry/sg/components/entity-multi-picker';
 import { createDemoClient, getDemoContext } from '../_shared/client';
 

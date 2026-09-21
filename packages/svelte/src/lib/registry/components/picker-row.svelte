@@ -1,5 +1,5 @@
 <script lang="ts" module>
-	import type { FieldSpec, PickerRow as PickerRowData, SgContext } from '@sg-widgets/core';
+	import type { FieldSpec, PickerRow as PickerRowData, SgContext } from 'sg-widgets-core';
 
 	export type PickerRowSize = 'sm' | 'md' | 'lg';
 
@@ -51,7 +51,7 @@
 
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import type { RowAnatomy, RowFieldPlan } from '@sg-widgets/core';
+	import type { RowAnatomy, RowFieldPlan } from 'sg-widgets-core';
 	import {
 		isEmptyValue,
 		pathOf,
@@ -62,7 +62,7 @@
 		rowThumbnail,
 		secondaryType,
 		subLabelType
-	} from '@sg-widgets/core';
+	} from 'sg-widgets-core';
 	import { cn } from '$lib/utils.js';
 	import { PICKER_ROW_INDICATOR } from '$lib/registry/components/picker-classes.js';
 	import FieldValue from '$lib/registry/components/field-value.svelte';

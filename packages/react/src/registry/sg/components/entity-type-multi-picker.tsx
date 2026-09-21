@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
-import type { EntityTypeInfo, PickerSummary, SgContext } from '@sg-widgets/core';
-import { entityTypeOptions, errorText, NO_MATCH_LABEL } from '@sg-widgets/core';
+import type { EntityTypeInfo, PickerSummary, SgContext } from 'sg-widgets-core';
+import { entityTypeOptions, errorText, NO_MATCH_LABEL } from 'sg-widgets-core';
 import { Combobox as ComboboxPrimitive } from '@base-ui/react';
 import { X } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';

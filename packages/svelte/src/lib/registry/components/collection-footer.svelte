@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { EntitySource, PageRange } from '@sg-widgets/core';
+	import type { EntitySource, PageRange } from 'sg-widgets-core';
 	import ChevronLeft from '@lucide/svelte/icons/chevron-left';
 	import ChevronRight from '@lucide/svelte/icons/chevron-right';
 	import { Button } from '$lib/components/ui/button/index.js';

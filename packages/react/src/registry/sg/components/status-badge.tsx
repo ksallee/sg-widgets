@@ -1,6 +1,6 @@
 import type * as React from 'react';
-import type { FieldSchema, StatusRecord } from '@sg-widgets/core';
-import { statusGlyph, statusLabel, statusPaint } from '@sg-widgets/core';
+import type { FieldSchema, StatusRecord } from 'sg-widgets-core';
+import { statusGlyph, statusLabel, statusPaint } from 'sg-widgets-core';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { CHIP_BOX, CHIP_CROSS, CHIP_GLYPH, CHIP_PAD, CHIP_SPACING, LEAF_GLYPH, REMOVE_CONTROL, type ChipSize } from '@/registry/sg/components/leaf-classes';

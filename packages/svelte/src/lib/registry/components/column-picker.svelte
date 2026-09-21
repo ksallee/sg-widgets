@@ -22,7 +22,7 @@
 
 <script lang="ts">
 	import type { HTMLAttributes } from 'svelte/elements';
-	import type { FieldHop, FieldOption, FieldSchema, SgContext } from '@sg-widgets/core';
+	import type { FieldHop, FieldOption, FieldSchema, SgContext } from 'sg-widgets-core';
 	import {
 		currentType,
 		deriveFieldOptions,
@@ -35,7 +35,7 @@
 		searchFieldOptions,
 		stateLine,
 		toggleFieldPath
-	} from '@sg-widgets/core';
+	} from 'sg-widgets-core';
 	import Braces from '@lucide/svelte/icons/braces';
 	import Calendar from '@lucide/svelte/icons/calendar';
 	import CalendarClock from '@lucide/svelte/icons/calendar-clock';

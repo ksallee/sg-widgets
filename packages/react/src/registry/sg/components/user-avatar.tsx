@@ -1,6 +1,6 @@
 import type * as React from 'react';
 import { useState } from 'react';
-import { initialsOf, nameHue } from '@sg-widgets/core';
+import { initialsOf, nameHue } from 'sg-widgets-core';
 import { Bot } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { LEAF_GLYPH, type LeafSize } from '@/registry/sg/components/leaf-classes';

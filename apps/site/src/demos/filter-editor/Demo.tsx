@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
-import type { FilterGroup } from '@sg-widgets/core';
-import { condition, group, toApi3Hash } from '@sg-widgets/core';
+import type { FilterGroup } from 'sg-widgets-core';
+import { condition, group, toApi3Hash } from 'sg-widgets-core';
 import { Button } from '@/components/ui/button';
 import { FilterEditor, type FilterEditorSize } from '@/registry/sg/components/filter-editor';
 import { createDemoContext } from '../_shared/client';

@@ -4,8 +4,8 @@
  * Every filter demo answers the same question -- what does this tree match -- so the
  * columns, the debounce and the project scoping live here rather than in each demo.
  */
-import type { FilterNode } from '@sg-widgets/core';
-import { condition, group } from '@sg-widgets/core';
+import type { FilterNode } from 'sg-widgets-core';
+import { condition, group } from 'sg-widgets-core';
 import type { DemoContext } from './client';
 
 /** Keystrokes settle before the result set is read again. */

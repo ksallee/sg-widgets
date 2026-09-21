@@ -8,7 +8,7 @@ import type {
   SearchFieldSpec,
   SgContext,
   WireGroup,
-} from '@sg-widgets/core';
+} from 'sg-widgets-core';
 import {
   createEntitySearch,
   entityKey,
@@ -17,7 +17,7 @@ import {
   placeholderName,
   rowThumbnail,
   withSelectedPinned,
-} from '@sg-widgets/core';
+} from 'sg-widgets-core';
 import { Combobox as ComboboxPrimitive } from '@base-ui/react';
 import { Check } from 'lucide-react';
 import { EntityChip } from '@/registry/sg/components/entity-chip';

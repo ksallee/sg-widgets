@@ -8,8 +8,8 @@
  * only what it draws.
  */
 import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react';
-import type { EntitySource, PagingMode, SortSpec, SourceFilters } from '@sg-widgets/core';
-import { sameFilters, sameSort, sourceModeFor } from '@sg-widgets/core';
+import type { EntitySource, PagingMode, SortSpec, SourceFilters } from 'sg-widgets-core';
+import { sameFilters, sameSort, sourceModeFor } from 'sg-widgets-core';
 
 /** The latest value, for an effect that must read it without depending on it. */
 export function useLatest<T>(value: T): { current: T } {

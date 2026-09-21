@@ -11,7 +11,7 @@
  * The checkbox is not one of them: it has no draft, so it writes on the toggle.
  */
 import { untrack } from 'svelte';
-import type { ParseResult } from '@sg-widgets/core';
+import type { ParseResult } from 'sg-widgets-core';
 
 /** The root box every value editor wears. */
 export const VALUE_EDITOR_ROOT = 'flex w-full min-w-0 flex-col gap-2';

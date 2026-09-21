@@ -1,8 +1,8 @@
 import type * as React from 'react';
 import { useState } from 'react';
 import type { ReactNode } from 'react';
-import type { FieldSchema, PickerSummary, StatusOption } from '@sg-widgets/core';
-import { clearableForField, matchesEveryWord, NO_ROWS_LABEL, statusLabel, usableStatuses } from '@sg-widgets/core';
+import type { FieldSchema, PickerSummary, StatusOption } from 'sg-widgets-core';
+import { clearableForField, matchesEveryWord, NO_ROWS_LABEL, statusLabel, usableStatuses } from 'sg-widgets-core';
 import { Combobox as ComboboxPrimitive } from '@base-ui/react';
 import { X } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';

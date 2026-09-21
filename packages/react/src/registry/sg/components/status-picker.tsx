@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
-import type { FieldSchema, SgContext, StatusOption, StatusRecord } from '@sg-widgets/core';
-import { errorText, NO_ROWS_LABEL } from '@sg-widgets/core';
+import type { FieldSchema, SgContext, StatusOption, StatusRecord } from 'sg-widgets-core';
+import { errorText, NO_ROWS_LABEL } from 'sg-widgets-core';
 import { LEAF_GLYPH } from '@/registry/sg/components/leaf-classes';
 import { ListPicker } from '@/registry/sg/components/list-picker';
 import { PICKER_CHIP as BADGE } from '@/registry/sg/components/picker-classes';

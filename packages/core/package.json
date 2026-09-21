@@ -1,5 +1,5 @@
 {
-  "name": "@sg-widgets/core",
+  "name": "sg-widgets-core",
   "version": "0.0.1",
   "description": "Headless, framework-agnostic model of Flow Production Tracking (ShotGrid) fields, filters, statuses and a client adapter, for building widgets.",
   "keywords": [

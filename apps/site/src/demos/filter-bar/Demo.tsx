@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { CollectionColumn, FilterGroup, StatusRecord, WireGroup } from '@sg-widgets/core';
-import { condition, createEntitySource, emptyFilter, facetCounts, group, resolveColumns, toApi3Hash } from '@sg-widgets/core';
+import type { CollectionColumn, FilterGroup, StatusRecord, WireGroup } from 'sg-widgets-core';
+import { condition, createEntitySource, emptyFilter, facetCounts, group, resolveColumns, toApi3Hash } from 'sg-widgets-core';
 import { Button } from '@/components/ui/button';
 import { FilterBar, type FilterBarSize } from '@/registry/sg/components/filter-bar';
 import { GroupedList } from '@/registry/sg/components/grouped-list';

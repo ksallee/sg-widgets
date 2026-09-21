@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { ParseResult } from '@sg-widgets/core';
+import type { ParseResult } from 'sg-widgets-core';
 import { Input } from '@/components/ui/input';
 import { CONTROL_BOX, type ControlSize } from '@/registry/sg/components/control-classes';
 import { ValueEditor, useValueSession } from '@/registry/sg/components/value-editor';

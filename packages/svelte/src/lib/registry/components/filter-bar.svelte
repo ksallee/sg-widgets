@@ -53,7 +53,7 @@
 		Scalar,
 		SgContext,
 		WireGroup
-	} from '@sg-widgets/core';
+	} from 'sg-widgets-core';
 	import {
 		conditionParts,
 		conditionValues,
@@ -69,7 +69,7 @@
 		asFilterGroup,
 		matchesEveryWord,
 		withoutPaths
-	} from '@sg-widgets/core';
+	} from 'sg-widgets-core';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
 	import * as Command from '$lib/components/ui/command/index.js';

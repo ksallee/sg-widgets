@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { FieldSchema } from '@sg-widgets/core';
+	import type { FieldSchema } from 'sg-widgets-core';
 	import FieldEditor from '$lib/registry/components/field-editor.svelte';
 	import { getDemoContext } from '../_shared/client';
 

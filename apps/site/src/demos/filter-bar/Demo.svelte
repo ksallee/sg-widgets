@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { CollectionColumn, FilterGroup, StatusRecord, WireGroup } from '@sg-widgets/core';
+	import type { CollectionColumn, FilterGroup, StatusRecord, WireGroup } from 'sg-widgets-core';
 	import {
 		condition,
 		createEntitySource,
@@ -8,7 +8,7 @@
 		group,
 		resolveColumns,
 		toApi3Hash
-	} from '@sg-widgets/core';
+	} from 'sg-widgets-core';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import FilterBar, { type FilterBarSize } from '$lib/registry/components/filter-bar.svelte';
 	import GroupedList from '$lib/registry/components/grouped-list.svelte';

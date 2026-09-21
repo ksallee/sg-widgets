@@ -1,5 +1,5 @@
 <script lang="ts" module>
-	import type { WidgetState } from '@sg-widgets/core';
+	import type { WidgetState } from 'sg-widgets-core';
 
 	/** Where the line sits: `docs/design-rules.md` rule 5 gives each its own inset. */
 	export type StateLinePad = 'popover' | 'table' | 'none';

@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { PointerEvent as ReactPointerEvent, ReactNode, RefObject } from 'react';
-import type { ChipRow, PickerSummary } from '@sg-widgets/core';
+import type { ChipRow, PickerSummary } from 'sg-widgets-core';
 import {
   focusChip,
   listStatus,
@@ -10,7 +10,7 @@ import {
   summariseSelection,
   watchHighlight,
   watchOverflow,
-} from '@sg-widgets/core';
+} from 'sg-widgets-core';
 import { Combobox as ComboboxPrimitive } from '@base-ui/react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ChevronDown, Search, SearchX, TriangleAlert, X } from 'lucide-react';

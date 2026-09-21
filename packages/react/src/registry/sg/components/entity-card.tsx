@@ -9,7 +9,7 @@ import type {
   SgClient,
   SgContext,
   StatusRecord,
-} from '@sg-widgets/core';
+} from 'sg-widgets-core';
 import {
   cellValue,
   contextFromClient,
@@ -26,7 +26,7 @@ import {
   renderKindFor,
   stateLine,
   urlLink,
-} from '@sg-widgets/core';
+} from 'sg-widgets-core';
 import { CircleAlert, Tag } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Skeleton } from '@/components/ui/skeleton';

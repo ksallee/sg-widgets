@@ -57,7 +57,7 @@ change that adds the item.
 React: the `@/` prefix is this package's own tsconfig alias (`@/* → ./src/*`), which is why the
 files sit under `src/`. The CLI rewrites by matching the **import string**, not the disk path:
 `@/registry/<anything>/components/…` becomes the consumer's `components` alias, and
-`@/lib/utils` becomes their `utils` alias. Bare specifiers (`@sg-widgets/core`, `lucide-react`)
+`@/lib/utils` becomes their `utils` alias. Bare specifiers (`sg-widgets-core`, `lucide-react`)
 are never touched. The `components` segment matters twice over: it is what makes the import
 rewrite land on `@/components/<name>` *and* what makes the install path collapse to
 `<components>/<name>.tsx`. Drop it and the two disagree.
@@ -110,7 +110,7 @@ is still named in `registryDependencies`, which is what makes it install.
 
 ## 4. npm dependencies
 
-An item declares every package its own files import, and nothing else. `@sg-widgets/core` and the
+An item declares every package its own files import, and nothing else. `sg-widgets-core` and the
 icon package are named where a file imports them, and not where none does. `react`, `react-dom` and
 `svelte` are never named. Two packages come in through what a file uses rather than what it imports:
 
@@ -158,7 +158,7 @@ The site serves both trees statically at `/r/react/<name>.json` and `/r/svelte/<
   for a consumer whose alias happens to match.
 - shadcn-svelte's `registry build` drops `docs` and `categories`; React keeps both.
 - Item content is copied into the consumer's tree and edited by them. Nothing in an item may
-  import from another package in this monorepo except `@sg-widgets/core`.
+  import from another package in this monorepo except `sg-widgets-core`.
 
 ## Dependency graph
 

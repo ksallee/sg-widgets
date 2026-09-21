@@ -6,8 +6,8 @@
 	refuses fails that read rather than the page: the table shows the refusal in place.
 -->
 <script lang="ts">
-	import type { CollectionColumn, FilterNode, StatusRecord, WireGroup } from '@sg-widgets/core';
-	import { createEntitySource, resolveColumns, toApi3Hash } from '@sg-widgets/core';
+	import type { CollectionColumn, FilterNode, StatusRecord, WireGroup } from 'sg-widgets-core';
+	import { createEntitySource, resolveColumns, toApi3Hash } from 'sg-widgets-core';
 	import EntityTable from '$lib/registry/components/entity-table.svelte';
 	import type { DemoContext } from './client';
 	import {

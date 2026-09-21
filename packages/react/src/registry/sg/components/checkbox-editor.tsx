@@ -1,5 +1,5 @@
 import type * as React from 'react';
-import type { FieldSchema } from '@sg-widgets/core';
+import type { FieldSchema } from 'sg-widgets-core';
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 import { CONTROL_HEIGHT, type ControlSize } from '@/registry/sg/components/control-classes';

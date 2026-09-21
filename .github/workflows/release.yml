@@ -1,13 +1,13 @@
-# Publish @sg-widgets/core to npm when a GitHub release is published. Nothing else triggers it: a
+# Publish sg-widgets-core to npm when a GitHub release is published. Nothing else triggers it: a
 # tag alone does not, so a mistyped tag costs nothing and the release notes are written before
 # anything ships.
 #
 # No token anywhere. npm Trusted Publishing exchanges this workflow's OIDC identity for a
 # short-lived publish token, which is why `id-token: write` is here and no secret is. Trusted
-# publishing needs the package to exist, so the first publish is by hand: create the `sg-widgets`
-# org on npm, `npm login`, then from a clean `main`
+# publishing needs the package to exist, so the first publish is by hand: `npm login` (the name is
+# unscoped, no org), then from a clean `main`
 #
-#   pnpm --filter @sg-widgets/core publish --access public
+#   pnpm --filter sg-widgets-core publish --access public
 #
 # and configure the rest once on npmjs.com, under the package's Trusted Publisher settings:
 #
@@ -53,7 +53,7 @@ jobs:
 
       # The gates already build the package on every push. This builds it again from the tagged
       # tree, because that is the tree being published and no other run has seen it.
-      - run: pnpm --filter @sg-widgets/core build
+      - run: pnpm --filter sg-widgets-core build
 
       - name: The tarball imports before anyone can install it
         working-directory: packages/core
@@ -63,8 +63,8 @@ jobs:
           cd /tmp/check
           npm init -y >/dev/null
           npm install /tmp/sg-widgets-core-*.tgz
-          node -e "import('@sg-widgets/core').then((m) => { if (!m.RestClient) throw new Error('no RestClient'); console.log('ok'); })"
-          node -e "import('@sg-widgets/core/mock').then((m) => { if (!m.MockClient) throw new Error('no MockClient'); console.log('ok'); })"
+          node -e "import('sg-widgets-core').then((m) => { if (!m.RestClient) throw new Error('no RestClient'); console.log('ok'); })"
+          node -e "import('sg-widgets-core/mock').then((m) => { if (!m.MockClient) throw new Error('no MockClient'); console.log('ok'); })"
 
       # Trusted publishing needs npm 11.5.1 or newer; the runner's npm is older than the Node it
       # ships with.

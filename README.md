@@ -15,11 +15,11 @@ pnpm dlx shadcn@latest add https://sg-widgets.vercel.app/r/react/sg-widgets.json
 pnpm dlx shadcn-svelte@latest add https://sg-widgets.vercel.app/r/svelte/sg-widgets.json
 ```
 
-Every item names `@sg-widgets/core` and `add` installs it. An app that draws its own components
+Every item names `sg-widgets-core` and `add` installs it. An app that draws its own components
 takes the core on its own:
 
 ```sh
-pnpm add @sg-widgets/core
+pnpm add sg-widgets-core
 ```
 
 [The docs site](https://sg-widgets.vercel.app) has a page per widget, a live demo in both
@@ -29,7 +29,7 @@ frameworks, and the rest of the install.
 
 | package | what |
 |---|---|
-| `packages/core` | `@sg-widgets/core`: headless TypeScript. Field data types and operator vocabularies, filter tree to `api3_hash`, status logic, client adapter. No framework, no dependencies. |
+| `packages/core` | `sg-widgets-core`: headless TypeScript. Field data types and operator vocabularies, filter tree to `api3_hash`, status logic, client adapter. No framework, no dependencies. |
 | `packages/react` | shadcn registry on Base UI. Installed into your app with `shadcn add`. |
 | `packages/svelte` | shadcn-svelte registry on Bits UI, Svelte 5. Installed with `shadcn-svelte add`. |
 | `apps/site` | Astro + Starlight docs, live demos of both frameworks side by side, and the static registry JSON under `/r/react` and `/r/svelte`. |

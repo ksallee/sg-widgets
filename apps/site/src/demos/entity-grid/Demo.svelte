@@ -1,6 +1,6 @@
 <script lang="ts">
-	import type { CollectionColumn, EntityRef, EntityRow } from '@sg-widgets/core';
-	import { cellValue, condition, createEntitySource, displayNameOf, resolveColumns } from '@sg-widgets/core';
+	import type { CollectionColumn, EntityRef, EntityRow } from 'sg-widgets-core';
+	import { cellValue, condition, createEntitySource, displayNameOf, resolveColumns } from 'sg-widgets-core';
 	import EntityGrid from '$lib/registry/components/entity-grid.svelte';
 	import Thumbnail from '$lib/registry/components/thumbnail.svelte';
 	import { createDemoContext } from '../_shared/client';

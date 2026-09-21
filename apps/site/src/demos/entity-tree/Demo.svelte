@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { EntityRef, TreeNode } from '@sg-widgets/core';
+	import type { EntityRef, TreeNode } from 'sg-widgets-core';
 	import EntityTree from '$lib/registry/components/entity-tree.svelte';
 	import { CONTROL_BUTTON, type ControlSize } from '$lib/registry/components/control-classes.js';
 	import { Button } from '$lib/components/ui/button/index.js';

@@ -1,5 +1,5 @@
-import type { SortableOrientation, SortableRect } from '@sg-widgets/core';
-import { createSortableController, measureSortable, playSortableFlip } from '@sg-widgets/core';
+import type { SortableOrientation, SortableRect } from 'sg-widgets-core';
+import { createSortableController, measureSortable, playSortableFlip } from 'sg-widgets-core';
 
 export interface SortableOptions {
 	/** The ids in the order they are drawn, one per item element. */

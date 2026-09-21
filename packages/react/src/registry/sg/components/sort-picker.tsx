@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 'react';
-import type { SgContext, SortKey } from '@sg-widgets/core';
-import { friendlyFieldPath, isSortable, toSortString } from '@sg-widgets/core';
+import type { SgContext, SortKey } from 'sg-widgets-core';
+import { friendlyFieldPath, isSortable, toSortString } from 'sg-widgets-core';
 import {
   ArrowDownIcon,
   ArrowUpDownIcon,

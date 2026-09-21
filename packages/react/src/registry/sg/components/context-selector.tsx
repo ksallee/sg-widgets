@@ -1,6 +1,6 @@
 import { Fragment, useCallback, useEffect, useState } from 'react';
-import type { EntityRef, FieldSpec, PickerRow as PickerRowData, SgContext } from '@sg-widgets/core';
-import { NO_ROWS_LABEL, pathOf, prependRecent, rowFields, watchOverflow } from '@sg-widgets/core';
+import type { EntityRef, FieldSpec, PickerRow as PickerRowData, SgContext } from 'sg-widgets-core';
+import { NO_ROWS_LABEL, pathOf, prependRecent, rowFields, watchOverflow } from 'sg-widgets-core';
 import { ChevronDown, History, ListChecks } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';

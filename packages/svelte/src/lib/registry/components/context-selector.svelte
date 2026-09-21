@@ -1,5 +1,5 @@
 <script lang="ts" module>
-	import type { EntityRef, FieldSpec } from '@sg-widgets/core';
+	import type { EntityRef, FieldSpec } from 'sg-widgets-core';
 
 	import { CONTROL_GLYPH, type ControlSize } from '$lib/registry/components/control-classes.js';
 
@@ -68,8 +68,8 @@
 
 <script lang="ts">
 	import type { HTMLAttributes } from 'svelte/elements';
-	import type { PickerRow, SgContext } from '@sg-widgets/core';
-	import { NO_ROWS_LABEL, pathOf, prependRecent, rowFields, watchOverflow } from '@sg-widgets/core';
+	import type { PickerRow, SgContext } from 'sg-widgets-core';
+	import { NO_ROWS_LABEL, pathOf, prependRecent, rowFields, watchOverflow } from 'sg-widgets-core';
 	import ChevronDown from '@lucide/svelte/icons/chevron-down';
 	import History from '@lucide/svelte/icons/history';
 	import ListChecks from '@lucide/svelte/icons/list-checks';

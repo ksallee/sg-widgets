@@ -16,7 +16,7 @@ A widget page names its own item, for a host that wants one widget rather than t
 Run `init` first. It writes `components.json`, the stylesheet and `lib/utils`, and installs the
 packages those need. Every item imports `lib/utils`, and no item generates it.
 
-An item names the packages its own files import, `@sg-widgets/core` among them, and `add` installs
+An item names the packages its own files import, `sg-widgets-core` among them, and `add` installs
 them. A host installing one widget gets less than a host installing the set.
 
 This registry ships its own `command` and `popover` for React, and its own `command`, `select` and

@@ -8,8 +8,8 @@ import type {
   SgContext,
   StatusRecord,
   UrlValue,
-} from '@sg-widgets/core';
-import { editorKindFor, editorNeedsContext, preferencesOf } from '@sg-widgets/core';
+} from 'sg-widgets-core';
+import { editorKindFor, editorNeedsContext, preferencesOf } from 'sg-widgets-core';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { CONTROL_BUTTON } from '@/registry/sg/components/control-classes';

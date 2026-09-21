@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
-import type { EntityRef, EntityRow, PagingMode } from '@sg-widgets/core';
-import { cellValue, condition, createEntitySource, nextEnabledIndex, stateLine } from '@sg-widgets/core';
+import type { EntityRef, EntityRow, PagingMode } from 'sg-widgets-core';
+import { cellValue, condition, createEntitySource, nextEnabledIndex, stateLine } from 'sg-widgets-core';
 import { CircleAlert, Inbox } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';

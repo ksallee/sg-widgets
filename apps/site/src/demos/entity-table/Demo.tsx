@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { CollapseState, CollectionColumn, EditorPlacement, EntityRef, FilterGroup, PagingMode, SortKey, StatusRecord } from '@sg-widgets/core';
-import { collapseAll, condition, createEntitySource, emptyFilter, expandAll, group, resolveColumns, toSortSpecs } from '@sg-widgets/core';
+import type { CollapseState, CollectionColumn, EditorPlacement, EntityRef, FilterGroup, PagingMode, SortKey, StatusRecord } from 'sg-widgets-core';
+import { collapseAll, condition, createEntitySource, emptyFilter, expandAll, group, resolveColumns, toSortSpecs } from 'sg-widgets-core';
 import { ColumnPicker } from '@/registry/sg/components/column-picker';
 import { EntityTable } from '@/registry/sg/components/entity-table';
 import { FilterBar } from '@/registry/sg/components/filter-bar';

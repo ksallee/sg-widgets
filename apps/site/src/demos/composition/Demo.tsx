@@ -16,8 +16,8 @@ import type {
   StatusRecord,
   UrlValue,
   UrlWriteValue,
-} from '@sg-widgets/core';
-import { condition, createEntitySource, group, resolveColumns, toSortSpecs } from '@sg-widgets/core';
+} from 'sg-widgets-core';
+import { condition, createEntitySource, group, resolveColumns, toSortSpecs } from 'sg-widgets-core';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CheckboxEditor } from '@/registry/sg/components/checkbox-editor';

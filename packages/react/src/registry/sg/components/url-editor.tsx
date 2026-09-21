@@ -1,6 +1,6 @@
 import type * as React from 'react';
-import type { FieldSchema, UrlValue, UrlWriteValue } from '@sg-widgets/core';
-import { parseUrlInput } from '@sg-widgets/core';
+import type { FieldSchema, UrlValue, UrlWriteValue } from 'sg-widgets-core';
+import { parseUrlInput } from 'sg-widgets-core';
 import { Input } from '@/components/ui/input';
 import { CONTROL_BOX, type ControlSize } from '@/registry/sg/components/control-classes';
 import { ValueEditor, useValueSession } from '@/registry/sg/components/value-editor';

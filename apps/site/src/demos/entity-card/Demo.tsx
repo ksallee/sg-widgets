@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { EntityRef, EntityRow, WireGroup } from '@sg-widgets/core';
-import { entityCardFields } from '@sg-widgets/core';
+import type { EntityRef, EntityRow, WireGroup } from 'sg-widgets-core';
+import { entityCardFields } from 'sg-widgets-core';
 import { EntityCard } from '@/registry/sg/components/entity-card';
 import { EntityPicker } from '@/registry/sg/components/entity-picker';
 import { createDemoContext, type DemoContext } from '../_shared/client';

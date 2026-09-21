@@ -1,5 +1,5 @@
 <script lang="ts" module>
-	import type { StatusOption } from '@sg-widgets/core';
+	import type { StatusOption } from 'sg-widgets-core';
 
 	export type ListPickerSize = 'sm' | 'md' | 'lg';
 
@@ -13,14 +13,14 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import type { HTMLAttributes } from 'svelte/elements';
-	import type { FieldSchema } from '@sg-widgets/core';
+	import type { FieldSchema } from 'sg-widgets-core';
 	import {
 		clearableForField,
 		matchesEveryWord,
 		NO_ROWS_LABEL,
 		statusLabel,
 		usableStatuses
-	} from '@sg-widgets/core';
+	} from 'sg-widgets-core';
 	import { Combobox } from 'bits-ui';
 	import PickerControl from '$lib/registry/components/picker-control.svelte';
 	import Check from '@lucide/svelte/icons/check';

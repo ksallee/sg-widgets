@@ -1,6 +1,6 @@
 import type * as React from 'react';
-import type { FieldSchema } from '@sg-widgets/core';
-import { COLOR_SENTINEL, colorToHex, parseBgColor, parseColorInput, rgbToCss } from '@sg-widgets/core';
+import type { FieldSchema } from 'sg-widgets-core';
+import { COLOR_SENTINEL, colorToHex, parseBgColor, parseColorInput, rgbToCss } from 'sg-widgets-core';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { CONTROL_BOX, type ControlSize } from '@/registry/sg/components/control-classes';

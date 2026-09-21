@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { EntityRef } from '@sg-widgets/core';
+import type { EntityRef } from 'sg-widgets-core';
 import { Button } from '@/components/ui/button';
 import { ContextSelector, type WorkContext } from '@/registry/sg/components/context-selector';
 import { CONTROL_BUTTON, type ControlSize } from '@/registry/sg/components/control-classes';

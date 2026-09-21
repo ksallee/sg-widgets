@@ -1,5 +1,5 @@
 <script lang="ts" module>
-	import type { TreeCheckState, TreeNode } from '@sg-widgets/core';
+	import type { TreeCheckState, TreeNode } from 'sg-widgets-core';
 	import type { StatusBadgeSize } from '$lib/registry/components/status-badge.svelte';
 
 	export type EntityTreeSize = 'sm' | 'md' | 'lg';
@@ -51,7 +51,7 @@
 		TreeFieldPlan,
 		TreeRow,
 		TreeSelectionMode
-	} from '@sg-widgets/core';
+	} from 'sg-widgets-core';
 	import {
 		createTree,
 		hierarchyLoader,
@@ -67,7 +67,7 @@
 		sameIds,
 		stateLine,
 		TREE_STATUS_FIELDS
-	} from '@sg-widgets/core';
+	} from 'sg-widgets-core';
 	import ChevronRight from '@lucide/svelte/icons/chevron-right';
 	import CircleAlert from '@lucide/svelte/icons/circle-alert';
 	import Inbox from '@lucide/svelte/icons/inbox';

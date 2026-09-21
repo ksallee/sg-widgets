@@ -1,6 +1,6 @@
 <script lang="ts">
-	import type { FieldSchema, NativeStatus, StatusRecord } from '@sg-widgets/core';
-	import { NATIVE_STATUSES, STOCK_ICON_KEYS, statusPaint } from '@sg-widgets/core';
+	import type { FieldSchema, NativeStatus, StatusRecord } from 'sg-widgets-core';
+	import { NATIVE_STATUSES, STOCK_ICON_KEYS, statusPaint } from 'sg-widgets-core';
 	import StatusBadge from '$lib/registry/components/status-badge.svelte';
 	import StatusGlyph from '$lib/registry/components/status-glyph.svelte';
 	import { setDemoContext } from '../_shared/svelte';

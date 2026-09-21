@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { CollapseState, CollectionColumn, EntityRef, EntityRow, SortSpec, StatusRecord } from '@sg-widgets/core';
+import type { CollapseState, CollectionColumn, EntityRef, EntityRow, SortSpec, StatusRecord } from 'sg-widgets-core';
 import {
   cellValue,
   collapseAll,
@@ -8,7 +8,7 @@ import {
   displayNameOf,
   expandAll,
   resolveColumns,
-} from '@sg-widgets/core';
+} from 'sg-widgets-core';
 import { GroupedList } from '@/registry/sg/components/grouped-list';
 import { StatusBadge } from '@/registry/sg/components/status-badge';
 import { createDemoClient, createDemoContext } from '../_shared/client';

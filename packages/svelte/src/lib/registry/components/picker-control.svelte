@@ -1,5 +1,5 @@
 <script lang="ts" module>
-	import type { PickerSummary } from '@sg-widgets/core';
+	import type { PickerSummary } from 'sg-widgets-core';
 
 	export type PickerControlSize = 'sm' | 'md' | 'lg';
 
@@ -96,7 +96,7 @@
 		summariseSelection,
 		watchHighlight,
 		watchOverflow
-	} from '@sg-widgets/core';
+	} from 'sg-widgets-core';
 	import { Combobox } from 'bits-ui';
 	import ChevronDown from '@lucide/svelte/icons/chevron-down';
 	import Search from '@lucide/svelte/icons/search';

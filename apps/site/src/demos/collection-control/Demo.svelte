@@ -1,6 +1,6 @@
 <script lang="ts">
-	import type { EntityRef, EntityRow, PagingMode } from '@sg-widgets/core';
-	import { cellValue, condition, createEntitySource, nextEnabledIndex, stateLine } from '@sg-widgets/core';
+	import type { EntityRef, EntityRow, PagingMode } from 'sg-widgets-core';
+	import { cellValue, condition, createEntitySource, nextEnabledIndex, stateLine } from 'sg-widgets-core';
 	import CircleAlert from '@lucide/svelte/icons/circle-alert';
 	import Inbox from '@lucide/svelte/icons/inbox';
 	import { Button } from '$lib/components/ui/button/index.js';

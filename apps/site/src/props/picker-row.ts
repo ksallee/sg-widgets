@@ -3,7 +3,7 @@ import type { PropsFile } from './_types';
 export default {
   page: 'picker-control',
   props: [
-    { name: 'row', type: '`PickerRow`', default: '—', meaning: 'The row to draw: the reference, its label and the values a read answered.' },
+    { name: 'row', type: '`PickerRow`', default: 'required', meaning: 'The row to draw: the reference, its label and the values a read answered.' },
     { name: 'query', type: '`string`', default: '`\'\'`', meaning: 'The query whose matched runs are bold.' },
     { name: 'crumbs', type: '`string[]`', default: '`[]`', meaning: 'Crumbs drawn before the label, muted and separated by `›`.' },
     { name: 'thumbnail', type: '`string | false`', default: '`\'image\'`', meaning: 'Field holding the thumbnail URL. `false` hides the leading slot.' },

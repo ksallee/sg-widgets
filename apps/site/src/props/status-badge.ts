@@ -4,7 +4,7 @@ export default {
   props: [
     { name: 'code', type: '`string`', default: 'required', meaning: 'The stored status code. An empty code renders nothing.' },
     { name: 'status', type: '`StatusRecord | null`', default: '`null`', meaning: 'The resolved Status row. Supplies the name, colour and icon.' },
-    { name: 'field', type: '`FieldSchema | null`', default: '`null`', meaning: 'Fallback label source, through its display values.' },
+    { name: 'field', type: '`Pick<FieldSchema, \'displayValues\'> | null`', default: '`null`', meaning: 'Fallback label source, through its display values.' },
     { name: 'variant', type: '`\'both\' | \'icon\' | \'text\' | \'glyph\'`', default: '`\'both\'`', meaning: 'Icon-only and glyph keep the label as screen-reader text and a tooltip.' },
     { name: 'size', type: '`\'xs\' | \'sm\' | \'md\' | \'lg\'`', default: '`\'md\'`', meaning: 'Heights 5, 6, 8 and 10.' },
     { name: 'color', type: '`boolean`', default: '`false`', meaning: 'Paints the badge in the status colour instead of the neutral surface.' },

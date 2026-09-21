@@ -5,7 +5,7 @@ export default {
   props: [
     { name: 'value', type: '`string | null`', default: '`null`', meaning: 'The stored instant, UTC. Two-way in Svelte.' },
     { name: 'onValueChange', type: '`(value: string | null) => void`', default: '—', meaning: 'Called when either input commits or a day is picked.' },
-    { name: 'field', type: '`FieldSchema | null`', default: '`null`', meaning: 'Supplies the accessible label and the required flag.' },
+    { name: 'field', type: '`Pick<FieldSchema, \'displayName\' | \'mandatory\'> | null`', default: '`null`', meaning: 'Supplies the accessible label and the required flag.' },
     { name: 'timeZone', type: '`string`', default: 'the runtime\'s', meaning: 'IANA zone the typed wall-clock time is read in.' },
     { name: 'showSeconds', type: '`boolean`', default: '`false`', meaning: 'Seconds in the time input and on the button.' },
     { name: 'size', type: '`\'sm\' | \'md\' | \'lg\'`', default: '`\'md\'`', meaning: 'Button height.' },

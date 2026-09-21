@@ -4,7 +4,7 @@ export default {
   props: [
     { name: 'entityType', type: '`string`', default: 'required', meaning: 'Type the editor reads its fields on.' },
     { name: 'context', type: '`SgContext`', default: 'required', meaning: 'The widget context. Every read goes through it, so widgets on a page share one cache.' },
-    { name: 'value', type: '`FilterGroup`', default: '`emptyFilter()`', meaning: 'The applied tree. Two-way in Svelte through `bind:value`.' },
+    { name: 'value', type: '`FilterGroup`', default: 'required', meaning: 'The applied tree. Two-way in Svelte through `bind:value`.' },
     { name: 'hidePaths', type: '`string[]`', default: '`[]`', meaning: 'Passed through to the editor.' },
     { name: 'label', type: '`string`', default: '—', meaning: 'Replaces both button labels.' },
     { name: 'title', type: '`string`', default: '`\'Filters\'`', meaning: 'Dialog title.' },

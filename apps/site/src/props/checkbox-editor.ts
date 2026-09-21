@@ -2,10 +2,10 @@ import type { PropsFile } from './_types';
 
 export default {
   props: [
-    { name: 'errorMessage', type: '`(message: string) => ReactNode`', default: '—', meaning: 'Draws the line under the control.' },
+    { name: 'errorMessage', type: '`(message: string) => ReactNode` / `Snippet<[string]>`', default: '—', meaning: 'Draws the line under the control.' },
     { name: 'value', type: '`boolean`', default: '`false`', meaning: 'The stored boolean. Two-way in Svelte.' },
     { name: 'onValueChange', type: '`(value: boolean) => void`', default: '—', meaning: 'Called on every change.' },
-    { name: 'field', type: '`FieldSchema | null`', default: '`null`', meaning: 'Supplies the accessible label.' },
+    { name: 'field', type: '`Pick<FieldSchema, \'displayName\' | \'mandatory\'> | null`', default: '`null`', meaning: 'Supplies the accessible label.' },
     { name: 'labels', type: '`{ on: string; off: string }`', default: '`{ on: \'Yes\', off: \'No\' }`', meaning: 'The word shown beside the switch.' },
     { name: 'size', type: '`\'sm\' | \'md\' | \'lg\'`', default: '`\'md\'`', meaning: 'Row height.' },
     { name: 'disabled', type: '`boolean`', default: '`false`' },

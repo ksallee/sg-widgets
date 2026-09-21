@@ -1,13 +1,13 @@
 import type { PropsFile } from './_types';
 
 export default {
-  extends: { name: 'picker-control', omit: ['slot', 'picker', 'label', 'multiple', 'keys', 'onSelect', 'labels', 'items', 'rowCount', 'chipKeys', 'chipsSlot', 'summary', 'max', 'chipRow', 'inline', 'tokenInput', 'inputPlaceholder', 'searchable', 'textValue', 'rowKey', 'inert', 'query', 'onQueryChange', 'onRemoveAt', 'onClear', 'anchored', 'loading', 'count', 'error', 'empty', 'hasMore', 'onLoadMore', 'clearLabel', 'triggerLabel', 'overflowLabel', 'itemToStringLabel', 'controlProps', 'chip', 'rows'] },
+  extends: { name: 'picker-control', omit: ['onOpenChange', 'slot', 'picker', 'label', 'multiple', 'keys', 'onSelect', 'labels', 'items', 'rowCount', 'chipKeys', 'chipsSlot', 'summary', 'max', 'chipRow', 'inline', 'tokenInput', 'inputPlaceholder', 'searchable', 'textValue', 'rowKey', 'inert', 'query', 'onQueryChange', 'onRemoveAt', 'onClear', 'anchored', 'loading', 'count', 'error', 'empty', 'hasMore', 'onLoadMore', 'clearLabel', 'triggerLabel', 'overflowLabel', 'itemToStringLabel', 'controlProps', 'chip', 'rows'] },
   props: [
     { name: 'entityTypes', type: '`string[]`', default: 'required', meaning: 'Types to search. Several make the picker polymorphic.' },
     { name: 'context', type: '`SgContext`', default: 'required', meaning: 'The widget context. Every read goes through it, so widgets on a page share one cache.' },
     { name: 'value', type: '`EntityRef | null`', default: '`null`', meaning: 'The chosen row. Two-way in Svelte.' },
     { name: 'labelField', type: '`string`', default: 'display-name chain', meaning: 'Field holding the row label.' },
-    { name: 'searchFields', type: '`string[] | ((query) => string[])`', default: '`[]`', meaning: 'Fields matched on top of the display-name chain. A function is called with the query.' },
+    { name: 'searchFields', type: '`SearchFieldSpec[] | ((query) => SearchFieldSpec[])`', default: '—', meaning: 'Fields matched on top of the display-name chain. A function is called with the query.' },
     { name: 'secondaryField', type: '`string | CollectionColumn | null`', default: '`null`', meaning: 'Field shown right-aligned, drawn by its data type. A resolved column renders it by type.' },
     { name: 'secondary', type: '`(row) => string`', default: '—', meaning: 'Right-aligned text of your own. Wins over `secondaryField`.' },
     { name: 'subLabelField', type: '`string | CollectionColumn | null`', default: '`null`', meaning: 'Field shown under the label, drawn by its data type: a status reads its display name.' },
@@ -16,10 +16,10 @@ export default {
     { name: 'roundThumbnail', type: '`boolean`', default: '`false`', meaning: 'Draws the thumbnail as a circle.' },
     { name: 'showCode', type: '`boolean`', default: '`false`', meaning: 'Shows the row\'s `code` beside the label when the two differ.' },
     { name: 'siteUrl', type: '`string`', default: 'the context\'s', meaning: 'The site the status sprite is served from, for a secondary that is a status.' },
-    { name: 'fields', type: '`string[]`', default: '`[]`', meaning: 'Extra fields to request.' },
+    { name: 'fields', type: '`string[]`', default: '—', meaning: 'Extra fields to request.' },
     { name: 'filters', type: '`FilterGroup | WireGroup | null`', default: '`null`', meaning: 'Pre-filter, merged into every search with `and`.' },
     { name: 'projectId', type: '`number`', default: '—', meaning: 'Scopes to one project.' },
-    { name: 'exclude', type: '`EntityRef[]`', default: '`[]`', meaning: 'Rows kept out of the results.' },
+    { name: 'exclude', type: '`EntityRef[]`', default: '—', meaning: 'Rows kept out of the results.' },
     { name: 'minQueryLength', type: '`number`', default: '`0`', meaning: 'Under it the query carries no name condition.' },
     { name: 'pageSize', type: '`number`', default: '`20`', meaning: 'Rows a page, with a load more row under them.' },
     { name: 'placeholder', type: '`string`', default: '`\'Search for an entity\'`', meaning: 'Shown in the control while nothing is chosen.' },

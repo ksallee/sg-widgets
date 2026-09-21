@@ -5,7 +5,7 @@ export default {
   props: [
     { name: 'value', type: '`string | null`', default: '`null`', meaning: 'The stored day. Two-way in Svelte.' },
     { name: 'onValueChange', type: '`(value: string | null) => void`', default: '—', meaning: 'Called when the input commits or a day is picked.' },
-    { name: 'field', type: '`FieldSchema | null`', default: '`null`', meaning: 'Supplies the accessible label and the required flag.' },
+    { name: 'field', type: '`Pick<FieldSchema, \'displayName\' | \'mandatory\'> | null`', default: '`null`', meaning: 'Supplies the accessible label and the required flag.' },
     { name: 'inline', type: '`boolean`', default: '`false`', meaning: 'The row form: the button takes the width of its value.' },
     { name: 'size', type: '`\'sm\' | \'md\' | \'lg\'`', default: '`\'md\'`', meaning: 'Button height.' },
     { name: 'disabled', type: '`boolean`', default: '`false`' },

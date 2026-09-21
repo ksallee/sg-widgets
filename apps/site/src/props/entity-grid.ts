@@ -3,7 +3,7 @@ import type { PropsFile } from './_types';
 export default {
   extends: { name: 'collection-control' },
   props: [
-    { name: 'source', type: '`EntitySource`', default: '—', meaning: 'The rows and the paging behind them.' },
+    { name: 'source', type: '`EntitySource`', default: 'required', meaning: 'The rows and the paging behind them.' },
     { name: 'context', type: '`SgContext`', default: 'required', meaning: 'The widget context. Every tile reads its schema, its statuses and its links through it.' },
     { name: 'thumbnail', type: '`string | false`', default: '`\'image\'`', meaning: 'Field holding the thumbnail URL. `false` leaves every tile on the placeholder.' },
     { name: 'labelField', type: '`string | null`', default: '`null`', meaning: 'Field shown as the tile\'s name. Defaults to the type\'s display name.' },

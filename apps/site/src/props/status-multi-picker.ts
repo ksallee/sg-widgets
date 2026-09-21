@@ -8,7 +8,7 @@ export default {
     { name: 'searchPlaceholder', type: '`string`', default: '`\'Search statuses…\'`', meaning: 'Placeholder of the search box.' },
     { name: 'emptyLabel', type: '`string`', default: '`\'No match\'`', meaning: 'Shown when the search matches nothing.' },
     { name: 'summary', type: '`\'chips\' | \'ellipsis\' | \'count\'`', default: '`\'ellipsis\'`', meaning: 'How many of the selection the control shows.' },
-    { name: 'badge', type: '`\'both\' | \'icon\' | \'text\'`', default: '`\'both\'`', meaning: 'What one selected status is drawn as.' },
+    { name: 'badge', type: '`\'both\' | \'icon\' | \'text\' | \'glyph\'`', default: '`\'both\'`', meaning: 'What one selected status is drawn as.' },
     { name: 'max', type: '`number`', default: '`0`', meaning: 'Badges drawn before the rest becomes `+n`. `0` lets the row fit what it can, and `badge="icon"` draws twice as many.' },
   ],
   keyboard: [

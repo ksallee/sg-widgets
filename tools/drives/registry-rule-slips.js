@@ -2,11 +2,14 @@
 //
 //   pnpm qa --start --path /widgets/field-picker/ --framework both --drive tools/drives/registry-rule-slips.js
 //   pnpm qa --start --path /widgets/picker-control/ --framework both --drive tools/drives/registry-rule-slips.js
+//   pnpm qa --start --path /widgets/entity-tree/ --framework both --drive tools/drives/registry-rule-slips.js
 //
-// Three readings, each on the page that holds its widget. The field picker's search box takes
+// Four readings, each on the page that holds its widget. The field picker's search box takes
 // focus on open with the page where it was, and its back, reset and descend controls carry the
 // coarse-pointer box of `PICKER_ICON_BUTTON`. A picker control with no placeholder still names
-// its combobox. Whichever of the three the page holds are read; a page that holds none fails.
+// its combobox. A tree node whose thumbnail field reads empty draws no picture. Whichever of
+// the four the page holds are read; a page that holds none fails.
+
 const notes = [];
 const pane = (name) => document.querySelector(`[data-pane="${name}"]`);
 /** The panes this run draws. Both islands stay mounted, so only a visible one is read. */
@@ -90,7 +93,30 @@ for (const framework of drawn) {
   }
   const blank = root.querySelectorAll('[aria-label=""]').length;
   if (blank > 0) return fail(`${framework}: ${blank} elements carry an empty aria-label`);
+
+  /* the tree's thumbnails -------------------------------------------------- */
+  const tree = root.querySelector('[data-testid="empty-thumb-tree"]');
+  if (tree) {
+    readings += 1;
+    const items = () => [...tree.querySelectorAll('[role="treeitem"]')];
+    if (!(await until(() => items().length > 0))) return fail(`${framework}: the tree drew no nodes`);
+    const assets = items().find((node) => node.dataset.path.endsWith('/Asset'));
+    if (!assets) return fail(`${framework}: the tree has no Assets folder`);
+    assets.click();
+    if (!(await until(() => tree.querySelectorAll('[data-slot="thumbnail"]').length > 0))) {
+      return fail(`${framework}: opening Assets drew no thumbnails`);
+    }
+    await wait(500);
+    const rows = items().filter((node) => node.dataset.path.includes('/id/'));
+    const without = rows.filter((node) => !node.querySelector('[data-slot="thumbnail"]'));
+    const broken = [...tree.querySelectorAll('img')].filter((img) => !img.getAttribute('src'));
+    if (without.length !== 1) {
+      return fail(`${framework}: ${without.length} of ${rows.length} asset rows drew no picture, expected 1`);
+    }
+    if (broken.length > 0) return fail(`${framework}: ${broken.length} pictures have no source`);
+    notes.push(`${framework}: ${rows.length} asset rows, the one whose field reads empty draws no picture`);
+  }
 }
 
-if (readings === 0) return { verdict: 'FAIL this page holds none of the widgets read here' };
+if (readings === 0) return { verdict: 'FAIL this page holds none of the four widgets' };
 return { verdict: `PASS ${readings} readings across ${drawn.join(' and ')}`, notes };

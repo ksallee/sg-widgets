@@ -62,6 +62,7 @@
 		pathOf,
 		resolveTreeFields,
 		rowSubLabel,
+		rowThumbnail,
 		subLabelType,
 		sameIds,
 		stateLine,
@@ -321,12 +322,6 @@
 			dataType: subLabelType({ subLabelField }, field?.dataType),
 			statuses: plan.statuses
 		});
-	}
-
-	function thumbOf(node: TreeNode): string | null {
-		if (thumbnail === false) return null;
-		const raw = node.values[thumbnail];
-		return typeof raw === 'string' ? raw : null;
 	}
 
 	function statusOf(node: TreeNode): string {
@@ -608,9 +603,9 @@
 							{:else}
 								{#if thumbnail !== false}
 									<span class={cn('flex shrink-0 items-center', LEAD[size])}>
-										{#if thumbOf(node)}
+										{#if rowThumbnail(node.values, { thumbnail })}
 											<Thumbnail
-												src={thumbOf(node)}
+												src={rowThumbnail(node.values, { thumbnail })}
 												aspect="square"
 												size={LEAF[size]}
 												entityType={node.entity?.type ?? null}

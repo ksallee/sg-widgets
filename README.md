@@ -25,6 +25,8 @@ pnpm add sg-widgets-core
 [The docs site](https://sg-widgets.vercel.app) has a page per widget, a live demo in both
 frameworks, and the rest of the install.
 
+Looking for the same widgets in PyQt? [We got you](https://github.com/ksallee/sg-widgets-qt).
+
 ## Packages
 
 | package | what |

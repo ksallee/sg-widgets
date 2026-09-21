@@ -141,12 +141,12 @@ function entityText(ref: EntityLike): string {
   return ref.name && ref.name.length > 0 ? ref.name : `${ref.type} #${ref.id}`;
 }
 
-function localeOnly(options: FieldTextOptions): DateOptions {
+function localeOnly(options: FieldTextOptions): DateFormatOptions {
   return options.locale === undefined ? {} : { locale: options.locale };
 }
 
 /** A `date` is zoneless and stays in UTC; only a `date_time` takes the zone (field_types/date, date_time). */
-function dateOptions(options: FieldTextOptions): DateOptions {
+function dateOptions(options: FieldTextOptions): DateFormatOptions {
   return {
     ...localeOnly(options),
     ...(options.timeZone === undefined ? {} : { timeZone: options.timeZone }),
@@ -188,7 +188,7 @@ export function isEmptyValue(value: unknown): boolean {
 
 // --- numbers -----------------------------------------------------------------
 
-export interface DurationOptions {
+export interface DurationFormatOptions {
   /**
    * The site's `hours_per_day` from `GET /preferences`. Given, the duration is
    * rendered in days, which is what a site with `duration_units: "days"` expects.
@@ -198,7 +198,7 @@ export interface DurationOptions {
 }
 
 /** A stored duration is a whole number of minutes (field_types/duration). */
-export function formatDuration(minutes: number | null | undefined, options: DurationOptions = {}): string {
+export function formatDuration(minutes: number | null | undefined, options: DurationFormatOptions = {}): string {
   if (minutes === null || minutes === undefined || !Number.isFinite(minutes)) return '';
   const sign = minutes < 0 ? '-' : '';
   const abs = Math.abs(minutes);
@@ -222,7 +222,7 @@ export function formatPercent(value: number | string | null | undefined): string
   return `${trimDecimals(String(n))}%`;
 }
 
-export interface TimecodeOptions {
+export interface TimecodeFormatOptions {
   /**
    * Frames a second, for the `HH:MM:SS:FF` form. No schema property and no
    * preference names the rate, so it comes from the app; solving it out of a
@@ -239,7 +239,7 @@ export interface TimecodeOptions {
  * with one they are the sub-second remainder rounded to the nearest frame, which
  * is how the server renders it.
  */
-export function formatTimecode(ms: number | null | undefined, options: TimecodeOptions = {}): string {
+export function formatTimecode(ms: number | null | undefined, options: TimecodeFormatOptions = {}): string {
   if (ms === null || ms === undefined || !Number.isFinite(ms)) return '';
   const sign = ms < 0 ? '-' : '';
   const abs = Math.abs(ms);
@@ -252,7 +252,7 @@ export function formatTimecode(ms: number | null | undefined, options: TimecodeO
   return sign + parts.map(pad2).join(':');
 }
 
-export interface FloatOptions {
+export interface FloatFormatOptions {
   /** Decimals to keep at most; trailing zeros are dropped. The store itself rounds to 6 (field_types/float). */
   maxDecimals?: number;
   /** Exactly this many decimals, zeros kept. Wins over `maxDecimals`. */
@@ -278,7 +278,7 @@ export function formatCurrency(value: number | string | null | undefined, option
   return n < 0 ? `-${symbol}${amount.slice(1)}` : `${symbol}${amount}`;
 }
 
-export function formatFloat(value: number | string | null | undefined, options: FloatOptions = {}): string {
+export function formatFloat(value: number | string | null | undefined, options: FloatFormatOptions = {}): string {
   if (isEmptyValue(value)) return '';
   const raw = typeof value === 'number' ? String(value) : String(value).trim();
   if (options.decimals !== undefined) {
@@ -311,7 +311,7 @@ function pad2(n: number): string {
 
 // --- dates -------------------------------------------------------------------
 
-export interface DateOptions {
+export interface DateFormatOptions {
   locale?: string | string[];
   /** IANA zone. Defaults to the runtime's, which is what "local" means to a viewer. */
   timeZone?: string;
@@ -324,7 +324,7 @@ const DATE_ONLY = /^(\d{4})-(\d{2})-(\d{2})$/;
  * therefore formatted in UTC whatever the viewer's zone, because shifting a
  * zoneless day into a local zone moves it to the wrong day.
  */
-export function formatDate(value: string | null | undefined, options: DateOptions = {}): string {
+export function formatDate(value: string | null | undefined, options: DateFormatOptions = {}): string {
   if (isEmptyValue(value)) return '';
   const raw = String(value);
   const m = DATE_ONLY.exec(raw);
@@ -340,7 +340,7 @@ export function formatDate(value: string | null | undefined, options: DateOption
  * (field_types/date_time). It is shown in the viewer's zone; keep the raw string
  * as a `title` so the stored instant stays readable.
  */
-export function formatDateTime(value: string | null | undefined, options: DateOptions = {}): string {
+export function formatDateTime(value: string | null | undefined, options: DateFormatOptions = {}): string {
   if (isEmptyValue(value)) return '';
   const raw = String(value);
   const ms = Date.parse(raw);

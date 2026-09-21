@@ -10,7 +10,6 @@
  * an editor that gets an error emits nothing and shows the message.
  */
 import { COLOR_SENTINEL, formatDuration, formatTimecode } from './render.js';
-import type { TimecodeOptions } from './render.js';
 
 
 /** A parsed value, or the reason the input was refused. */
@@ -46,7 +45,7 @@ export function parseTextInput(raw: string): ParseResult<string | null> {
 
 // --- numbers -----------------------------------------------------------------
 
-export interface IntegerOptions {
+export interface IntegerParseOptions {
   min?: number;
   max?: number;
 }
@@ -57,7 +56,7 @@ export interface IntegerOptions {
  * and `timecode` takes `[Integer, NilClass]` alone (field_types/number, percent,
  * timecode). Empty input clears the field.
  */
-export function parseInteger(raw: string, options: IntegerOptions = {}): ParseResult<number | null> {
+export function parseInteger(raw: string, options: IntegerParseOptions = {}): ParseResult<number | null> {
   const text = raw.trim();
   if (text.length === 0) return { value: null };
   if (!/^[+-]?\d+$/.test(text)) {
@@ -168,6 +167,11 @@ function bounded(minutes: number): ParseResult<number> {
   return { value: minutes };
 }
 
+export interface TimecodeParseOptions {
+  /** Frames a second, without which the frame digits of a typed timecode are refused. */
+  frameRate?: number;
+}
+
 const TIMECODE = /^([+-]?)(\d+):([0-5]\d):([0-5]\d)(?:[:;](\d+))?$/;
 
 /**
@@ -178,7 +182,7 @@ const TIMECODE = /^([+-]?)(\d+):([0-5]\d):([0-5]\d)(?:[:;](\d+))?$/;
  * including the drop-frame spelling, so the conversion is the client's
  * (field_types/timecode). Empty input clears the field.
  */
-export function parseTimecodeInput(raw: string, options: TimecodeOptions = {}): ParseResult<number | null> {
+export function parseTimecodeInput(raw: string, options: TimecodeParseOptions = {}): ParseResult<number | null> {
   const text = raw.trim();
   if (text.length === 0) return { value: null };
 
@@ -383,7 +387,7 @@ export function parseNumberInput(raw: string, dataType: string, shape: NumberSha
     case 'timecode':
       return parseTimecodeInput(text, shape.frameRate === undefined ? {} : { frameRate: shape.frameRate });
     default: {
-      const bounds: IntegerOptions = {};
+      const bounds: IntegerParseOptions = {};
       if (shape.min !== undefined) bounds.min = shape.min;
       if (shape.max !== undefined) bounds.max = shape.max;
       return parseInteger(text, bounds);

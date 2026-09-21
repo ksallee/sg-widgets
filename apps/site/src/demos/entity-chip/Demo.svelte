@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { EntityRef } from '@sg-widgets/core';
+	import type { EntityRef } from 'sg-widgets-core';
 	import EntityChip from '$lib/registry/components/entity-chip.svelte';
 	import { createDemoContext } from '../_shared/client';
 

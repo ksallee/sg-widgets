@@ -9,7 +9,7 @@ import type {
   SearchFieldSpec,
   SgContext,
   WireGroup,
-} from '@sg-widgets/core';
+} from 'sg-widgets-core';
 import {
   createEntitySearch,
   entityKey,
@@ -18,7 +18,7 @@ import {
   placeholderName,
   rowThumbnail,
   withSelectedPinned,
-} from '@sg-widgets/core';
+} from 'sg-widgets-core';
 import { Combobox as ComboboxPrimitive } from '@base-ui/react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { EntityChip } from '@/registry/sg/components/entity-chip';
@@ -327,7 +327,7 @@ export function EntityMultiPicker({
         data-slot="entity-picker-option"
         data-entity-type={row.type}
         data-entity-id={row.id}
-        data-selected-entity={chosen ? 'true' : undefined}
+        data-checked={chosen ? 'true' : undefined}
         value={key}
         className={PICKER_ROW}
       >

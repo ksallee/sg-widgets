@@ -9,6 +9,13 @@ The goal is one system: a page mixing ten of our widgets must read as one hand.
   `border-border`, `ring-ring`, `rounded-md` via `--radius`, ...). Never a raw hex, rgb or arbitrary
   colour class. The exceptions are colour that is data: status colour from the site through `parseBgColor`, and the
   name-derived hue behind initials, both applied inline.
+- A surface takes the token its role names: a raised or bordered container that reads as a card is
+  `bg-card text-card-foreground`; a floating surface - popover, dropdown, dialog, hover card, tooltip,
+  command palette - is `bg-popover text-popover-foreground`, which the primitives already give; an
+  inline region in the page flow - an input, a picker control, a table, a tree, an inline editor -
+  stays `bg-background`; a tinted region stays `bg-muted` or `bg-accent`. A leaf that is put on one of
+  them, a badge or a chip, paints no background of its own and wears the surface it sits on. On a
+  palette whose card, popover and background differ, Bubblegum for one, a wrong token shows at once.
 - Never override a shadcn primitive's look from outside. Compose it, or pass `className`/`class`.
 - Both frameworks must produce the same DOM structure and the same classes for the same widget. When in
   doubt, write the Svelte one first and port the markup verbatim.

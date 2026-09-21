@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import type { ReactNode } from 'react';
-import { hasMorePage, matchesEveryWord } from '@sg-widgets/core';
+import { hasMorePage, matchesEveryWord } from 'sg-widgets-core';
 import { CommandItem } from '@/components/ui/command';
 import type { SearchAnswer, SearchRequest } from '@/registry/sg/components/search-control';
 import { SearchControl } from '@/registry/sg/components/search-control';

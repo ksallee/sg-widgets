@@ -16,8 +16,8 @@ import type {
   StatusRecord,
   UrlValue,
   UrlWriteValue,
-} from '@sg-widgets/core';
-import { condition, createEntitySource, group, resolveColumns, toSortSpecs } from '@sg-widgets/core';
+} from 'sg-widgets-core';
+import { condition, createEntitySource, group, resolveColumns, toSortSpecs } from 'sg-widgets-core';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CheckboxEditor } from '@/registry/sg/components/checkbox-editor';
@@ -129,6 +129,12 @@ export default function CompositionDemo() {
     group('and', [condition('sg_status_list', 'in', ['ip', 'apr']), condition('sg_first_frame', 'in', [1001, 1101])]),
   );
   const [paths, setPaths] = useState<string[]>([...SHOWN]);
+  /** Which widgets have emitted through their value callback, read by the prop-names drive. */
+  const [emitted, setEmitted] = useState<string[]>([]);
+  const emit = useCallback(
+    (name: string) => setEmitted((was) => (was.includes(name) ? was : [...was, name])),
+    [],
+  );
 
   const [note, setNote] = useState<string | null>('Plate handed over with the cut change.');
   const [frames, setFrames] = useState<string | number | null>(1001);
@@ -205,10 +211,27 @@ export default function CompositionDemo() {
       <div className={page}>
         <div className="flex min-w-0 flex-wrap items-center gap-2" data-qa-widget="toolbar" data-qa-region="toolbar">
           <div className="min-w-0 flex-1" data-qa-widget="filter-bar" data-qa-size="md">
-            <FilterBar entityType="Version" context={context} facets={['sg_status_list']} value={filter} onChange={setFilter} />
+            <FilterBar
+              entityType="Version"
+              context={context}
+              facets={['sg_status_list']}
+              value={filter}
+              onValueChange={(next) => {
+                setFilter(next);
+                emit('filter-bar');
+              }}
+            />
           </div>
           <div data-qa-widget="sort-picker" data-qa-size="md" data-qa-popup="sort-trigger">
-            <SortPicker entityType="Version" context={context} value={sortKeys} onChange={setSortKeys} />
+            <SortPicker
+              entityType="Version"
+              context={context}
+              value={sortKeys}
+              onValueChange={(next) => {
+                setSortKeys(next);
+                emit('sort-picker');
+              }}
+            />
           </div>
           <div data-qa-widget="column-picker" data-qa-size="md" data-qa-popup="popover-trigger">
             <Popover>
@@ -346,9 +369,16 @@ export default function CompositionDemo() {
             context={context}
             value={editorFilter}
             hidePaths={['sg_task']}
-            onChange={setEditorFilter}
+            onValueChange={(next) => {
+              setEditorFilter(next);
+              emit('filter-editor');
+            }}
           />
         </section>
+
+        <span className="sr-only" data-testid="emitted">
+          {emitted.join(' ')}
+        </span>
 
         <p className="text-sm" data-qa-widget="inline-atoms">
           The plate is{' '}

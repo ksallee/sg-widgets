@@ -4,16 +4,14 @@ description: The empty and error line a data widget draws in place of its rows.
 ---
 
 import Demo from '../../../components/Demo.astro';
+import Install from '../../../components/Install.astro';
 import Props from '../../../components/Props.astro';
 
 One centred line with a glyph in front of it, drawn wherever a data widget has no rows to show.
 
 ## Install
 
-```sh
-pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/state-line.json
-pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/state-line.json
-```
+<Install item="state-line" />
 
 <Demo name="state-line" title="StateLine: empty and error, in a popup list, in a table body, and under rows already drawn" />
 
@@ -53,6 +51,18 @@ reader is told about a list that answered as well as one that did not.
 ## Props
 
 <Props name="state-line" />
+
+## Events
+
+None.
+
+## Slots
+
+None.
+
+## Keyboard
+
+Not focusable. The live region beside it is what a screen reader hears.
 
 ## Where it is drawn
 

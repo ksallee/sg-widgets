@@ -28,7 +28,7 @@
 		NodePath,
 		Operator,
 		Scalar
-	} from '@sg-widgets/core';
+	} from 'sg-widgets-core';
 
 	/** What the field slot is given. Its job is to call `onSelect` with a dotted path. */
 	export interface FieldChooserArgs {
@@ -102,7 +102,7 @@
 	import PlusIcon from '@lucide/svelte/icons/plus';
 	import XIcon from '@lucide/svelte/icons/x';
 	import type { HTMLAttributes } from 'svelte/elements';
-	import type { SgContext, TimeUnit } from '@sg-widgets/core';
+	import type { SgContext, TimeUnit } from 'sg-widgets-core';
 	import {
 		appendAt,
 		applyPreset,
@@ -126,7 +126,7 @@
 		withListValue,
 		withoutListValue,
 		withRelativeWindow
-	} from '@sg-widgets/core';
+	} from 'sg-widgets-core';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { CONTROL_BUTTON } from '$lib/registry/components/control-classes.js';
 	import * as Select from '$lib/components/ui/select/index.js';
@@ -165,7 +165,7 @@
 		emptyLabel?: string;
 		size?: FilterEditorSize;
 		disabled?: boolean;
-		onChange?: (value: FilterGroup) => void;
+		onValueChange?: (value: FilterGroup) => void;
 		fieldChooser?: Snippet<[FieldChooserArgs]>;
 		valueEditor?: Snippet<[ValueEditorArgs]>;
 		entityEditor?: Snippet<[ValueEditorArgs]>;
@@ -181,7 +181,7 @@
 		emptyLabel = NOTHING_CHOSEN_LABEL,
 		size = 'md',
 		disabled = false,
-		onChange,
+		onValueChange,
 		fieldChooser,
 		valueEditor,
 		entityEditor,
@@ -251,7 +251,7 @@
 
 	function commit(next: FilterGroup): void {
 		value = next;
-		onChange?.(next);
+		onValueChange?.(next);
 	}
 
 	function edit(path: NodePath, node: FilterCondition | FilterGroup): void {
@@ -572,7 +572,7 @@
 				{projectId}
 				entityType={field?.entityType ?? entityType}
 				field={field?.name}
-				value={typeof node.value === 'string' && node.value !== '' ? node.value : undefined}
+				value={typeof node.value === 'string' && node.value !== '' ? node.value : null}
 				onValueChange={(next) => set(next ?? '')}
 			/>
 		{:else if kind === 'options' && arity === 'many'}

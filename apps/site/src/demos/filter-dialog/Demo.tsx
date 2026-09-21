@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
-import type { FilterGroup } from '@sg-widgets/core';
-import { condition, emptyFilter, group, toApi3Hash } from '@sg-widgets/core';
+import type { FilterGroup } from 'sg-widgets-core';
+import { condition, emptyFilter, group, toApi3Hash } from 'sg-widgets-core';
 import { Button } from '@/components/ui/button';
 import { FilterDialog, type FilterDialogSize } from '@/registry/sg/components/filter-dialog';
 import { createDemoContext } from '../_shared/client';
@@ -29,12 +29,12 @@ export default function FilterDialogDemo() {
       <div className="flex min-w-0 flex-col gap-4">
         <section className={section}>
           <h4 className={label}>No filters yet, not wired to the table</h4>
-          <FilterDialog entityType="Version" context={context} value={empty} onChange={setEmpty} />
+          <FilterDialog entityType="Version" context={context} value={empty} onValueChange={setEmpty} />
         </section>
 
         <section className={section}>
           <h4 className={label}>Two applied, drives the table below</h4>
-          <FilterDialog entityType="Version" context={context} value={applied} onChange={setApplied} />
+          <FilterDialog entityType="Version" context={context} value={applied} onValueChange={setApplied} />
           <pre
             data-testid="dialog-json"
             className="border-border bg-muted text-foreground max-h-48 overflow-auto rounded-lg border p-3 font-mono text-xs"
@@ -47,7 +47,7 @@ export default function FilterDialogDemo() {
 
         <section className={section} data-demo="note">
           <h4 className={label}>Note, whose read-state field takes is and is not alone</h4>
-          <FilterDialog entityType="Note" context={context} value={note} onChange={setNote} />
+          <FilterDialog entityType="Note" context={context} value={note} onValueChange={setNote} />
         </section>
 
         <section className={section} data-demo="sizes">
@@ -60,7 +60,7 @@ export default function FilterDialogDemo() {
                   context={context}
                   size={size}
                   value={sized[size]}
-                  onChange={(next) => setSized({ ...sized, [size]: next })}
+                  onValueChange={(next) => setSized({ ...sized, [size]: next })}
                 />
                 <Button variant="outline" size={size === 'md' ? 'default' : size}>
                   {size}

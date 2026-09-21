@@ -3,7 +3,7 @@ import type { PropsFile } from './_types';
 export default {
   extends: { name: 'collection-control' },
   props: [
-    { name: 'columns', type: '`CollectionColumn[]`', default: '—', meaning: 'Columns in display order, from `resolveColumns`. Two-way: hiding one writes the shorter list back.' },
+    { name: 'columns', type: '`CollectionColumn[]`', default: 'required', meaning: 'Columns in display order, from `resolveColumns`. Two-way: hiding one writes the shorter list back.' },
     { name: 'statuses', type: '`Record<string, StatusRecord> | null`', default: '`null`', meaning: 'Status rows by code, for status cells.' },
     { name: 'context', type: '`SgContext`', default: '—', meaning: 'The widget context. Cells render with its preferences, a cell editor reads through it, and an entity cell links to the row\'s page when it carries a site.' },
     { name: 'projectId', type: '`number`', default: '—', meaning: 'The project the columns were resolved with. Scopes a status, list or entity cell editor.' },
@@ -15,7 +15,7 @@ export default {
     { name: 'groupBy', type: '`string | null`', default: '`null`', meaning: 'Collapses rows under headers of a shared value at this path.' },
     { name: 'collapsed', type: '`string[] | CollapseState`', default: '`expandAll()`', meaning: 'Which group headers are shut, two-way. A bare id list is the open mode with those ids shut.' },
     { name: 'editable', type: '`boolean`', default: '`false`', meaning: 'Lets an editable cell open an editor.' },
-    { name: 'editorFor', type: '`(dataType) => Component | null`', default: '—', meaning: 'The editor a cell opens, by data type. A type it does not answer for opens FieldEditor.' },
+    { name: 'editorFor', type: '`(dataType) => ComponentType<CellEditorProps> | null` / `(dataType) => Component<CellEditorProps> | null`', default: '—', meaning: 'The editor a cell opens, by data type. A type it does not answer for opens FieldEditor.' },
     { name: 'editorPlacement', type: '`\'inline\' | \'popover\'`', default: 'per data type', meaning: 'Where every cell editor opens. A column\'s own `editorPlacement` wins over it.' },
     { name: 'showCode', type: '`boolean`', default: '`false`', meaning: 'Show the programmatic field path beside the header\'s display name.' },
     { name: 'columnMenu', type: '`boolean`', default: '`false`', meaning: 'A menu on every header: sort, hide and pin left.' },
@@ -41,7 +41,6 @@ export default {
     { name: 'row', receives: '`{ row, id, index, selected, disabled, columns }`', draws: 'Draws the cells of one row. The table keeps the row\'s box.' },
     { name: 'cell', receives: '`{ row, id, column, value, disabled }`', draws: 'Draws one cell\'s contents. Ignored where `row` is given.' },
     { name: 'groupHeader', receives: '`{ value, column, count, expanded, id }`', draws: 'Draws a group header\'s contents, after its chevron.' },
-    { name: 'editorFor', receives: '`dataType`', draws: 'The component a cell opens for that data type.' },
   ],
   keyboard: [
     { key: 'Tab', does: 'Moves through toolbar, header buttons, column menus, checkboxes, editable cells and the footer.' },

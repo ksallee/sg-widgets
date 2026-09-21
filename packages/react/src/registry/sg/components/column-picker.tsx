@@ -1,8 +1,9 @@
 import { Fragment, useEffect, useRef, useState, type KeyboardEvent } from 'react';
-import type { FieldHop, FieldOption, FieldSchema, SgContext } from '@sg-widgets/core';
+import type { FieldHop, FieldOption, FieldSchema, SgContext } from 'sg-widgets-core';
 import {
   currentType,
   deriveFieldOptions,
+  errorText,
   friendlyFieldPath,
   iconNameFor,
   moveFieldPath,
@@ -11,7 +12,7 @@ import {
   searchFieldOptions,
   stateLine,
   toggleFieldPath,
-} from '@sg-widgets/core';
+} from 'sg-widgets-core';
 import {
   Braces,
   Calendar,
@@ -243,7 +244,7 @@ export function ColumnPicker({
         if (live) setLoaded({ type, fields });
       })
       .catch((error: unknown) => {
-        if (live) setFailure(error instanceof Error ? error.message : String(error));
+        if (live) setFailure(errorText(error));
       });
     return () => {
       live = false;
@@ -528,7 +529,7 @@ export function ColumnPicker({
                     onSelect={() => activate(row)}
                     data-slot="column-picker-field"
                     data-path={row.path}
-                    data-chosen={value.includes(row.path) ? 'true' : undefined}
+                    data-checked={value.includes(row.path) ? 'true' : undefined}
                     className={TEXT[size]}
                   >
                     <Checkbox

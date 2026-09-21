@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { FieldSchema, StatusRecord } from '@sg-widgets/core';
+import type { FieldSchema, StatusRecord } from 'sg-widgets-core';
 import { FieldValue } from '@/registry/sg/components/field-value';
 import { DemoContextProvider, useSgContext } from '../_shared/react';
 

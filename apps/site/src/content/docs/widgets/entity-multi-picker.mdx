@@ -4,6 +4,7 @@ description: Several Flow Production Tracking entities, chosen by server-side se
 ---
 
 import Demo from '../../../components/Demo.astro';
+import Install from '../../../components/Install.astro';
 import Props from '../../../components/Props.astro';
 
 Searches one or more entity types on the server as you type, and binds the rows you tick.
@@ -12,10 +13,7 @@ Single and multi: [EntityPicker](/widgets/entity-picker/) binds one row.
 
 ## Install
 
-```sh
-pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/entity-multi-picker.json
-pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/entity-multi-picker.json
-```
+<Install item="entity-multi-picker" />
 
 <Demo name="entity-multi-picker" title="EntityMultiPicker: secondary column, types, hydration, exclusions, paging, errors, summary modes, sizes, states" />
 

@@ -1,6 +1,6 @@
 import type * as React from 'react';
-import type { FieldSchema } from '@sg-widgets/core';
-import { COLOR_SENTINEL, colorToHex, parseBgColor, parseColorInput, rgbToCss } from '@sg-widgets/core';
+import type { FieldSchema } from 'sg-widgets-core';
+import { COLOR_SENTINEL, colorToHex, parseBgColor, parseColorInput, rgbToCss } from 'sg-widgets-core';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { CONTROL_BOX, type ControlSize } from '@/registry/sg/components/control-classes';
@@ -93,7 +93,7 @@ export function ColorEditor({
           title={disabled || readonly ? undefined : 'Pick a colour'}
           style={rgb ? { backgroundColor: rgbToCss(rgb) } : undefined}
           className={cn(
-            'border-input focus-within:ring-ring focus-within:ring-offset-background relative shrink-0 overflow-hidden rounded-lg border transition-shadow duration-150 focus-within:ring-2 focus-within:ring-offset-2',
+            'border-input focus-within:ring-ring focus-within:ring-offset-background relative shrink-0 overflow-hidden rounded-lg border shadow-xs transition-shadow duration-150 focus-within:ring-2 focus-within:ring-offset-2',
             SWATCH[size],
             rgb ? undefined : 'bg-muted',
             disabled || readonly ? 'cursor-default' : 'cursor-pointer',

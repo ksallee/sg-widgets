@@ -1,7 +1,7 @@
 import type * as React from 'react';
 import type { ReactNode } from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { PressGate, RequestGate } from '@sg-widgets/core';
+import type { PressGate, RequestGate } from 'sg-widgets-core';
 import {
   errorText,
   listStatus,
@@ -13,7 +13,7 @@ import {
   SEARCH_DEBOUNCE_MS,
   searchView,
   stateLine,
-} from '@sg-widgets/core';
+} from 'sg-widgets-core';
 import { Search, TriangleAlert } from 'lucide-react';
 import {
   Command,

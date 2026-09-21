@@ -4,7 +4,7 @@
  * The split and the padding are core's; only the shape react-day-picker takes
  * lives here, which is why this is not in core.
  */
-import { isoDay, isoDayParts } from '@sg-widgets/core';
+import { isoDay, isoDayParts } from 'sg-widgets-core';
 
 /** `YYYY-MM-DD` as a calendar day, or undefined when the string is not one (field_types/date). */
 export function toCalendarDate(value: string | null | undefined): Date | undefined {

@@ -14,7 +14,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import type { HTMLAttributes } from 'svelte/elements';
-	import type { FieldSchema } from '@sg-widgets/core';
+	import type { FieldSchema } from 'sg-widgets-core';
 	import { Switch } from '$lib/components/ui/switch/index.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
 	import { CONTROL_HEIGHT } from '$lib/registry/components/control-classes.js';

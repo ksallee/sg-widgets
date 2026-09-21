@@ -1,7 +1,7 @@
 import type { PropsFile } from './_types';
 
 export default {
-  extends: { name: 'search-control', omit: ['load', 'query', 'onQueryChange', 'request', 'enabled', 'readsEmpty', 'paging', 'debounceMs', 'shell', 'commandClass', 'onKeyDown', 'title', 'description', 'errorSlot', 'loadingSlot', 'emptySlot', 'skeletonLines', 'skeletonLead', 'rows', 'empty'] },
+  extends: { name: 'search-control', omit: ['onOpenChange', 'load', 'query', 'onQueryChange', 'request', 'enabled', 'readsEmpty', 'paging', 'debounceMs', 'shell', 'commandClass', 'onKeyDown', 'title', 'description', 'errorSlot', 'loadingSlot', 'emptySlot', 'skeletonLines', 'skeletonLead', 'rows', 'empty'] },
   props: [
     { name: 'context', type: '`SgContext`', default: 'required', meaning: 'The widget context. Every read goes through it, so widgets on a page share one cache.' },
     { name: 'entityTypes', type: '`string[] | Record<string, WireCondition[] | null>`', default: 'Asset, Shot, Sequence, Task, Version, HumanUser, Project', meaning: 'Types to search, with an optional filter each.' },

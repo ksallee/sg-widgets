@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { CollapseState, CollectionColumn, EntityRef, EntityRow, SortSpec, StatusRecord } from '@sg-widgets/core';
+import type { CollapseState, CollectionColumn, EntityRef, EntityRow, SortSpec, StatusRecord } from 'sg-widgets-core';
 import {
   cellValue,
   collapseAll,
@@ -8,7 +8,7 @@ import {
   displayNameOf,
   expandAll,
   resolveColumns,
-} from '@sg-widgets/core';
+} from 'sg-widgets-core';
 import { GroupedList } from '@/registry/sg/components/grouped-list';
 import { StatusBadge } from '@/registry/sg/components/status-badge';
 import { createDemoClient, createDemoContext } from '../_shared/client';
@@ -20,7 +20,7 @@ const SECONDARY = 'due_date';
 const FIELDS = ['content', 'sg_status_list', GROUP, SUB, SECONDARY];
 
 const toggle =
-  'inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-background px-2 text-sm ' +
+  'inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-background px-2 text-sm shadow-xs ' +
   'text-muted-foreground outline-none transition-colors duration-150 hover:bg-accent hover:text-accent-foreground ' +
   'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ' +
   'aria-pressed:bg-accent aria-pressed:text-accent-foreground aria-pressed:font-medium';
@@ -180,7 +180,7 @@ export default function GroupedListDemo() {
             groupKey={(row) => cellValue(row, 'entity')}
             groupLabel={(record) => displayNameOf(record as Record<string, unknown>)}
             labelField="code"
-            subLabelField="description"
+            subLabelField="sg_status_list"
             statuses={data.statuses}
             collapsed={collapsed}
             onCollapsedChange={setCollapsed}

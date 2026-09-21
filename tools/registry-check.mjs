@@ -18,8 +18,8 @@ const REGISTRIES = {
     uiImport: /^@\/components\/ui\/([^/]+)/,
     componentImport: /^@\/registry\/sg\/components\/([^/]+?)(?:\.tsx?|\.js)?$/,
     aliasImport: /^@\//,
-    localRef: (name) => `https://sg-widgets.dev/r/react/${name}.json`,
-    refName: (dep) => dep.match(/^https:\/\/sg-widgets\.dev\/r\/react\/(.+)\.json$/)?.[1],
+    localRef: (name) => `https://sg-widgets.vercel.app/r/react/${name}.json`,
+    refName: (dep) => dep.match(/^https:\/\/sg-widgets\.vercel\.app\/r\/react\/(.+)\.json$/)?.[1],
   },
   svelte: {
     dir: "packages/svelte",

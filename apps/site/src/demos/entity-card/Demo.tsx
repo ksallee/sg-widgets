@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { EntityRef, EntityRow, WireGroup } from '@sg-widgets/core';
-import { entityCardFields } from '@sg-widgets/core';
+import type { EntityRef, EntityRow, WireGroup } from 'sg-widgets-core';
+import { entityCardFields } from 'sg-widgets-core';
 import { EntityCard } from '@/registry/sg/components/entity-card';
 import { EntityPicker } from '@/registry/sg/components/entity-picker';
 import { createDemoContext, type DemoContext } from '../_shared/client';
@@ -16,7 +16,8 @@ const SIZES = ['sm', 'md', 'lg'] as const;
 const group = 'flex flex-col gap-2';
 const label = 'text-muted-foreground text-xs font-medium tracking-wide uppercase';
 const caption = 'text-muted-foreground text-xs';
-const box = 'rounded-lg border p-3';
+// The card variant paints no surface: the caller frames it, here as a card.
+const box = 'bg-card text-card-foreground rounded-lg border p-3';
 const action =
   'inline-flex size-6 items-center justify-center rounded-md border border-border bg-background/80 text-muted-foreground shadow-sm outline-none transition-colors duration-150 hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background';
 
@@ -107,6 +108,7 @@ export default function EntityCardDemo() {
               context={context}
               row={rows[index % rows.length]!}
               variant="tile"
+              subLabelField="sg_status_list"
               secondaryField="user"
               size={size}
             />
@@ -115,6 +117,7 @@ export default function EntityCardDemo() {
             context={context}
             row={row}
             variant="tile"
+            subLabelField="sg_status_list"
             secondaryField="user"
             actions={
               <button type="button" className={action} aria-label="More">

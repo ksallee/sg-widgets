@@ -1,13 +1,13 @@
 <script lang="ts">
 	import type { HTMLAttributes } from 'svelte/elements';
-	import type { EntityRef, PickerRow, UserPickerOptions } from '@sg-widgets/core';
+	import type { EntityRef, PickerRow, UserPickerOptions } from 'sg-widgets-core';
 	import {
 		USER_PICKER_FIELDS,
 		userPickerFilters,
 		userPickerSearchFields,
 		userPickerSubLabel,
 		userPickerTypes
-	} from '@sg-widgets/core';
+	} from 'sg-widgets-core';
 	import { type WithElementRef } from '$lib/utils.js';
 	import EntityPicker, { type EntityPickerBaseProps } from './entity-picker.svelte';
 

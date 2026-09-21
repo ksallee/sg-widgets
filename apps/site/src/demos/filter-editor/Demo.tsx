@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
-import type { FilterGroup } from '@sg-widgets/core';
-import { condition, group, toApi3Hash } from '@sg-widgets/core';
+import type { FilterGroup } from 'sg-widgets-core';
+import { condition, group, toApi3Hash } from 'sg-widgets-core';
 import { Button } from '@/components/ui/button';
 import { FilterEditor, type FilterEditorSize } from '@/registry/sg/components/filter-editor';
 import { createDemoContext } from '../_shared/client';
@@ -122,7 +122,7 @@ export default function FilterEditorDemo() {
           context={context}
           value={value}
           hidePaths={['sg_task']}
-          onChange={setValue}
+          onValueChange={setValue}
         />
 
         <section className="flex flex-col gap-2">
@@ -139,7 +139,7 @@ export default function FilterEditorDemo() {
 
         <section className={section} data-demo="note">
           <h4 className={label}>Note, whose read-state field takes is and is not alone</h4>
-          <FilterEditor entityType="Note" context={context} value={note} onChange={setNote} />
+          <FilterEditor entityType="Note" context={context} value={note} onValueChange={setNote} />
         </section>
 
         <section className={section} data-demo="sizes">
@@ -153,7 +153,7 @@ export default function FilterEditorDemo() {
                     context={context}
                     size={size}
                     value={sized[size]}
-                    onChange={(next) => setSized({ ...sized, [size]: next })}
+                    onValueChange={(next) => setSized({ ...sized, [size]: next })}
                   />
                 </div>
                 <Button variant="outline" size={size === 'md' ? 'default' : size}>

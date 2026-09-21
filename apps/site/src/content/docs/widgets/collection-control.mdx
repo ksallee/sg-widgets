@@ -4,6 +4,7 @@ description: The source, the selection and the cursor every collection is built 
 ---
 
 import Demo from '../../../components/Demo.astro';
+import Install from '../../../components/Install.astro';
 import Props from '../../../components/Props.astro';
 
 The model under the entity table, the entity grid and the grouped list: a source and its paging, a
@@ -12,10 +13,7 @@ on it supplies its layout and its markup.
 
 ## Install
 
-```sh
-pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/collection-control.json
-pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/collection-control.json
-```
+<Install item="collection-control" />
 
 <Demo name="collection-control" title="CollectionControl: a queue of shots drawn straight off the base" />
 
@@ -91,6 +89,15 @@ stream, so a header on screen only makes the scroller ask for the next page late
 ## Events
 
 <Props name="collection-control" kind="events" />
+
+## Slots
+
+None. A layout draws its own lines
+and hands the base the scroller.
+
+## Keyboard
+
+<Props name="collection-control" kind="keyboard" />
 
 ## CollectionSource
 

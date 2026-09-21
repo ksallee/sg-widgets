@@ -694,8 +694,9 @@ describe('conditionValues', () => {
       text: 'Approved, Final',
       values: ['apr', 'fin'],
     });
-    // `max` of 0 is every value, and a list shorter than `max` never overflows.
-    expect(conditionValues(ticked, status, 0).overflow).toBe(0);
+    // A pill always names at least one value, so a limit below one reads as one; a list
+    // shorter than `max` never overflows.
+    expect(conditionValues(ticked, status, 0)).toMatchObject({ shown: ['Approved'], overflow: 3 });
     expect(conditionValues(condition('sg_status_list', 'in', ['apr']), status, 2).overflow).toBe(0);
   });
 

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { EntitySource, PagingModel } from '@sg-widgets/core';
+	import type { EntitySource, PageRange } from 'sg-widgets-core';
 	import ChevronLeft from '@lucide/svelte/icons/chevron-left';
 	import ChevronRight from '@lucide/svelte/icons/chevron-right';
 	import { Button } from '$lib/components/ui/button/index.js';
@@ -10,7 +10,7 @@
 		/** The source the controls drive. */
 		source: EntitySource;
 		/** The numbers to draw, from core's `describePaging`. */
-		pager: PagingModel;
+		pager: PageRange;
 		/** The page sizes offered in `pages` mode. */
 		pageSizes: number[];
 		/** True while the set is being read: the arrows wait for it. */

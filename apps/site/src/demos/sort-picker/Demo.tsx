@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { CollectionColumn, SortKey, StatusRecord } from '@sg-widgets/core';
+import type { CollectionColumn, SortKey, StatusRecord } from 'sg-widgets-core';
 import {
   createEntitySource,
   emptyFilter,
@@ -7,7 +7,7 @@ import {
   resolveColumns,
   serializeSort,
   toSortString,
-} from '@sg-widgets/core';
+} from 'sg-widgets-core';
 import { Button } from '@/components/ui/button';
 import { CONTROL_BUTTON, type ControlSize } from '@/registry/sg/components/control-classes';
 import { EntityTable } from '@/registry/sg/components/entity-table';
@@ -82,7 +82,7 @@ export default function SortPickerDemo() {
   return (
     <DemoContextProvider context={context}>
       <div className="flex min-w-0 flex-col gap-4">
-        <SortPicker entityType="Shot" context={context} value={value} onChange={setValue} />
+        <SortPicker entityType="Shot" context={context} value={value} onValueChange={setValue} />
 
         <section className="flex flex-col gap-2">
           <h4 className={label}>sort</h4>

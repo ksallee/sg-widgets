@@ -1,5 +1,5 @@
 <script lang="ts" module>
-	import type { EntityRef, FieldSpec, PickerRow, SearchHit, WireCondition } from '@sg-widgets/core';
+	import type { EntityRef, FieldSpec, PickerRow, SearchHit, WireCondition } from 'sg-widgets-core';
 	import { CONTROL_GLYPH, CONTROL_HEIGHT, type ControlSize } from '$lib/registry/components/control-classes.js';
 
 	export type GlobalSearchSize = ControlSize;
@@ -40,7 +40,7 @@
 
 <script lang="ts">
 	import type { HTMLAttributes } from 'svelte/elements';
-	import type { SgContext } from '@sg-widgets/core';
+	import type { SgContext } from 'sg-widgets-core';
 	import {
 		hasMorePage,
 		hydrate,
@@ -52,7 +52,7 @@
 		scopeToProject,
 		SEARCH_PAGE_SIZE,
 		searchTypeMap
-	} from '@sg-widgets/core';
+	} from 'sg-widgets-core';
 	import type { Snippet } from 'svelte';
 	import Search from '@lucide/svelte/icons/search';
 	import * as Command from '$lib/components/ui/command/index.js';
@@ -300,7 +300,7 @@
 		{load}
 		bind:query
 		shell={inline ? 'command' : 'dialog'}
-		commandClass="border-border rounded-lg border"
+		commandClass="border-input rounded-lg border shadow-xs"
 		bind:open={() => open, setOpen}
 		title="Search"
 		description="Search across the site by name."

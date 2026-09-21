@@ -455,9 +455,9 @@ export interface ConditionValues {
 }
 
 /**
- * A condition's values as a pill reads them: the first `max`, a count of the rest,
- * and the whole list for the title. A condition on any other shape than a list has
- * one value and no overflow, so a pill draws it whole.
+ * A condition's values as a pill reads them: the first `max`, at least one, a count of
+ * the rest, and the whole list for the title. A condition on any other shape than a
+ * list has one value and no overflow, so a pill draws it whole.
  */
 export function conditionValues(
   condition: FilterCondition,
@@ -469,7 +469,7 @@ export function conditionValues(
     return { shown: title ? [title] : [], overflow: 0, title, text: title, values: [] };
   }
   const all = condition.value as Scalar[];
-  const limit = max > 0 ? Math.min(max, all.length) : all.length;
+  const limit = Math.min(Math.max(1, Math.floor(max)), all.length);
   const shown = all.slice(0, limit).map((v) => scalarLabel(v, field));
   return {
     shown,

@@ -3,6 +3,8 @@ import { EntityTypeMultiPicker } from '@/registry/sg/components/entity-type-mult
 import { DemoContextProvider, useSgContext } from '../_shared/react';
 
 const PRODUCTION = ['Project', 'Sequence', 'Shot', 'Asset', 'Version', 'Task'];
+/** Types whose code and display name differ, so the code line has something to show. */
+const MIXED = ['Shot', 'Version', 'HumanUser', 'ApiUser', 'Step'];
 const SUMMARIES = ['chips', 'ellipsis', 'count'] as const;
 
 const group = 'flex flex-col gap-3';
@@ -74,11 +76,11 @@ function Pickers() {
         <div className={stack}>
           <div className={field}>
             <span className={label}>With the code</span>
-            <EntityTypeMultiPicker context={context} value={['Version']} allow={PRODUCTION} />
+            <EntityTypeMultiPicker context={context} value={['Version']} allow={MIXED} />
           </div>
           <div className={field}>
             <span className={label}>Without it</span>
-            <EntityTypeMultiPicker context={context} value={['Version']} allow={PRODUCTION} showCode={false} />
+            <EntityTypeMultiPicker context={context} value={['Version']} allow={MIXED} showCode={false} />
           </div>
         </div>
       </div>

@@ -12,5 +12,6 @@ build/
 coverage/
 apps/site/public/r/
 .claude/
+claude-config/
 .playwright-mcp/
 shots/

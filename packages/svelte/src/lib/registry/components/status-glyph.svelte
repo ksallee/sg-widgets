@@ -16,8 +16,8 @@
 </script>
 
 <script lang="ts">
-	import type { StatusRecord } from '@sg-widgets/core';
-	import { statusGlyph } from '@sg-widgets/core';
+	import type { StatusRecord } from 'sg-widgets-core';
+	import { statusGlyph } from 'sg-widgets-core';
 	import { cn } from '$lib/utils.js';
 
 	type Props = {

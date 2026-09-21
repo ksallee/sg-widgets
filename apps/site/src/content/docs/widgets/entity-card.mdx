@@ -4,6 +4,7 @@ description: One Flow Production Tracking row as a card, or as a thumbnail-first
 ---
 
 import Demo from '../../../components/Demo.astro';
+import Install from '../../../components/Install.astro';
 import Props from '../../../components/Props.astro';
 
 Renders one row as a card: its thumbnail, name, type, status and a grid of the field paths you name.
@@ -14,10 +15,7 @@ same row picture first, and is what EntityGrid lays out.
 
 Installing this pulls StatusBadge and Thumbnail with it.
 
-```sh
-pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/entity-card.json
-pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/entity-card.json
-```
+<Install item="entity-card" />
 
 <Demo name="entity-card" title="EntityCard: three sizes from a row, one card reading a picked reference, and the tile variant" />
 
@@ -31,7 +29,9 @@ other widget on that client.
 These shape the tile and are ignored by the card:
 
 
-Nothing is on the metadata line by default, and the row's id is never on it. The tile takes its
+Nothing is on the metadata line by default, and the row's id is never on it. Both sides of it draw
+by the field's data type, so a status reads the name the site gives its code and a linked row links
+to its own page. The tile takes its
 selected state rather than holding one, and it spreads whatever attributes and handlers it is given
 onto its root, so a collection can make it an option of a listbox and drive it.
 
@@ -58,12 +58,16 @@ that names no field is shown under its own text with an empty value. A badge sit
 the card's own size.
 
 The header names the row's own status, so a path naming that same field is not drawn a second time
-in the grid. A path that ends at a linked row's status is a different row's status and stays.
+in the grid. A path that ends at a linked row's status is a different row's status and stays. The
+tile's metadata line draws whatever you name on it, that field included.
 The field is the type's conventional one, `sg_status_list` or `sg_status` on a Project, whatever
 other status fields the site has added to the type.
 
 A card with no row yet shows a skeleton shaped like the card; a read that fails shows the message
 inline.
+
+The card paints no surface of its own, so it wears the card, popover or page it is put on: a chip's
+hover card shows one on a popover, and a page frames it. The tile is a card and paints one.
 
 The root fills its container and carries the size as a data attribute.
 
@@ -108,6 +112,6 @@ status is read from and never whichever status field the response listed first.
 
 The web app addresses a row at `/detail/<Type>/<id>`. The API hands that path out for one type only,
 as `Project.landing_page_url`, site-relative and with the site url left to the caller
-(entity_types/Project). On the test site the same shape answers for every type: the route resolves
-before authentication decides, redirecting an anonymous visitor to the login page with itself as the
-return path. Site measurement, pending a corpus card.
+(entity_types/Project). Every other type takes the same shape by a convention the API does not
+document. On the test site it answers for every type: the route resolves before authentication
+decides, redirecting an anonymous visitor to the login page with itself as the return path.

@@ -18,10 +18,10 @@ export function normalizeSiteUrl(siteUrl: string | null | undefined): string {
  *
  * `Project.landing_page_url` is the only detail address the API hands out, and it
  * is the site-relative path `/detail/Project/<id>` with the site url left to the
- * caller (entity_types/Project). The same shape addresses every type: on the test
- * site `/detail/<Type>/<id>` answers 302 to `/user/login` carrying itself as
- * `return_path`, so the route resolves before authentication decides. Site
- * measurement, pending a corpus card.
+ * caller (entity_types/Project). Every other type takes the same shape by a
+ * convention the API does not document: on the test site `/detail/<Type>/<id>`
+ * answers 302 to `/user/login` carrying itself as `return_path`, so the route
+ * resolves before authentication decides.
  *
  * Answers null when there is no site to link into or no row to link to.
  */

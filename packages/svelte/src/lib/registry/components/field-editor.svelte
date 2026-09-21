@@ -8,8 +8,8 @@
 		StatusRecord,
 		UrlValue,
 		UrlWriteValue
-	} from '@sg-widgets/core';
-	import { editorNeedsContext } from '@sg-widgets/core';
+	} from 'sg-widgets-core';
+	import { editorNeedsContext } from 'sg-widgets-core';
 
 	export type FieldEditorMode = 'display' | 'edit';
 	export type FieldEditorSize = 'sm' | 'md' | 'lg';
@@ -67,7 +67,7 @@
 <script lang="ts">
 	import { onMount, onDestroy, type Snippet } from 'svelte';
 	import type { HTMLAttributes } from 'svelte/elements';
-	import { editorKindFor, preferencesOf } from '@sg-widgets/core';
+	import { editorKindFor, preferencesOf } from 'sg-widgets-core';
 	import { cn, type WithElementRef } from '$lib/utils.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { CONTROL_BUTTON } from '$lib/registry/components/control-classes.js';
@@ -555,8 +555,8 @@
 				entityType={field?.entityType ?? ''}
 				field={field?.name}
 				{projectId}
-				value={typeof value === 'string' ? value : undefined}
-				onValueChange={(next: string | undefined) => emit(next ?? null)}
+				value={typeof value === 'string' ? value : null}
+				onValueChange={emit}
 				{size}
 				{disabled}
 				{readonly}

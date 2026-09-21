@@ -9,12 +9,14 @@ import type {
   SgClient,
   SgContext,
   StatusRecord,
-} from '@sg-widgets/core';
+} from 'sg-widgets-core';
 import {
   cellValue,
   contextFromClient,
   describeEntityCard,
+  entityCardSlot,
   entityDetailUrl,
+  errorText,
   fieldText,
   imageState,
   isEmptyValue,
@@ -24,7 +26,7 @@ import {
   renderKindFor,
   stateLine,
   urlLink,
-} from '@sg-widgets/core';
+} from 'sg-widgets-core';
 import { CircleAlert, Tag } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -207,7 +209,7 @@ export function EntityCard({
         if (current) setLoaded({ card, statuses: statuses ?? Object.fromEntries(table ?? []) });
       })
       .catch((e: unknown) => {
-        if (current) setError(e instanceof Error ? e.message : String(e));
+        if (current) setError(errorText(e));
       });
     return () => {
       current = false;
@@ -295,13 +297,6 @@ export function EntityCard({
     );
   }
 
-  /** The column behind a metadata slot, when it resolved to something worth a line. */
-  function slotColumn(model: EntityCardModel, path: string): EntityCardColumn | null {
-    if (path.length === 0) return null;
-    const column = model.columns.find((c) => c.path === path) ?? null;
-    return column && !isEmptyValue(column.value) ? column : null;
-  }
-
   function nameOf(model: EntityCardModel): string {
     if (!labelField) return model.name;
     return String(cellValue(model.row, labelField) ?? '');
@@ -319,8 +314,8 @@ export function EntityCard({
     const code = codeOf(model);
     const sub = subLabel ? subLabel(model.row) : '';
     const right = secondary ? secondary(model.row) : '';
-    const subColumn = slotColumn(model, subPath);
-    const secondaryColumn = slotColumn(model, secondaryPath);
+    const subColumn = entityCardSlot(model, subLabelField);
+    const secondaryColumn = entityCardSlot(model, secondaryField);
     return (
       <>
         <div data-slot="entity-card-media" className="relative w-full">

@@ -8,8 +8,8 @@ import type {
   SgContext,
   StatusRecord,
   UrlValue,
-} from '@sg-widgets/core';
-import { editorKindFor, editorNeedsContext, preferencesOf } from '@sg-widgets/core';
+} from 'sg-widgets-core';
+import { editorKindFor, editorNeedsContext, preferencesOf } from 'sg-widgets-core';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { CONTROL_BUTTON } from '@/registry/sg/components/control-classes';
@@ -433,8 +433,8 @@ export function FieldEditor({
           entityType={field?.entityType ?? ''}
           field={field?.name}
           projectId={projectId}
-          value={typeof value === 'string' ? value : undefined}
-          onValueChange={(next: string | undefined) => emit(next ?? null)}
+          value={typeof value === 'string' ? value : null}
+          onValueChange={emit}
           size={size}
           disabled={disabled}
           readonly={readonly}

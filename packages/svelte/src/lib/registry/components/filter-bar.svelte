@@ -25,6 +25,15 @@
 	 * would otherwise run the bar past the width it was given (`docs/design-rules.md` rule 2).
 	 */
 	const VALUE_WIDTH = 'max-w-64';
+	/** One row of whole badges: a status value wraps past the cap and the rows below are clipped. */
+	const VALUE_ROW: Record<FilterBarSize, string> = { sm: 'max-h-5', md: 'max-h-6', lg: 'max-h-8' };
+	/**
+	 * A pill is the outline button: a bordered control on the height ladder that presses
+	 * to open a list, so it wears the button's border, radius and shadow rather than a
+	 * badge's flat surface.
+	 */
+	const PILL =
+		'border-border inline-flex max-w-full min-w-0 items-center overflow-hidden rounded-lg border text-sm shadow-xs';
 </script>
 
 <script lang="ts">
@@ -44,12 +53,13 @@
 		Scalar,
 		SgContext,
 		WireGroup
-	} from '@sg-widgets/core';
+	} from 'sg-widgets-core';
 	import {
 		conditionParts,
 		conditionValues,
 		describeCondition,
 		emptyFilter,
+		errorText,
 		facetLists,
 		facetScopes,
 		facetShape,
@@ -57,9 +67,9 @@
 		renderKindFor,
 		setFacet,
 		asFilterGroup,
-		matchesTokens,
+		matchesEveryWord,
 		withoutPaths
-	} from '@sg-widgets/core';
+	} from 'sg-widgets-core';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
 	import * as Command from '$lib/components/ui/command/index.js';
@@ -97,7 +107,7 @@
 		counts?: FacetCounts;
 		/** Rows read for a tally. */
 		sampleSize?: number;
-		onChange?: (value: FilterGroup) => void;
+		onValueChange?: (value: FilterGroup) => void;
 		class?: string;
 	};
 
@@ -114,7 +124,7 @@
 		counts,
 		baseFilter = null,
 		sampleSize = 200,
-		onChange,
+		onValueChange,
 		class: className,
 		ref = $bindable(null),
 		...rest
@@ -194,7 +204,7 @@
 
 	function commit(next: FilterGroup): void {
 		value = next;
-		onChange?.(next);
+		onValueChange?.(next);
 	}
 
 	/** The list operator the checklist writes: the one the pill already holds, else `in`. */
@@ -269,12 +279,16 @@
 	{#if shown.shown.length > 0}
 		<span
 			data-slot="filter-pill-values"
-			class={cn('flex min-w-0 items-center gap-1.5 truncate', VALUE_WIDTH)}
+			class={cn(
+				'flex min-w-0 items-center gap-1.5',
+				VALUE_WIDTH,
+				isStatus(name) && shown.values.length > 0 ? `flex-wrap content-start overflow-hidden ${VALUE_ROW[size]}` : 'truncate'
+			)}
 			title={shown.title}
 		>
 			{#if isStatus(name) && shown.values.length > 0}
 				{#each shown.values as scalar (keyOf(scalar as Scalar))}
-					<span class="flex min-w-0 items-center truncate">
+					<span class="flex shrink-0 items-center">
 						{@render valueBadge(name, keyOf(scalar as Scalar))}
 					</span>
 				{/each}
@@ -311,7 +325,7 @@
 						<StateLine state="empty" icon={SearchXIcon} label="No value." pad="none" />
 					</Command.Empty>
 					<!-- The box matches what it was given rather than what a read answered, so the rows drawn are the rows the list holds. -->
-					{#each (found[name]?.values ?? []).filter((option) => matchesTokens(facetQuery, option.label, option.key)) as option (option.key)}
+					{#each (found[name]?.values ?? []).filter((option) => matchesEveryWord(`${option.label} ${option.key}`, facetQuery)) as option (option.key)}
 						<Command.Item
 							value={option.key}
 							data-option={option.key}
@@ -335,7 +349,7 @@
 						state="error"
 						slotName="filter-bar-error"
 						icon={TriangleAlertIcon}
-						label={error.message}
+						label={errorText(error)}
 					/>
 				{/await}
 			</Command.List>
@@ -405,7 +419,7 @@
 					role={found ? 'group' : undefined}
 					aria-label={found ? describeCondition(found.summary, field) : undefined}
 					class={cn(
-						'border-border inline-flex max-w-full min-w-0 items-center overflow-hidden rounded-lg border text-sm',
+						PILL,
 						CONTROL_HEIGHT[size],
 						found && parts && CROSS_PAD[size],
 						found ? 'bg-background' : 'text-muted-foreground max-w-72 border-dashed'
@@ -446,11 +460,7 @@
 				data-active="true"
 				role="group"
 				aria-label={describeCondition(found.summary, field)}
-				class={cn(
-					'border-border bg-background inline-flex max-w-full min-w-0 items-center overflow-hidden rounded-lg border text-sm',
-					CONTROL_HEIGHT[size],
-					CROSS_PAD[size]
-				)}
+				class={cn(PILL, 'bg-background', CONTROL_HEIGHT[size], CROSS_PAD[size])}
 			>
 				<span
 					class={cn('inline-flex min-w-0 items-center gap-1.5', CONTROL_HEIGHT[size], CONTROL_PAD[size])}
@@ -485,6 +495,6 @@
 		{size}
 		label="More filters"
 		bind:value
-		onChange={(next) => onChange?.(next)}
+		onValueChange={(next) => onValueChange?.(next)}
 	/>
 </div>

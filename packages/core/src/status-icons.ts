@@ -515,8 +515,11 @@ export const STOCK_ICON_DATA_URLS: Readonly<Record<string, string>> = {
     'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAQAAAABCAYAAAD5PA/NAAAACXBIWXMAAAsSAAALEgHS3X78AAAADklEQVQImWMoKqr9j4wBTW0JgUnBaSwAAAAASUVORK5CYII=',
 };
 
-/** The keys the status picker offers, in the site's order. */
-export const STOCK_ICON_KEYS: readonly string[] = Object.keys(STOCK_ICON_DATA_URLS);
+/**
+ * The keys the status picker offers, in the site's order. Annotated pure, so a
+ * bundle that imports something else from this module drops the icon data with it.
+ */
+export const STOCK_ICON_KEYS: readonly string[] = /* @__PURE__ */ Object.keys(STOCK_ICON_DATA_URLS);
 
 const nativeByCode = new Map(NATIVE_STATUSES.map((s) => [s.code, s]));
 

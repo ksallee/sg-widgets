@@ -4,6 +4,7 @@ description: Dense Flow Production Tracking rows under collapsible group headers
 ---
 
 import Demo from '../../../components/Demo.astro';
+import Install from '../../../components/Install.astro';
 import Props from '../../../components/Props.astro';
 
 Renders rows from an entity source as one line each, under collapsible headers of a shared value.
@@ -23,7 +24,7 @@ the next page brings as well as the ones already loaded. A bare key list still w
 open mode with those keys shut.
 
 ```ts
-import { collapseAll, expandAll, isCollapsed, toggleCollapsed } from '@sg-widgets/core';
+import { collapseAll, expandAll, isCollapsed, toggleCollapsed } from 'sg-widgets-core';
 
 collapseAll();                              // { all: true, except: [] }
 toggleCollapsed(collapseAll(), 'group:2');  // every group shut but that one
@@ -49,10 +50,7 @@ is not read.
 
 ## Install
 
-```sh
-pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/grouped-list.json
-pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/grouped-list.json
-```
+<Install item="grouped-list" />
 
 <Demo name="grouped-list" title="Grouped List: Tasks by pipeline step, then Versions under the record each is of, from a derived key" />
 
@@ -71,6 +69,11 @@ const [group, sub, secondary] = await resolveColumns(context.schema, 'Task', [
   'due_date',
 ]);
 ```
+
+`groupBy` takes a resolved column. `subLabelField` and `secondaryField` take one too, or a bare
+path, which the list resolves against the source's type through the context: either way the value
+draws by its data type, so a status reads the name the site gives its code rather than the code.
+Without a context a bare path draws as the text it is stored as.
 
 ## Props
 

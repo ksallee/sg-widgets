@@ -4,6 +4,7 @@ description: The box and the session every leaf value editor runs on.
 ---
 
 import Demo from '../../../components/Demo.astro';
+import Install from '../../../components/Install.astro';
 import Props from '../../../components/Props.astro';
 
 The box a value editor stands in and the session its control runs on. Text, number, url, colour,
@@ -11,10 +12,7 @@ date and date-time are built on it.
 
 ## Install
 
-```sh
-pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/value-editor.json
-pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/value-editor.json
-```
+<Install item="value-editor" />
 
 <Demo name="value-editor" title="ValueEditor: a frame range editor of the caller's own, on the base" />
 
@@ -63,6 +61,19 @@ there is nothing between the two states for a parse to refuse.
 ## Props
 
 <Props name="value-editor" />
+
+## Events
+
+None. The session emits; the box draws.
+
+## Slots
+
+`children` is the control the box is drawn around. `errorMessage` draws the line under it
+in place of the default one.
+
+## Keyboard
+
+<Props name="value-editor" kind="keyboard" />
 
 ## The session
 

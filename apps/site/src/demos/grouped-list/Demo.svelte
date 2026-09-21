@@ -6,7 +6,7 @@
 		EntityRow,
 		SortSpec,
 		StatusRecord
-	} from '@sg-widgets/core';
+	} from 'sg-widgets-core';
 	import {
 		cellValue,
 		collapseAll,
@@ -15,7 +15,7 @@
 		displayNameOf,
 		expandAll,
 		resolveColumns
-	} from '@sg-widgets/core';
+	} from 'sg-widgets-core';
 	import GroupedList from '$lib/registry/components/grouped-list.svelte';
 	import StatusBadge from '$lib/registry/components/status-badge.svelte';
 	import { createDemoClient, createDemoContext } from '../_shared/client';
@@ -104,7 +104,7 @@
 	}
 
 	const toggle =
-		'inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-background px-2 text-sm ' +
+		'inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-background px-2 text-sm shadow-xs ' +
 		'text-muted-foreground outline-none transition-colors duration-150 hover:bg-accent hover:text-accent-foreground ' +
 		'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ' +
 		'aria-pressed:bg-accent aria-pressed:text-accent-foreground aria-pressed:font-medium';
@@ -171,7 +171,7 @@
 				groupKey={(row) => cellValue(row, 'entity')}
 				groupLabel={(record) => displayNameOf(record as Record<string, unknown>)}
 				labelField="code"
-				subLabelField="description"
+				subLabelField="sg_status_list"
 				{statuses}
 				bind:collapsed
 				bind:sort={derivedSort}

@@ -97,7 +97,7 @@ for (const framework of ['svelte', 'react']) {
   key(input, 'ArrowDown');
   await wait(100);
   key(input, 'Enter');
-  const ticked = await until(() => rows().find((row) => row.dataset.selectedEntity === 'true'));
+  const ticked = await until(() => rows().find((row) => row.dataset.checked === 'true'));
   const chip = $('[data-demo-case="multi"] [data-slot="entity-picker-value"] [data-slot="entity-chip"]', pane);
   if (!ticked) failures.push(`${framework}: Enter ticked no row`);
   if (!chip) failures.push(`${framework}: ticking a row put no chip in the control`);

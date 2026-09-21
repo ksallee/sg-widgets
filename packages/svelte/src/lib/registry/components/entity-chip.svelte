@@ -15,8 +15,8 @@
 
 <script lang="ts">
 	import type { HTMLAttributes, MouseEventHandler } from 'svelte/elements';
-	import type { EntityRef, SgClient, SgContext } from '@sg-widgets/core';
-	import { contextFromClient, entityDetailUrl } from '@sg-widgets/core';
+	import type { EntityRef, SgClient, SgContext } from 'sg-widgets-core';
+	import { contextFromClient, entityDetailUrl } from 'sg-widgets-core';
 	import X from '@lucide/svelte/icons/x';
 	import * as HoverCard from '$lib/components/ui/hover-card/index.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';

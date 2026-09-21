@@ -4,7 +4,7 @@ export default {
   props: [
     { name: 'entityType', type: '`string`', default: 'required', meaning: 'Type the root of every field path is read on.' },
     { name: 'context', type: '`SgContext`', default: 'required', meaning: 'The widget context. Every read goes through it, so widgets on a page share one cache.' },
-    { name: 'value', type: '`FilterGroup`', default: '`emptyFilter()`', meaning: 'The tree. Two-way in Svelte through `bind:value`.' },
+    { name: 'value', type: '`FilterGroup`', default: 'required', meaning: 'The tree. Two-way in Svelte through `bind:value`.' },
     { name: 'hidePaths', type: '`string[]`', default: '`[]`', meaning: 'Paths kept out of the field list. A pattern hides itself and everything under it.' },
     { name: 'projectId', type: '`number`', default: '—', meaning: 'Scopes the status pickers to the codes one project allows.' },
     { name: 'emptyLabel', type: '`string`', default: '`\'Nothing chosen\'`', meaning: 'Shown when a group holds no condition.' },
@@ -13,7 +13,7 @@ export default {
     { name: 'class / className', type: '`string`', default: '—', meaning: 'Merged after the widget\'s own classes.' },
   ],
   events: [
-    { name: 'onChange', payload: '`FilterGroup`', when: 'The whole tree changed, on every edit. Svelte also binds it with `bind:value`.' },
+    { name: 'onValueChange', payload: '`FilterGroup`', when: 'The whole tree changed, on every edit. Svelte also binds it with `bind:value`.' },
   ],
   slots: [
     { name: 'fieldChooser', receives: '`entityType`, the current `path`, `hidePaths`, `filterableOnly`, `disabled`, `onSelect(path)`.' },

@@ -4,16 +4,14 @@ description: One Flow Production Tracking status as a badge.
 ---
 
 import Demo from '../../../components/Demo.astro';
+import Install from '../../../components/Install.astro';
 import Props from '../../../components/Props.astro';
 
 Renders one status code as a badge carrying the site's own label and icon.
 
 ## Install
 
-```sh
-pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/status-badge.json
-pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/status-badge.json
-```
+<Install item="status-badge" />
 
 <Demo name="status-badge" title="StatusBadge: neutral and coloured, the bare glyph on the muted ground and on its colour, removable, labels, stock icons, unknown codes" />
 
@@ -34,6 +32,9 @@ The stock sprite was drawn as dark strokes for a light page, so a cell of it is 
 rotated back on a dark page: the mark reads against the page in both schemes and a green tick stays
 green. A site's own icon is sent ready for both and is left as it is, and so is a glyph sitting on the
 status colour.
+
+A badge with no status colour paints no background: it wears the card, popover, row or page it
+sits on, so a badge reads the same wherever it is put.
 
 The root carries the status code, the variant and whether it was resolved, as data attributes. An
 image-map icon carries its key on the glyph, as a data attribute. A removable badge draws its cross inside the pill

@@ -1,6 +1,6 @@
 <script lang="ts" module>
 	import type { Component } from 'svelte';
-	import type { CollectionColumn, EditorPlacement, EntityRow, FieldSchema } from '@sg-widgets/core';
+	import type { CollectionColumn, EditorPlacement, EntityRow, FieldSchema } from 'sg-widgets-core';
 
 	export type EntityTableDensity = 'compact' | 'default';
 	export type EntityTableSize = 'sm' | 'md' | 'lg';
@@ -85,7 +85,7 @@
 		SortSpec,
 		SourceFilters,
 		StatusRecord
-	} from '@sg-widgets/core';
+	} from 'sg-widgets-core';
 	import {
 		cellValue,
 		NO_ROWS_LABEL,
@@ -100,7 +100,7 @@
 		isCollapsed,
 		sameCollapse,
 		stateLine
-	} from '@sg-widgets/core';
+	} from 'sg-widgets-core';
 	import {
 		columnGroupingFeature,
 		columnOrderingFeature,
@@ -895,7 +895,7 @@
 							{@const groupColumn = byPath.get(item.groupColumnId)}
 							<Table.Row
 								data-slot="entity-table-group"
-								class="bg-muted/50 hover:bg-muted/50"
+								class="bg-muted hover:bg-muted"
 								style={body.virtualized ? `height:${rowHeight}px` : undefined}
 							>
 								<Table.Cell colspan={layout.length} class="p-0">

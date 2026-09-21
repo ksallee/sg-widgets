@@ -16,9 +16,11 @@
  * mints one from the script key in `.env.local`, so local QA needs no login;
  * that endpoint is 404 in a production build. Otherwise it is minted in the
  * browser from a session token the person approved through the App Session
- * Launcher (probe 052), kept in `localStorage` under `sg-demo:session`.
+ * Launcher (probe 052), kept in `sessionStorage` under `sg-demo:session`. The
+ * two launcher endpoints forward for a page this site served, to a site on the
+ * product's domains, and answer 403 to anything else.
  */
-import { createSessionTokenAuth, createSgContext, RestClient, type SgContext } from '@sg-widgets/core';
+import { createSessionTokenAuth, createSgContext, RestClient, type SgContext } from 'sg-widgets-core';
 
 const KEYS = {
   source: 'sg-demo:source',
@@ -56,9 +58,14 @@ export interface LiveState {
 /* Storage. Values are raw strings or JSON; tools/qa.mjs writes JSON, so a quoted
  * value reads as the string inside. Blocked storage is a fallback, never a throw. */
 
+/** The view survives a visit; the approved session dies with the tab that approved it. */
+function area(key: string): Storage {
+  return key === KEYS.session ? sessionStorage : localStorage;
+}
+
 function raw(key: string): string | null {
   try {
-    return localStorage.getItem(key);
+    return area(key).getItem(key);
   } catch {
     return null;
   }
@@ -88,8 +95,8 @@ function json<T>(key: string): T | null {
 
 function write(key: string, value: string | null): void {
   try {
-    if (value === null) localStorage.removeItem(key);
-    else localStorage.setItem(key, value);
+    if (value === null) area(key).removeItem(key);
+    else area(key).setItem(key, value);
   } catch {
     /* Persisting the view is a convenience, not a requirement. */
   }

@@ -4,7 +4,7 @@ export default {
   props: [
     { name: 'entityType', type: '`string`', default: 'required', meaning: 'Type the editor reads its fields on.' },
     { name: 'context', type: '`SgContext`', default: 'required', meaning: 'The widget context. Every read goes through it, so widgets on a page share one cache.' },
-    { name: 'value', type: '`FilterGroup`', default: '`emptyFilter()`', meaning: 'The applied tree. Two-way in Svelte through `bind:value`.' },
+    { name: 'value', type: '`FilterGroup`', default: 'required', meaning: 'The applied tree. Two-way in Svelte through `bind:value`.' },
     { name: 'hidePaths', type: '`string[]`', default: '`[]`', meaning: 'Passed through to the editor.' },
     { name: 'label', type: '`string`', default: '—', meaning: 'Replaces both button labels.' },
     { name: 'title', type: '`string`', default: '`\'Filters\'`', meaning: 'Dialog title.' },
@@ -14,7 +14,7 @@ export default {
     { name: 'class / className', type: '`string`', default: '—', meaning: 'Merged after the widget\'s own classes.' },
   ],
   events: [
-    { name: 'onChange', payload: '`FilterGroup`', when: 'The tree was applied, by Apply, Clear all or the clear control, never while editing. Svelte also binds it with `bind:value`.' },
+    { name: 'onValueChange', payload: '`FilterGroup`', when: 'The tree was applied, by Apply, Clear all or the clear control, never while editing. Svelte also binds it with `bind:value`.' },
     { name: 'onOpenChange', payload: '`boolean`', when: 'The dialog opened or closed. Svelte also binds it with `bind:open`.' },
   ],
   keyboard: [

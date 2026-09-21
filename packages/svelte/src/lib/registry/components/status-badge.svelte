@@ -10,8 +10,8 @@
 
 <script lang="ts">
 	import type { HTMLAttributes } from 'svelte/elements';
-	import type { FieldSchema, StatusRecord } from '@sg-widgets/core';
-	import { statusGlyph, statusLabel, statusPaint } from '@sg-widgets/core';
+	import type { FieldSchema, StatusRecord } from 'sg-widgets-core';
+	import { statusGlyph, statusLabel, statusPaint } from 'sg-widgets-core';
 	import X from '@lucide/svelte/icons/x';
 	import { cn, type WithElementRef } from '$lib/utils.js';
 	import { CHIP_BOX, CHIP_CROSS, CHIP_GLYPH, CHIP_PAD, CHIP_SPACING, LEAF_GLYPH, REMOVE_CONTROL } from '$lib/registry/components/leaf-classes.js';
@@ -131,7 +131,8 @@
 			bare
 				? cn('inline-flex shrink-0 items-center justify-center align-middle', LEAF_GLYPH[size === 'xs' ? 'sm' : size])
 				: cn(
-						'border-border bg-background inline-flex max-w-full min-w-0 items-center rounded-md border align-middle',
+						/* A badge paints no surface of its own: it wears the card, popover or page it sits on. */
+						'border-border inline-flex max-w-full min-w-0 items-center rounded-md border align-middle',
 						showRemove ? CHIP_SPACING[size].cross : CHIP_SPACING[size].glyph,
 						CHIP_BOX[size],
 						variant === 'icon'

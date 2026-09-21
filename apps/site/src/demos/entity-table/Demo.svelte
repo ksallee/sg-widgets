@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { CollapseState, CollectionColumn, EditorPlacement, EntityRef, FilterGroup, PagingMode, SortKey, StatusRecord } from '@sg-widgets/core';
+	import type { CollapseState, CollectionColumn, EditorPlacement, EntityRef, FilterGroup, PagingMode, SortKey, StatusRecord } from 'sg-widgets-core';
 	import {
 		collapseAll,
 		condition,
@@ -9,7 +9,7 @@
 		group,
 		resolveColumns,
 		toSortSpecs
-	} from '@sg-widgets/core';
+	} from 'sg-widgets-core';
 	import ColumnPicker from '$lib/registry/components/column-picker.svelte';
 	import EntityTable from '$lib/registry/components/entity-table.svelte';
 	import FilterBar from '$lib/registry/components/filter-bar.svelte';
@@ -91,7 +91,7 @@
 	}
 
 	const toggle =
-		'inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-background px-2 text-sm ' +
+		'inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-background px-2 text-sm shadow-xs ' +
 		'text-muted-foreground outline-none transition-colors duration-150 hover:bg-accent hover:text-accent-foreground ' +
 		'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ' +
 		'aria-pressed:bg-accent aria-pressed:text-accent-foreground aria-pressed:font-medium';

@@ -11,6 +11,9 @@ import { cellValue } from './collection.js';
 import type { SgContext } from './context.js';
 import type { EntityRef } from './filter.js';
 import { pathLabel } from './presentation.js';
+import { isEmptyValue } from './render.js';
+import type { FieldSpec } from './row.js';
+import { pathOf } from './row.js';
 import type { FieldSchema } from './schema.js';
 import { DISPLAY_NAME_FIELDS, displayNameOf, statusFieldFor } from './schema.js';
 
@@ -103,6 +106,37 @@ export async function describeEntityCard(
     // different row's and stays.
     columns: badge ? columns.filter((column) => column.path !== badge.field.name) : columns,
   };
+}
+
+/**
+ * The column one metadata slot of a tile draws, or null when there is nothing to draw.
+ *
+ * The slot takes the same spec as every other row-anatomy prop: a bare path, resolved
+ * against the card's own columns so the value renders by its data type, or a column the
+ * caller already resolved, which is taken at its word and costs no lookup. A slot naming
+ * the row's own status field draws it: the grid leaves that field to the header, and a
+ * caller who puts it on the metadata line has asked for it there. A status reads the name
+ * the site gives the code, off the field's `display_values`, which covers the whole
+ * vocabulary (recipes/010, field_types/status_list).
+ */
+export function entityCardSlot(
+  card: EntityCardModel,
+  spec: FieldSpec | null | undefined,
+): EntityCardColumn | null {
+  const path = pathOf(spec);
+  if (path.length === 0) return null;
+  const value = cellValue(card.row, path);
+  if (isEmptyValue(value)) return null;
+  if (spec !== null && spec !== undefined && typeof spec !== 'string') {
+    return { path, label: spec.header, dataType: spec.dataType, field: spec.field, value };
+  }
+  const column = card.columns.find((entry) => entry.path === path);
+  if (column) return column;
+  const status = card.status;
+  if (status && path === status.field.name) {
+    return { path, label: status.field.displayName, dataType: status.field.dataType, field: status.field, value };
+  }
+  return null;
 }
 
 /** The card model for a reference: one search for the row, then its description. */

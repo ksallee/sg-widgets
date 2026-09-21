@@ -1,8 +1,8 @@
 import type * as React from 'react';
 import { useState } from 'react';
 import type { ReactNode } from 'react';
-import type { FieldSchema, StatusOption } from '@sg-widgets/core';
-import { clearableForField, matchesTokens, NO_ROWS_LABEL, statusLabel, usableStatuses } from '@sg-widgets/core';
+import type { FieldSchema, StatusOption } from 'sg-widgets-core';
+import { clearableForField, matchesEveryWord, NO_ROWS_LABEL, statusLabel, usableStatuses } from 'sg-widgets-core';
 import { Combobox as ComboboxPrimitive } from '@base-ui/react';
 import { Check } from 'lucide-react';
 import { PICKER_ROW } from '@/registry/sg/components/picker-classes';
@@ -145,7 +145,7 @@ export function ListPicker({
   // keeps a row of its own, labelled with the value (probe 009).
   const rows = value && !options.some((option) => option.code === value) ? [...options, { code: value, label: value }] : options;
   // The vocabulary is one read, so a search box narrows it here.
-  const shown = searchable ? rows.filter((option) => matchesTokens(search, option.label, option.code)) : rows;
+  const shown = searchable ? rows.filter((option) => matchesEveryWord(`${option.label} ${option.code}`, search)) : rows;
   const byCode = new Map(rows.map((option) => [option.code, option]));
   const labelOf = (code: string): string => byCode.get(code)?.label ?? code;
 

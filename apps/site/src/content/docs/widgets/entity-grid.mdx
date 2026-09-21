@@ -4,6 +4,7 @@ description: Flow Production Tracking rows as EntityCard tiles, with selection a
 ---
 
 import Demo from '../../../components/Demo.astro';
+import Install from '../../../components/Install.astro';
 import Props from '../../../components/Props.astro';
 
 Renders rows from an entity source as EntityCard tiles: the thumbnail fills the top of each tile, the
@@ -21,10 +22,7 @@ that fails leaves its tiles and puts one error line under them with a retry.
 
 Installing this pulls EntityCard, and StatusBadge and Thumbnail with it.
 
-```sh
-pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/entity-grid.json
-pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/entity-grid.json
-```
+<Install item="entity-grid" />
 
 <Demo name="entity-grid" title="Entity Grid: Versions at three tile sizes, a selectable grid, one with no picture, one with every third card disabled, and one drawing a card of the caller's own" />
 

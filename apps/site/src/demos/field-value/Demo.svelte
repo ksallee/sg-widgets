@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { FieldSchema, StatusRecord } from '@sg-widgets/core';
+	import type { FieldSchema, StatusRecord } from 'sg-widgets-core';
 	import FieldValue from '$lib/registry/components/field-value.svelte';
 	import { setDemoContext } from '../_shared/svelte';
 

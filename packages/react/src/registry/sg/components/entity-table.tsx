@@ -15,12 +15,13 @@ import type {
   SortSpec,
   SourceFilters,
   StatusRecord,
-} from '@sg-widgets/core';
+} from 'sg-widgets-core';
 import {
   asCollapseState,
   cellValue,
   collapseStateFrom,
   editorPlacementFor,
+  errorText,
   expandAll,
   isCollapsed,
   isEditableType,
@@ -29,7 +30,7 @@ import {
   preferencesOf,
   sameCollapse,
   stateLine,
-} from '@sg-widgets/core';
+} from 'sg-widgets-core';
 import {
   columnGroupingFeature,
   columnOrderingFeature,
@@ -555,7 +556,7 @@ export function EntityTable({
     } catch (error) {
       // The write is refused, so the cell goes back to what the row still holds and
       // says why beside it.
-      setCellError({ key, path: column.path, message: error instanceof Error ? error.message : String(error) });
+      setCellError({ key, path: column.path, message: errorText(error) });
     }
   }
 
@@ -850,7 +851,7 @@ export function EntityTable({
                       <TableRow
                         key={modelRow.id}
                         data-slot="entity-table-group"
-                        className="bg-muted/50 hover:bg-muted/50"
+                        className="bg-muted hover:bg-muted"
                         style={body.virtualized ? { height: `${rowHeight}px` } : undefined}
                       >
                         <TableCell colSpan={leafColumns.length} className="p-0">

@@ -4,7 +4,7 @@ export default {
   extends: { name: 'entity-picker' },
   props: [
     { name: 'value', type: '`EntityRef[]`', default: '`[]`', meaning: 'The chosen rows, in the order they were ticked. Two-way in Svelte.' },
-    { name: 'exclude', type: '`EntityRef[]`', default: '`[]`', meaning: 'Rows kept out of the results, per type.' },
+    { name: 'exclude', type: '`EntityRef[]`', default: '—', meaning: 'Rows kept out of the results, per type.' },
     { name: 'clearable', type: '`boolean`', default: '`true`', meaning: 'Shows the clear-all control.' },
     { name: 'summary', type: '`\'chips\' | \'ellipsis\' | \'count\'`', default: '`\'ellipsis\'`', meaning: 'What the control shows for the selection.' },
     { name: 'max', type: '`number`', default: '`0`', meaning: 'Chips drawn before the rest becomes `+n`. `0` lets the row fit what it can.' },

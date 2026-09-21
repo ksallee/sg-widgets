@@ -4,7 +4,6 @@ export default {
   extends: { name: 'entity-type-picker' },
   props: [
     { name: 'value', type: '`string[]`', default: '`[]`', meaning: 'The chosen type codes, in the order they were ticked. Two-way in Svelte.' },
-    { name: 'onValueChange', type: '`(value) => void`', default: '—', meaning: 'Receives the new array, empty on clear.' },
     { name: 'placeholder', type: '`string`', default: '`\'Select entity types\'`', meaning: 'Shown while nothing is chosen.' },
     { name: 'summary', type: '`\'chips\' | \'ellipsis\' | \'count\'`', default: '`\'ellipsis\'`', meaning: 'What the control shows for the selection.' },
     { name: 'max', type: '`number`', default: '`0`', meaning: 'Chips drawn before the rest becomes `+n`. `0` lets the row fit what it can.' },

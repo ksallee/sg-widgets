@@ -4,6 +4,7 @@ description: The query lifecycle and the list every search widget is built on.
 ---
 
 import Demo from '../../../components/Demo.astro';
+import Install from '../../../components/Install.astro';
 import Props from '../../../components/Props.astro';
 
 The pause before a query is asked for, the answer that arrives too late to count, the page under the
@@ -11,10 +12,7 @@ rows, and the list itself. A search built on it supplies the read and draws its 
 
 ## Install
 
-```sh
-pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/search-control.json
-pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/search-control.json
-```
+<Install item="search-control" />
 
 <Demo name="search-control" title="SearchControl: a query, a page, a list with no query, and a read that failed" />
 

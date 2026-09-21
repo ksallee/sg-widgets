@@ -1,6 +1,6 @@
 <script lang="ts">
-	import type { CollectionColumn, EntityRef, EntityRow } from '@sg-widgets/core';
-	import { cellValue, condition, createEntitySource, displayNameOf, resolveColumns } from '@sg-widgets/core';
+	import type { CollectionColumn, EntityRef, EntityRow } from 'sg-widgets-core';
+	import { cellValue, condition, createEntitySource, displayNameOf, resolveColumns } from 'sg-widgets-core';
 	import EntityGrid from '$lib/registry/components/entity-grid.svelte';
 	import Thumbnail from '$lib/registry/components/thumbnail.svelte';
 	import { createDemoContext } from '../_shared/client';
@@ -45,7 +45,7 @@
 	}
 
 	const toggle =
-		'inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-background px-2 text-sm ' +
+		'inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-background px-2 text-sm shadow-xs ' +
 		'text-muted-foreground outline-none transition-colors duration-150 hover:bg-accent hover:text-accent-foreground ' +
 		'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ' +
 		'aria-pressed:bg-accent aria-pressed:text-accent-foreground aria-pressed:font-medium';

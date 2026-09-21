@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { HTMLAttributes } from 'svelte/elements';
-	import { matchRuns } from '@sg-widgets/core';
+	import { matchRuns } from 'sg-widgets-core';
 	import { cn, type WithElementRef } from '$lib/utils.js';
 
 	type Props = WithElementRef<Omit<HTMLAttributes<HTMLSpanElement>, 'children'>, HTMLSpanElement> & {

@@ -5,7 +5,7 @@ export default {
     { name: 'localHref', type: '`(link: UrlLinkInfo) => string | null`', default: '—', meaning: 'Rewrites the href of a local file link. The default opens `file:`, which a browser refuses from an http page.' },
     { name: 'value', type: '`unknown`', default: 'required', meaning: 'The raw attribute or relationship value, as the API returned it.' },
     { name: 'dataType', type: '`string`', default: 'required', meaning: 'The field\'s data type. An unknown one renders as text.' },
-    { name: 'field', type: '`FieldSchema | null`', default: '`null`', meaning: 'Supplies a status label through its display values.' },
+    { name: 'field', type: '`Pick<FieldSchema, \'displayValues\'> | null`', default: '`null`', meaning: 'Supplies a status label through its display values.' },
     { name: 'statuses', type: '`Record<string, StatusRecord> | null`', default: '`null`', meaning: 'Status rows by code, for the status name and icon.' },
     { name: 'siteUrl', type: '`string`', default: 'the context\'s', meaning: 'The site the stock sprite is served from, and the site a linked row is addressed on.' },
     { name: 'entityVariant', type: '`\'chip\' | \'link\' | \'text\'`', default: '`\'chip\'`', meaning: 'How an entity or multi-entity value draws.' },

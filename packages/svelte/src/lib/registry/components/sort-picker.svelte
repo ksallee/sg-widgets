@@ -20,8 +20,8 @@
 	import GripVerticalIcon from '@lucide/svelte/icons/grip-vertical';
 	import XIcon from '@lucide/svelte/icons/x';
 	import type { HTMLAttributes } from 'svelte/elements';
-	import type { SgContext, SortKey } from '@sg-widgets/core';
-	import { friendlyFieldPath, isSortable, toSortString } from '@sg-widgets/core';
+	import type { SgContext, SortKey } from 'sg-widgets-core';
+	import { friendlyFieldPath, isSortable, toSortString } from 'sg-widgets-core';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import * as Popover from '$lib/components/ui/popover/index.js';
 	import { Separator } from '$lib/components/ui/separator/index.js';
@@ -45,7 +45,7 @@
 		size?: SortPickerSize;
 		disabled?: boolean;
 		/** Both the keys and the `sort` string they serialise to. */
-		onChange?: (value: SortKey[], sort: string) => void;
+		onValueChange?: (value: SortKey[], sort: string) => void;
 		/** Whether the popover is showing, two-way. */
 		open?: boolean;
 		onOpenChange?: (open: boolean) => void;
@@ -61,7 +61,7 @@
 		options,
 		size = 'md',
 		disabled = false,
-		onChange,
+		onValueChange,
 		open = $bindable(false),
 		onOpenChange,
 		class: className,
@@ -121,7 +121,7 @@
 
 	function commit(next: SortKey[]): void {
 		value = next;
-		onChange?.(next, toSortString(next));
+		onValueChange?.(next, toSortString(next));
 	}
 
 	function move(index: number, delta: number): void {
@@ -182,7 +182,7 @@
 			data-slot="sort-trigger"
 			data-size={size}
 			class={cn(
-				'border-border bg-background hover:bg-muted focus-visible:border-ring focus-visible:ring-ring/50 inline-flex min-w-0 items-center gap-1.5 rounded-lg border text-sm font-medium outline-none focus-visible:ring-3 disabled:pointer-events-none disabled:opacity-50',
+				'border-border bg-background hover:bg-muted focus-visible:border-ring focus-visible:ring-ring/50 inline-flex min-w-0 items-center gap-1.5 rounded-lg border text-sm font-medium shadow-xs outline-none focus-visible:ring-3 disabled:pointer-events-none disabled:opacity-50',
 				BOX[size]
 			)}
 		>

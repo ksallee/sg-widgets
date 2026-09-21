@@ -4,6 +4,7 @@ description: The control box and popup shell every picker is built on.
 ---
 
 import Demo from '../../../components/Demo.astro';
+import Install from '../../../components/Install.astro';
 import Props from '../../../components/Props.astro';
 
 The box a picker's value sits in, and the popup its rows come from. A picker built on it supplies its
@@ -11,16 +12,14 @@ query, its rows, its row renderer and its chip.
 
 ## Install
 
-```sh
-pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/picker-control.json
-pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/picker-control.json
-```
+<Install item="picker-control" />
 
 <Demo name="picker-control" title="PickerControl: every shape a picker comes in, over one static list of departments" />
 
 The demo draws every shape a picker comes in from one static list of departments: single and several,
-inline and summary, a measured row that ends in `+n`, a fixed set with no search row, the three
-heights, disabled, read-only and invalid, and a row and a chip of the caller's own. The chip is a
+inline and summary, a control named by a label of its own, a measured row that ends in `+n`, a fixed
+set with no search row, the three heights, disabled, read-only and invalid, and a row and a chip of
+the caller's own. The chip is a
 plain text chip; a picker that draws an entity chip or a status badge passes that instead.
 
 ## The control
@@ -45,6 +44,9 @@ press on the control is never read as a dismissal.
 The caret that takes focus on open is the control's own when the control is inline, and the popup's
 search box when it is a summary trigger. Every focus call passes `preventScroll`, so opening a picker
 far down a page leaves the page where it is.
+
+The caret is a combobox, so it carries a name: `label` when the caller gives one, the placeholder
+otherwise, and `triggerLabel` for a control that shows neither.
 
 ## Inline and summary
 
@@ -90,7 +92,7 @@ and moves the caret between them itself, so a chip needs nothing of the caller f
 ## The contract
 
 Every picker behaves the same, whether it is built on this base or keeps a primitive of its own.
-The clauses are design rule 7; `tools/drives/picker-contract.js` checks the ones that apply to a
+The clauses are design rule 7; a drive over both frameworks checks the ones that apply to a
 picker's shape, on every picker page, in both frameworks.
 
 One picker, walked from the keyboard:

@@ -249,6 +249,39 @@ describe('invalidate', () => {
   });
 });
 
+describe('a write against a request already in flight', () => {
+  it('keeps a text search and a count started before it out of the cache', async () => {
+    const { client, calls } = counting(new MockClient());
+    let gated = true;
+    const waiting: (() => void)[] = [];
+    // Hold the two reads open until the write has been through the cache.
+    const held: SgClient = {
+      ...client,
+      textSearch(text: string, entityTypes: Record<string, TextSearchFilter>, page?: { size?: number; number?: number }): Promise<TextSearchRow[]> {
+        if (!gated) return client.textSearch(text, entityTypes, page);
+        return new Promise((resolve) => waiting.push(() => resolve(client.textSearch(text, entityTypes, page))));
+      },
+      summarize(entityType: string, summarizeOptions?: SummarizeOptions): Promise<SummarizeResult> {
+        if (!gated) return client.summarize(entityType, summarizeOptions);
+        return new Promise((resolve) => waiting.push(() => resolve(client.summarize(entityType, summarizeOptions))));
+      },
+    };
+    const cache = createQueryCache(held);
+
+    const text = cache.textSearch('sh010', { Shot: null });
+    const counted = cache.summarize('Shot');
+    await cache.update('Shot', 862, { description: 'x' });
+    gated = false;
+    for (const release of waiting) release();
+    await Promise.all([text, counted]);
+
+    await cache.textSearch('sh010', { Shot: null });
+    await cache.summarize('Shot');
+    expect(calls.filter((c) => c.startsWith('textSearch'))).toHaveLength(2);
+    expect(calls.filter((c) => c.startsWith('summarize'))).toHaveLength(2);
+  });
+});
+
 describe('ttl', () => {
   it('refetches once a value has gone stale', async () => {
     vi.useFakeTimers();

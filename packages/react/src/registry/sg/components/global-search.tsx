@@ -1,6 +1,6 @@
 import type * as React from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { EntityRef, FieldSpec, PickerRow as PickerRowData, SearchHit, SgContext, WireCondition } from '@sg-widgets/core';
+import type { EntityRef, FieldSpec, PickerRow as PickerRowData, SearchHit, SgContext, WireCondition } from 'sg-widgets-core';
 import {
   hasMorePage,
   hydrate,
@@ -12,7 +12,7 @@ import {
   scopeToProject,
   SEARCH_PAGE_SIZE,
   searchTypeMap,
-} from '@sg-widgets/core';
+} from 'sg-widgets-core';
 import { Search } from 'lucide-react';
 import { CommandGroup, CommandItem } from '@/components/ui/command';
 import { Button } from '@/components/ui/button';
@@ -315,7 +315,7 @@ export function GlobalSearch({
       query={query}
       onQueryChange={setQuery}
       shell={inline ? 'command' : 'dialog'}
-      commandClass="border-border rounded-lg border"
+      commandClass="border-input rounded-lg border shadow-xs"
       open={open}
       onOpenChange={setOpen}
       title="Search"

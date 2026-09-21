@@ -4,6 +4,7 @@ description: A lazy tree over a project's navigation hierarchy.
 ---
 
 import Demo from '../../../components/Demo.astro';
+import Install from '../../../components/Install.astro';
 import Props from '../../../components/Props.astro';
 
 Walks the navigation tree the web interface draws, one level per call, from a project down to its
@@ -11,12 +12,9 @@ shots and assets.
 
 ## Install
 
-```sh
-pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/entity-tree.json
-pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/entity-tree.json
-```
+<Install item="entity-tree" />
 
-<Demo name="entity-tree" title="Entity Tree: a project seeded open to one shot, with checkboxes, a search, a thumbnail variant, and the three sizes beside a button" />
+<Demo name="entity-tree" title="Entity Tree: a project seeded open to one shot, with checkboxes, a search, a thumbnail variant, a row whose thumbnail field is empty, and the three sizes beside a button" />
 
 ```ts
 <EntityTree
@@ -48,6 +46,9 @@ until every one of them is in.
 
 Each level's rows are read once per type over the ids the level returned, so `subLabelField`,
 `secondaryField`, `thumbnail` and the status badge cost no read per row.
+
+A row draws a picture only when its `thumbnail` field holds a URL. A field that is absent, null or
+empty draws no picture and leaves the row's leading edge to the label.
 
 ## Props
 

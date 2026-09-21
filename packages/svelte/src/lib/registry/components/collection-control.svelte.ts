@@ -24,7 +24,7 @@ import type {
 	RowIdFn,
 	SortSpec,
 	SourceFilters
-} from '@sg-widgets/core';
+} from 'sg-widgets-core';
 import {
 	collectionBottom,
 	collectionView,
@@ -41,7 +41,7 @@ import {
 	shouldLoadNext,
 	stateLine,
 	toggleRef
-} from '@sg-widgets/core';
+} from 'sg-widgets-core';
 import { Virtualizer, elementScroll, observeElementOffset, observeElementRect } from '@tanstack/virtual-core';
 import { bindSource, type Mirror, type SourceSnapshot } from '$lib/registry/components/collection-source.svelte.js';
 

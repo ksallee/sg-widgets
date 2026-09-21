@@ -7,7 +7,7 @@ import type {
   PickerRow as PickerRowData,
   SgContext,
   WireCondition,
-} from '@sg-widgets/core';
+} from 'sg-widgets-core';
 import {
   breadcrumb,
   hierarchyEntity,
@@ -21,7 +21,7 @@ import {
   rowFields,
   scopeToProject,
   searchTypeMap,
-} from '@sg-widgets/core';
+} from 'sg-widgets-core';
 import { ChevronRight, Folder } from 'lucide-react';
 import { CommandGroup, CommandItem } from '@/components/ui/command';
 import { cn } from '@/lib/utils';
@@ -390,7 +390,7 @@ export function HierarchicalSearch({
         onQueryChange={setQuery}
         request={level.path}
         readsEmpty
-        commandClass="border-border rounded-lg border"
+        commandClass="border-input rounded-lg border shadow-xs"
         onKeyDown={onKeydown}
         placeholder={placeholder}
         emptyLabel={searching ? noMatchLabel : emptyLabel}

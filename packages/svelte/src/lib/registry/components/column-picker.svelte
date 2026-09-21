@@ -22,10 +22,11 @@
 
 <script lang="ts">
 	import type { HTMLAttributes } from 'svelte/elements';
-	import type { FieldHop, FieldOption, FieldSchema, SgContext } from '@sg-widgets/core';
+	import type { FieldHop, FieldOption, FieldSchema, SgContext } from 'sg-widgets-core';
 	import {
 		currentType,
 		deriveFieldOptions,
+		errorText,
 		friendlyFieldPath,
 		iconNameFor,
 		moveFieldPath,
@@ -34,7 +35,7 @@
 		searchFieldOptions,
 		stateLine,
 		toggleFieldPath
-	} from '@sg-widgets/core';
+	} from 'sg-widgets-core';
 	import Braces from '@lucide/svelte/icons/braces';
 	import Calendar from '@lucide/svelte/icons/calendar';
 	import CalendarClock from '@lucide/svelte/icons/calendar-clock';
@@ -214,7 +215,7 @@
 				if (live) loaded = { type: wanted, fields };
 			})
 			.catch((error: unknown) => {
-				if (live) failure = error instanceof Error ? error.message : String(error);
+				if (live) failure = errorText(error);
 			});
 		return () => {
 			live = false;
@@ -517,7 +518,7 @@
 						onSelect={() => activate(row)}
 						data-slot="column-picker-field"
 						data-path={row.path}
-						data-chosen={value.includes(row.path) ? 'true' : undefined}
+						data-checked={value.includes(row.path) ? 'true' : undefined}
 						class={TEXT[size]}
 					>
 						<Checkbox

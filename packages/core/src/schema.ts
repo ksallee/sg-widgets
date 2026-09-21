@@ -161,7 +161,11 @@ export function normalizeFields(response: RawFieldsResponse, entityType?: string
   return out;
 }
 
-/** The field name a type's own status lives under. Project's is a plain `list`. */
+/**
+ * The field name a type's own status lives under. Project's is `sg_status`, a plain
+ * `list` with the four values a bid goes through and no Status row behind it
+ * (probe 018, entity_types/Project).
+ */
 export function statusFieldNameFor(entityType: string): string {
   return entityType === 'Project' ? 'sg_status' : 'sg_status_list';
 }
@@ -189,7 +193,8 @@ export function statusFieldFor(entityType: string, fields?: Record<string, Field
 
 /**
  * The fields Flow PT conventionally uses as a row's human label, in order.
- * `cached_display_name` is the server's own copy and wins when present.
+ * `cached_display_name` is the server's own copy, the same string an entity dict
+ * carries as its `name`, and wins when present (060_entity_dict_name).
  */
 export const DISPLAY_NAME_FIELDS = ['cached_display_name', 'code', 'name', 'title', 'content', 'subject'] as const;
 

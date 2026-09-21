@@ -4,16 +4,14 @@ description: A person as a round avatar, with an initials fallback.
 ---
 
 import Demo from '../../../components/Demo.astro';
+import Install from '../../../components/Install.astro';
 import Props from '../../../components/Props.astro';
 
 Renders one person as a round avatar, falling back to initials whenever there is no picture.
 
 ## Install
 
-```sh
-pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/user-avatar.json
-pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/user-avatar.json
-```
+<Install item="user-avatar" />
 
 <Demo name="user-avatar" title="UserAvatar: sizes, initials, inactive users, API users" />
 

@@ -1,15 +1,20 @@
 import { describe, expect, it } from 'vitest';
 import {
+  createSchemaService,
+  createStatusService,
   pathOf,
+  resolveRowFields,
   rowCode,
   rowFields,
   rowSecondary,
   rowSubLabel,
   rowThumbnail,
   secondaryType,
+  subLabelType,
   thumbnailField,
   type CollectionColumn,
 } from '../src/index.js';
+import { MockClient } from '../src/mock.js';
 
 const column: CollectionColumn = {
   path: 'sg_status_list',
@@ -128,5 +133,123 @@ describe('secondaryType', () => {
 
   it('renders an id as a number, which is the mono treatment', () => {
     expect(secondaryType({ secondaryField: 'id' })).toBe('number');
+  });
+});
+
+/** Two Status rows, the shape a site's Status table has, keyed by code (probe 010). */
+const statuses = {
+  pndng: { id: 3, code: 'pndng', name: 'Pending Review', bgColor: '236,151,31', icon: null },
+  ip: { id: 4, code: 'ip', name: 'In Progress', bgColor: '25,118,27', icon: null },
+};
+
+describe('rowSubLabel by data type', () => {
+  it('reads a status code as the name the site knows it by', () => {
+    expect(
+      rowSubLabel({ sg_status_list: 'pndng' }, { subLabelField: 'sg_status_list' }, { dataType: 'status_list', statuses }),
+    ).toBe('Pending Review');
+  });
+
+  it('keeps a code the table has no row for', () => {
+    expect(
+      rowSubLabel({ sg_status_list: 'zzz' }, { subLabelField: 'sg_status_list' }, { dataType: 'status_list', statuses }),
+    ).toBe('zzz');
+    expect(
+      rowSubLabel({ sg_status_list: 'pndng' }, { subLabelField: 'sg_status_list' }, { dataType: 'status_list' }),
+    ).toBe('pndng');
+  });
+
+  it('keeps an entity name and joins the names of a list of them', () => {
+    expect(
+      rowSubLabel(
+        { project: { type: 'Project', id: 70, name: 'Blue Moon' } },
+        { subLabelField: 'project' },
+        { dataType: 'entity' },
+      ),
+    ).toBe('Blue Moon');
+    expect(
+      rowSubLabel(
+        {
+          assets: [
+            { type: 'Asset', id: 1, name: 'Anna' },
+            { type: 'Asset', id: 2, name: 'Rooftop' },
+          ],
+        },
+        { subLabelField: 'assets' },
+        { dataType: 'multi_entity' },
+      ),
+    ).toBe('Anna, Rooftop');
+    expect(rowSubLabel({ assets: [] }, { subLabelField: 'assets' }, { dataType: 'multi_entity' })).toBe('');
+  });
+
+  it('leaves a date and a date-time as they were written', () => {
+    expect(rowSubLabel({ due: '2026-04-07' }, { subLabelField: 'due' }, { dataType: 'date' })).toBe('2026-04-07');
+    expect(
+      rowSubLabel({ created_at: '2026-04-07T10:15:00Z' }, { subLabelField: 'created_at' }, { dataType: 'date_time' }),
+    ).toBe('2026-04-07T10:15:00Z');
+  });
+
+  it('is the value as written for every other type, table or no table', () => {
+    expect(rowSubLabel({ sg_cut_in: 1001 }, { subLabelField: 'sg_cut_in' }, { dataType: 'number', statuses })).toBe(
+      '1001',
+    );
+    expect(rowSubLabel({ description: 'a shot' }, { subLabelField: 'description' }, { dataType: 'text' })).toBe(
+      'a shot',
+    );
+    expect(rowSubLabel({ sg_status_list: 'pndng' }, { subLabelField: 'sg_status_list' })).toBe('pndng');
+  });
+
+  it('takes the type off a resolved column', () => {
+    expect(
+      rowSubLabel(
+        { sg_status_list: 'ip' },
+        { subLabelField: column },
+        { dataType: subLabelType({ subLabelField: column }), statuses },
+      ),
+    ).toBe('In Progress');
+  });
+});
+
+describe('subLabelType', () => {
+  it('prefers the resolved column, then the schema, and names nothing otherwise', () => {
+    expect(subLabelType({ subLabelField: column })).toBe('status_list');
+    expect(subLabelType({ subLabelField: 'sg_status_list' }, 'status_list')).toBe('status_list');
+    expect(subLabelType({ subLabelField: 'description' })).toBe('');
+    expect(subLabelType({})).toBe('');
+  });
+});
+
+describe('resolveRowFields', () => {
+  it('resolves both fields and reads the Status table once when either is a status', async () => {
+    const client = new MockClient();
+    const plan = await resolveRowFields(createSchemaService(client), createStatusService(client), 'Version', {
+      subLabelField: 'sg_status_list',
+      secondaryField: 'id',
+    });
+    expect(plan.subLabel?.dataType).toBe('status_list');
+    // `id` is on the row itself, so it costs no read.
+    expect(plan.secondary).toBeNull();
+    expect(plan.statuses?.['pndng']?.name).toBe('Pending');
+  });
+
+  it('reads no Status table when neither field is a status', async () => {
+    const client = new MockClient();
+    const plan = await resolveRowFields(createSchemaService(client), createStatusService(client), 'Shot', {
+      subLabelField: 'description',
+      secondaryField: 'code',
+    });
+    expect(plan.subLabel?.dataType).toBe('text');
+    expect(plan.secondary?.name).toBe('code');
+    expect(plan.statuses).toBeNull();
+  });
+
+  it('takes a column at its word and answers null for a field the schema has not', async () => {
+    const client = new MockClient();
+    const plan = await resolveRowFields(createSchemaService(client), createStatusService(client), 'Shot', {
+      subLabelField: column,
+      secondaryField: 'sg_not_a_field',
+    });
+    expect(plan.secondary).toBeNull();
+    // The column declares a status, so the table loads without a schema read.
+    expect(plan.statuses?.['ip']?.code).toBe('ip');
   });
 });

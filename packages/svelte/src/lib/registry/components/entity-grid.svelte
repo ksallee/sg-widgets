@@ -1,5 +1,5 @@
 <script lang="ts" module>
-	import type { EntityRow } from '@sg-widgets/core';
+	import type { EntityRow } from 'sg-widgets-core';
 
 	export type EntityGridSize = 'sm' | 'md' | 'lg';
 
@@ -48,8 +48,8 @@
 		SortSpec,
 		SourceFilters,
 		StatusRecord
-	} from '@sg-widgets/core';
-	import { firstEnabledIndex, NO_ROWS_LABEL, nextEnabledIndex, stateLine } from '@sg-widgets/core';
+	} from 'sg-widgets-core';
+	import { firstEnabledIndex, NO_ROWS_LABEL, nextEnabledIndex, stateLine } from 'sg-widgets-core';
 	import CircleAlert from '@lucide/svelte/icons/circle-alert';
 	import Inbox from '@lucide/svelte/icons/inbox';
 	import { Button } from '$lib/components/ui/button/index.js';

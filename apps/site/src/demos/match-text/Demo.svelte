@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { Input } from '$lib/components/ui/input/index.js';
 	import MatchText from '$lib/registry/components/match-text.svelte';
 
 	/** Labels of the shape a text search answers: a name, a path, a person. */
@@ -19,12 +20,7 @@
 <div class="flex flex-col gap-4">
 	<section class={group}>
 		<h4 class={label}>Query</h4>
-		<input
-			data-slot="input"
-			aria-label="Query"
-			bind:value={query}
-			class="border-input bg-background h-8 w-64 rounded-lg border px-3 text-sm outline-none"
-		/>
+		<Input aria-label="Query" bind:value={query} class="w-64" />
 	</section>
 
 	<section class={group}>

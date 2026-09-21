@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { EntitySource, PagingModel } from '@sg-widgets/core';
+import type { EntitySource, PageRange } from 'sg-widgets-core';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,7 +14,7 @@ export interface CollectionFooterProps {
   /** The source the controls drive. */
   source: EntitySource;
   /** The numbers to draw, from core's `describePaging`. */
-  pager: PagingModel;
+  pager: PageRange;
   /** The page sizes offered in `pages` mode. */
   pageSizes: number[];
   /** True while the set is being read: the arrows wait for it. */

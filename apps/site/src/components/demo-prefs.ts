@@ -38,6 +38,13 @@ export const palettes: Palette[] = [
 /** The palette a page wears until something says otherwise. */
 export const defaultPalette = palettes[0]!.name;
 
+/**
+ * The palette a theme saved on /themes wears. It has no block in themes.css: its two
+ * selectors are written from `localStorage` by src/scripts/palette-boot.js, and the
+ * header select offers the name only while one is stored.
+ */
+export const customPalette = 'custom';
+
 /* `default` keeps whatever `--radius` the palette sets; the rest override it. */
 export const radii = [
   { name: 'default', label: 'Radius: theme' },
@@ -48,7 +55,15 @@ export const radii = [
   { name: 'xl', label: 'Radius: xl' },
 ];
 
-export const frameworks = ['svelte', 'react', 'both'];
+/**
+ * Whether the two-pane stage is on offer. It is development work: a reader wants one
+ * framework, and the pair needs a column wider than the page reads at. Set
+ * `PUBLIC_SG_DEMO_BOTH=1` (see .env.example) to bring the Both segment, the `both`
+ * value and the two panes back.
+ */
+export const bothPanes = import.meta.env.PUBLIC_SG_DEMO_BOTH === '1';
+
+export const frameworks = bothPanes ? ['react', 'svelte', 'both'] : ['react', 'svelte'];
 
 const KEYS = {
   framework: 'sg-demo:framework',
@@ -64,17 +79,20 @@ const ALLOWED: Record<Pref, string[]> = {
   framework: frameworks,
   theme: ['light', 'dark'],
   motion: ['normal', 'reduced'],
-  palette: palettes.map((palette) => palette.name),
+  palette: [...palettes.map((palette) => palette.name), customPalette],
   radius: radii.map((radius) => radius.name),
 };
 
 const FALLBACK: Record<Pref, string> = {
-  framework: 'both',
+  framework: bothPanes ? 'both' : 'react',
   theme: 'light',
   motion: 'normal',
   palette: defaultPalette,
   radius: 'default',
 };
+
+/** The framework a page shows until the reader picks one. */
+export const defaultFramework = FALLBACK.framework;
 
 /*
  * Values are raw strings, the spelling tools/qa.mjs writes for the initial load. Its
@@ -135,6 +153,9 @@ export function applyPrefs(): void {
   // are left alone.
   document.documentElement.dataset.sgPalette = prefs.palette;
   document.documentElement.dataset.sgRadius = prefs.radius;
+  // The install tabs pick their pane off the root, so a page opens on the stored
+  // framework: src/scripts/palette-boot.js writes it before the first paint.
+  document.documentElement.dataset.sgFramework = prefs.framework;
   // The dark class lands on the root as well as on each stage: a popup portals to the
   // body, and the `dark:` variant both packages define reads `.dark *`, so a row drawn
   // outside the stage would otherwise keep its light treatment.
@@ -165,6 +186,11 @@ export function applyPrefs(): void {
     if (radiusPick) radiusPick.value = prefs.radius;
 
     toolbar.querySelector('[data-motion-toggle]')?.setAttribute('aria-pressed', String(prefs.motion === 'reduced'));
+  }
+
+  // The install tabs write the same key, so a tab and a toolbar segment follow each other.
+  for (const pick of document.querySelectorAll<HTMLElement>('[data-install-pick]')) {
+    pick.setAttribute('aria-pressed', String(pick.dataset.installPick === prefs.framework));
   }
 
   const palettePick = document.querySelector<HTMLSelectElement>('.sg-palette select');

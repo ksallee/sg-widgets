@@ -1,5 +1,5 @@
 import type * as React from 'react';
-import { matchRuns } from '@sg-widgets/core';
+import { matchRuns } from 'sg-widgets-core';
 import { cn } from '@/lib/utils';
 
 export interface MatchTextProps extends Omit<React.HTMLAttributes<HTMLSpanElement>, 'children'> {

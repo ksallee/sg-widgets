@@ -7,7 +7,7 @@ import type {
   SgContext,
   StatusRecord,
   UrlLinkInfo,
-} from '@sg-widgets/core';
+} from 'sg-widgets-core';
 import {
   COLOR_SENTINEL,
   contextFromClient,
@@ -18,7 +18,7 @@ import {
   renderKindFor,
   rgbToCss,
   urlLink,
-} from '@sg-widgets/core';
+} from 'sg-widgets-core';
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 import { EntityChip, type EntityChipVariant } from '@/registry/sg/components/entity-chip';

@@ -4,6 +4,7 @@ description: Several people and script accounts, chosen by server-side search ac
 ---
 
 import Demo from '../../../components/Demo.astro';
+import Install from '../../../components/Install.astro';
 import Props from '../../../components/Props.astro';
 
 Searches people, and optionally script accounts, on the server, and binds the rows you tick.
@@ -12,10 +13,7 @@ Single and multi: [UserPicker](/widgets/user-picker/) takes one person.
 
 ## Install
 
-```sh
-pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/user-multi-picker.json
-pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/user-multi-picker.json
-```
+<Install item="user-multi-picker" />
 
 <Demo name="user-multi-picker" title="UserMultiPicker: chips, scripts, inactive people, hydration, summary modes, sizes, states" />
 

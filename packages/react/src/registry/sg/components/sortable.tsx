@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import type { SortableController, SortableOrientation, SortableRect } from '@sg-widgets/core';
-import { createSortableController, measureSortable, playSortableFlip } from '@sg-widgets/core';
+import type { SortableController, SortableOrientation, SortableRect } from 'sg-widgets-core';
+import { createSortableController, measureSortable, playSortableFlip } from 'sg-widgets-core';
 
 export interface UseSortableOptions {
   /** The ids in the order they are drawn, one per item element. */

@@ -1,5 +1,5 @@
 <script lang="ts" module>
-	import type { CollectionColumn, EntityRow } from '@sg-widgets/core';
+	import type { CollectionColumn, EntityRow } from 'sg-widgets-core';
 
 	export type GroupedListDensity = 'compact' | 'default';
 	export type GroupedListSize = 'sm' | 'md' | 'lg';
@@ -59,7 +59,7 @@
 		SortSpec,
 		SourceFilters,
 		StatusRecord
-	} from '@sg-widgets/core';
+	} from 'sg-widgets-core';
 	import {
 		asCollapseState,
 		cellValue,
@@ -70,10 +70,11 @@
 		isCollapsed,
 		nextEnabledIndex,
 		NO_ROWS_LABEL,
+		resolveColumns,
 		stateLine,
 		toColumn,
 		toggleCollapsed
-	} from '@sg-widgets/core';
+	} from 'sg-widgets-core';
 	import ChevronRight from '@lucide/svelte/icons/chevron-right';
 	import CircleAlert from '@lucide/svelte/icons/circle-alert';
 	import Inbox from '@lucide/svelte/icons/inbox';
@@ -268,8 +269,48 @@
 
 	const rows = $derived(control.rows);
 	const rowClass = $derived(ROW[density]);
-	const subColumn = $derived(subLabelField ? toColumn(subLabelField) : null);
-	const secondaryColumn = $derived(secondaryField ? toColumn(secondaryField) : null);
+
+	/** The two columns a row draws its sub-label and its secondary by. */
+	interface RowColumns {
+		sub: CollectionColumn | null;
+		secondary: CollectionColumn | null;
+	}
+
+	/**
+	 * A bare path resolves against the source's type through the context's cached
+	 * schema, so the value draws by its data type and a status reads the name the site
+	 * gives its code rather than the code. A column the caller resolved is taken as it
+	 * is and costs no read, and a path no schema answers stays text, which is always
+	 * readable. The read hangs off the props through a derived rather than an effect
+	 * with a "last seen" key.
+	 */
+	function rowColumns(
+		type: string,
+		sub: FieldSpec | null,
+		right: FieldSpec | null,
+		ctx: SgContext | undefined
+	): RowColumns {
+		const columns = $state<RowColumns>({
+			sub: sub ? toColumn(sub) : null,
+			secondary: right ? toColumn(right) : null
+		});
+		const bare = [sub, right].filter((spec): spec is string => typeof spec === 'string');
+		if (!ctx || bare.length === 0) return columns;
+		void resolveColumns(ctx.schema, type, bare).then(
+			(found) => {
+				for (const column of found) {
+					if (column.path === sub) columns.sub = column;
+					if (column.path === right) columns.secondary = column;
+				}
+			},
+			() => {}
+		);
+		return columns;
+	}
+
+	const columns = $derived(rowColumns(source.entityType, subLabelField, secondaryField, context));
+	const subColumn = $derived(columns.sub);
+	const secondaryColumn = $derived(columns.secondary);
 
 	// A page whose first rows carry the value the last group carries grows that group
 	// rather than opening a second one, and the key it is collapsed under stands.
@@ -431,7 +472,7 @@
 							aria-expanded={!closed}
 							onclick={() => toggleGroup(group.key)}
 							class={cn(
-								'bg-muted/50 focus-visible:ring-ring focus-visible:ring-offset-background border-border sticky top-0 z-10 flex w-full items-center gap-1.5 border-b px-2 py-1.5 text-left font-medium outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
+								'bg-muted focus-visible:ring-ring focus-visible:ring-offset-background border-border sticky top-0 z-10 flex w-full items-center gap-1.5 border-b px-2 py-1.5 text-left font-medium outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
 								TEXT[size]
 							)}
 						>
@@ -532,9 +573,13 @@
 												{/if}
 											</span>
 											{#if sub}
-												<span class="text-muted-foreground w-full min-w-0 truncate text-xs" title={sub}>{sub}</span>
+												<span
+													data-slot="grouped-list-row-sub-label"
+													class="text-muted-foreground w-full min-w-0 truncate text-xs"
+													title={sub}>{sub}</span
+												>
 											{:else if subColumn}
-												<span class="w-full min-w-0 truncate text-xs">
+												<span data-slot="grouped-list-row-sub-label" class="w-full min-w-0 truncate text-xs">
 													<FieldValue
 														value={cellValue(row, subColumn.path)}
 														dataType={subColumn.dataType}
@@ -562,9 +607,12 @@
 											{/each}
 										</button>
 										{#if right}
-											<span class="text-muted-foreground flex shrink-0 justify-end text-xs">{right}</span>
+											<span
+												data-slot="grouped-list-row-secondary"
+												class="text-muted-foreground flex shrink-0 justify-end text-xs">{right}</span
+											>
 										{:else if secondaryColumn}
-											<span class="flex shrink-0 justify-end text-xs">
+											<span data-slot="grouped-list-row-secondary" class="flex shrink-0 justify-end text-xs">
 												<FieldValue
 													value={cellValue(row, secondaryColumn.path)}
 													dataType={secondaryColumn.dataType}

@@ -19,7 +19,7 @@
 
 <script lang="ts">
 	import type { HTMLAttributes } from 'svelte/elements';
-	import { initialsOf, nameHue } from '@sg-widgets/core';
+	import { initialsOf, nameHue } from 'sg-widgets-core';
 	import Bot from '@lucide/svelte/icons/bot';
 	import { cn, type WithElementRef } from '$lib/utils.js';
 

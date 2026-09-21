@@ -10,7 +10,8 @@
  *
  * The checkbox is not one of them: it has no draft, so it writes on the toggle.
  */
-import type { ParseResult } from '@sg-widgets/core';
+import { untrack } from 'svelte';
+import type { ParseResult } from 'sg-widgets-core';
 
 /** The root box every value editor wears. */
 export const VALUE_EDITOR_ROOT = 'flex w-full min-w-0 flex-col gap-2';
@@ -50,9 +51,11 @@ export function createValueSession<TValue, TDraft>(options: ValueSessionOptions<
 	// incoming value; an outside change lands as soon as the control is left.
 	let editing = $state(false);
 
+	// Keyed on the incoming value alone: a commit that clears the focus flag must not
+	// re-run this, or a refused draft is overwritten while its message still stands.
 	$effect(() => {
 		const incoming = options.format(options.value());
-		if (!editing) draft = incoming;
+		if (!untrack(() => editing)) draft = incoming;
 	});
 
 	const message = $derived(options.error?.() ?? parseError);

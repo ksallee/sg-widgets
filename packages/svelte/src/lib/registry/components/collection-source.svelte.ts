@@ -7,8 +7,8 @@
  * lives here and each widget keeps only what it draws.
  */
 import { untrack } from 'svelte';
-import type { EntitySource, PagingMode, SortSpec, SourceFilters } from '@sg-widgets/core';
-import { sameFilters, sameSort, sourceModeFor } from '@sg-widgets/core';
+import type { EntitySource, PagingMode, SortSpec, SourceFilters } from 'sg-widgets-core';
+import { sameFilters, sameSort, sourceModeFor } from 'sg-widgets-core';
 
 /** The value a source publishes, as the template reads it. */
 export type SourceSnapshot = ReturnType<EntitySource['snapshot']>;

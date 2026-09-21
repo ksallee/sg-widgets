@@ -1,11 +1,11 @@
-import type { EntityRef, PickerRow, UserPickerOptions } from '@sg-widgets/core';
+import type { EntityRef, PickerRow, UserPickerOptions } from 'sg-widgets-core';
 import {
   USER_PICKER_FIELDS,
   userPickerFilters,
   userPickerSearchFields,
   userPickerSubLabel,
   userPickerTypes,
-} from '@sg-widgets/core';
+} from 'sg-widgets-core';
 import {
   EntityMultiPicker,
   type EntityMultiPickerBaseProps,

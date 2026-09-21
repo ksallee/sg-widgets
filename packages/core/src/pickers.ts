@@ -8,6 +8,7 @@
  */
 import type { EntityTypeInfo } from './client.js';
 import { isFilterable } from './field-types.js';
+import { matchesEveryWord } from './search.js';
 import { pathLabel, type PathLabelOptions } from './presentation.js';
 import type { FieldSchema } from './schema.js';
 import type { PathSegment, SchemaService } from './schema-service.js';
@@ -16,12 +17,9 @@ import type { PathSegment, SchemaService } from './schema-service.js';
 /* search                                                                     */
 /* -------------------------------------------------------------------------- */
 
-/** Every whitespace-separated token of the query must appear in one of the haystacks. */
-export function matchesTokens(query: string, ...haystacks: (string | undefined)[]): boolean {
-  const tokens = query.toLowerCase().split(/\s+/).filter(Boolean);
-  if (tokens.length === 0) return true;
-  const text = haystacks.filter(Boolean).join(' ').toLowerCase();
-  return tokens.every((token) => text.includes(token));
+/** Everything a row is matched on, as the one text `matchesEveryWord` reads. */
+function haystack(...parts: (string | undefined)[]): string {
+  return parts.filter(Boolean).join(' ');
 }
 
 /* -------------------------------------------------------------------------- */
@@ -73,7 +71,7 @@ export function entityTypeOptions(
   const byName = new Map(types.map((t) => [t.name, t]));
   return {
     types,
-    shown: types.filter((t) => matchesTokens(options.query ?? '', t.displayName, t.name)),
+    shown: types.filter((t) => matchesEveryWord(haystack(t.displayName, t.name), options.query ?? '')),
     labelOf: (code: string) => byName.get(code)?.displayName ?? code,
   };
 }
@@ -261,7 +259,7 @@ export function deriveFieldOptions(fields: Record<string, FieldSchema>, input: F
 /** Rows matching the search box. */
 export function searchFieldOptions(options: readonly FieldOption[], query: string): FieldOption[] {
   if (!query.trim()) return [...options];
-  return options.filter((option) => matchesTokens(query, option.displayName, option.name, option.dataType));
+  return options.filter((option) => matchesEveryWord(haystack(option.displayName, option.name, option.dataType), query));
 }
 
 /* -------------------------------------------------------------------------- */
@@ -341,5 +339,5 @@ export async function resolveFieldPathOptions(
 /** Rows matching the search box, read on what the row shows and on the path behind it. */
 export function searchFieldPathOptions(options: readonly FieldPathOption[], query: string): FieldPathOption[] {
   if (!query.trim()) return [...options];
-  return options.filter((option) => matchesTokens(query, option.label, option.path));
+  return options.filter((option) => matchesEveryWord(haystack(option.label, option.path), query));
 }

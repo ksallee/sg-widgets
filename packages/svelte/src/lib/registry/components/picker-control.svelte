@@ -1,5 +1,5 @@
 <script lang="ts" module>
-	import type { PickerSummary } from '@sg-widgets/core';
+	import type { PickerSummary } from 'sg-widgets-core';
 
 	export type PickerControlSize = 'sm' | 'md' | 'lg';
 
@@ -52,12 +52,15 @@
 		invalid?: boolean;
 		clearable?: boolean;
 		placeholder?: string;
+		/** The combobox's accessible name, for a control whose placeholder is empty. */
+		label?: string;
 		searchPlaceholder?: string;
 		/** Whether the popup is showing, two-way. */
 		open?: boolean;
 		onOpenChange?: (open: boolean) => void;
 		/** What the caret holds, two-way. */
 		query?: string;
+		onQueryChange?: (query: string) => void;
 		/** Remove the chip at `index`. Backspace walks the row through it. */
 		onRemoveAt?: (index: number) => void;
 		onClear?: () => void;
@@ -83,7 +86,7 @@
 </script>
 
 <script lang="ts">
-	import type { Snippet } from 'svelte';
+	import { tick, type Snippet } from 'svelte';
 	import {
 		focusChip,
 		listStatus,
@@ -93,7 +96,7 @@
 		summariseSelection,
 		watchHighlight,
 		watchOverflow
-	} from '@sg-widgets/core';
+	} from 'sg-widgets-core';
 	import { Combobox } from 'bits-ui';
 	import ChevronDown from '@lucide/svelte/icons/chevron-down';
 	import Search from '@lucide/svelte/icons/search';
@@ -157,10 +160,12 @@
 		invalid = false,
 		clearable = true,
 		placeholder = '',
+		label,
 		searchPlaceholder = 'Search…',
 		open = $bindable(false),
 		onOpenChange,
 		query = $bindable(''),
+		onQueryChange,
 		onRemoveAt,
 		onClear,
 		anchored = false,
@@ -193,6 +198,8 @@
 	let paging = false;
 
 	const loadingText = $derived(stateLine('loading', { loadingLabel }));
+	/** The caret is a combobox, so it is named even when the control shows no placeholder. */
+	const inputLabel = $derived(label || placeholder || triggerLabel);
 	const interactive = $derived(!readonly && !inert);
 	const showClear = $derived(clearable && labels.length > 0 && !readonly && !disabled);
 	/** Only a multi control's row weighs itself; a single one draws its chip and stops. */
@@ -255,10 +262,17 @@
 	);
 	const counted = $derived(summary === 'count' && chipRow && multiple);
 
+	/** The caret's text, written back and announced, as `setOpen` is to `open`. */
+	function setQuery(next: string): void {
+		if (next === query) return;
+		query = next;
+		onQueryChange?.(next);
+	}
+
 	/** A press anywhere in the field opens the list, and a token field takes the caret. */
 	/** Typing asks for the list: a press may have closed it a moment ago. */
 	function typed(next: string): void {
-		query = next;
+		setQuery(next);
 		if (interactive && !open) setOpen(true);
 	}
 
@@ -291,7 +305,7 @@
 			return;
 		}
 		const wanted = interactive ? next : false;
-		if (!wanted) query = '';
+		if (!wanted) setQuery('');
 		if (wanted === open) return;
 		open = wanted;
 		onOpenChange?.(open);
@@ -397,11 +411,25 @@
 			return;
 		}
 		onSelect(next);
+		restoreSearchBox();
 		// A press on a row leaves the caret in the list; the next key belongs to the
 		// control, so the input takes it back and the chip row is released. A pick made
 		// with a chip armed would otherwise keep that chip, and the next Backspace would
 		// take it rather than the one just added.
 		toInput();
+	}
+
+	/**
+	 * The primitive writes the chosen item's label into the search box. The box holds the
+	 * query and nothing else, so the write is put back as a write the primitive reads:
+	 * an unchanged query is not a new search.
+	 */
+	function restoreSearchBox(): void {
+		void tick().then(() => {
+			if (!inputEl || inputEl.value === query) return;
+			inputEl.value = query;
+			inputEl.dispatchEvent(new Event('input', { bubbles: true }));
+		});
 	}
 
 	function clear(): void {
@@ -415,7 +443,7 @@
 		bind:ref={inputEl}
 		data-slot={`${slot}-input`}
 		aria-invalid={invalid ? 'true' : undefined}
-		aria-label={placeholder}
+		aria-label={inputLabel}
 		readonly={readonly || undefined}
 		placeholder={inputPlaceholder ?? (labels.length > 0 ? '' : placeholder)}
 		oninput={(e) => typed(e.currentTarget.value)}
@@ -525,7 +553,7 @@
 				<Combobox.Input
 					bind:ref={inputEl}
 					data-slot={`${slot}-input`}
-					aria-label={placeholder}
+					aria-label={inputLabel}
 					readonly
 					onkeydown={onKey}
 					class="sr-only"

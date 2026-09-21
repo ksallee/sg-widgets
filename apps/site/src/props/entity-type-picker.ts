@@ -1,11 +1,10 @@
 import type { PropsFile } from './_types';
 
 export default {
-  extends: { name: 'picker-control', omit: ['slot', 'picker', 'multiple', 'keys', 'onSelect', 'labels', 'items', 'rowCount', 'chipKeys', 'chipsSlot', 'summary', 'max', 'chipRow', 'inline', 'tokenInput', 'inputPlaceholder', 'searchable', 'textValue', 'rowKey', 'inert', 'query', 'onQueryChange', 'onRemoveAt', 'onClear', 'anchored', 'loading', 'count', 'error', 'empty', 'hasMore', 'onLoadMore', 'clearLabel', 'triggerLabel', 'overflowLabel', 'itemToStringLabel', 'controlProps', 'chip', 'rows'] },
+  extends: { name: 'picker-control', omit: ['onOpenChange', 'slot', 'picker', 'label', 'multiple', 'keys', 'onSelect', 'labels', 'items', 'rowCount', 'chipKeys', 'chipsSlot', 'summary', 'max', 'chipRow', 'inline', 'tokenInput', 'inputPlaceholder', 'searchable', 'textValue', 'rowKey', 'inert', 'query', 'onQueryChange', 'onRemoveAt', 'onClear', 'anchored', 'loading', 'count', 'error', 'empty', 'hasMore', 'onLoadMore', 'clearLabel', 'triggerLabel', 'overflowLabel', 'itemToStringLabel', 'controlProps', 'chip', 'rows'] },
   props: [
     { name: 'context', type: '`SgContext`', default: 'required', meaning: 'The widget context. The site\'s enabled types are read through it, once per page.' },
     { name: 'value', type: '`string | null`', default: '`null`', meaning: 'The chosen type code. Two-way in Svelte.' },
-    { name: 'onValueChange', type: '`(value) => void`', default: '—', meaning: 'Receives the code, or `null` on clear.' },
     { name: 'allow', type: '`string[]`', default: '—', meaning: 'Codes on offer. Empty or absent means every enabled type.' },
     { name: 'deny', type: '`string[]`', default: '—', meaning: 'Codes withheld, applied after `allow`.' },
     { name: 'placeholder', type: '`string`', default: '`\'Select an entity type\'`', meaning: 'Shown while nothing is chosen.' },

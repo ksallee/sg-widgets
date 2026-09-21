@@ -4,6 +4,7 @@ description: Several entity types of a site, chosen from a searchable list with 
 ---
 
 import Demo from '../../../components/Demo.astro';
+import Install from '../../../components/Install.astro';
 import Props from '../../../components/Props.astro';
 
 Picks any number of entity types of a site, from a searchable list of everything the site has
@@ -13,10 +14,7 @@ Single and multi: [EntityTypePicker](/widgets/entity-type-picker/) takes one typ
 
 ## Install
 
-```sh
-pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/entity-type-multi-picker.json
-pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/entity-type-multi-picker.json
-```
+<Install item="entity-type-multi-picker" />
 
 <Demo name="entity-type-multi-picker" title="EntityTypeMultiPicker: allow and deny lists, summary modes, codes, sizes and states" />
 

@@ -4,6 +4,7 @@ description: Any Flow Production Tracking attribute value, rendered by its data 
 ---
 
 import Demo from '../../../components/Demo.astro';
+import Install from '../../../components/Install.astro';
 import Props from '../../../components/Props.astro';
 
 Renders a raw attribute value the way its data type should look, delegating to the other atoms where
@@ -13,10 +14,7 @@ one exists.
 
 Installing this pulls EntityChip, StatusBadge and Thumbnail with it.
 
-```sh
-pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/field-value.json
-pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/field-value.json
-```
+<Install item="field-value" />
 
 <Demo name="field-value" title="FieldValue: every data type, including the empty and sentinel cases" />
 

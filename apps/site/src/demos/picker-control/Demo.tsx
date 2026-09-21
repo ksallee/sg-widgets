@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { ReactNode } from 'react';
-import { matchesTokens } from '@sg-widgets/core';
+import { matchesEveryWord } from 'sg-widgets-core';
 import { Combobox as ComboboxPrimitive } from '@base-ui/react';
 import { PickerControl } from '@/registry/sg/components/picker-control';
 import {
@@ -26,7 +26,7 @@ const SIZES = ['sm', 'md', 'lg'] as const;
 
 const labelOf = (code: string) => DEPARTMENTS.find((d) => d.code === code)?.label ?? code;
 const leadOf = (code: string) => DEPARTMENTS.find((d) => d.code === code)?.lead ?? '';
-const matching = (query: string) => DEPARTMENTS.filter((d) => matchesTokens(query, d.label, d.code));
+const matching = (query: string) => DEPARTMENTS.filter((d) => matchesEveryWord(`${d.label} ${d.code}`, query));
 const codes = (query: string) => matching(query).map((d) => d.code);
 
 const field = 'flex w-full flex-col gap-2';
@@ -95,6 +95,9 @@ export default function PickerControlDemo() {
   const [invalid, setInvalid] = useState<string[]>([]);
   const [invalidOpen, setInvalidOpen] = useState(false);
   const [invalidQuery, setInvalidQuery] = useState('');
+  const [named, setNamed] = useState<string[]>([]);
+  const [namedOpen, setNamedOpen] = useState(false);
+  const [namedQuery, setNamedQuery] = useState('');
   const [crew, setCrew] = useState<string[]>(['light']);
   const [crewOpen, setCrewOpen] = useState(false);
   const [crewQuery, setCrewQuery] = useState('');
@@ -130,6 +133,34 @@ export default function PickerControlDemo() {
           />
         </div>
         <span className={readout}>{JSON.stringify(one)}</span>
+      </div>
+
+      <div className={field} data-demo-case="named">
+        <span className={label}>Named by a label of its own, with no placeholder</span>
+        <div className={box}>
+          <PickerControl
+            slot="department-named-picker"
+            picker="department-named"
+            keys={named}
+            onSelect={setNamed}
+            labels={named.map(labelOf)}
+            items={codes(namedQuery)}
+            renderItem={(code) => row('department-named-picker', code)}
+            renderChip={(index, armed, hidden) =>
+              chip('department-named-picker', labelOf(named[index] ?? ''), armed, hidden, 'md')
+            }
+            label="Department"
+            open={namedOpen}
+            onOpenChange={setNamedOpen}
+            query={namedQuery}
+            onQueryChange={setNamedQuery}
+            onRemoveAt={() => setNamed([])}
+            onClear={() => setNamed([])}
+            itemToStringLabel={() => ''}
+            empty={codes(namedQuery).length === 0}
+            triggerLabel="Show the departments"
+          />
+        </div>
       </div>
 
       <div className={field} data-demo-case="text">

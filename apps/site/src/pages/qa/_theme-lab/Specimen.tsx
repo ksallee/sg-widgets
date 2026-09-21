@@ -14,8 +14,8 @@ import type {
   StatusRecord,
   UrlValue,
   UrlWriteValue,
-} from '@sg-widgets/core';
-import { condition, createEntitySource, group, resolveColumns } from '@sg-widgets/core';
+} from 'sg-widgets-core';
+import { condition, createEntitySource, group, resolveColumns } from 'sg-widgets-core';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -245,16 +245,16 @@ function Filters({ context }: { context: DemoContext }) {
   return (
     <div className="tl-sizes">
       <Line label="Filter bar">
-        <FilterBar entityType="Version" context={context} facets={['sg_status_list']} value={bar} onChange={setBar} />
+        <FilterBar entityType="Version" context={context} facets={['sg_status_list']} value={bar} onValueChange={setBar} />
       </Line>
       <Line label="Sort picker">
-        <SortPicker entityType="Version" context={context} value={keys} onChange={setKeys} />
+        <SortPicker entityType="Version" context={context} value={keys} onValueChange={setKeys} />
       </Line>
       <Line label="Column picker">
         <ColumnPicker context={context} entityType="Version" showCount value={columns} onValueChange={setColumns} />
       </Line>
       <Line label="Filter editor">
-        <FilterEditor entityType="Version" context={context} value={tree} hidePaths={['sg_task']} onChange={setTree} />
+        <FilterEditor entityType="Version" context={context} value={tree} hidePaths={['sg_task']} onValueChange={setTree} />
       </Line>
     </div>
   );

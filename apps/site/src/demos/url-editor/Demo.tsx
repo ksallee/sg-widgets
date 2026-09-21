@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { UrlValue } from '@sg-widgets/core';
+import type { UrlValue } from 'sg-widgets-core';
 import { UrlEditor } from '@/registry/sg/components/url-editor';
 
 const local: UrlValue = {

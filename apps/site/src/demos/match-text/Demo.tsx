@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Input } from '@/components/ui/input';
 import { MatchText } from '@/registry/sg/components/match-text';
 
 /** Labels of the shape a text search answers: a name, a path, a person. */
@@ -20,12 +21,11 @@ export default function MatchTextDemo() {
     <div className="flex flex-col gap-4">
       <section className={group}>
         <h4 className={label}>Query</h4>
-        <input
-          data-slot="input"
+        <Input
           aria-label="Query"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          className="border-input bg-background h-8 w-64 rounded-lg border px-3 text-sm outline-none"
+          className="w-64"
         />
       </section>
 

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import type { EntityRef } from '@sg-widgets/core';
+import type { EntityRef } from 'sg-widgets-core';
 import { EntityPicker } from '@/registry/sg/components/entity-picker';
 import { createDemoClient, createDemoContext } from '../_shared/client';
 
@@ -176,7 +176,7 @@ export default function EntityPickerDemo() {
             />
           </div>
           <div className={field}>
-            <span className={caption}>A sub-label, and the code beside the name</span>
+            <span className={caption}>Everything: thumbnail, sub-label, secondary and the code beside the name</span>
             <EntityPicker
               context={context}
               entityTypes={['Version']}

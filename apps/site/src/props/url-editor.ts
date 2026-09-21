@@ -5,7 +5,7 @@ export default {
   props: [
     { name: 'value', type: '`UrlValue | null`', default: '`null`', meaning: 'The stored object. Two-way in Svelte.' },
     { name: 'onValueChange', type: '`(value: UrlWriteValue | null) => void`', default: '—', meaning: 'Called when either input commits.' },
-    { name: 'field', type: '`FieldSchema | null`', default: '`null`', meaning: 'Supplies the accessible label and the required flag.' },
+    { name: 'field', type: '`Pick<FieldSchema, \'displayName\' | \'mandatory\'> | null`', default: '`null`', meaning: 'Supplies the accessible label and the required flag.' },
     { name: 'disabled', type: '`boolean`', default: '`false`' },
     { name: 'readonly', type: '`boolean`', default: '`false`' },
     { name: 'invalid', type: '`boolean`', default: '`false`', meaning: 'Forced invalid state.' },

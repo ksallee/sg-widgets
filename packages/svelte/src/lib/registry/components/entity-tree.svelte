@@ -1,5 +1,5 @@
 <script lang="ts" module>
-	import type { TreeCheckState, TreeNode } from '@sg-widgets/core';
+	import type { TreeCheckState, TreeNode } from 'sg-widgets-core';
 	import type { StatusBadgeSize } from '$lib/registry/components/status-badge.svelte';
 
 	export type EntityTreeSize = 'sm' | 'md' | 'lg';
@@ -43,7 +43,15 @@
 <script lang="ts">
 	import { untrack, type Snippet } from 'svelte';
 	import type { HTMLAttributes } from 'svelte/elements';
-	import type { EntityRef, FieldSpec, SgContext, TreeFieldPlan, TreeRow, TreeSelectionMode } from '@sg-widgets/core';
+	import type {
+		EntityRef,
+		FieldSpec,
+		SgContext,
+		TreeFieldNames,
+		TreeFieldPlan,
+		TreeRow,
+		TreeSelectionMode
+	} from 'sg-widgets-core';
 	import {
 		createTree,
 		hierarchyLoader,
@@ -53,10 +61,13 @@
 		NO_ROWS_LABEL,
 		pathOf,
 		resolveTreeFields,
+		rowSubLabel,
+		rowThumbnail,
+		subLabelType,
 		sameIds,
 		stateLine,
 		TREE_STATUS_FIELDS
-	} from '@sg-widgets/core';
+	} from 'sg-widgets-core';
 	import ChevronRight from '@lucide/svelte/icons/chevron-right';
 	import CircleAlert from '@lucide/svelte/icons/circle-alert';
 	import Inbox from '@lucide/svelte/icons/inbox';
@@ -273,19 +284,23 @@
 	 * through the cached schema service. The read hangs off the props through a
 	 * derived and never off an effect with a "last seen" key.
 	 */
-	function loadPlan(seen: string, name: string | undefined): TreeFieldPlan {
-		const plan = $state<TreeFieldPlan>({ status: {}, secondary: {}, statuses: null });
+	function loadPlan(seen: string, names: TreeFieldNames): TreeFieldPlan {
+		const plan = $state<TreeFieldPlan>({ status: {}, secondary: {}, subLabel: {}, statuses: null });
 		const types = seen.split(',').filter(Boolean);
-		void resolveTreeFields(schema, statusTable, types, name).then((found) => {
+		void resolveTreeFields(schema, statusTable, types, names).then((found) => {
 			plan.status = found.status;
 			plan.secondary = found.secondary;
+			plan.subLabel = found.subLabel;
 			plan.statuses = found.statuses;
 		}, onError);
 		return plan;
 	}
 
 	const secondaryPath = $derived(pathOf(secondaryField));
-	const plan = $derived(loadPlan(typeKey, secondaryPath || undefined));
+	const subPath = $derived(pathOf(subLabelField));
+	const plan = $derived(
+		loadPlan(typeKey, { secondary: secondaryPath || undefined, subLabel: subPath || undefined })
+	);
 	const hasSubLabel = $derived(Boolean(subLabelField || subLabel));
 	/** An id is a code, and codes are the mono treatment of `docs/design-rules.md`. */
 	const secondaryIsId = $derived(secondaryPath === 'id');
@@ -302,16 +317,11 @@
 
 	function subLabelOf(node: TreeNode): string {
 		if (subLabel) return subLabel(node);
-		const path = pathOf(subLabelField);
-		if (!path) return '';
-		const raw = node.values[path];
-		return raw === null || raw === undefined ? '' : String(raw);
-	}
-
-	function thumbOf(node: TreeNode): string | null {
-		if (thumbnail === false) return null;
-		const raw = node.values[thumbnail];
-		return typeof raw === 'string' ? raw : null;
+		const field = node.entity ? plan.subLabel[node.entity.type] : null;
+		return rowSubLabel(node.values, { subLabelField }, {
+			dataType: subLabelType({ subLabelField }, field?.dataType),
+			statuses: plan.statuses
+		});
 	}
 
 	function statusOf(node: TreeNode): string {
@@ -593,9 +603,9 @@
 							{:else}
 								{#if thumbnail !== false}
 									<span class={cn('flex shrink-0 items-center', LEAD[size])}>
-										{#if thumbOf(node)}
+										{#if rowThumbnail(node.values, { thumbnail })}
 											<Thumbnail
-												src={thumbOf(node)}
+												src={rowThumbnail(node.values, { thumbnail })}
 												aspect="square"
 												size={LEAF[size]}
 												entityType={node.entity?.type ?? null}

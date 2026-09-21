@@ -1,6 +1,6 @@
 <script lang="ts">
-	import type { CollectionColumn, StatusRecord } from '@sg-widgets/core';
-	import { condition, createEntitySource, resolveColumns } from '@sg-widgets/core';
+	import type { CollectionColumn, StatusRecord } from 'sg-widgets-core';
+	import { condition, createEntitySource, resolveColumns } from 'sg-widgets-core';
 	import EntityTable from '$lib/registry/components/entity-table.svelte';
 	import { createDemoContext } from '../_shared/client';
 	import { setDemoContext } from '../_shared/svelte';

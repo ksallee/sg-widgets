@@ -1,26 +1,24 @@
 ---
 title: Widgets
-description: Every widget, with a live demo of the Svelte and React implementations.
+description: Every widget, with a live demo in Svelte or React.
 ---
 
 import Demo from '../../../components/Demo.astro';
+import Install from '../../../components/Install.astro';
 
-Each widget page shows the Svelte and React implementations side by side. The toolbar on an example
-sets the framework, reduced motion and the corner radius; the palette select in the header picks one
-of seven palettes for the demo stages, and light or dark follows the theme select next to it. Every one
-of those choices carries to the other examples on the page and to the next page.
+Each widget page shows one framework at a time. The toolbar on an example sets it, along with
+reduced motion and the corner radius; the palette select in the header picks one of seven palettes
+for the demo stages, and light or dark follows the theme select next to it. Every one of those
+choices carries to the other examples on the page, to the install tabs, and to the next page.
 
 Demos run on fixtures until you open Connect in the header, switch it to Live, give it your site and
 log in through your site's own approval page. Your session stays in this browser, this site keeps
 nothing of it on a server, and the project you pick there is the one the demos that take a project
 read.
 
-Widgets install from a registry into your project, one command per framework:
+Widgets install from a registry into your project, with one command:
 
-```sh
-pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/status-badge.json
-pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/status-badge.json
-```
+<Install item="status-badge" />
 
 Name `sg-widgets.json` in place of a widget to install every widget and every shared part at once.
 

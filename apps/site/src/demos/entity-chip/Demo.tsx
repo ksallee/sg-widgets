@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { EntityRef } from '@sg-widgets/core';
+import type { EntityRef } from 'sg-widgets-core';
 import { EntityChip } from '@/registry/sg/components/entity-chip';
 import { createDemoContext, type DemoContext } from '../_shared/client';
 

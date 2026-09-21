@@ -1,9 +1,9 @@
 <script lang="ts">
-	import type { EntityRef, TreeNode } from '@sg-widgets/core';
+	import type { EntityRef, TreeNode } from 'sg-widgets-core';
 	import EntityTree from '$lib/registry/components/entity-tree.svelte';
 	import { CONTROL_BUTTON, type ControlSize } from '$lib/registry/components/control-classes.js';
 	import { Button } from '$lib/components/ui/button/index.js';
-	import { createDemoContext } from '../_shared/client';
+	import { createDemoClient, createDemoContext } from '../_shared/client';
 	import { setDemoContext } from '../_shared/svelte';
 
 	const context = createDemoContext();
@@ -16,6 +16,14 @@
 	/** The project whose shots sit under no sequence at all. */
 	const looseRoot = `/Project/${context.projectFor(72)}`;
 	const searchPlaceholder = context.live ? 'Search' : 'Search, e.g. sh020_0030';
+
+	/** Its own fixtures, with one asset's thumbnail field reading empty rather than absent. */
+	const blanked = createDemoClient();
+	const blankedAsset = blanked.mock
+		.rowsOf('Asset')
+		.find((row) => (row['project'] as { id: number } | null)?.id === blanked.context.projectId);
+	if (blankedAsset) (blankedAsset as Record<string, unknown>)['image'] = '';
+	const blankedRoot = `/Project/${blanked.context.projectId}`;
 
 	let picked = $state<TreeNode | null>(null);
 	let checked = $state<EntityRef[]>([]);
@@ -30,7 +38,7 @@
 	const group = 'flex flex-col gap-2';
 	const label = 'text-muted-foreground text-xs font-medium tracking-wide uppercase';
 	const toggle =
-		'inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-background px-2 text-sm ' +
+		'inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-background px-2 text-sm shadow-xs ' +
 		'text-muted-foreground outline-none transition-colors duration-150 hover:bg-accent hover:text-accent-foreground ' +
 		'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background';
 </script>
@@ -76,6 +84,17 @@
 			subLabelField="description"
 			maxHeight="16rem"
 			data-testid="thumbnail-tree"
+		/>
+	</section>
+
+	<section class={group}>
+		<h4 class={label}>A row whose thumbnail field reads empty</h4>
+		<EntityTree
+			context={blanked.context}
+			rootPath={blankedRoot}
+			thumbnail="image"
+			maxHeight="12rem"
+			data-testid="empty-thumb-tree"
 		/>
 	</section>
 

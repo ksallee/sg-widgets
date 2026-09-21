@@ -5,7 +5,7 @@ export default {
   props: [
     { name: 'value', type: '`string | null`', default: '`null`', meaning: 'The stored string. Two-way in Svelte.' },
     { name: 'onValueChange', type: '`(value: string | null) => void`', default: '—', meaning: 'Called when the input commits.' },
-    { name: 'field', type: '`FieldSchema | null`', default: '`null`', meaning: 'Supplies the accessible label and the required flag.' },
+    { name: 'field', type: '`Pick<FieldSchema, \'displayName\' | \'mandatory\'> | null`', default: '`null`', meaning: 'Supplies the accessible label and the required flag.' },
     { name: 'size', type: '`\'sm\' | \'md\' | \'lg\'`', default: '`\'md\'`', meaning: 'Control height, and the size of the swatch.' },
     { name: 'hint', type: '`boolean`', default: '`true`', meaning: 'Explain the pipeline-step token under the control.' },
     { name: 'disabled', type: '`boolean`', default: '`false`' },

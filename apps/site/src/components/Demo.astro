@@ -1,12 +1,13 @@
 ---
 /**
- * A live demo of one widget, in both frameworks.
+ * A live demo of one widget, in the framework the reader picked.
  *
- * `<Demo name="hello" />` renders the Svelte and the React implementation of the same
- * widget side by side, on a stage that carries the shadcn tokens and its own `dark`
- * class -- so a reviewer can compare the two frameworks, under any of the palettes in
- * src/styles/themes.css, light or dark, at any radius and with motion reduced, without
- * leaving the page and without touching Starlight's theme or their OS settings.
+ * `<Demo name="hello" />` mounts the Svelte and the React implementation of the same
+ * widget on a stage that carries the shadcn tokens and its own `dark` class -- so a
+ * reader sees their framework under any of the palettes in src/styles/themes.css, light
+ * or dark, at any radius and with motion reduced, without leaving the page and without
+ * touching Starlight's theme or their OS settings. The two panes side by side are
+ * development work, behind `PUBLIC_SG_DEMO_BOTH`; see demo-prefs.ts.
  *
  * A demo carries its own toolbar -- framework, reduced motion and radius, see
  * DemoToolbar.astro -- and the stage under it. The palette and what the demos read are
@@ -24,7 +25,7 @@
  * at duration-150.
  */
 import DemoToolbar from './DemoToolbar.astro';
-import { defaultPalette } from './demo-prefs';
+import { defaultFramework, defaultPalette } from './demo-prefs';
 
 interface Props {
   /** Directory name under `src/demos/`. */
@@ -56,27 +57,27 @@ if (!svelteDemos[`../demos/${name}/Demo.svelte`] || !reactDemos[`../demos/${name
   class="sg-demo sg-demo-chrome not-content w-full overflow-hidden rounded-lg border border-border"
   data-sg-demo
   data-demo-name={name}
-  data-framework="both"
+  data-framework={defaultFramework}
   data-motion="normal"
   data-source="mock"
 >
   <DemoToolbar title={title} />
 
   <div class="sg-demo grid gap-px bg-border" data-stage data-theme={defaultPalette} data-radius="default">
-    <section class="min-w-0 bg-background p-4" data-pane="svelte">
-      <h3 class="pb-3 text-xs font-medium tracking-wide text-muted-foreground uppercase" data-pane-title>
-        Svelte
-      </h3>
-      <div data-island="svelte">
-        <p class="text-sm text-muted-foreground">Loading the Svelte demo&hellip;</p>
-      </div>
-    </section>
     <section class="min-w-0 bg-background p-4" data-pane="react">
       <h3 class="pb-3 text-xs font-medium tracking-wide text-muted-foreground uppercase" data-pane-title>
         React
       </h3>
       <div data-island="react">
         <p class="text-sm text-muted-foreground">Loading the React demo&hellip;</p>
+      </div>
+    </section>
+    <section class="min-w-0 bg-background p-4" data-pane="svelte">
+      <h3 class="pb-3 text-xs font-medium tracking-wide text-muted-foreground uppercase" data-pane-title>
+        Svelte
+      </h3>
+      <div data-island="svelte">
+        <p class="text-sm text-muted-foreground">Loading the Svelte demo&hellip;</p>
       </div>
     </section>
   </div>

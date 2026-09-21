@@ -1,6 +1,6 @@
 import type * as React from 'react';
-import type { FieldSchema } from '@sg-widgets/core';
-import { parseTextInput } from '@sg-widgets/core';
+import type { FieldSchema } from 'sg-widgets-core';
+import { parseTextInput } from 'sg-widgets-core';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { CONTROL_BOX, CONTROL_PAD, type ControlSize } from '@/registry/sg/components/control-classes';

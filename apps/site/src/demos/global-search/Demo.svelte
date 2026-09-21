@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { EntityRef } from '@sg-widgets/core';
+	import type { EntityRef } from 'sg-widgets-core';
 	import GlobalSearch from '$lib/registry/components/global-search.svelte';
 	import { CONTROL_BUTTON, type ControlSize } from '$lib/registry/components/control-classes.js';
 	import { Button } from '$lib/components/ui/button/index.js';

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Command as CommandPrimitive } from "bits-ui";
-	import { watchOverflow } from "@sg-widgets/core";
+	import { watchOverflow } from "sg-widgets-core";
 	import { cn } from "$lib/utils.js";
 
 	let {

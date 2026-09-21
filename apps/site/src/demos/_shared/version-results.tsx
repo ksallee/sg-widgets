@@ -6,8 +6,8 @@
  * refuses fails that read rather than the page: the table shows the refusal in place.
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { CollectionColumn, FilterNode, StatusRecord, WireGroup } from '@sg-widgets/core';
-import { createEntitySource, resolveColumns, toApi3Hash } from '@sg-widgets/core';
+import type { CollectionColumn, FilterNode, StatusRecord, WireGroup } from 'sg-widgets-core';
+import { createEntitySource, resolveColumns, toApi3Hash } from 'sg-widgets-core';
 import { EntityTable } from '@/registry/sg/components/entity-table';
 import type { DemoContext } from './client';
 import {

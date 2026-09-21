@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { CollectionColumn, FilterGroup, StatusRecord, WireGroup } from '@sg-widgets/core';
-import { condition, createEntitySource, emptyFilter, facetCounts, group, resolveColumns, toApi3Hash } from '@sg-widgets/core';
+import type { CollectionColumn, FilterGroup, StatusRecord, WireGroup } from 'sg-widgets-core';
+import { condition, createEntitySource, emptyFilter, facetCounts, group, resolveColumns, toApi3Hash } from 'sg-widgets-core';
 import { Button } from '@/components/ui/button';
 import { FilterBar, type FilterBarSize } from '@/registry/sg/components/filter-bar';
 import { GroupedList } from '@/registry/sg/components/grouped-list';
@@ -30,9 +30,6 @@ const seededTree = () =>
     condition('sg_shot_type', 'in', ['VFX', '2D', 'Full CG']),
   ]);
 
-/** Every status ticked, on a bar that names every value: the pill holds its cap. */
-const everyTree = () => group('and', [condition(GROUP, 'in', ['wtg', 'ip', 'rev', 'apr', 'fin', 'hld', 'omt'])]);
-
 interface Loaded {
   columns: CollectionColumn[];
   statuses: Record<string, StatusRecord>;
@@ -46,7 +43,6 @@ export default function FilterBarDemo() {
   const [readState, setReadState] = useState<FilterGroup>(emptyFilter);
   const noteCounts = useMemo(() => facetCounts(context.client, 'Note'), [context]);
   const [seeded, setSeeded] = useState<FilterGroup>(seededTree);
-  const [every, setEvery] = useState<FilterGroup>(everyTree);
   const [sized, setSized] = useState<Record<FilterBarSize, FilterGroup>>({ sm: seededTree(), md: seededTree(), lg: seededTree() });
   const scope = context.live ? group('and', [condition('project', 'is', { type: 'Project', id: context.projectId })]) : null;
 
@@ -124,7 +120,7 @@ export default function FilterBarDemo() {
           labels={{ sg_shot_type: 'Kind' }}
           baseFilter={scope}
           value={value}
-          onChange={setValue}
+          onValueChange={setValue}
         />
 
         <section className="flex min-w-0 flex-col gap-2">
@@ -163,20 +159,7 @@ export default function FilterBarDemo() {
             labels={{ sg_shot_type: 'Kind' }}
             baseFilter={scope}
             value={seeded}
-            onChange={setSeeded}
-          />
-        </section>
-
-        <section className={section} data-demo="every-value">
-          <h4 className={label}>Every status ticked, every value named</h4>
-          <FilterBar
-            entityType="Shot"
-            context={context}
-            facets={['sg_status_list']}
-            maxValues={0}
-            baseFilter={scope}
-            value={every}
-            onChange={setEvery}
+            onValueChange={setSeeded}
           />
         </section>
 
@@ -190,7 +173,7 @@ export default function FilterBarDemo() {
             counts={noteCounts}
             baseFilter={scope}
             value={readState}
-            onChange={setReadState}
+            onValueChange={setReadState}
           />
           <p className="text-muted-foreground text-sm tabular-nums" data-testid="note-count" data-for={readWire}>
             {matchLabel(notes.wire === readWire ? notes.count : { kind: 'counting' }, 'Note')}
@@ -217,7 +200,7 @@ export default function FilterBarDemo() {
                     size={size}
                     baseFilter={scope}
                     value={sized[size]}
-                    onChange={(next) => setSized({ ...sized, [size]: next })}
+                    onValueChange={(next) => setSized({ ...sized, [size]: next })}
                   />
                 </div>
                 <Button variant="outline" size={size === 'md' ? 'default' : size}>

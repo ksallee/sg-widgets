@@ -10,7 +10,6 @@
  * an editor that gets an error emits nothing and shows the message.
  */
 import { COLOR_SENTINEL, formatDuration, formatTimecode } from './render.js';
-import type { TimecodeOptions } from './render.js';
 
 
 /** A parsed value, or the reason the input was refused. */
@@ -46,7 +45,7 @@ export function parseTextInput(raw: string): ParseResult<string | null> {
 
 // --- numbers -----------------------------------------------------------------
 
-export interface IntegerOptions {
+export interface IntegerParseOptions {
   min?: number;
   max?: number;
 }
@@ -57,7 +56,7 @@ export interface IntegerOptions {
  * and `timecode` takes `[Integer, NilClass]` alone (field_types/number, percent,
  * timecode). Empty input clears the field.
  */
-export function parseInteger(raw: string, options: IntegerOptions = {}): ParseResult<number | null> {
+export function parseInteger(raw: string, options: IntegerParseOptions = {}): ParseResult<number | null> {
   const text = raw.trim();
   if (text.length === 0) return { value: null };
   if (!/^[+-]?\d+$/.test(text)) {
@@ -110,7 +109,7 @@ export function toApiFloat(value: number | null): string | null {
 }
 
 export interface DurationParseOptions {
-  /** The site's `hours_per_day` from `GET /preferences`, for the `d` unit. Default 8. */
+  /** The site's `hours_per_day` from `GET /preferences`. Without it the `d` unit is refused. */
   hoursPerDay?: number;
 }
 
@@ -120,15 +119,16 @@ const DURATION_PART = /([+-]?\d+(?:\.\d+)?)\s*(days?|d|hours?|hrs?|h|minutes?|mi
  * A duration, in whole minutes.
  *
  * The stored integer is minutes and no schema names the unit, so the accepted
- * spellings are the client's own: a bare number is minutes, `1h 30m`, `1.5h` and
- * `2d` scale by the site's working day, and `1:30` is hours and minutes. The API
- * itself takes only something that parses as a number, so `"1h 30m"` never leaves
- * this function (field_types/duration).
+ * spellings are the client's own: a bare number is minutes, `1h 30m` and `1.5h`
+ * are hours, and `1:30` is hours and minutes. `2d` needs `hours_per_day`, which
+ * only the site's preferences hold, and is refused without it. The API itself
+ * takes only something that parses as a number, so `"1h 30m"` never leaves this
+ * function (field_types/duration).
  */
 export function parseDurationInput(raw: string, options: DurationParseOptions = {}): ParseResult<number | null> {
   const text = raw.trim();
   if (text.length === 0) return { value: null };
-  const hoursPerDay = options.hoursPerDay ?? 8;
+  const hoursPerDay = options.hoursPerDay;
 
   const clock = /^([+-]?)(\d+):([0-5]?\d)$/.exec(text);
   if (clock) {
@@ -146,12 +146,18 @@ export function parseDurationInput(raw: string, options: DurationParseOptions = 
   for (let m = DURATION_PART.exec(compact); m !== null; m = DURATION_PART.exec(compact)) {
     const amount = Number(m[1]);
     const unit = (m[2] ?? '').toLowerCase()[0];
-    minutes += amount * (unit === 'd' ? 60 * hoursPerDay : unit === 'h' ? 60 : 1);
+    if (unit === 'd') {
+      if (hoursPerDay === undefined || !(hoursPerDay > 0)) return { error: "Days need the site's working day." };
+      minutes += amount * 60 * hoursPerDay;
+    } else {
+      minutes += amount * (unit === 'h' ? 60 : 1);
+    }
     consumed += m[0].length;
   }
   // Every character has to belong to a part, so `1h banana` is refused rather than read as 1h.
   if (consumed === 0 || consumed !== compact.length) {
-    return { error: 'Not a duration. Try 90, 1h 30m, 1.5h or 2d.' };
+    const hint = hoursPerDay === undefined ? '90, 1h 30m or 1.5h' : '90, 1h 30m, 1.5h or 2d';
+    return { error: `Not a duration. Try ${hint}.` };
   }
   return bounded(Math.round(minutes));
 }
@@ -159,6 +165,11 @@ export function parseDurationInput(raw: string, options: DurationParseOptions = 
 function bounded(minutes: number): ParseResult<number> {
   if (minutes < INT32_MIN || minutes > INT32_MAX) return { error: OUT_OF_RANGE };
   return { value: minutes };
+}
+
+export interface TimecodeParseOptions {
+  /** Frames a second, without which the frame digits of a typed timecode are refused. */
+  frameRate?: number;
 }
 
 const TIMECODE = /^([+-]?)(\d+):([0-5]\d):([0-5]\d)(?:[:;](\d+))?$/;
@@ -171,7 +182,7 @@ const TIMECODE = /^([+-]?)(\d+):([0-5]\d):([0-5]\d)(?:[:;](\d+))?$/;
  * including the drop-frame spelling, so the conversion is the client's
  * (field_types/timecode). Empty input clears the field.
  */
-export function parseTimecodeInput(raw: string, options: TimecodeOptions = {}): ParseResult<number | null> {
+export function parseTimecodeInput(raw: string, options: TimecodeParseOptions = {}): ParseResult<number | null> {
   const text = raw.trim();
   if (text.length === 0) return { value: null };
 
@@ -192,11 +203,6 @@ export function parseTimecodeInput(raw: string, options: TimecodeOptions = {}): 
   const total = sign * ms;
   if (total < INT32_MIN || total > INT32_MAX) return { error: OUT_OF_RANGE };
   return { value: total };
-}
-
-/** Milliseconds as `HH:MM:SS:FF`, for putting a stored timecode back in an input. */
-export function formatTimecodeFrames(ms: number, frameRate: number): string {
-  return formatTimecode(ms, { frameRate });
 }
 
 // --- stepping ----------------------------------------------------------------
@@ -355,7 +361,7 @@ export function numberDraft(value: unknown, dataType: string, shape: NumberShape
       // round trip through the parse. The working day is a parse unit only.
       return formatDuration(n);
     case 'timecode':
-      return shape.frameRate === undefined ? formatTimecode(n) : formatTimecodeFrames(n, shape.frameRate);
+      return formatTimecode(n, shape.frameRate === undefined ? {} : { frameRate: shape.frameRate });
     default:
       return Number.isFinite(n)
         ? formatNumberInput(n, shape.locale === undefined ? {} : { locale: shape.locale })
@@ -381,7 +387,7 @@ export function parseNumberInput(raw: string, dataType: string, shape: NumberSha
     case 'timecode':
       return parseTimecodeInput(text, shape.frameRate === undefined ? {} : { frameRate: shape.frameRate });
     default: {
-      const bounds: IntegerOptions = {};
+      const bounds: IntegerParseOptions = {};
       if (shape.min !== undefined) bounds.min = shape.min;
       if (shape.max !== undefined) bounds.max = shape.max;
       return parseInteger(text, bounds);

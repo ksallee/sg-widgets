@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { CollapseState, CollectionColumn, EditorPlacement, EntityRef, FilterGroup, PagingMode, SortKey, StatusRecord } from '@sg-widgets/core';
-import { collapseAll, condition, createEntitySource, emptyFilter, expandAll, group, resolveColumns, toSortSpecs } from '@sg-widgets/core';
+import type { CollapseState, CollectionColumn, EditorPlacement, EntityRef, FilterGroup, PagingMode, SortKey, StatusRecord } from 'sg-widgets-core';
+import { collapseAll, condition, createEntitySource, emptyFilter, expandAll, group, resolveColumns, toSortSpecs } from 'sg-widgets-core';
 import { ColumnPicker } from '@/registry/sg/components/column-picker';
 import { EntityTable } from '@/registry/sg/components/entity-table';
 import { FilterBar } from '@/registry/sg/components/filter-bar';
@@ -34,7 +34,7 @@ const PAGING: Array<{ value: PagingMode; label: string }> = [
 ];
 
 const toggle =
-  'inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-background px-2 text-sm ' +
+  'inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-background px-2 text-sm shadow-xs ' +
   'text-muted-foreground outline-none transition-colors duration-150 hover:bg-accent hover:text-accent-foreground ' +
   'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ' +
   'aria-pressed:bg-accent aria-pressed:text-accent-foreground aria-pressed:font-medium';
@@ -182,7 +182,7 @@ export default function EntityTableDemo() {
                 baseFilter={scope}
                 size="sm"
                 value={filter}
-                onChange={setFilter}
+                onValueChange={setFilter}
               />
               <div className="flex flex-col gap-2">
                 <button type="button" className={toggle} aria-pressed={picking} onClick={() => setPicking(!picking)}>
@@ -206,7 +206,7 @@ export default function EntityTableDemo() {
             </>
           }
           toolbarEnd={
-            <SortPicker entityType="Version" context={context} size="sm" options={columns.map((column) => column.path)} value={sortKeys} onChange={setSortKeys} />
+            <SortPicker entityType="Version" context={context} size="sm" options={columns.map((column) => column.path)} value={sortKeys} onValueChange={setSortKeys} />
           }
         />
       </div>

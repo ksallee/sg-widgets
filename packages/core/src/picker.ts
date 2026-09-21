@@ -24,8 +24,7 @@ import { pathOf } from './row.js';
 import type { SchemaService } from './schema-service.js';
 import { createSchemaService } from './schema-service.js';
 import { DISPLAY_NAME_FIELDS, displayNameOf } from './schema.js';
-import type { MatchRun } from './search.js';
-import { matchRuns, searchWords } from './search.js';
+import { searchWords } from './search.js';
 
 /* -------------------------------------------------------------------------- */
 /* rows                                                                       */
@@ -82,9 +81,6 @@ export function flattenRow(row: EntityRow, labelField?: string): PickerRow {
 /* -------------------------------------------------------------------------- */
 /* the query filter                                                           */
 /* -------------------------------------------------------------------------- */
-
-/** The words of a query. The name the pickers were written against; `searchWords` is the function. */
-export const queryTokens = searchWords;
 
 /** One field a query is matched against, and how. */
 export interface SearchField {
@@ -250,19 +246,6 @@ export function clearableForField(
   if (field?.mandatory === true) return false;
   return clearable ?? true;
 }
-
-/* -------------------------------------------------------------------------- */
-/* highlighting                                                               */
-/* -------------------------------------------------------------------------- */
-
-/** A stretch of a label, matched or not. The shape `matchRuns` answers. */
-export type HighlightRun = MatchRun;
-
-/**
- * Split a label into matched and unmatched runs for the current query, the one
- * splitting `matchRuns` does. Kept as the name the pickers were written against.
- */
-export const highlightRuns = matchRuns;
 
 /* -------------------------------------------------------------------------- */
 /* option list composition                                                    */

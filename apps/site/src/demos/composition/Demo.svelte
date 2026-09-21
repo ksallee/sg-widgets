@@ -15,8 +15,8 @@
 		StatusRecord,
 		UrlValue,
 		UrlWriteValue
-	} from '@sg-widgets/core';
-	import { condition, createEntitySource, group, resolveColumns, toSortSpecs } from '@sg-widgets/core';
+	} from 'sg-widgets-core';
+	import { condition, createEntitySource, group, resolveColumns, toSortSpecs } from 'sg-widgets-core';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import * as Popover from '$lib/components/ui/popover/index.js';
 	import CheckboxEditor from '$lib/registry/components/checkbox-editor.svelte';
@@ -114,6 +114,11 @@
 		])
 	);
 	let paths = $state<string[]>([...SHOWN]);
+	/** Which widgets have emitted through their value callback, read by the prop-names drive. */
+	let emitted = $state<string[]>([]);
+	const emit = (name: string) => {
+		if (!emitted.includes(name)) emitted = [...emitted, name];
+	};
 
 	let note = $state<string | null>('Plate handed over with the cut change.');
 	let frames = $state<number | null>(1001);
@@ -238,10 +243,21 @@
 			data-qa-region="toolbar"
 		>
 			<div class="min-w-0 flex-1" data-qa-widget="filter-bar" data-qa-size="md">
-				<FilterBar entityType="Version" {context} facets={['sg_status_list']} bind:value={filter} />
+				<FilterBar
+					entityType="Version"
+					{context}
+					facets={['sg_status_list']}
+					bind:value={filter}
+					onValueChange={() => emit('filter-bar')}
+				/>
 			</div>
 			<div data-qa-widget="sort-picker" data-qa-size="md" data-qa-popup="sort-trigger">
-				<SortPicker entityType="Version" {context} bind:value={sortKeys} />
+				<SortPicker
+					entityType="Version"
+					{context}
+					bind:value={sortKeys}
+					onValueChange={() => emit('sort-picker')}
+				/>
 			</div>
 			<div data-qa-widget="column-picker" data-qa-size="md" data-qa-popup="popover-trigger">
 				<Popover.Root>
@@ -375,8 +391,11 @@
 				{context}
 				bind:value={editorFilter}
 				hidePaths={['sg_task']}
+				onValueChange={() => emit('filter-editor')}
 			/>
 		</section>
+
+		<span class="sr-only" data-testid="emitted">{emitted.join(' ')}</span>
 
 		<p class="text-sm" data-qa-widget="inline-atoms">
 			The plate is

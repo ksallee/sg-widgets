@@ -6,14 +6,16 @@
  * `{"approved": true, "sessionToken", "userLogin"}`, then 404 for a request that
  * was spent, denied, forgotten or never existed
  * (put_internal_api_app_session_request_id). The token crosses this endpoint and
- * is not written down anywhere on the way.
+ * is not written down anywhere on the way. It polls for a page this site served,
+ * a site on the product's domains, and answers 403 to anything else.
  */
 import type { APIRoute } from 'astro';
-import { badRequest, forwardFailed, launcherBase, siteFromBody } from './_launcher';
+import { badRequest, forbidden, forwardFailed, fromThisSite, launcherBase, siteFromBody } from './_launcher';
 
 export const prerender = false;
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, url }) => {
+  if (!fromThisSite(request, url)) return forbidden('This endpoint answers this site only.');
   let body: unknown;
   try {
     body = await request.json();

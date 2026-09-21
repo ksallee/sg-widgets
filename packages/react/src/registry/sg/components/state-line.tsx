@@ -1,5 +1,5 @@
 import type * as React from 'react';
-import type { WidgetState } from '@sg-widgets/core';
+import type { WidgetState } from 'sg-widgets-core';
 import type { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 export type StateLinePad = 'popover' | 'table' | 'none';
 
 const LINE = 'flex items-center justify-center gap-1.5 text-center text-sm';
-const TONE: Record<Exclude<WidgetState, 'loading'>, string> = {
+const TONE: Record<Exclude<WidgetState, 'loading' | 'rows'>, string> = {
   empty: 'text-muted-foreground',
   error: 'text-destructive',
 };
@@ -15,7 +15,7 @@ const PAD: Record<StateLinePad, string> = { popover: 'py-6', table: 'py-10', non
 
 export interface StateLineProps extends React.HTMLAttributes<HTMLDivElement> {
   /** Which state this is. An error is destructive, an empty state muted. */
-  state: Exclude<WidgetState, 'loading'>;
+  state: Exclude<WidgetState, 'loading' | 'rows'>;
   /** The line to show. */
   label: string;
   /** The glyph in front of it. */

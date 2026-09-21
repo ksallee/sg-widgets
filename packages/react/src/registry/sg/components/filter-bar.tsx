@@ -11,12 +11,13 @@ import type {
   SgContext,
   StatusRecord,
   WireGroup,
-} from '@sg-widgets/core';
+} from 'sg-widgets-core';
 import {
   conditionParts,
   conditionValues,
   describeCondition,
   emptyFilter,
+  errorText,
   facetLists,
   facetScopes,
   facetShape,
@@ -24,9 +25,9 @@ import {
   renderKindFor,
   setFacet,
   asFilterGroup,
-  matchesTokens,
+  matchesEveryWord,
   withoutPaths,
-} from '@sg-widgets/core';
+} from 'sg-widgets-core';
 import { PlusIcon, SearchX, TriangleAlert, XIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -64,8 +65,17 @@ const BADGE: Record<FilterBarSize, StatusBadgeSize> = { sm: 'xs', md: 'sm', lg: 
  * otherwise run the bar past the width it was given (`docs/design-rules.md` rule 2).
  */
 const VALUE_WIDTH = 'max-w-64';
+/** One row of whole badges: a status value wraps past the cap and the rows below are clipped. */
+const VALUE_ROW: Record<FilterBarSize, string> = { sm: 'max-h-5', md: 'max-h-6', lg: 'max-h-8' };
+/**
+ * A pill is the outline button: a bordered control on the height ladder that presses
+ * to open a list, so it wears the button's border, radius and shadow rather than a
+ * badge's flat surface.
+ */
+const PILL =
+  'border-border inline-flex max-w-full min-w-0 items-center overflow-hidden rounded-lg border text-sm shadow-xs';
 
-export interface FilterBarProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange'> {
+export interface FilterBarProps extends React.HTMLAttributes<HTMLDivElement> {
   /** The root element. */
   ref?: React.Ref<HTMLDivElement>;
 
@@ -92,7 +102,7 @@ export interface FilterBarProps extends Omit<React.HTMLAttributes<HTMLDivElement
   counts?: FacetCounts;
   /** Rows read for a tally. */
   sampleSize?: number;
-  onChange?: (value: FilterGroup) => void;
+  onValueChange?: (value: FilterGroup) => void;
   className?: string;
 }
 
@@ -123,7 +133,7 @@ export function FilterBar({
   counts,
   baseFilter = null,
   sampleSize = 200,
-  onChange,
+  onValueChange,
   className,
   ref,
   ...rest
@@ -150,7 +160,12 @@ export function FilterBar({
 
   useEffect(() => {
     const present = facets.map((name) => fields[name]).filter((f): f is FieldSchema => Boolean(f));
-    if (present.length === 0) return;
+    // Nothing to count is a finished count: a facet whose field the type does not carry
+    // has an empty list, not a running one.
+    if (present.length === 0) {
+      setCounting(false);
+      return;
+    }
     let live = true;
     setCounting(true);
     setFailure(null);
@@ -173,7 +188,7 @@ export function FilterBar({
         if (live) setTally(found);
       })
       .catch((error: unknown) => {
-        if (live) setFailure(error instanceof Error ? error.message : String(error));
+        if (live) setFailure(errorText(error));
       })
       .finally(() => {
         if (live) setCounting(false);
@@ -238,12 +253,16 @@ export function FilterBar({
     return (
       <span
         data-slot="filter-pill-values"
-        className={cn('flex min-w-0 items-center gap-1.5 truncate', VALUE_WIDTH)}
+        className={cn(
+          'flex min-w-0 items-center gap-1.5',
+          VALUE_WIDTH,
+          isStatus(name) && shown.values.length > 0 ? `flex-wrap content-start overflow-hidden ${VALUE_ROW[size]}` : 'truncate',
+        )}
         title={shown.title}
       >
         {isStatus(name) && shown.values.length > 0 ? (
           shown.values.map((scalar) => (
-            <span key={keyOf(scalar)} className="flex min-w-0 items-center truncate">
+            <span key={keyOf(scalar)} className="flex shrink-0 items-center">
               {valueBadge(name, keyOf(scalar))}
             </span>
           ))
@@ -280,14 +299,14 @@ export function FilterBar({
     const next = selected.some((v) => keyOf(v) === option.key)
       ? selected.filter((v) => keyOf(v) !== option.key)
       : [...selected, option.value];
-    onChange?.(setFacet(value, name, next, listOperator(name), fields[name]));
+    onValueChange?.(setFacet(value, name, next, listOperator(name), fields[name]));
   }
 
   const facetList = (name: string): ReactNode => {
     const selected = selectedOf(name);
     // The box matches what it was given rather than what a read answered, so the rows
     // drawn are the rows the list holds.
-    const shown = (tally[name]?.values ?? []).filter((option) => matchesTokens(facetQuery, option.label, option.key));
+    const shown = (tally[name]?.values ?? []).filter((option) => matchesEveryWord(`${option.label} ${option.key}`, facetQuery));
     const sampled = tally[name]?.sampled;
     return (
       <PopoverContent className="w-64 p-0" align="start">
@@ -348,7 +367,7 @@ export function FilterBar({
               size={CONTROL_BUTTON[size]}
               className="w-full"
               data-slot="filter-pill-clear"
-              onClick={() => onChange?.(setFacet(value, name, [], 'in', fields[name]))}
+              onClick={() => onValueChange?.(setFacet(value, name, [], 'in', fields[name]))}
             >
               Clear
             </Button>
@@ -379,7 +398,7 @@ export function FilterBar({
             data-slot="filter-pill-remove"
             aria-label={`Remove ${label} filter`}
             className={cn(REMOVE_CONTROL, 'disabled:pointer-events-none disabled:opacity-50')}
-            onClick={() => onChange?.(withoutPaths(value, [name]))}
+            onClick={() => onValueChange?.(withoutPaths(value, [name]))}
           >
             <XIcon aria-hidden="true" className={CHIP_CROSS[CROSS[size]]} />
           </button>
@@ -396,7 +415,7 @@ export function FilterBar({
                 role={found ? 'group' : undefined}
                 aria-label={found ? describeCondition(found.summary, field) : undefined}
                 className={cn(
-                  'border-border inline-flex max-w-full min-w-0 items-center overflow-hidden rounded-lg border text-sm',
+                  PILL,
                   CONTROL_HEIGHT[size],
                   found && parts && CROSS_PAD[size],
                   found ? 'bg-background' : 'text-muted-foreground max-w-72 border-dashed',
@@ -444,11 +463,7 @@ export function FilterBar({
             data-active="true"
             role="group"
             aria-label={describeCondition(found.summary, field)}
-            className={cn(
-              'border-border bg-background inline-flex max-w-full min-w-0 items-center overflow-hidden rounded-lg border text-sm',
-              CONTROL_HEIGHT[size],
-              CROSS_PAD[size],
-            )}
+            className={cn(PILL, 'bg-background', CONTROL_HEIGHT[size], CROSS_PAD[size])}
           >
             <span
               className={cn('inline-flex min-w-0 items-center gap-1.5', CONTROL_HEIGHT[size], CONTROL_PAD[size])}
@@ -471,7 +486,7 @@ export function FilterBar({
           disabled={disabled}
           className="text-muted-foreground"
           data-slot="filter-clear-all"
-          onClick={() => onChange?.(withoutPaths(value, facets))}
+          onClick={() => onValueChange?.(withoutPaths(value, facets))}
         >
           Clear all
         </Button>
@@ -485,7 +500,7 @@ export function FilterBar({
         size={size}
         label="More filters"
         value={value}
-        onChange={(next) => onChange?.(next)}
+        onValueChange={(next) => onValueChange?.(next)}
       />
     </div>
   );

@@ -1,5 +1,5 @@
 <script lang="ts" module>
-	import type { PickerSummary, StatusOption } from '@sg-widgets/core';
+	import type { PickerSummary, StatusOption } from 'sg-widgets-core';
 
 	export type ListMultiPickerSize = 'sm' | 'md' | 'lg';
 
@@ -13,14 +13,14 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import type { HTMLAttributes } from 'svelte/elements';
-	import type { FieldSchema } from '@sg-widgets/core';
+	import type { FieldSchema } from 'sg-widgets-core';
 	import {
 		clearableForField,
-		matchesTokens,
+		matchesEveryWord,
 		NO_ROWS_LABEL,
 		statusLabel,
 		usableStatuses
-	} from '@sg-widgets/core';
+	} from 'sg-widgets-core';
 	import { Combobox } from 'bits-ui';
 	import X from '@lucide/svelte/icons/x';
 	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
@@ -142,7 +142,7 @@
 	]);
 	// The vocabulary is one read, so a search box narrows it here.
 	const shown = $derived(
-		searchable ? rows.filter((option) => matchesTokens(search, option.label, option.code)) : rows
+		searchable ? rows.filter((option) => matchesEveryWord(`${option.label} ${option.code}`, search)) : rows
 	);
 	const interactive = $derived(!readonly && !disabled);
 

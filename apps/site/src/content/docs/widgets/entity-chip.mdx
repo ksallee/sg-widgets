@@ -4,6 +4,7 @@ description: A linked Flow Production Tracking row as a compact chip.
 ---
 
 import Demo from '../../../components/Demo.astro';
+import Install from '../../../components/Install.astro';
 import Props from '../../../components/Props.astro';
 
 Renders one linked row as a chip, an inline link or bare text, with a type glyph or thumbnail, its
@@ -13,10 +14,7 @@ name, an optional remove control and an optional hover card.
 
 Installing this pulls EntityCard with it, for the hover card.
 
-```sh
-pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/entity-chip.json
-pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/entity-chip.json
-```
+<Install item="entity-chip" />
 
 <Demo name="entity-chip" title="EntityChip: variants, links, hover card, sizes, thumbnails, removal" />
 
@@ -64,9 +62,9 @@ string (field_types/image).
 
 The web app addresses a row at `/detail/<Type>/<id>`. The API hands that path out for one type only,
 as `Project.landing_page_url`, site-relative and with the site url left to the caller
-(entity_types/Project). On the test site the same shape answers for every type: the route resolves
-before authentication decides, redirecting an anonymous visitor to the login page with itself as the
-return path. Site measurement, pending a corpus card.
+(entity_types/Project). Every other type takes the same shape by a convention the API does not
+document. On the test site it answers for every type: the route resolves before authentication
+decides, redirecting an anonymous visitor to the login page with itself as the return path.
 
 ## Reference
 

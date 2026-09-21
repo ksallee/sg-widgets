@@ -8,7 +8,7 @@
 		SearchFieldSpec,
 		SgContext,
 		WireGroup
-	} from '@sg-widgets/core';
+	} from 'sg-widgets-core';
 
 	export type EntityMultiPickerSize = 'sm' | 'md' | 'lg';
 
@@ -77,7 +77,6 @@
 </script>
 
 <script lang="ts">
-	import { tick } from 'svelte';
 	import type { HTMLAttributes } from 'svelte/elements';
 	import {
 		createEntitySearch,
@@ -87,7 +86,7 @@
 		placeholderName,
 		rowThumbnail,
 		withSelectedPinned
-	} from '@sg-widgets/core';
+	} from 'sg-widgets-core';
 	import { Combobox } from 'bits-ui';
 	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
 	import EntityChip from '$lib/registry/components/entity-chip.svelte';
@@ -272,10 +271,6 @@
 		const rows = keys.map(rowFor).filter((row): row is PickerRow => row !== null);
 		search.remember(rows);
 		emit(rows.map((row) => ({ type: row.type, id: row.id, name: row.name })));
-		// The primitive writes the ticked item's label into its own copy of the input
-		// value, and the popup stays open, so the clear has to be a change it sees.
-		query = rows.at(-1)?.name ?? '';
-		void tick().then(() => (query = ''));
 	}
 
 	function remove(ref: EntityRef): void {
@@ -371,7 +366,7 @@
 					data-slot="entity-picker-option"
 					data-entity-type={row.type}
 					data-entity-id={row.id}
-					data-selected-entity={chosen ? 'true' : undefined}
+					data-checked={chosen ? 'true' : undefined}
 					value={entityKey(row)}
 					label={row.name}
 					class={PICKER_ROW}

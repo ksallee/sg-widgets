@@ -409,7 +409,7 @@ export function createEntitySource(options: EntitySourceOptions): EntitySource {
 /* -------------------------------------------------------------------------- */
 
 /** The numbers a collection's footer draws, in either mode. */
-export interface PagingModel {
+export interface PageRange {
   mode: SourceMode;
   page: number;
   pageSize: number;
@@ -432,11 +432,12 @@ export interface PagingModel {
  * The footer's numbers for one state.
  *
  * A read answers no total of its own, so a range reads "of N" only once
- * `_summarize` has counted the set, and a next page exists either because that
- * count says so or because the page that came back was full (006_pagination,
- * 020_summarize).
+ * `_summarize` has counted the set. In `pages` mode a next page exists because
+ * that count says so, or because the page that came back was full; in
+ * `infinite` mode the source has already walked the set, so its own answer
+ * stands (006_pagination, 020_summarize).
  */
-export function describePaging(state: EntitySourceState): PagingModel {
+export function describePaging(state: EntitySourceState): PageRange {
   const { mode, page, pageSize, total, hasMore } = state;
   const loaded = state.rows.length;
   const from = loaded === 0 ? 0 : mode === 'pages' ? (page - 1) * pageSize + 1 : 1;
@@ -451,7 +452,8 @@ export function describePaging(state: EntitySourceState): PagingModel {
     total,
     pageCount,
     hasPrevious: mode === 'pages' && page > 1,
-    hasNext: pageCount === null ? hasMore : page < pageCount,
+    // An appending source walks the set itself, so only it knows whether a page is left.
+    hasNext: mode === 'infinite' ? hasMore : pageCount === null ? hasMore : page < pageCount,
     rangeLabel: total === null ? `${from} to ${to}` : `${from} to ${to} of ${total}`,
     loadedLabel: total === null ? `${loaded} loaded` : `${loaded} of ${total} loaded`,
   };

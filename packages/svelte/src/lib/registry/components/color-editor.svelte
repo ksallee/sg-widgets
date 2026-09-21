@@ -14,8 +14,8 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import type { HTMLAttributes } from 'svelte/elements';
-	import type { FieldSchema } from '@sg-widgets/core';
-	import { COLOR_SENTINEL, colorToHex, parseBgColor, parseColorInput, rgbToCss } from '@sg-widgets/core';
+	import type { FieldSchema } from 'sg-widgets-core';
+	import { COLOR_SENTINEL, colorToHex, parseBgColor, parseColorInput, rgbToCss } from 'sg-widgets-core';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
 	import { CONTROL_BOX } from '$lib/registry/components/control-classes.js';
@@ -106,7 +106,7 @@
 			title={disabled || readonly ? undefined : 'Pick a colour'}
 			style={rgb ? `background-color:${rgbToCss(rgb)}` : undefined}
 			class={cn(
-				'border-input focus-within:ring-ring focus-within:ring-offset-background relative shrink-0 overflow-hidden rounded-lg border transition-shadow duration-150 focus-within:ring-2 focus-within:ring-offset-2',
+				'border-input focus-within:ring-ring focus-within:ring-offset-background relative shrink-0 overflow-hidden rounded-lg border shadow-xs transition-shadow duration-150 focus-within:ring-2 focus-within:ring-offset-2',
 				SWATCH[size],
 				rgb ? undefined : 'bg-muted',
 				disabled || readonly ? 'cursor-default' : 'cursor-pointer'

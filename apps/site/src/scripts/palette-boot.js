@@ -1,8 +1,8 @@
 /*
- * The palette and the radius on `:root`, before the first paint.
+ * The palette, the radius and the framework on `:root`, before the first paint.
  *
  * Starlight's chrome reads the shadcn tokens through `--sl-*`, and the tokens follow
- * `data-sg-palette` and `data-sg-radius`. `demo-prefs.ts` writes both from then on;
+ * `data-sg-palette` and `data-sg-radius`. `demo-prefs.ts` writes all three from then on;
  * this copy runs inline in the head, beside Starlight's own theme script, so a reload
  * lands on the stored palette instead of flashing the default one.
  *
@@ -34,4 +34,49 @@
   const root = document.documentElement;
   root.dataset.sgPalette = read('palette', 'default');
   root.dataset.sgRadius = read('radius', 'default');
+  // The install tabs show the pane this names. `both` is the two-pane stage
+  // `PUBLIC_SG_DEMO_BOTH` gates and is never the value a page opens on, so it resolves
+  // here rather than painting a column width the build may not allow.
+  root.dataset.sgFramework = read('framework', 'react') === 'svelte' ? 'svelte' : 'react';
+
+  /*
+   * The theme saved on /themes, as the `custom` palette. The stored value carries the
+   * block themes.css would hold, written for that name, so the page wears it from the
+   * first paint the way it wears a shipped palette.
+   */
+  try {
+    const stored = localStorage.getItem('sg-theme:custom');
+    const saved = stored ? JSON.parse(stored) : null;
+    const css = saved ? saved.css : null;
+    if (typeof css === 'string') {
+      const tag = document.createElement('style');
+      tag.id = 'sg-custom-palette';
+      tag.textContent = css;
+      document.head.appendChild(tag);
+    }
+    /*
+     * The typefaces the theme names, from Google Fonts. The site self-hosts the families
+     * its own palettes name, so this request is only ever a pasted theme's. The three
+     * links carry the ids src/theme/live.ts holds them under, so the Themes page repoints
+     * them rather than adding a second set.
+     */
+    const fonts = saved ? saved.fonts : null;
+    if (typeof fonts === 'string') {
+      const link = (id, rel, href, anonymous) => {
+        if (document.getElementById(id)) return;
+        const tag = document.createElement('link');
+        tag.id = id;
+        tag.rel = rel;
+        tag.href = href;
+        if (anonymous) tag.crossOrigin = '';
+        document.head.appendChild(tag);
+      };
+      link('sg-fonts-preconnect', 'preconnect', 'https://fonts.googleapis.com', false);
+      link('sg-fonts-preconnect-files', 'preconnect', 'https://fonts.gstatic.com', true);
+      // One request per family, plain and weighted, the way src/theme/fonts.ts writes them.
+      fonts.split(/\s+/).filter(Boolean).forEach((href, index) => link(index === 0 ? 'sg-theme-fonts' : 'sg-theme-fonts-' + index, 'stylesheet', href, false));
+    }
+  } catch {
+    /* Blocked storage or a value this version cannot read: the page wears a shipped palette. */
+  }
 })();

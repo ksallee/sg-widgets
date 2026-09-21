@@ -5,13 +5,15 @@ import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
 import react from '@astrojs/react';
 import svelte from '@astrojs/svelte';
-import node from '@astrojs/node';
+import vercel from '@astrojs/vercel';
+import sitemap from '@astrojs/sitemap';
 import tailwindcss from '@tailwindcss/vite';
 
 const packages = new URL('../../packages/', import.meta.url);
 const reactSrc = fileURLToPath(new URL('react/src', packages));
 const svelteLib = fileURLToPath(new URL('svelte/src/lib', packages));
 const coreSrc = fileURLToPath(new URL('core/src/index.ts', packages));
+const coreMockSrc = fileURLToPath(new URL('core/src/mock.ts', packages));
 const baseUi = fileURLToPath(new URL('react/node_modules/@base-ui/react', packages));
 const bitsUi = fileURLToPath(new URL('svelte/node_modules/bits-ui', packages));
 const lucideReact = fileURLToPath(new URL('react/node_modules/lucide-react', packages));
@@ -24,13 +26,17 @@ const paletteBoot = readFileSync(new URL('./src/scripts/palette-boot.js', import
 
 export default defineConfig({
   // Set so the sitemap Starlight emits has absolute URLs (and to silence its warning).
-  site: 'https://sg-widgets.dev',
+  site: 'https://sg-widgets.vercel.app',
   // Every page is prerendered. The adapter is here for the three endpoints under
   // src/pages/live/, which opt out with `export const prerender = false`: the two
   // App Session Launcher calls the browser cannot make itself, and the dev-only
-  // token endpoint.
-  adapter: node({ mode: 'standalone' }),
+  // token endpoint. They become one Vercel function; the pages stay static files.
+  adapter: vercel(),
   integrations: [
+    // Starlight adds a sitemap of its own only when none is configured. This one
+    // leaves out the three /qa/ harness pages, which are routes but not pages of
+    // the site.
+    sitemap({ filter: (page) => !new URL(page).pathname.startsWith('/qa/') }),
     starlight({
       title: 'SG Widgets',
       description: 'shadcn-compatible widgets for Flow Production Tracking, for React and Svelte.',
@@ -79,7 +85,11 @@ export default defineConfig({
             { label: 'Overview', slug: 'widgets' },
             {
               label: 'Foundations',
-              items: ['thumbnail', 'user-avatar', 'text-editor', 'number-editor', 'checkbox-editor', 'date-editor', 'date-time-editor', 'url-editor', 'color-editor', 'picker-control', 'search-control', 'collection-control', 'value-editor', 'state-line'].map((n) => ({ slug: `widgets/${n}` })),
+              items: [
+                ...['thumbnail', 'user-avatar', 'text-editor', 'number-editor', 'checkbox-editor', 'date-editor', 'date-time-editor', 'url-editor', 'color-editor', 'picker-control', 'search-control', 'collection-control', 'value-editor', 'state-line'].map((n) => ({ slug: `widgets/${n}` })),
+                // A page of its own rather than a docs page, so the sidebar names the link.
+                { label: 'Themes', link: '/themes/' },
+              ],
             },
             {
               label: 'Display',
@@ -135,10 +145,13 @@ export default defineConfig({
       alias: [
         // Core is aliased to its TypeScript source rather than the `dist/index.mjs`
         // its package entry points name. Two reasons: `pnpm --filter site build` then
-        // needs no prior `pnpm --filter @sg-widgets/core build`, and `astro dev`
+        // needs no prior `pnpm --filter sg-widgets-core build`, and `astro dev`
         // hot-reloads an edit to packages/core straight into the open demo page,
         // which watching a build output does not.
-        { find: '@sg-widgets/core', replacement: coreSrc },
+        // The mock site is a second entry point, so it is aliased before the root one:
+        // these are prefix matches and `sg-widgets-core` would otherwise swallow it.
+        { find: 'sg-widgets-core/mock', replacement: coreMockSrc },
+        { find: 'sg-widgets-core', replacement: coreSrc },
         // A demo that builds a widget out of a registry part imports the same
         // primitive the part does. The site keeps no copy of either, so both point at
         // the workspace package's, which is also the copy the registry sources load:

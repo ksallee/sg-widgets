@@ -12,8 +12,8 @@ import type {
   SortSpec,
   SourceFilters,
   StatusRecord,
-} from '@sg-widgets/core';
-import { firstEnabledIndex, NO_ROWS_LABEL, nextEnabledIndex, stateLine } from '@sg-widgets/core';
+} from 'sg-widgets-core';
+import { firstEnabledIndex, NO_ROWS_LABEL, nextEnabledIndex, stateLine } from 'sg-widgets-core';
 import { CircleAlert, Inbox } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';

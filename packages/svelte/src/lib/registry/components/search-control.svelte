@@ -29,7 +29,7 @@
 		SEARCH_DEBOUNCE_MS,
 		searchView,
 		stateLine
-	} from '@sg-widgets/core';
+	} from 'sg-widgets-core';
 	import Search from '@lucide/svelte/icons/search';
 	import TriangleAlert from '@lucide/svelte/icons/triangle-alert';
 	import * as Command from '$lib/components/ui/command/index.js';
@@ -41,6 +41,7 @@
 		load: (request: SearchRequest) => Promise<SearchAnswer<T>>;
 		/** What the caret holds, two-way. */
 		query?: string;
+		onQueryChange?: (query: string) => void;
 		/** What the read depends on besides the query. A change reads again at once. */
 		request?: string;
 		/** Nothing is read while this is off. */
@@ -85,6 +86,7 @@
 	let {
 		load,
 		query = $bindable(''),
+		onQueryChange,
 		request = '',
 		enabled = true,
 		readsEmpty = false,
@@ -221,7 +223,14 @@
 		if (searchKeyIntent(event.key, { query }).kind !== 'clear') return;
 		event.preventDefault();
 		event.stopPropagation();
-		query = '';
+		setQuery('');
+	}
+
+	/** The caret's text, written back and announced, as `setOpen` is to `open`. */
+	function setQuery(next: string): void {
+		if (next === query) return;
+		query = next;
+		onQueryChange?.(next);
 	}
 
 	function setOpen(next: boolean): void {
@@ -285,7 +294,7 @@
 		bind:ref={inputEl}
 		value={query}
 		{placeholder}
-		oninput={(e) => (query = e.currentTarget.value)}
+		oninput={(e) => setQuery(e.currentTarget.value)}
 		onkeydown={onInputKeydown}
 	/>
 	{@render status()}

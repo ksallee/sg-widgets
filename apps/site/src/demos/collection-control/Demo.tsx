@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
-import type { EntityRef, EntityRow, PagingMode } from '@sg-widgets/core';
-import { cellValue, condition, createEntitySource, nextEnabledIndex, stateLine } from '@sg-widgets/core';
+import type { EntityRef, EntityRow, PagingMode } from 'sg-widgets-core';
+import { cellValue, condition, createEntitySource, nextEnabledIndex, stateLine } from 'sg-widgets-core';
 import { CircleAlert, Inbox } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -26,7 +26,7 @@ const PAGING: Array<{ value: PagingMode; label: string }> = [
 ];
 
 const toggle =
-  'inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-background px-2 text-sm ' +
+  'inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-background px-2 text-sm shadow-xs ' +
   'text-muted-foreground outline-none transition-colors duration-150 hover:bg-accent hover:text-accent-foreground ' +
   'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ' +
   'aria-pressed:bg-accent aria-pressed:text-accent-foreground aria-pressed:font-medium';

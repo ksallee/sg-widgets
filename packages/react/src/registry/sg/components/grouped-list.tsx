@@ -14,7 +14,7 @@ import type {
   SortSpec,
   SourceFilters,
   StatusRecord,
-} from '@sg-widgets/core';
+} from 'sg-widgets-core';
 import {
   asCollapseState,
   cellValue,
@@ -25,10 +25,12 @@ import {
   isCollapsed,
   nextEnabledIndex,
   NO_ROWS_LABEL,
+  pathOf,
+  resolveColumns,
   stateLine,
   toColumn,
   toggleCollapsed,
-} from '@sg-widgets/core';
+} from 'sg-widgets-core';
 import { ChevronRight, CircleAlert, Inbox } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -176,6 +178,63 @@ export interface GroupedListProps extends Omit<React.HTMLAttributes<HTMLDivEleme
 /** What a list given nothing to group on says. */
 const GROUPING_REQUIRED = 'GroupedList needs groupBy or groupKey.';
 
+/** The two columns a row draws its sub-label and its secondary by. */
+interface RowColumns {
+  sub: CollectionColumn | null;
+  secondary: CollectionColumn | null;
+}
+
+/** The type a spec declares of itself: a resolved column's own, and nothing for a bare path. */
+function declaredType(spec: FieldSpec | null): string {
+  return spec !== null && typeof spec !== 'string' ? spec.dataType : '';
+}
+
+function textColumns(sub: FieldSpec | null, right: FieldSpec | null): RowColumns {
+  return { sub: sub ? toColumn(sub) : null, secondary: right ? toColumn(right) : null };
+}
+
+/**
+ * A bare path resolves against the source's type through the context's cached schema,
+ * so the value draws by its data type and a status reads the name the site gives its
+ * code rather than the code. A column the caller resolved is taken as it is and costs
+ * no read, and a path no schema answers stays text, which is always readable.
+ */
+function useRowColumns(
+  type: string,
+  sub: FieldSpec | null,
+  right: FieldSpec | null,
+  context: SgContext | undefined,
+): RowColumns {
+  const [columns, setColumns] = useState<RowColumns>(() => textColumns(sub, right));
+  const subPath = pathOf(sub);
+  const secondaryPath = pathOf(right);
+  const subType = declaredType(sub);
+  const secondaryType = declaredType(right);
+  useEffect(() => {
+    const text = textColumns(sub, right);
+    setColumns(text);
+    const bare = [sub, right].filter((spec): spec is string => typeof spec === 'string');
+    if (!context || bare.length === 0) return;
+    let live = true;
+    void resolveColumns(context.schema, type, bare)
+      .then((found) => {
+        if (!live) return;
+        const next = { ...text };
+        for (const column of found) {
+          if (column.path === sub) next.sub = column;
+          if (column.path === right) next.secondary = column;
+        }
+        setColumns(next);
+      })
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [context, type, subPath, secondaryPath, subType, secondaryType]);
+  return columns;
+}
+
 /**
  * Rows under collapsible group headers.
  *
@@ -270,8 +329,9 @@ export function GroupedList({
   const view = control.view(rows.length);
   const loadingText = control.loadingText;
   const rowClass = ROW[density];
-  const subColumn = subLabelField ? toColumn(subLabelField) : null;
-  const secondaryColumn = secondaryField ? toColumn(secondaryField) : null;
+  const columns = useRowColumns(source.entityType, subLabelField, secondaryField, context);
+  const subColumn = columns.sub;
+  const secondaryColumn = columns.secondary;
 
   // A page whose first rows carry the value the last group carries grows that group
   // rather than opening a second one, and the key it is collapsed under stands.
@@ -411,7 +471,7 @@ export function GroupedList({
                     aria-expanded={!shut}
                     onClick={() => toggleGroup(group.key)}
                     className={cn(
-                      'bg-muted/50 focus-visible:ring-ring focus-visible:ring-offset-background border-border sticky top-0 z-10 flex w-full items-center gap-1.5 border-b px-2 py-1.5 text-left font-medium outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
+                      'bg-muted focus-visible:ring-ring focus-visible:ring-offset-background border-border sticky top-0 z-10 flex w-full items-center gap-1.5 border-b px-2 py-1.5 text-left font-medium outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
                       TEXT[size],
                     )}
                   >
@@ -522,11 +582,15 @@ export function GroupedList({
                                 ) : null}
                               </span>
                               {sub ? (
-                                <span className="text-muted-foreground w-full min-w-0 truncate text-xs" title={sub}>
+                                <span
+                                  data-slot="grouped-list-row-sub-label"
+                                  className="text-muted-foreground w-full min-w-0 truncate text-xs"
+                                  title={sub}
+                                >
                                   {sub}
                                 </span>
                               ) : subColumn ? (
-                                <span className="w-full min-w-0 truncate text-xs">
+                                <span data-slot="grouped-list-row-sub-label" className="w-full min-w-0 truncate text-xs">
                                   <FieldValue
                                     value={cellValue(row, subColumn.path)}
                                     dataType={subColumn.dataType}
@@ -554,9 +618,14 @@ export function GroupedList({
                               ))}
                             </button>
                             {right ? (
-                              <span className="text-muted-foreground flex shrink-0 justify-end text-xs">{right}</span>
+                              <span
+                                data-slot="grouped-list-row-secondary"
+                                className="text-muted-foreground flex shrink-0 justify-end text-xs"
+                              >
+                                {right}
+                              </span>
                             ) : secondaryColumn ? (
-                              <span className="flex shrink-0 justify-end text-xs">
+                              <span data-slot="grouped-list-row-secondary" className="flex shrink-0 justify-end text-xs">
                                 <FieldValue
                                   value={cellValue(row, secondaryColumn.path)}
                                   dataType={secondaryColumn.dataType}

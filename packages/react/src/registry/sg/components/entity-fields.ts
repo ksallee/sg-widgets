@@ -12,9 +12,14 @@ export function useEntityFields(context: SgContext, entityType: string): Record<
   const [fields, setFields] = useState<Record<string, FieldSchema>>({});
   useEffect(() => {
     let live = true;
-    void context.schema.fields(entityType).then((loaded) => {
-      if (live) setFields(loaded);
-    });
+    context.schema
+      .fields(entityType)
+      .then((loaded) => {
+        if (live) setFields(loaded);
+      })
+      .catch(() => {
+        // A type whose schema the site cannot answer still draws: a field reads as its path.
+      });
     return () => {
       live = false;
     };

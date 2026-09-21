@@ -111,9 +111,10 @@ Which entries appear is decided by the field's `data_type`.
 ## API behaviour
 
 The operator vocabulary is per data type, and a wrong operator is a 400 naming the legal set
-(017_filter_operators). Six data types take no filter at all — `url`, `serializable`, `calculated`,
-`summary`, `password` and `pivot_column` — and are left out of the field list; `pivot_column`
-advertises `is` and `is_not` and then rejects both.
+(017_filter_operators). Five data types take no filter operator at all — `url`, `calculated`,
+`password`, `serializable` and `summary` — and answer `data type cannot be used in a filter` with no
+legal set to name. A `pivot_column` advertises `is` and `is_not` and rejects both
+(field_types/pivot_column). All six are left out of the field list.
 
 Groups serialise to `{logical_operator, conditions}` with both keys required, `and` and `or` in
 lowercase and nothing else, and no negation operator; nesting is safe to 265 levels
@@ -155,9 +156,9 @@ descended into; a path through a `multi_entity` field reads back nothing, 200 wi
 The row and group anatomy follows ReUI's Filters 2.5.2: the field, operator and value cells on one
 band and the row's trailing control on a second, so the trailing controls of every row share an axis
 whatever the depth. The chip wording follows bazza/ui's data-table-filter 2025.04.12. The named
-buckets around today come from Dice UI's data table config, its `isRelativeToToday` date operator
-(`docs/config/data-table.ts`, commit `6e0ab98`), mapped onto the calendar operators this API
-documents. None of the three is installed.
+buckets around today come from Dice UI's data table, its shadcn registry item, for the
+`isRelativeToToday` date operator, mapped onto the calendar operators this API documents. None of
+the three is installed.
 
 ## EntityFields
 

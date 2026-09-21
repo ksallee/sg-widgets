@@ -62,6 +62,19 @@ there is nothing between the two states for a parse to refuse.
 
 <Props name="value-editor" />
 
+## Events
+
+None. The session emits; the box draws.
+
+## Slots
+
+`children` is the control the box is drawn around. `errorMessage` draws the line under it
+in place of the default one.
+
+## Keyboard
+
+<Props name="value-editor" kind="keyboard" />
+
 ## The session
 
 `useValueSession` in React and `createValueSession` in Svelte. Svelte takes a getter for every

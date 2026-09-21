@@ -16,17 +16,21 @@
     ".": {
       "types": "./dist/index.d.mts",
       "import": "./dist/index.mjs"
+    },
+    "./mock": {
+      "types": "./dist/mock.d.mts",
+      "import": "./dist/mock.mjs"
     }
   },
   "files": [
     "dist"
   ],
   "scripts": {
-    "build": "tsdown src/index.ts --format esm --dts",
+    "build": "tsdown src/index.ts src/mock.ts --format esm --dts",
     "test": "vitest run",
     "test:watch": "vitest",
     "check": "tsc --noEmit",
-    "prepare": "tsdown src/index.ts --format esm --dts"
+    "prepare": "tsdown src/index.ts src/mock.ts --format esm --dts"
   },
   "license": "MIT",
   "devDependencies": {

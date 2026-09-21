@@ -12,6 +12,7 @@ const packages = new URL('../../packages/', import.meta.url);
 const reactSrc = fileURLToPath(new URL('react/src', packages));
 const svelteLib = fileURLToPath(new URL('svelte/src/lib', packages));
 const coreSrc = fileURLToPath(new URL('core/src/index.ts', packages));
+const coreMockSrc = fileURLToPath(new URL('core/src/mock.ts', packages));
 const baseUi = fileURLToPath(new URL('react/node_modules/@base-ui/react', packages));
 const bitsUi = fileURLToPath(new URL('svelte/node_modules/bits-ui', packages));
 const lucideReact = fileURLToPath(new URL('react/node_modules/lucide-react', packages));
@@ -142,6 +143,9 @@ export default defineConfig({
         // needs no prior `pnpm --filter @sg-widgets/core build`, and `astro dev`
         // hot-reloads an edit to packages/core straight into the open demo page,
         // which watching a build output does not.
+        // The mock site is a second entry point, so it is aliased before the root one:
+        // these are prefix matches and `@sg-widgets/core` would otherwise swallow it.
+        { find: '@sg-widgets/core/mock', replacement: coreMockSrc },
         { find: '@sg-widgets/core', replacement: coreSrc },
         // A demo that builds a widget out of a registry part imports the same
         // primitive the part does. The site keeps no copy of either, so both point at

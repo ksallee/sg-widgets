@@ -49,9 +49,7 @@
         "https://sg-widgets.vercel.app/r/react/date-editor.json",
         "https://sg-widgets.vercel.app/r/react/date-time-editor.json",
         "https://sg-widgets.vercel.app/r/react/list-picker.json",
-        "https://sg-widgets.vercel.app/r/react/list-select.json",
         "https://sg-widgets.vercel.app/r/react/list-multi-picker.json",
-        "https://sg-widgets.vercel.app/r/react/list-multi-select.json",
         "https://sg-widgets.vercel.app/r/react/url-editor.json",
         "https://sg-widgets.vercel.app/r/react/color-editor.json",
         "https://sg-widgets.vercel.app/r/react/field-editor.json",
@@ -922,27 +920,6 @@
       ]
     },
     {
-      "name": "list-select",
-      "type": "registry:component",
-      "title": "List Select",
-      "description": "Deprecated: the former name of list-picker, which it re-exports.",
-      "categories": [
-        "flow-production-tracking",
-        "deprecated"
-      ],
-      "dependencies": [],
-      "registryDependencies": [
-        "https://sg-widgets.vercel.app/r/react/list-picker.json"
-      ],
-      "docs": "Deprecated. Install list-picker instead.",
-      "files": [
-        {
-          "path": "src/registry/sg/components/list-select.tsx",
-          "type": "registry:component"
-        }
-      ]
-    },
-    {
       "name": "list-multi-picker",
       "type": "registry:component",
       "title": "List Multi Picker",
@@ -968,27 +945,6 @@
       "files": [
         {
           "path": "src/registry/sg/components/list-multi-picker.tsx",
-          "type": "registry:component"
-        }
-      ]
-    },
-    {
-      "name": "list-multi-select",
-      "type": "registry:component",
-      "title": "List Multi Select",
-      "description": "Deprecated: the former name of list-multi-picker, which it re-exports.",
-      "categories": [
-        "flow-production-tracking",
-        "deprecated"
-      ],
-      "dependencies": [],
-      "registryDependencies": [
-        "https://sg-widgets.vercel.app/r/react/list-multi-picker.json"
-      ],
-      "docs": "Deprecated. Install list-multi-picker instead.",
-      "files": [
-        {
-          "path": "src/registry/sg/components/list-multi-select.tsx",
           "type": "registry:component"
         }
       ]

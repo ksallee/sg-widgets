@@ -8,4 +8,8 @@ describe('the root entry', () => {
     expect(Object.keys(mock)).toContain('MockClient');
     for (const name of ['MockClient', 'MOCK_NOW']) expect(Object.keys(core)).not.toContain(name);
   });
+
+  it('keeps the url spelling of an entity type to itself', () => {
+    expect(Object.keys(core)).not.toContain('pluralPath');
+  });
 });

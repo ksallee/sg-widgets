@@ -7,14 +7,17 @@
  * two calls are the only ones that need a server. This endpoint appends the one fixed
  * launcher path to the site the caller names, forwards `appName` and
  * `machineId`, and answers `{id, url}` (post_internal_api_app_session_request).
- * It takes no credential, keeps nothing, and reads nothing of this site's.
+ * It takes no credential, keeps nothing, and reads nothing of this site's. It
+ * forwards for a page this site served, to a site on the product's domains, and
+ * answers 403 to anything else.
  */
 import type { APIRoute } from 'astro';
-import { badRequest, forwardFailed, launcherBase, siteFromBody } from './_launcher';
+import { badRequest, forbidden, forwardFailed, fromThisSite, launcherBase, siteFromBody } from './_launcher';
 
 export const prerender = false;
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, url }) => {
+  if (!fromThisSite(request, url)) return forbidden('This endpoint answers this site only.');
   let body: unknown;
   try {
     body = await request.json();

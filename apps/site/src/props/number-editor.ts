@@ -8,7 +8,7 @@ export default {
     { name: 'dataType', type: '`\'number\' | \'float\' | \'percent\' | \'duration\' | \'timecode\' | \'currency\'`', default: '`\'number\'`', meaning: 'Picks the parse, the format, the affix and the step.' },
     { name: 'field', type: '`FieldSchema | null`', default: '`null`', meaning: 'Supplies the accessible label and the required flag.' },
     { name: 'precision', type: '`number`', default: '`6`', meaning: 'Decimals kept on a float or a currency.' },
-    { name: 'hoursPerDay', type: '`number`', default: '`8`', meaning: 'The site\'s working day, for the day unit on a duration.' },
+    { name: 'hoursPerDay', type: '`number`', default: '—', meaning: 'The site\'s working day. Without it the day unit on a duration is refused.' },
     { name: 'frameRate', type: '`number`', default: '—', meaning: 'Frames per second, for the frame form of a timecode and its one-frame step.' },
     { name: 'symbol', type: '`string`', default: '`\'$\'`', meaning: 'Shown before the value on a currency field.' },
     { name: 'inline', type: '`boolean`', default: '`false`', meaning: 'Compact for one row: a fixed width for the data type, the steppers inside the input, no hint.' },

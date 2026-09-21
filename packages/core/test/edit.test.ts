@@ -148,6 +148,12 @@ describe('parseDurationInput', () => {
     expect(ok(parseDurationInput('1d 2h', { hoursPerDay: 8 }))).toBe(600);
   });
 
+  it('refuses a day when nothing names the working day', () => {
+    // formatDuration renders hours and minutes without hours_per_day; the parse invents nothing either.
+    expect(err(parseDurationInput('1d'))).toContain('working day');
+    expect(err(parseDurationInput('1d 2h'))).toContain('working day');
+  });
+
   it('rounds to a whole minute', () => {
     // A Float truncates toward zero at 200, so the client rounds first (field_types/duration).
     expect(ok(parseDurationInput('90.6'))).toBe(91);

@@ -110,7 +110,7 @@ export function toApiFloat(value: number | null): string | null {
 }
 
 export interface DurationParseOptions {
-  /** The site's `hours_per_day` from `GET /preferences`, for the `d` unit. Default 8. */
+  /** The site's `hours_per_day` from `GET /preferences`. Without it the `d` unit is refused. */
   hoursPerDay?: number;
 }
 
@@ -120,15 +120,16 @@ const DURATION_PART = /([+-]?\d+(?:\.\d+)?)\s*(days?|d|hours?|hrs?|h|minutes?|mi
  * A duration, in whole minutes.
  *
  * The stored integer is minutes and no schema names the unit, so the accepted
- * spellings are the client's own: a bare number is minutes, `1h 30m`, `1.5h` and
- * `2d` scale by the site's working day, and `1:30` is hours and minutes. The API
- * itself takes only something that parses as a number, so `"1h 30m"` never leaves
- * this function (field_types/duration).
+ * spellings are the client's own: a bare number is minutes, `1h 30m` and `1.5h`
+ * are hours, and `1:30` is hours and minutes. `2d` needs `hours_per_day`, which
+ * only the site's preferences hold, and is refused without it. The API itself
+ * takes only something that parses as a number, so `"1h 30m"` never leaves this
+ * function (field_types/duration).
  */
 export function parseDurationInput(raw: string, options: DurationParseOptions = {}): ParseResult<number | null> {
   const text = raw.trim();
   if (text.length === 0) return { value: null };
-  const hoursPerDay = options.hoursPerDay ?? 8;
+  const hoursPerDay = options.hoursPerDay;
 
   const clock = /^([+-]?)(\d+):([0-5]?\d)$/.exec(text);
   if (clock) {
@@ -146,12 +147,18 @@ export function parseDurationInput(raw: string, options: DurationParseOptions = 
   for (let m = DURATION_PART.exec(compact); m !== null; m = DURATION_PART.exec(compact)) {
     const amount = Number(m[1]);
     const unit = (m[2] ?? '').toLowerCase()[0];
-    minutes += amount * (unit === 'd' ? 60 * hoursPerDay : unit === 'h' ? 60 : 1);
+    if (unit === 'd') {
+      if (hoursPerDay === undefined || !(hoursPerDay > 0)) return { error: "Days need the site's working day." };
+      minutes += amount * 60 * hoursPerDay;
+    } else {
+      minutes += amount * (unit === 'h' ? 60 : 1);
+    }
     consumed += m[0].length;
   }
   // Every character has to belong to a part, so `1h banana` is refused rather than read as 1h.
   if (consumed === 0 || consumed !== compact.length) {
-    return { error: 'Not a duration. Try 90, 1h 30m, 1.5h or 2d.' };
+    const hint = hoursPerDay === undefined ? '90, 1h 30m or 1.5h' : '90, 1h 30m, 1.5h or 2d';
+    return { error: `Not a duration. Try ${hint}.` };
   }
   return bounded(Math.round(minutes));
 }

@@ -3,6 +3,7 @@ import type { FieldHop, FieldOption, FieldSchema, SgContext } from '@sg-widgets/
 import {
   currentType,
   deriveFieldOptions,
+  errorText,
   friendlyFieldPath,
   iconNameFor,
   moveFieldPath,
@@ -243,7 +244,7 @@ export function ColumnPicker({
         if (live) setLoaded({ type, fields });
       })
       .catch((error: unknown) => {
-        if (live) setFailure(error instanceof Error ? error.message : String(error));
+        if (live) setFailure(errorText(error));
       });
     return () => {
       live = false;

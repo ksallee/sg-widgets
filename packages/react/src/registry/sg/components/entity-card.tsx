@@ -16,6 +16,7 @@ import {
   describeEntityCard,
   entityCardSlot,
   entityDetailUrl,
+  errorText,
   fieldText,
   imageState,
   isEmptyValue,
@@ -208,7 +209,7 @@ export function EntityCard({
         if (current) setLoaded({ card, statuses: statuses ?? Object.fromEntries(table ?? []) });
       })
       .catch((e: unknown) => {
-        if (current) setError(e instanceof Error ? e.message : String(e));
+        if (current) setError(errorText(e));
       });
     return () => {
       current = false;

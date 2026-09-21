@@ -3,6 +3,7 @@ import type { FieldHop, FieldOption, FieldPathOption, FieldSchema, SgContext } f
 import {
   currentType,
   deriveFieldOptions,
+  errorText,
   friendlyFieldPath,
   iconNameFor,
   NO_MATCH_LABEL,
@@ -247,7 +248,7 @@ export function FieldPicker({
         if (live) setLoaded({ type, fields });
       })
       .catch((error: unknown) => {
-        if (live) setFailure(error instanceof Error ? error.message : String(error));
+        if (live) setFailure(errorText(error));
       });
     return () => {
       live = false;

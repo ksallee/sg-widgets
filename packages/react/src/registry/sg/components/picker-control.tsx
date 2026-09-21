@@ -649,11 +649,16 @@ export function PickerControl({
   );
 
   const offered = hasMore ? [...items, LOAD_MORE] : items;
-  const typing = (next: string, reason: string): void => {
-    if (reason === 'item-press') return;
+  const typing = (next: string, details: { reason: string; isItemPress?: boolean; cancel: () => void }): void => {
+    // Ticking a row clears the primitive's own box. Several rows are picked from one
+    // query, so the clear is refused and the query stands: a tick is not a search.
+    if (details.isItemPress) {
+      details.cancel();
+      return;
+    }
     onQueryChange(next);
     // Typing asks for the list: a press may have closed it a moment ago.
-    if (reason === 'input-change' && interactive && !open) setOpen(true);
+    if (details.reason === 'input-change' && interactive && !open) setOpen(true);
   };
 
   return multiple ? (
@@ -670,7 +675,7 @@ export function PickerControl({
       onValueChange={(next) => choose(next)}
       itemToStringLabel={itemToStringLabel}
       inputValue={query}
-      onInputValueChange={(next, details) => typing(next, details.reason)}
+      onInputValueChange={(next, details) => typing(next, details)}
       open={open}
       onOpenChange={(next, details) => closing(next, details)}
     >
@@ -691,7 +696,7 @@ export function PickerControl({
       onValueChange={(next) => choose(next === null || next === undefined ? [] : [next])}
       itemToStringLabel={itemToStringLabel}
       inputValue={query}
-      onInputValueChange={(next, details) => typing(next, details.reason)}
+      onInputValueChange={(next, details) => typing(next, details)}
       open={open}
       onOpenChange={(next, details) => closing(next, details)}
     >

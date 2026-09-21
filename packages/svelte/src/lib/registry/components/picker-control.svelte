@@ -86,7 +86,7 @@
 </script>
 
 <script lang="ts">
-	import type { Snippet } from 'svelte';
+	import { tick, type Snippet } from 'svelte';
 	import {
 		focusChip,
 		listStatus,
@@ -411,11 +411,25 @@
 			return;
 		}
 		onSelect(next);
+		restoreSearchBox();
 		// A press on a row leaves the caret in the list; the next key belongs to the
 		// control, so the input takes it back and the chip row is released. A pick made
 		// with a chip armed would otherwise keep that chip, and the next Backspace would
 		// take it rather than the one just added.
 		toInput();
+	}
+
+	/**
+	 * The primitive writes the chosen item's label into the search box. The box holds the
+	 * query and nothing else, so the write is put back as a write the primitive reads:
+	 * an unchanged query is not a new search.
+	 */
+	function restoreSearchBox(): void {
+		void tick().then(() => {
+			if (!inputEl || inputEl.value === query) return;
+			inputEl.value = query;
+			inputEl.dispatchEvent(new Event('input', { bubbles: true }));
+		});
 	}
 
 	function clear(): void {

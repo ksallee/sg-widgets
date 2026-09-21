@@ -5,7 +5,7 @@
 <script lang="ts">
 	import type { HTMLAttributes } from 'svelte/elements';
 	import type { FieldSchema, SgContext, StatusOption, StatusRecord } from '@sg-widgets/core';
-	import { NO_ROWS_LABEL } from '@sg-widgets/core';
+	import { errorText, NO_ROWS_LABEL } from '@sg-widgets/core';
 	import { LEAF_GLYPH } from '$lib/registry/components/leaf-classes.js';
 	import ListPicker from '$lib/registry/components/list-picker.svelte';
 	import { PICKER_CHIP as BADGE } from '$lib/registry/components/picker-classes.js';
@@ -127,7 +127,7 @@
 				state.loading = false;
 			},
 			(error: unknown) => {
-				state.error = error instanceof Error ? error.message : String(error);
+				state.error = errorText(error);
 				state.loading = false;
 			}
 		);

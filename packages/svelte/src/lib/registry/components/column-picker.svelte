@@ -26,6 +26,7 @@
 	import {
 		currentType,
 		deriveFieldOptions,
+		errorText,
 		friendlyFieldPath,
 		iconNameFor,
 		moveFieldPath,
@@ -214,7 +215,7 @@
 				if (live) loaded = { type: wanted, fields };
 			})
 			.catch((error: unknown) => {
-				if (live) failure = error instanceof Error ? error.message : String(error);
+				if (live) failure = errorText(error);
 			});
 		return () => {
 			live = false;

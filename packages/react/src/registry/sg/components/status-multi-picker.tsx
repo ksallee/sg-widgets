@@ -8,7 +8,7 @@ import type {
   StatusOption,
   StatusRecord,
 } from '@sg-widgets/core';
-import { clearableForField, matchesEveryWord, NO_MATCH_LABEL } from '@sg-widgets/core';
+import { clearableForField, errorText, matchesEveryWord, NO_MATCH_LABEL } from '@sg-widgets/core';
 import { Combobox as ComboboxPrimitive } from '@base-ui/react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
@@ -87,7 +87,7 @@ interface Loaded {
 const LOADING: Loaded = { loading: true, error: null, options: [], field: null, statuses: new Map() };
 
 /**
- * One load, as a store. The read starts in a memo over the props and goes through the
+ * One load, as a store. The read starts with the first subscriber and goes through the
  * context's cache, so it is never an effect re-firing on a "last seen" key.
  */
 function statusOptionStore(
@@ -102,41 +102,49 @@ function statusOptionStore(
   const statuses = context.statuses;
   const ids = projectKey === '' ? [] : projectKey.split(',').map(Number);
   const [first] = ids;
-  const options =
-    first === undefined
-      ? schema.statusOptions(entityType, undefined, field)
-      : ids.length === 1
-        ? schema.statusOptions(entityType, first, field)
-        : schema.statusOptionsForProjects(entityType, ids, field);
-  // The field itself, for its display name and its `mandatory` flag.
-  const named = field === undefined ? schema.statusField(entityType) : schema.field(entityType, field);
-
   const listeners = new Set<() => void>();
   let snapshot = LOADING;
+  let started = false;
   const settle = (next: Loaded) => {
     snapshot = next;
     for (const listener of listeners) listener();
   };
-  void Promise.all([options, named, statuses.byCode()]).then(
-    ([resolved, found, table]) =>
-      settle({
-        loading: false,
-        error: null,
-        options: resolved,
-        field: typeof found === 'string' || found === undefined ? null : found,
-        statuses: table,
-      }),
-    (error: unknown) =>
-      settle({
-        loading: false,
-        error: error instanceof Error ? error.message : String(error),
-        options: [],
-        field: null,
-        statuses: new Map(),
-      }),
-  );
+
+  /** The read, on the first subscriber, so a render that is thrown away asks the site for nothing. */
+  function start(): void {
+    if (started) return;
+    started = true;
+    const options =
+      first === undefined
+        ? schema.statusOptions(entityType, undefined, field)
+        : ids.length === 1
+          ? schema.statusOptions(entityType, first, field)
+          : schema.statusOptionsForProjects(entityType, ids, field);
+    // The field itself, for its display name and its `mandatory` flag.
+    const named = field === undefined ? schema.statusField(entityType) : schema.field(entityType, field);
+    void Promise.all([options, named, statuses.byCode()]).then(
+      ([resolved, found, table]) =>
+        settle({
+          loading: false,
+          error: null,
+          options: resolved,
+          field: typeof found === 'string' || found === undefined ? null : found,
+          statuses: table,
+        }),
+      (error: unknown) =>
+        settle({
+          loading: false,
+          error: errorText(error),
+          options: [],
+          field: null,
+          statuses: new Map(),
+        }),
+    );
+  }
+
   return {
     subscribe(listener: () => void): () => void {
+      start();
       listeners.add(listener);
       return () => {
         listeners.delete(listener);

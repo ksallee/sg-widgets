@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { EntityTypeInfo, SgContext } from '@sg-widgets/core';
-import { entityTypeOptions, NO_MATCH_LABEL } from '@sg-widgets/core';
+import { entityTypeOptions, errorText, NO_MATCH_LABEL } from '@sg-widgets/core';
 import { Combobox as ComboboxPrimitive } from '@base-ui/react';
 import { cn } from '@/lib/utils';
 import {
@@ -103,7 +103,7 @@ export function EntityTypePicker({
         if (live) setLoaded(types);
       })
       .catch((error: unknown) => {
-        if (live) setFailure(error instanceof Error ? error.message : String(error));
+        if (live) setFailure(errorText(error));
       });
     return () => {
       live = false;

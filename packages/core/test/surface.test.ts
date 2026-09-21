@@ -1,5 +1,6 @@
 /** What the package's entry points hand out, which a publish then freezes. */
 import { describe, expect, it } from 'vitest';
+import manifest from '../package.json';
 import * as core from '../src/index.js';
 import * as mock from '../src/mock.js';
 import { collectionView } from '../src/paging.js';
@@ -46,5 +47,26 @@ describe('what a widget is showing', () => {
       1,
     );
     expect([empty, rows]).toEqual(['empty', 'rows']);
+  });
+});
+
+describe('what npm publishes', () => {
+  it('carries the metadata an npm page shows', () => {
+    expect(manifest.license).toBe('MIT');
+    expect(manifest.homepage).toBe('https://sg-widgets.vercel.app');
+    expect(manifest.repository).toEqual({
+      type: 'git',
+      url: 'git+https://github.com/ksallee/sg-widgets.git',
+      directory: 'packages/core',
+    });
+    expect(manifest.bugs).toEqual({ url: 'https://github.com/ksallee/sg-widgets/issues' });
+    expect(manifest.keywords).toContain('shotgrid');
+    expect(manifest.engines).toEqual({ node: '>=22' });
+  });
+
+  it('ships the readme and the licence, and publishes under a public scope', () => {
+    expect(manifest.files).toEqual(expect.arrayContaining(['dist', 'README.md', 'LICENSE']));
+    expect(manifest.publishConfig).toEqual({ access: 'public' });
+    expect(manifest.exports['./package.json']).toBe('./package.json');
   });
 });

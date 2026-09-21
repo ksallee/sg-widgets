@@ -54,33 +54,16 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-import { PICKER_ICON_BUTTON } from '@/registry/sg/components/picker-classes';
+import {
+  PICKER_CONTROL,
+  PICKER_GLYPH,
+  PICKER_ICON_BUTTON,
+  PICKER_TEXT_BOX,
+  PICKER_TRAILING,
+} from '@/registry/sg/components/picker-classes';
 import { StateLine } from '@/registry/sg/components/state-line';
 
 export type FieldPickerSize = 'sm' | 'md' | 'lg';
-
-/**
- * Controls follow the input ladder of `docs/design-rules.md`. `data-empty` takes the
- * leading inset down one step, so an empty control is tighter than a filled one. The
- * height is fixed, so there is no vertical inset to take.
- */
-const BOX: Record<FieldPickerSize, string> = {
-  sm: 'h-7 px-2 data-empty:pl-1.5',
-  md: 'h-8 px-3 data-empty:pl-2',
-  lg: 'h-9 px-3 data-empty:pl-2',
-};
-const GLYPH: Record<FieldPickerSize, string> = {
-  sm: 'size-4',
-  md: 'size-4',
-  lg: 'size-5',
-};
-
-/** The trailing controls ride the first row, so they stay with it when the value wraps. */
-const TRAILING: Record<FieldPickerSize, string> = {
-  sm: 'h-7',
-  md: 'h-8',
-  lg: 'h-9'
-};
 
 const ICONS: Record<string, typeof Type> = {
   braces: Braces,
@@ -458,8 +441,10 @@ export function FieldPicker({
           disabled={disabled}
           title={label ?? placeholder}
           className={cn(
-            'border-input bg-background hover:bg-muted/30 focus-visible:ring-ring focus-visible:ring-offset-background aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 flex w-full min-w-0 items-center rounded-lg border text-sm shadow-xs outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 aria-invalid:ring-2',
-            BOX[size],
+            PICKER_CONTROL,
+            // The trigger is the focusable element itself, not a box round an input.
+            'focus-visible:ring-ring focus-visible:ring-offset-background aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 aria-invalid:ring-2',
+            PICKER_TEXT_BOX[size],
             readonly ? 'pr-3' : showClear ? 'pr-14' : 'pr-8',
           )}
         >
@@ -491,7 +476,7 @@ export function FieldPicker({
                 aria-label="Go back one level"
                 title="Back (Left arrow)"
                 onClick={back}
-                className="hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring focus-visible:ring-offset-background shrink-0 rounded-sm p-0.5 opacity-70 outline-none transition-colors duration-150 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-2 motion-safe:active:scale-[0.98]"
+                className={PICKER_ICON_BUTTON}
               >
                 <ChevronLeft aria-hidden="true" className="size-4" />
               </button>
@@ -519,7 +504,7 @@ export function FieldPicker({
                 aria-label="Back to the root type"
                 title="Reset"
                 onClick={reset}
-                className="hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring focus-visible:ring-offset-background shrink-0 rounded-sm p-0.5 opacity-70 outline-none transition-colors duration-150 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-2 motion-safe:active:scale-[0.98]"
+                className={PICKER_ICON_BUTTON}
               >
                 <RotateCcw aria-hidden="true" className="size-4" />
               </button>
@@ -618,7 +603,7 @@ export function FieldPicker({
                               event.stopPropagation();
                               if (row.field) descendInto(row.field);
                             }}
-                            className="hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring focus-visible:ring-offset-background shrink-0 rounded-sm p-0.5 opacity-70 outline-none transition-colors duration-150 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-2 motion-safe:active:scale-[0.98]"
+                            className={PICKER_ICON_BUTTON}
                           >
                             <ChevronRight aria-hidden="true" className="size-4" />
                           </button>
@@ -634,7 +619,7 @@ export function FieldPicker({
       </Popover>
 
       {!readonly ? (
-        <div className={cn('pointer-events-none absolute top-0 right-2 flex items-center gap-1', TRAILING[size])}>
+        <div className={cn('pointer-events-none absolute top-0 right-2 flex items-center gap-1', PICKER_TRAILING[size])}>
           {showClear ? (
             <button
               type="button"
@@ -643,10 +628,10 @@ export function FieldPicker({
               onClick={() => onValueChange?.('')}
               className={PICKER_ICON_BUTTON}
             >
-              <X aria-hidden="true" className={GLYPH[size]} />
+              <X aria-hidden="true" className={PICKER_GLYPH[size]} />
             </button>
           ) : null}
-          <ChevronDown aria-hidden="true" className={cn('shrink-0 opacity-50', GLYPH[size])} />
+          <ChevronDown aria-hidden="true" className={cn('shrink-0 opacity-50', PICKER_GLYPH[size])} />
         </div>
       ) : null}
     </div>

@@ -2,7 +2,8 @@
 //
 //   pnpm qa --start --path /widgets/field-picker/ --framework both --drive tools/drives/registry-rule-slips.js
 //
-// The field picker's search box takes focus on open with the page where it was.
+// The field picker's search box takes focus on open with the page where it was, and its
+// back, reset and descend controls carry the coarse-pointer box of `PICKER_ICON_BUTTON`.
 const notes = [];
 const pane = (name) => document.querySelector(`[data-pane="${name}"]`);
 /** The panes this run draws. Both islands stay mounted, so only a visible one is read. */
@@ -17,6 +18,8 @@ const until = async (test, tries = 60) => {
   }
   return Boolean(test());
 };
+/** The 44px box a coarse pointer gets, as `PICKER_ICON_BUTTON` spells it. */
+const COARSE = 'pointer-coarse:before:size-11';
 const popup = (selector) => document.querySelector(`[data-picker="field"] ${selector}`);
 const name = (el) => (el ? `${el.tagName.toLowerCase()}${el.dataset.slot ? `[${el.dataset.slot}]` : ''}` : 'nothing');
 let readings = 0;
@@ -46,6 +49,26 @@ for (const framework of drawn) {
       return fail(`${framework}: opening the picker moved the page ${Math.round(window.scrollY - before)}px`);
     }
     notes.push(`${framework}: the search box takes focus on open, page still at ${Math.round(before)}`);
+
+    // The descend control is on a traversable row; pressing it draws the breadcrumb,
+    // which is where back and reset are.
+    const descend = popup('[data-slot="field-picker-descend"]');
+    if (!descend) return fail(`${framework}: the field list offers no traversable row`);
+    if (!descend.getAttribute('class').includes(COARSE)) {
+      return fail(`${framework}: the descend control misses the coarse-pointer box`);
+    }
+    descend.click();
+    if (!(await until(() => popup('[data-slot="field-picker-back"]')))) {
+      return fail(`${framework}: descending drew no breadcrumb`);
+    }
+    for (const slot of ['field-picker-back', 'field-picker-reset']) {
+      const button = popup(`[data-slot="${slot}"]`);
+      if (!button) return fail(`${framework}: the breadcrumb has no ${slot}`);
+      if (!button.getAttribute('class').includes(COARSE)) {
+        return fail(`${framework}: ${slot} misses the coarse-pointer box`);
+      }
+    }
+    notes.push(`${framework}: back, reset and descend all carry the 44px coarse-pointer box`);
 
     input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
     await wait(400);

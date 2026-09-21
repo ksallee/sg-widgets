@@ -409,7 +409,7 @@ export function createEntitySource(options: EntitySourceOptions): EntitySource {
 /* -------------------------------------------------------------------------- */
 
 /** The numbers a collection's footer draws, in either mode. */
-export interface PagingModel {
+export interface PageRange {
   mode: SourceMode;
   page: number;
   pageSize: number;
@@ -437,7 +437,7 @@ export interface PagingModel {
  * `infinite` mode the source has already walked the set, so its own answer
  * stands (006_pagination, 020_summarize).
  */
-export function describePaging(state: EntitySourceState): PagingModel {
+export function describePaging(state: EntitySourceState): PageRange {
   const { mode, page, pageSize, total, hasMore } = state;
   const loaded = state.rows.length;
   const from = loaded === 0 ? 0 : mode === 'pages' ? (page - 1) * pageSize + 1 : 1;

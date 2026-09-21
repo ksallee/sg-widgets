@@ -505,6 +505,24 @@ describe('describePaging', () => {
     expect(paging.hasPrevious).toBe(false);
   });
 
+  it('is at its end once an infinite source has loaded the whole counted set', () => {
+    const paging = describePaging({
+      rows: Array.from({ length: 320 }, (_, i) => ({ type: 'Version', id: i + 1, attributes: {}, relationships: {} })),
+      status: 'ready',
+      error: null,
+      hasMore: false,
+      total: 320,
+      filters: null,
+      sort: [],
+      mode: 'infinite',
+      page: 1,
+      pageSize: 50,
+    });
+    // The page count describes the set; an appending source is done when the source says so.
+    expect(paging.pageCount).toBe(7);
+    expect(paging.hasNext).toBe(false);
+  });
+
   it('reads zero rows as an empty range', () => {
     const paging = describePaging({
       rows: [],

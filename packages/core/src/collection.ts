@@ -432,9 +432,10 @@ export interface PagingModel {
  * The footer's numbers for one state.
  *
  * A read answers no total of its own, so a range reads "of N" only once
- * `_summarize` has counted the set, and a next page exists either because that
- * count says so or because the page that came back was full (006_pagination,
- * 020_summarize).
+ * `_summarize` has counted the set. In `pages` mode a next page exists because
+ * that count says so, or because the page that came back was full; in
+ * `infinite` mode the source has already walked the set, so its own answer
+ * stands (006_pagination, 020_summarize).
  */
 export function describePaging(state: EntitySourceState): PagingModel {
   const { mode, page, pageSize, total, hasMore } = state;
@@ -451,7 +452,8 @@ export function describePaging(state: EntitySourceState): PagingModel {
     total,
     pageCount,
     hasPrevious: mode === 'pages' && page > 1,
-    hasNext: pageCount === null ? hasMore : page < pageCount,
+    // An appending source walks the set itself, so only it knows whether a page is left.
+    hasNext: mode === 'infinite' ? hasMore : pageCount === null ? hasMore : page < pageCount,
     rangeLabel: total === null ? `${from} to ${to}` : `${from} to ${to} of ${total}`,
     loadedLabel: total === null ? `${loaded} loaded` : `${loaded} of ${total} loaded`,
   };

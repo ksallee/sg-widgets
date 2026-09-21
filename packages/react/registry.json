@@ -1,7 +1,7 @@
 {
   "$schema": "https://ui.shadcn.com/schema/registry.json",
   "name": "sg-widgets",
-  "homepage": "https://sg-widgets.dev",
+  "homepage": "https://sg-widgets.vercel.app",
   "items": [
     {
       "name": "sg-widgets",
@@ -16,68 +16,68 @@
         "lucide-react"
       ],
       "registryDependencies": [
-        "https://sg-widgets.dev/r/react/command.json",
-        "https://sg-widgets.dev/r/react/popover.json",
-        "https://sg-widgets.dev/r/react/status-glyph.json",
-        "https://sg-widgets.dev/r/react/status-badge.json",
-        "https://sg-widgets.dev/r/react/entity-chip.json",
-        "https://sg-widgets.dev/r/react/entity-card.json",
-        "https://sg-widgets.dev/r/react/thumbnail.json",
-        "https://sg-widgets.dev/r/react/user-avatar.json",
-        "https://sg-widgets.dev/r/react/field-value.json",
-        "https://sg-widgets.dev/r/react/picker-row.json",
-        "https://sg-widgets.dev/r/react/match-text.json",
-        "https://sg-widgets.dev/r/react/state-line.json",
-        "https://sg-widgets.dev/r/react/search-skeleton.json",
-        "https://sg-widgets.dev/r/react/picker-classes.json",
-        "https://sg-widgets.dev/r/react/control-classes.json",
-        "https://sg-widgets.dev/r/react/leaf-classes.json",
-        "https://sg-widgets.dev/r/react/entity-glyphs.json",
-        "https://sg-widgets.dev/r/react/field-error.json",
-        "https://sg-widgets.dev/r/react/editor-calendar.json",
-        "https://sg-widgets.dev/r/react/value-editor.json",
-        "https://sg-widgets.dev/r/react/picker-control.json",
-        "https://sg-widgets.dev/r/react/search-control.json",
-        "https://sg-widgets.dev/r/react/entity-type-picker.json",
-        "https://sg-widgets.dev/r/react/entity-type-multi-picker.json",
-        "https://sg-widgets.dev/r/react/field-picker.json",
-        "https://sg-widgets.dev/r/react/sortable.json",
-        "https://sg-widgets.dev/r/react/column-picker.json",
-        "https://sg-widgets.dev/r/react/text-editor.json",
-        "https://sg-widgets.dev/r/react/number-editor.json",
-        "https://sg-widgets.dev/r/react/checkbox-editor.json",
-        "https://sg-widgets.dev/r/react/date-editor.json",
-        "https://sg-widgets.dev/r/react/date-time-editor.json",
-        "https://sg-widgets.dev/r/react/list-picker.json",
-        "https://sg-widgets.dev/r/react/list-select.json",
-        "https://sg-widgets.dev/r/react/list-multi-picker.json",
-        "https://sg-widgets.dev/r/react/list-multi-select.json",
-        "https://sg-widgets.dev/r/react/url-editor.json",
-        "https://sg-widgets.dev/r/react/color-editor.json",
-        "https://sg-widgets.dev/r/react/field-editor.json",
-        "https://sg-widgets.dev/r/react/entity-fields.json",
-        "https://sg-widgets.dev/r/react/filter-editor.json",
-        "https://sg-widgets.dev/r/react/filter-dialog.json",
-        "https://sg-widgets.dev/r/react/filter-bar.json",
-        "https://sg-widgets.dev/r/react/sort-picker.json",
-        "https://sg-widgets.dev/r/react/status-picker.json",
-        "https://sg-widgets.dev/r/react/status-multi-picker.json",
-        "https://sg-widgets.dev/r/react/collection-source.json",
-        "https://sg-widgets.dev/r/react/collection-control.json",
-        "https://sg-widgets.dev/r/react/collection-footer.json",
-        "https://sg-widgets.dev/r/react/entity-table.json",
-        "https://sg-widgets.dev/r/react/entity-grid.json",
-        "https://sg-widgets.dev/r/react/grouped-list.json",
-        "https://sg-widgets.dev/r/react/entity-tree.json",
-        "https://sg-widgets.dev/r/react/entity-picker.json",
-        "https://sg-widgets.dev/r/react/entity-multi-picker.json",
-        "https://sg-widgets.dev/r/react/user-picker.json",
-        "https://sg-widgets.dev/r/react/user-multi-picker.json",
-        "https://sg-widgets.dev/r/react/project-picker.json",
-        "https://sg-widgets.dev/r/react/project-multi-picker.json",
-        "https://sg-widgets.dev/r/react/global-search.json",
-        "https://sg-widgets.dev/r/react/hierarchical-search.json",
-        "https://sg-widgets.dev/r/react/context-selector.json"
+        "https://sg-widgets.vercel.app/r/react/command.json",
+        "https://sg-widgets.vercel.app/r/react/popover.json",
+        "https://sg-widgets.vercel.app/r/react/status-glyph.json",
+        "https://sg-widgets.vercel.app/r/react/status-badge.json",
+        "https://sg-widgets.vercel.app/r/react/entity-chip.json",
+        "https://sg-widgets.vercel.app/r/react/entity-card.json",
+        "https://sg-widgets.vercel.app/r/react/thumbnail.json",
+        "https://sg-widgets.vercel.app/r/react/user-avatar.json",
+        "https://sg-widgets.vercel.app/r/react/field-value.json",
+        "https://sg-widgets.vercel.app/r/react/picker-row.json",
+        "https://sg-widgets.vercel.app/r/react/match-text.json",
+        "https://sg-widgets.vercel.app/r/react/state-line.json",
+        "https://sg-widgets.vercel.app/r/react/search-skeleton.json",
+        "https://sg-widgets.vercel.app/r/react/picker-classes.json",
+        "https://sg-widgets.vercel.app/r/react/control-classes.json",
+        "https://sg-widgets.vercel.app/r/react/leaf-classes.json",
+        "https://sg-widgets.vercel.app/r/react/entity-glyphs.json",
+        "https://sg-widgets.vercel.app/r/react/field-error.json",
+        "https://sg-widgets.vercel.app/r/react/editor-calendar.json",
+        "https://sg-widgets.vercel.app/r/react/value-editor.json",
+        "https://sg-widgets.vercel.app/r/react/picker-control.json",
+        "https://sg-widgets.vercel.app/r/react/search-control.json",
+        "https://sg-widgets.vercel.app/r/react/entity-type-picker.json",
+        "https://sg-widgets.vercel.app/r/react/entity-type-multi-picker.json",
+        "https://sg-widgets.vercel.app/r/react/field-picker.json",
+        "https://sg-widgets.vercel.app/r/react/sortable.json",
+        "https://sg-widgets.vercel.app/r/react/column-picker.json",
+        "https://sg-widgets.vercel.app/r/react/text-editor.json",
+        "https://sg-widgets.vercel.app/r/react/number-editor.json",
+        "https://sg-widgets.vercel.app/r/react/checkbox-editor.json",
+        "https://sg-widgets.vercel.app/r/react/date-editor.json",
+        "https://sg-widgets.vercel.app/r/react/date-time-editor.json",
+        "https://sg-widgets.vercel.app/r/react/list-picker.json",
+        "https://sg-widgets.vercel.app/r/react/list-select.json",
+        "https://sg-widgets.vercel.app/r/react/list-multi-picker.json",
+        "https://sg-widgets.vercel.app/r/react/list-multi-select.json",
+        "https://sg-widgets.vercel.app/r/react/url-editor.json",
+        "https://sg-widgets.vercel.app/r/react/color-editor.json",
+        "https://sg-widgets.vercel.app/r/react/field-editor.json",
+        "https://sg-widgets.vercel.app/r/react/entity-fields.json",
+        "https://sg-widgets.vercel.app/r/react/filter-editor.json",
+        "https://sg-widgets.vercel.app/r/react/filter-dialog.json",
+        "https://sg-widgets.vercel.app/r/react/filter-bar.json",
+        "https://sg-widgets.vercel.app/r/react/sort-picker.json",
+        "https://sg-widgets.vercel.app/r/react/status-picker.json",
+        "https://sg-widgets.vercel.app/r/react/status-multi-picker.json",
+        "https://sg-widgets.vercel.app/r/react/collection-source.json",
+        "https://sg-widgets.vercel.app/r/react/collection-control.json",
+        "https://sg-widgets.vercel.app/r/react/collection-footer.json",
+        "https://sg-widgets.vercel.app/r/react/entity-table.json",
+        "https://sg-widgets.vercel.app/r/react/entity-grid.json",
+        "https://sg-widgets.vercel.app/r/react/grouped-list.json",
+        "https://sg-widgets.vercel.app/r/react/entity-tree.json",
+        "https://sg-widgets.vercel.app/r/react/entity-picker.json",
+        "https://sg-widgets.vercel.app/r/react/entity-multi-picker.json",
+        "https://sg-widgets.vercel.app/r/react/user-picker.json",
+        "https://sg-widgets.vercel.app/r/react/user-multi-picker.json",
+        "https://sg-widgets.vercel.app/r/react/project-picker.json",
+        "https://sg-widgets.vercel.app/r/react/project-multi-picker.json",
+        "https://sg-widgets.vercel.app/r/react/global-search.json",
+        "https://sg-widgets.vercel.app/r/react/hierarchical-search.json",
+        "https://sg-widgets.vercel.app/r/react/context-selector.json"
       ],
       "docs": "Installs every widget and every shared part at once. Add a single item instead when you only need one.",
       "files": []
@@ -169,8 +169,8 @@
         "cn"
       ],
       "registryDependencies": [
-        "https://sg-widgets.dev/r/react/leaf-classes.json",
-        "https://sg-widgets.dev/r/react/status-glyph.json"
+        "https://sg-widgets.vercel.app/r/react/leaf-classes.json",
+        "https://sg-widgets.vercel.app/r/react/status-glyph.json"
       ],
       "docs": "Pass the resolved Status row for colour and icon, or just a field schema for the label. An unknown code renders as itself in a muted badge.",
       "files": [
@@ -195,9 +195,9 @@
         "cn"
       ],
       "registryDependencies": [
-        "https://sg-widgets.dev/r/react/entity-glyphs.json",
-        "https://sg-widgets.dev/r/react/leaf-classes.json",
-        "https://sg-widgets.dev/r/react/entity-card.json",
+        "https://sg-widgets.vercel.app/r/react/entity-glyphs.json",
+        "https://sg-widgets.vercel.app/r/react/leaf-classes.json",
+        "https://sg-widgets.vercel.app/r/react/entity-card.json",
         "hover-card"
       ],
       "docs": "Takes an EntityRef exactly as an entity field returns it. With no name it falls back to `Type #id`. A preview list installs EntityCard for the hover card.",
@@ -223,10 +223,10 @@
         "cn"
       ],
       "registryDependencies": [
-        "https://sg-widgets.dev/r/react/entity-glyphs.json",
-        "https://sg-widgets.dev/r/react/state-line.json",
-        "https://sg-widgets.dev/r/react/status-badge.json",
-        "https://sg-widgets.dev/r/react/thumbnail.json",
+        "https://sg-widgets.vercel.app/r/react/entity-glyphs.json",
+        "https://sg-widgets.vercel.app/r/react/state-line.json",
+        "https://sg-widgets.vercel.app/r/react/status-badge.json",
+        "https://sg-widgets.vercel.app/r/react/thumbnail.json",
         "checkbox",
         "skeleton"
       ],
@@ -253,7 +253,7 @@
         "cn"
       ],
       "registryDependencies": [
-        "https://sg-widgets.dev/r/react/entity-glyphs.json"
+        "https://sg-widgets.vercel.app/r/react/entity-glyphs.json"
       ],
       "docs": "The value of an image field is the only state marker there is: null, still transcoding, or ready. All three render; pass entityType so the empty one draws the row's glyph.",
       "files": [
@@ -278,7 +278,7 @@
         "cn"
       ],
       "registryDependencies": [
-        "https://sg-widgets.dev/r/react/leaf-classes.json"
+        "https://sg-widgets.vercel.app/r/react/leaf-classes.json"
       ],
       "docs": "Initials come from core's initialsOf so both frameworks derive them identically.",
       "files": [
@@ -302,10 +302,10 @@
         "cn"
       ],
       "registryDependencies": [
-        "https://sg-widgets.dev/r/react/entity-chip.json",
-        "https://sg-widgets.dev/r/react/leaf-classes.json",
-        "https://sg-widgets.dev/r/react/status-badge.json",
-        "https://sg-widgets.dev/r/react/thumbnail.json",
+        "https://sg-widgets.vercel.app/r/react/entity-chip.json",
+        "https://sg-widgets.vercel.app/r/react/leaf-classes.json",
+        "https://sg-widgets.vercel.app/r/react/status-badge.json",
+        "https://sg-widgets.vercel.app/r/react/thumbnail.json",
         "switch"
       ],
       "docs": "Installs EntityChip, StatusBadge and Thumbnail alongside it.",
@@ -330,11 +330,11 @@
         "cn"
       ],
       "registryDependencies": [
-        "https://sg-widgets.dev/r/react/picker-classes.json",
-        "https://sg-widgets.dev/r/react/field-value.json",
-        "https://sg-widgets.dev/r/react/thumbnail.json",
-        "https://sg-widgets.dev/r/react/user-avatar.json",
-        "https://sg-widgets.dev/r/react/match-text.json"
+        "https://sg-widgets.vercel.app/r/react/picker-classes.json",
+        "https://sg-widgets.vercel.app/r/react/field-value.json",
+        "https://sg-widgets.vercel.app/r/react/thumbnail.json",
+        "https://sg-widgets.vercel.app/r/react/user-avatar.json",
+        "https://sg-widgets.vercel.app/r/react/match-text.json"
       ],
       "docs": "The six row-anatomy props of rule 9. It draws a row's contents, not its box: the caller owns the list item.",
       "files": [
@@ -425,7 +425,7 @@
         "tw-animate-css"
       ],
       "registryDependencies": [
-        "https://sg-widgets.dev/r/react/leaf-classes.json"
+        "https://sg-widgets.vercel.app/r/react/leaf-classes.json"
       ],
       "docs": "Class strings only. Import what a control needs; the ladder and the states are the design rules'.",
       "files": [
@@ -548,8 +548,8 @@
         "cn"
       ],
       "registryDependencies": [
-        "https://sg-widgets.dev/r/react/field-error.json",
-        "https://sg-widgets.dev/r/react/control-classes.json"
+        "https://sg-widgets.vercel.app/r/react/field-error.json",
+        "https://sg-widgets.vercel.app/r/react/control-classes.json"
       ],
       "docs": "createValueSession / useValueSession owns the draft and the keys; ValueEditor draws the box and the error line. An editor supplies a parse and a format for its own type.",
       "files": [
@@ -575,8 +575,8 @@
         "cn"
       ],
       "registryDependencies": [
-        "https://sg-widgets.dev/r/react/picker-classes.json",
-        "https://sg-widgets.dev/r/react/state-line.json",
+        "https://sg-widgets.vercel.app/r/react/picker-classes.json",
+        "https://sg-widgets.vercel.app/r/react/state-line.json",
         "skeleton"
       ],
       "docs": "The control and the popup of every picker: the box and its states, the press rule, the keyboard model, inline against summary, and the popup shell.",
@@ -601,9 +601,9 @@
         "lucide-react"
       ],
       "registryDependencies": [
-        "https://sg-widgets.dev/r/react/search-skeleton.json",
-        "https://sg-widgets.dev/r/react/state-line.json",
-        "https://sg-widgets.dev/r/react/command.json"
+        "https://sg-widgets.vercel.app/r/react/search-skeleton.json",
+        "https://sg-widgets.vercel.app/r/react/state-line.json",
+        "https://sg-widgets.vercel.app/r/react/command.json"
       ],
       "docs": "The debounce, the ticket that drops a stale answer, the page and its load-more row, and the list with its error, loading and empty blocks.",
       "files": [
@@ -628,8 +628,8 @@
         "cn"
       ],
       "registryDependencies": [
-        "https://sg-widgets.dev/r/react/picker-control.json",
-        "https://sg-widgets.dev/r/react/picker-classes.json"
+        "https://sg-widgets.vercel.app/r/react/picker-control.json",
+        "https://sg-widgets.vercel.app/r/react/picker-classes.json"
       ],
       "docs": "Takes a SchemaService. `allow` and `deny` narrow the derived options, so changing them re-filters with no second call.",
       "files": [
@@ -655,10 +655,10 @@
         "cn"
       ],
       "registryDependencies": [
-        "https://sg-widgets.dev/r/react/picker-control.json",
-        "https://sg-widgets.dev/r/react/picker-classes.json",
+        "https://sg-widgets.vercel.app/r/react/picker-control.json",
+        "https://sg-widgets.vercel.app/r/react/picker-classes.json",
         "checkbox",
-        "https://sg-widgets.dev/r/react/leaf-classes.json"
+        "https://sg-widgets.vercel.app/r/react/leaf-classes.json"
       ],
       "docs": "Takes a SchemaService. The value is an array of codes, and the control shows it as chips, as `+n` or as a count.",
       "files": [
@@ -683,11 +683,11 @@
         "cn"
       ],
       "registryDependencies": [
-        "https://sg-widgets.dev/r/react/state-line.json",
-        "https://sg-widgets.dev/r/react/popover.json",
-        "https://sg-widgets.dev/r/react/command.json",
+        "https://sg-widgets.vercel.app/r/react/state-line.json",
+        "https://sg-widgets.vercel.app/r/react/popover.json",
+        "https://sg-widgets.vercel.app/r/react/command.json",
         "skeleton",
-        "https://sg-widgets.dev/r/react/picker-classes.json"
+        "https://sg-widgets.vercel.app/r/react/picker-classes.json"
       ],
       "docs": "Emits ShotGrid's dotted path. Only single entity fields are descended into; a path through a multi-entity field reads back nothing.",
       "files": [
@@ -733,14 +733,14 @@
         "cn"
       ],
       "registryDependencies": [
-        "https://sg-widgets.dev/r/react/state-line.json",
-        "https://sg-widgets.dev/r/react/picker-classes.json",
+        "https://sg-widgets.vercel.app/r/react/state-line.json",
+        "https://sg-widgets.vercel.app/r/react/picker-classes.json",
         "button",
         "checkbox",
-        "https://sg-widgets.dev/r/react/command.json",
+        "https://sg-widgets.vercel.app/r/react/command.json",
         "skeleton",
-        "https://sg-widgets.dev/r/react/field-picker.json",
-        "https://sg-widgets.dev/r/react/sortable.json"
+        "https://sg-widgets.vercel.app/r/react/field-picker.json",
+        "https://sg-widgets.vercel.app/r/react/sortable.json"
       ],
       "docs": "The picker appends a path to the list; a row is moved by dragging its grip or with Alt and an arrow key. `layout=\"dual\"` gives the two lists side by side.",
       "files": [
@@ -763,8 +763,8 @@
         "@sg-widgets/core"
       ],
       "registryDependencies": [
-        "https://sg-widgets.dev/r/react/value-editor.json",
-        "https://sg-widgets.dev/r/react/control-classes.json",
+        "https://sg-widgets.vercel.app/r/react/value-editor.json",
+        "https://sg-widgets.vercel.app/r/react/control-classes.json",
         "input",
         "textarea"
       ],
@@ -792,8 +792,8 @@
         "@base-ui/react"
       ],
       "registryDependencies": [
-        "https://sg-widgets.dev/r/react/value-editor.json",
-        "https://sg-widgets.dev/r/react/control-classes.json",
+        "https://sg-widgets.vercel.app/r/react/value-editor.json",
+        "https://sg-widgets.vercel.app/r/react/control-classes.json",
         "button",
         "input"
       ],
@@ -819,8 +819,8 @@
         "cn"
       ],
       "registryDependencies": [
-        "https://sg-widgets.dev/r/react/field-error.json",
-        "https://sg-widgets.dev/r/react/control-classes.json",
+        "https://sg-widgets.vercel.app/r/react/field-error.json",
+        "https://sg-widgets.vercel.app/r/react/control-classes.json",
         "switch"
       ],
       "docs": "The type is two-state and never null, so the control has no empty state.",
@@ -846,13 +846,13 @@
         "cn"
       ],
       "registryDependencies": [
-        "https://sg-widgets.dev/r/react/value-editor.json",
-        "https://sg-widgets.dev/r/react/editor-calendar.json",
-        "https://sg-widgets.dev/r/react/control-classes.json",
+        "https://sg-widgets.vercel.app/r/react/value-editor.json",
+        "https://sg-widgets.vercel.app/r/react/editor-calendar.json",
+        "https://sg-widgets.vercel.app/r/react/control-classes.json",
         "input",
         "button",
         "calendar",
-        "https://sg-widgets.dev/r/react/popover.json"
+        "https://sg-widgets.vercel.app/r/react/popover.json"
       ],
       "docs": "Takes YYYY-MM-DD and validates the day. A timestamp is never a date on this type.",
       "files": [
@@ -877,13 +877,13 @@
         "cn"
       ],
       "registryDependencies": [
-        "https://sg-widgets.dev/r/react/value-editor.json",
-        "https://sg-widgets.dev/r/react/editor-calendar.json",
-        "https://sg-widgets.dev/r/react/control-classes.json",
+        "https://sg-widgets.vercel.app/r/react/value-editor.json",
+        "https://sg-widgets.vercel.app/r/react/editor-calendar.json",
+        "https://sg-widgets.vercel.app/r/react/control-classes.json",
         "input",
         "button",
         "calendar",
-        "https://sg-widgets.dev/r/react/popover.json"
+        "https://sg-widgets.vercel.app/r/react/popover.json"
       ],
       "docs": "The zone the typed time is read in is named under the control.",
       "files": [
@@ -909,9 +909,9 @@
         "cn"
       ],
       "registryDependencies": [
-        "https://sg-widgets.dev/r/react/picker-control.json",
-        "https://sg-widgets.dev/r/react/picker-row.json",
-        "https://sg-widgets.dev/r/react/picker-classes.json"
+        "https://sg-widgets.vercel.app/r/react/picker-control.json",
+        "https://sg-widgets.vercel.app/r/react/picker-row.json",
+        "https://sg-widgets.vercel.app/r/react/picker-classes.json"
       ],
       "docs": "With a project id the field's hidden values are subtracted, which REST does not do on write.",
       "files": [
@@ -932,7 +932,7 @@
       ],
       "dependencies": [],
       "registryDependencies": [
-        "https://sg-widgets.dev/r/react/list-picker.json"
+        "https://sg-widgets.vercel.app/r/react/list-picker.json"
       ],
       "docs": "Deprecated. Install list-picker instead.",
       "files": [
@@ -958,11 +958,11 @@
         "cn"
       ],
       "registryDependencies": [
-        "https://sg-widgets.dev/r/react/picker-control.json",
-        "https://sg-widgets.dev/r/react/picker-row.json",
-        "https://sg-widgets.dev/r/react/picker-classes.json",
+        "https://sg-widgets.vercel.app/r/react/picker-control.json",
+        "https://sg-widgets.vercel.app/r/react/picker-row.json",
+        "https://sg-widgets.vercel.app/r/react/picker-classes.json",
         "checkbox",
-        "https://sg-widgets.dev/r/react/leaf-classes.json"
+        "https://sg-widgets.vercel.app/r/react/leaf-classes.json"
       ],
       "docs": "With a project id the field's hidden values are subtracted, which REST does not do on write.",
       "files": [
@@ -983,7 +983,7 @@
       ],
       "dependencies": [],
       "registryDependencies": [
-        "https://sg-widgets.dev/r/react/list-multi-picker.json"
+        "https://sg-widgets.vercel.app/r/react/list-multi-picker.json"
       ],
       "docs": "Deprecated. Install list-multi-picker instead.",
       "files": [
@@ -1006,8 +1006,8 @@
         "@sg-widgets/core"
       ],
       "registryDependencies": [
-        "https://sg-widgets.dev/r/react/value-editor.json",
-        "https://sg-widgets.dev/r/react/control-classes.json",
+        "https://sg-widgets.vercel.app/r/react/value-editor.json",
+        "https://sg-widgets.vercel.app/r/react/control-classes.json",
         "input"
       ],
       "docs": "Web links only. Uploads mint an Attachment through a separate flow.",
@@ -1032,8 +1032,8 @@
         "cn"
       ],
       "registryDependencies": [
-        "https://sg-widgets.dev/r/react/value-editor.json",
-        "https://sg-widgets.dev/r/react/control-classes.json",
+        "https://sg-widgets.vercel.app/r/react/value-editor.json",
+        "https://sg-widgets.vercel.app/r/react/control-classes.json",
         "input"
       ],
       "docs": "Takes r,g,b or a hex code and emits the decimal triple the field stores.",
@@ -1060,20 +1060,20 @@
         "cn"
       ],
       "registryDependencies": [
-        "https://sg-widgets.dev/r/react/control-classes.json",
-        "https://sg-widgets.dev/r/react/field-value.json",
-        "https://sg-widgets.dev/r/react/text-editor.json",
-        "https://sg-widgets.dev/r/react/number-editor.json",
-        "https://sg-widgets.dev/r/react/checkbox-editor.json",
-        "https://sg-widgets.dev/r/react/date-editor.json",
-        "https://sg-widgets.dev/r/react/date-time-editor.json",
-        "https://sg-widgets.dev/r/react/url-editor.json",
-        "https://sg-widgets.dev/r/react/color-editor.json",
-        "https://sg-widgets.dev/r/react/status-picker.json",
-        "https://sg-widgets.dev/r/react/entity-picker.json",
-        "https://sg-widgets.dev/r/react/entity-multi-picker.json",
+        "https://sg-widgets.vercel.app/r/react/control-classes.json",
+        "https://sg-widgets.vercel.app/r/react/field-value.json",
+        "https://sg-widgets.vercel.app/r/react/text-editor.json",
+        "https://sg-widgets.vercel.app/r/react/number-editor.json",
+        "https://sg-widgets.vercel.app/r/react/checkbox-editor.json",
+        "https://sg-widgets.vercel.app/r/react/date-editor.json",
+        "https://sg-widgets.vercel.app/r/react/date-time-editor.json",
+        "https://sg-widgets.vercel.app/r/react/url-editor.json",
+        "https://sg-widgets.vercel.app/r/react/color-editor.json",
+        "https://sg-widgets.vercel.app/r/react/status-picker.json",
+        "https://sg-widgets.vercel.app/r/react/entity-picker.json",
+        "https://sg-widgets.vercel.app/r/react/entity-multi-picker.json",
         "button",
-        "https://sg-widgets.dev/r/react/list-picker.json"
+        "https://sg-widgets.vercel.app/r/react/list-picker.json"
       ],
       "docs": "Installs FieldValue, the eight typed editors and the three pickers alongside it.",
       "files": [
@@ -1119,28 +1119,28 @@
         "cn"
       ],
       "registryDependencies": [
-        "https://sg-widgets.dev/r/react/control-classes.json",
-        "https://sg-widgets.dev/r/react/entity-fields.json",
-        "https://sg-widgets.dev/r/react/leaf-classes.json",
-        "https://sg-widgets.dev/r/react/state-line.json",
+        "https://sg-widgets.vercel.app/r/react/control-classes.json",
+        "https://sg-widgets.vercel.app/r/react/entity-fields.json",
+        "https://sg-widgets.vercel.app/r/react/leaf-classes.json",
+        "https://sg-widgets.vercel.app/r/react/state-line.json",
         "button",
         "select",
         "skeleton",
         "toggle-group",
-        "https://sg-widgets.dev/r/react/checkbox-editor.json",
-        "https://sg-widgets.dev/r/react/color-editor.json",
-        "https://sg-widgets.dev/r/react/date-editor.json",
-        "https://sg-widgets.dev/r/react/date-time-editor.json",
-        "https://sg-widgets.dev/r/react/entity-multi-picker.json",
-        "https://sg-widgets.dev/r/react/entity-picker.json",
-        "https://sg-widgets.dev/r/react/field-picker.json",
-        "https://sg-widgets.dev/r/react/number-editor.json",
-        "https://sg-widgets.dev/r/react/status-multi-picker.json",
-        "https://sg-widgets.dev/r/react/status-picker.json",
-        "https://sg-widgets.dev/r/react/text-editor.json",
-        "https://sg-widgets.dev/r/react/url-editor.json",
-        "https://sg-widgets.dev/r/react/list-multi-picker.json",
-        "https://sg-widgets.dev/r/react/list-picker.json"
+        "https://sg-widgets.vercel.app/r/react/checkbox-editor.json",
+        "https://sg-widgets.vercel.app/r/react/color-editor.json",
+        "https://sg-widgets.vercel.app/r/react/date-editor.json",
+        "https://sg-widgets.vercel.app/r/react/date-time-editor.json",
+        "https://sg-widgets.vercel.app/r/react/entity-multi-picker.json",
+        "https://sg-widgets.vercel.app/r/react/entity-picker.json",
+        "https://sg-widgets.vercel.app/r/react/field-picker.json",
+        "https://sg-widgets.vercel.app/r/react/number-editor.json",
+        "https://sg-widgets.vercel.app/r/react/status-multi-picker.json",
+        "https://sg-widgets.vercel.app/r/react/status-picker.json",
+        "https://sg-widgets.vercel.app/r/react/text-editor.json",
+        "https://sg-widgets.vercel.app/r/react/url-editor.json",
+        "https://sg-widgets.vercel.app/r/react/list-multi-picker.json",
+        "https://sg-widgets.vercel.app/r/react/list-picker.json"
       ],
       "docs": "Takes a FilterGroup and emits one on every edit. toApi3Hash turns it into the body _search takes.",
       "files": [
@@ -1165,11 +1165,11 @@
         "cn"
       ],
       "registryDependencies": [
-        "https://sg-widgets.dev/r/react/control-classes.json",
-        "https://sg-widgets.dev/r/react/leaf-classes.json",
+        "https://sg-widgets.vercel.app/r/react/control-classes.json",
+        "https://sg-widgets.vercel.app/r/react/leaf-classes.json",
         "button",
         "dialog",
-        "https://sg-widgets.dev/r/react/filter-editor.json"
+        "https://sg-widgets.vercel.app/r/react/filter-editor.json"
       ],
       "docs": "Edits are staged. Only Apply emits; Cancel drops them and Clear all emits an empty filter.",
       "files": [
@@ -1194,18 +1194,18 @@
         "cn"
       ],
       "registryDependencies": [
-        "https://sg-widgets.dev/r/react/entity-fields.json",
-        "https://sg-widgets.dev/r/react/control-classes.json",
-        "https://sg-widgets.dev/r/react/leaf-classes.json",
-        "https://sg-widgets.dev/r/react/match-text.json",
-        "https://sg-widgets.dev/r/react/status-badge.json",
-        "https://sg-widgets.dev/r/react/status-glyph.json",
-        "https://sg-widgets.dev/r/react/state-line.json",
+        "https://sg-widgets.vercel.app/r/react/entity-fields.json",
+        "https://sg-widgets.vercel.app/r/react/control-classes.json",
+        "https://sg-widgets.vercel.app/r/react/leaf-classes.json",
+        "https://sg-widgets.vercel.app/r/react/match-text.json",
+        "https://sg-widgets.vercel.app/r/react/status-badge.json",
+        "https://sg-widgets.vercel.app/r/react/status-glyph.json",
+        "https://sg-widgets.vercel.app/r/react/state-line.json",
         "button",
         "checkbox",
-        "https://sg-widgets.dev/r/react/command.json",
-        "https://sg-widgets.dev/r/react/popover.json",
-        "https://sg-widgets.dev/r/react/filter-dialog.json"
+        "https://sg-widgets.vercel.app/r/react/command.json",
+        "https://sg-widgets.vercel.app/r/react/popover.json",
+        "https://sg-widgets.vercel.app/r/react/filter-dialog.json"
       ],
       "docs": "Pass counts to compute the numbers with a _summarize grouping call; without it the bar tallies one page of rows.",
       "files": [
@@ -1230,14 +1230,14 @@
         "cn"
       ],
       "registryDependencies": [
-        "https://sg-widgets.dev/r/react/leaf-classes.json",
-        "https://sg-widgets.dev/r/react/state-line.json",
+        "https://sg-widgets.vercel.app/r/react/leaf-classes.json",
+        "https://sg-widgets.vercel.app/r/react/state-line.json",
         "button",
-        "https://sg-widgets.dev/r/react/popover.json",
+        "https://sg-widgets.vercel.app/r/react/popover.json",
         "separator",
         "toggle-group",
-        "https://sg-widgets.dev/r/react/field-picker.json",
-        "https://sg-widgets.dev/r/react/sortable.json"
+        "https://sg-widgets.vercel.app/r/react/field-picker.json",
+        "https://sg-widgets.vercel.app/r/react/sortable.json"
       ],
       "docs": "Emits both the keys and the comma-joined sort string, a leading minus marking a descending key.",
       "files": [
@@ -1260,11 +1260,11 @@
         "@sg-widgets/core"
       ],
       "registryDependencies": [
-        "https://sg-widgets.dev/r/react/list-picker.json",
-        "https://sg-widgets.dev/r/react/leaf-classes.json",
-        "https://sg-widgets.dev/r/react/picker-classes.json",
-        "https://sg-widgets.dev/r/react/status-badge.json",
-        "https://sg-widgets.dev/r/react/status-glyph.json"
+        "https://sg-widgets.vercel.app/r/react/list-picker.json",
+        "https://sg-widgets.vercel.app/r/react/leaf-classes.json",
+        "https://sg-widgets.vercel.app/r/react/picker-classes.json",
+        "https://sg-widgets.vercel.app/r/react/status-badge.json",
+        "https://sg-widgets.vercel.app/r/react/status-glyph.json"
       ],
       "docs": "Pass a cached SgClient. The options are valid_values minus the project hidden_values; a code outside them still renders.",
       "files": [
@@ -1289,12 +1289,12 @@
         "cn"
       ],
       "registryDependencies": [
-        "https://sg-widgets.dev/r/react/picker-control.json",
-        "https://sg-widgets.dev/r/react/leaf-classes.json",
-        "https://sg-widgets.dev/r/react/picker-classes.json",
-        "https://sg-widgets.dev/r/react/picker-row.json",
-        "https://sg-widgets.dev/r/react/status-badge.json",
-        "https://sg-widgets.dev/r/react/status-glyph.json",
+        "https://sg-widgets.vercel.app/r/react/picker-control.json",
+        "https://sg-widgets.vercel.app/r/react/leaf-classes.json",
+        "https://sg-widgets.vercel.app/r/react/picker-classes.json",
+        "https://sg-widgets.vercel.app/r/react/picker-row.json",
+        "https://sg-widgets.vercel.app/r/react/status-badge.json",
+        "https://sg-widgets.vercel.app/r/react/status-glyph.json",
         "checkbox"
       ],
       "docs": "Pass a cached SgClient. Selections outside the option set keep a row of their own rather than being dropped.",
@@ -1340,7 +1340,7 @@
         "@tanstack/react-virtual"
       ],
       "registryDependencies": [
-        "https://sg-widgets.dev/r/react/collection-source.json"
+        "https://sg-widgets.vercel.app/r/react/collection-source.json"
       ],
       "docs": "useCollectionControl answers the source and the selection; useCollectionBody wires the virtualiser, the cursor and the scroll trigger over one layout.",
       "files": [
@@ -1392,12 +1392,12 @@
         "cn"
       ],
       "registryDependencies": [
-        "https://sg-widgets.dev/r/react/collection-control.json",
-        "https://sg-widgets.dev/r/react/collection-footer.json",
-        "https://sg-widgets.dev/r/react/state-line.json",
-        "https://sg-widgets.dev/r/react/field-value.json",
-        "https://sg-widgets.dev/r/react/field-editor.json",
-        "https://sg-widgets.dev/r/react/picker-classes.json",
+        "https://sg-widgets.vercel.app/r/react/collection-control.json",
+        "https://sg-widgets.vercel.app/r/react/collection-footer.json",
+        "https://sg-widgets.vercel.app/r/react/state-line.json",
+        "https://sg-widgets.vercel.app/r/react/field-value.json",
+        "https://sg-widgets.vercel.app/r/react/field-editor.json",
+        "https://sg-widgets.vercel.app/r/react/picker-classes.json",
         "table",
         "checkbox",
         "skeleton",
@@ -1427,10 +1427,10 @@
         "cn"
       ],
       "registryDependencies": [
-        "https://sg-widgets.dev/r/react/collection-control.json",
-        "https://sg-widgets.dev/r/react/collection-footer.json",
-        "https://sg-widgets.dev/r/react/state-line.json",
-        "https://sg-widgets.dev/r/react/entity-card.json",
+        "https://sg-widgets.vercel.app/r/react/collection-control.json",
+        "https://sg-widgets.vercel.app/r/react/collection-footer.json",
+        "https://sg-widgets.vercel.app/r/react/state-line.json",
+        "https://sg-widgets.vercel.app/r/react/entity-card.json",
         "skeleton",
         "button"
       ],
@@ -1457,11 +1457,11 @@
         "cn"
       ],
       "registryDependencies": [
-        "https://sg-widgets.dev/r/react/collection-control.json",
-        "https://sg-widgets.dev/r/react/collection-footer.json",
-        "https://sg-widgets.dev/r/react/state-line.json",
-        "https://sg-widgets.dev/r/react/field-value.json",
-        "https://sg-widgets.dev/r/react/thumbnail.json",
+        "https://sg-widgets.vercel.app/r/react/collection-control.json",
+        "https://sg-widgets.vercel.app/r/react/collection-footer.json",
+        "https://sg-widgets.vercel.app/r/react/state-line.json",
+        "https://sg-widgets.vercel.app/r/react/field-value.json",
+        "https://sg-widgets.vercel.app/r/react/thumbnail.json",
         "checkbox",
         "skeleton",
         "button"
@@ -1489,16 +1489,16 @@
         "cn"
       ],
       "registryDependencies": [
-        "https://sg-widgets.dev/r/react/collection-source.json",
-        "https://sg-widgets.dev/r/react/state-line.json",
-        "https://sg-widgets.dev/r/react/field-value.json",
-        "https://sg-widgets.dev/r/react/status-badge.json",
-        "https://sg-widgets.dev/r/react/thumbnail.json",
+        "https://sg-widgets.vercel.app/r/react/collection-source.json",
+        "https://sg-widgets.vercel.app/r/react/state-line.json",
+        "https://sg-widgets.vercel.app/r/react/field-value.json",
+        "https://sg-widgets.vercel.app/r/react/status-badge.json",
+        "https://sg-widgets.vercel.app/r/react/thumbnail.json",
         "checkbox",
         "skeleton",
         "input",
-        "https://sg-widgets.dev/r/react/match-text.json",
-        "https://sg-widgets.dev/r/react/control-classes.json"
+        "https://sg-widgets.vercel.app/r/react/match-text.json",
+        "https://sg-widgets.vercel.app/r/react/control-classes.json"
       ],
       "docs": "Expands one level per call through POST /hierarchy/_expand. seedPath opens the tree to a row on mount; checkboxes propagate both ways.",
       "files": [
@@ -1524,10 +1524,10 @@
         "lucide-react"
       ],
       "registryDependencies": [
-        "https://sg-widgets.dev/r/react/picker-control.json",
-        "https://sg-widgets.dev/r/react/picker-classes.json",
-        "https://sg-widgets.dev/r/react/entity-chip.json",
-        "https://sg-widgets.dev/r/react/picker-row.json"
+        "https://sg-widgets.vercel.app/r/react/picker-control.json",
+        "https://sg-widgets.vercel.app/r/react/picker-classes.json",
+        "https://sg-widgets.vercel.app/r/react/entity-chip.json",
+        "https://sg-widgets.vercel.app/r/react/picker-row.json"
       ],
       "docs": "Server-side search only. Pass a cached client; a query past minQueryLength becomes one contains condition per word.",
       "files": [
@@ -1552,10 +1552,10 @@
         "cn"
       ],
       "registryDependencies": [
-        "https://sg-widgets.dev/r/react/picker-control.json",
-        "https://sg-widgets.dev/r/react/picker-classes.json",
-        "https://sg-widgets.dev/r/react/entity-chip.json",
-        "https://sg-widgets.dev/r/react/picker-row.json",
+        "https://sg-widgets.vercel.app/r/react/picker-control.json",
+        "https://sg-widgets.vercel.app/r/react/picker-classes.json",
+        "https://sg-widgets.vercel.app/r/react/entity-chip.json",
+        "https://sg-widgets.vercel.app/r/react/picker-row.json",
         "checkbox"
       ],
       "docs": "Selected rows stay pinned to the end of the option list, so they can be unticked whatever the query.",
@@ -1579,7 +1579,7 @@
         "@sg-widgets/core"
       ],
       "registryDependencies": [
-        "https://sg-widgets.dev/r/react/entity-picker.json"
+        "https://sg-widgets.vercel.app/r/react/entity-picker.json"
       ],
       "docs": "Configures the generic entity picker for people; it does not fork it.",
       "files": [
@@ -1602,7 +1602,7 @@
         "@sg-widgets/core"
       ],
       "registryDependencies": [
-        "https://sg-widgets.dev/r/react/entity-multi-picker.json"
+        "https://sg-widgets.vercel.app/r/react/entity-multi-picker.json"
       ],
       "docs": "The person configuration on the generic multi picker. The value is an array of references, shown as chips.",
       "files": [
@@ -1625,7 +1625,7 @@
         "@sg-widgets/core"
       ],
       "registryDependencies": [
-        "https://sg-widgets.dev/r/react/entity-picker.json"
+        "https://sg-widgets.vercel.app/r/react/entity-picker.json"
       ],
       "docs": "Archived projects are left out unless includeArchived is set.",
       "files": [
@@ -1648,7 +1648,7 @@
         "@sg-widgets/core"
       ],
       "registryDependencies": [
-        "https://sg-widgets.dev/r/react/entity-multi-picker.json"
+        "https://sg-widgets.vercel.app/r/react/entity-multi-picker.json"
       ],
       "docs": "The project configuration on the generic multi picker. The value is an array of references, shown as chips.",
       "files": [
@@ -1673,11 +1673,11 @@
         "cn"
       ],
       "registryDependencies": [
-        "https://sg-widgets.dev/r/react/search-control.json",
-        "https://sg-widgets.dev/r/react/control-classes.json",
-        "https://sg-widgets.dev/r/react/entity-chip.json",
-        "https://sg-widgets.dev/r/react/picker-row.json",
-        "https://sg-widgets.dev/r/react/command.json",
+        "https://sg-widgets.vercel.app/r/react/search-control.json",
+        "https://sg-widgets.vercel.app/r/react/control-classes.json",
+        "https://sg-widgets.vercel.app/r/react/entity-chip.json",
+        "https://sg-widgets.vercel.app/r/react/picker-row.json",
+        "https://sg-widgets.vercel.app/r/react/command.json",
         "button",
         "kbd"
       ],
@@ -1704,11 +1704,11 @@
         "cn"
       ],
       "registryDependencies": [
-        "https://sg-widgets.dev/r/react/search-control.json",
-        "https://sg-widgets.dev/r/react/entity-glyphs.json",
-        "https://sg-widgets.dev/r/react/picker-classes.json",
-        "https://sg-widgets.dev/r/react/picker-row.json",
-        "https://sg-widgets.dev/r/react/command.json"
+        "https://sg-widgets.vercel.app/r/react/search-control.json",
+        "https://sg-widgets.vercel.app/r/react/entity-glyphs.json",
+        "https://sg-widgets.vercel.app/r/react/picker-classes.json",
+        "https://sg-widgets.vercel.app/r/react/picker-row.json",
+        "https://sg-widgets.vercel.app/r/react/command.json"
       ],
       "docs": "Browses one level per call and searches by matching words, then asking where each hit sits. Emits the row picked and the path that reaches it.",
       "files": [
@@ -1733,14 +1733,14 @@
         "cn"
       ],
       "registryDependencies": [
-        "https://sg-widgets.dev/r/react/search-control.json",
-        "https://sg-widgets.dev/r/react/control-classes.json",
-        "https://sg-widgets.dev/r/react/entity-chip.json",
-        "https://sg-widgets.dev/r/react/picker-classes.json",
-        "https://sg-widgets.dev/r/react/picker-row.json",
-        "https://sg-widgets.dev/r/react/hierarchical-search.json",
-        "https://sg-widgets.dev/r/react/state-line.json",
-        "https://sg-widgets.dev/r/react/popover.json"
+        "https://sg-widgets.vercel.app/r/react/search-control.json",
+        "https://sg-widgets.vercel.app/r/react/control-classes.json",
+        "https://sg-widgets.vercel.app/r/react/entity-chip.json",
+        "https://sg-widgets.vercel.app/r/react/picker-classes.json",
+        "https://sg-widgets.vercel.app/r/react/picker-row.json",
+        "https://sg-widgets.vercel.app/r/react/hierarchical-search.json",
+        "https://sg-widgets.vercel.app/r/react/state-line.json",
+        "https://sg-widgets.vercel.app/r/react/popover.json"
       ],
       "docs": "Installs HierarchicalSearch alongside it. Assigned tasks are one search on Task filtered by task_assignees.",
       "files": [

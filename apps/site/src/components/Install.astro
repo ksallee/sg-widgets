@@ -27,8 +27,8 @@ if (!item && !(react && svelte)) {
 }
 
 const panes = [
-  { framework: 'react', label: 'React', command: react ?? `pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/${item}.json` },
-  { framework: 'svelte', label: 'Svelte', command: svelte ?? `pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/${item}.json` },
+  { framework: 'react', label: 'React', command: react ?? `pnpm dlx shadcn@latest add https://sg-widgets.vercel.app/r/react/${item}.json` },
+  { framework: 'svelte', label: 'Svelte', command: svelte ?? `pnpm dlx shadcn-svelte@latest add https://sg-widgets.vercel.app/r/svelte/${item}.json` },
 ];
 ---
 

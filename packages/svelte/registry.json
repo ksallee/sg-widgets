@@ -1,7 +1,7 @@
 {
   "$schema": "https://shadcn-svelte.com/schema/registry.json",
   "name": "sg-widgets",
-  "homepage": "https://sg-widgets.dev",
+  "homepage": "https://sg-widgets.vercel.app",
   "aliases": {
     "components": "$lib/registry/components",
     "ui": "$lib/components/ui",

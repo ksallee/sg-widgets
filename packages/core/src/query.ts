@@ -110,13 +110,16 @@ export function createQueryCache(client: SgClient, options: QueryCacheOptions = 
     return promise;
   }
 
-  function invalidateSearches(entityType: string): void {
-    const prefix = `search:[${JSON.stringify(entityType)}`;
+  /** Forget a prefix in both maps, so a request started before a write cannot land after it. */
+  function drop(prefix: string): void {
     for (const key of [...entries.keys()]) if (key.startsWith(prefix)) entries.delete(key);
     for (const key of [...inFlight.keys()]) if (key.startsWith(prefix)) inFlight.delete(key);
-    for (const key of [...entries.keys()]) if (key.startsWith('textSearch')) entries.delete(key);
-    const counted = `summarize:[${JSON.stringify(entityType)}`;
-    for (const key of [...entries.keys()]) if (key.startsWith(counted)) entries.delete(key);
+  }
+
+  function invalidateSearches(entityType: string): void {
+    drop(`search:[${JSON.stringify(entityType)}`);
+    drop('textSearch');
+    drop(`summarize:[${JSON.stringify(entityType)}`);
   }
 
   /**
@@ -125,8 +128,7 @@ export function createQueryCache(client: SgClient, options: QueryCacheOptions = 
    * (get_entity_notes_id_thread_contents). Every cached thread goes.
    */
   function invalidateThreads(): void {
-    for (const key of [...entries.keys()]) if (key.startsWith('threadContents')) entries.delete(key);
-    for (const key of [...inFlight.keys()]) if (key.startsWith('threadContents')) inFlight.delete(key);
+    drop('threadContents');
   }
 
   return {
@@ -204,8 +206,7 @@ export function createQueryCache(client: SgClient, options: QueryCacheOptions = 
         inFlight.clear();
         return;
       }
-      for (const key of [...entries.keys()]) if (key.startsWith(prefix)) entries.delete(key);
-      for (const key of [...inFlight.keys()]) if (key.startsWith(prefix)) inFlight.delete(key);
+      drop(prefix);
     },
   };
 }

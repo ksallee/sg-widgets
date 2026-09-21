@@ -57,7 +57,7 @@ for (const framework of ['svelte', 'react']) {
 
   // Open the list from the field, then walk the caret onto the chip before the last.
   // The chosen rows are drawn at once, pinned; the page with fresh rows lands after.
-  const fresh = () => rows().filter((one) => one.dataset.selectedEntity !== 'true');
+  const fresh = () => rows().filter((one) => one.dataset.checked !== 'true');
   press(control);
   if (!(await until(() => popup() && fresh().length > 0))) {
     failures.push(`${framework}: a press on the field did not open a list with rows to pick`);

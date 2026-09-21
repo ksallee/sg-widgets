@@ -6,6 +6,7 @@ import starlight from '@astrojs/starlight';
 import react from '@astrojs/react';
 import svelte from '@astrojs/svelte';
 import vercel from '@astrojs/vercel';
+import sitemap from '@astrojs/sitemap';
 import tailwindcss from '@tailwindcss/vite';
 
 const packages = new URL('../../packages/', import.meta.url);
@@ -32,6 +33,10 @@ export default defineConfig({
   // token endpoint. They become one Vercel function; the pages stay static files.
   adapter: vercel(),
   integrations: [
+    // Starlight adds a sitemap of its own only when none is configured. This one
+    // leaves out the three /qa/ harness pages, which are routes but not pages of
+    // the site.
+    sitemap({ filter: (page) => !new URL(page).pathname.startsWith('/qa/') }),
     starlight({
       title: 'SG Widgets',
       description: 'shadcn-compatible widgets for Flow Production Tracking, for React and Svelte.',

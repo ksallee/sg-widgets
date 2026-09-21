@@ -7,6 +7,6 @@ export default {
     { name: 'includeArchived', type: '`boolean`', default: '`false`', meaning: 'Offer projects whose `archived` checkbox is set.' },
   ],
   events: [
-    { name: 'onValueChange', payload: '`EntityRef`, `PickerRow`', when: 'The selection changed.' },
+    { name: 'onValueChange', payload: '`EntityRef | null`, `PickerRow | null`', when: 'The selection changed.' },
   ],
 } satisfies PropsFile;

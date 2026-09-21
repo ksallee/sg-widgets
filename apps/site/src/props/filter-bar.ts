@@ -8,7 +8,7 @@ export default {
     { name: 'facets', type: '`string[]`', default: 'required', meaning: 'Field names to offer as pills, in order.' },
     { name: 'labels', type: '`Record<string, string>`', default: '`{}`', meaning: 'A name per facet, for a field whose schema label is not what the page calls it.' },
     { name: 'maxValues', type: '`number`', default: '`2`', meaning: 'Values a pill names before the rest reads as `+n`, at least one.' },
-    { name: 'value', type: '`FilterGroup`', default: '`emptyFilter()`', meaning: 'The tree the pills write into. Two-way in Svelte through `bind:value`.' },
+    { name: 'value', type: '`FilterGroup`', default: 'required', meaning: 'The tree the pills write into. Two-way in Svelte through `bind:value`.' },
     { name: 'counts', type: '`FacetCounts`', default: '—', meaning: 'The groups of a `_summarize` call grouped on one facet\'s field. Pass `facetCounts(context.client, entityType)`.' },
     { name: 'sampleSize', type: '`number`', default: '`200`', meaning: 'Rows read for a tally: every facet without `counts`, and a facet the site refuses to group.' },
     { name: 'hidePaths', type: '`string[]`', default: '`[]`', meaning: 'Passed through to the dialog.' },

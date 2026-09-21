@@ -4,7 +4,7 @@ export default {
   props: [
     { name: 'entityType', type: '`string`', default: 'required', meaning: 'Type the field list is read on.' },
     { name: 'context', type: '`SgContext`', default: 'required', meaning: 'The widget context. Every read goes through it, so widgets on a page share one cache.' },
-    { name: 'value', type: '`SortKey[]`', default: '`[]`', meaning: 'The keys, in order. Two-way in Svelte through `bind:value`.' },
+    { name: 'value', type: '`SortKey[]`', default: 'required', meaning: 'The keys, in order. Two-way in Svelte through `bind:value`.' },
     { name: 'hidePaths', type: '`string[]`', default: '`[]`', meaning: 'Paths kept out of the field list. A pattern hides itself and everything under it.' },
     { name: 'paths', type: '`string[]`', default: '—', meaning: 'Only these paths are offered in the nested list. A link stays in the list while an offered path runs through it.' },
     { name: 'options', type: '`string[]`', default: '—', meaning: 'Exactly these paths, offered as one flat list, so a table\'s toolbar sorts on the columns it shows, a linked one included. Takes the place of `paths`.' },

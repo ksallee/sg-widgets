@@ -62,9 +62,9 @@ string (field_types/image).
 
 The web app addresses a row at `/detail/<Type>/<id>`. The API hands that path out for one type only,
 as `Project.landing_page_url`, site-relative and with the site url left to the caller
-(entity_types/Project). On the test site the same shape answers for every type: the route resolves
-before authentication decides, redirecting an anonymous visitor to the login page with itself as the
-return path. Site measurement, pending a corpus card.
+(entity_types/Project). Every other type takes the same shape by a convention the API does not
+document. On the test site it answers for every type: the route resolves before authentication
+decides, redirecting an anonymous visitor to the login page with itself as the return path.
 
 ## Reference
 

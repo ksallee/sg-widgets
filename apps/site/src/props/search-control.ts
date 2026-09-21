@@ -2,7 +2,7 @@ import type { PropsFile } from './_types';
 
 export default {
   props: [
-    { name: 'load', type: '`(request) => Promise<answer>`', default: '—', meaning: 'The read behind the list. Takes the query and the page, answers the rows and `hasMore`.' },
+    { name: 'load', type: '`(request) => Promise<SearchAnswer<T>>`', default: 'required', meaning: 'The read behind the list. Takes the query and the page, answers the rows and `hasMore`.' },
     { name: 'query', type: '`string`', default: '`\'\'`', meaning: 'What the caret holds. Two-way in Svelte.' },
     { name: 'onQueryChange', type: '`(query: string) => void`', default: '—', meaning: 'Called when the caret changes.' },
     { name: 'request', type: '`string`', default: '`\'\'`', meaning: 'What the read depends on besides the query. A change reads again at once.' },

@@ -6,7 +6,7 @@ export default {
     { name: 'value', type: '`number | string | null`', default: '`null`', meaning: 'The stored value. Two-way in Svelte.' },
     { name: 'onValueChange', type: '`(value: number | string | null) => void`', default: '—', meaning: 'Called when the input commits.' },
     { name: 'dataType', type: '`\'number\' | \'float\' | \'percent\' | \'duration\' | \'timecode\' | \'currency\'`', default: '`\'number\'`', meaning: 'Picks the parse, the format, the affix and the step.' },
-    { name: 'field', type: '`FieldSchema | null`', default: '`null`', meaning: 'Supplies the accessible label and the required flag.' },
+    { name: 'field', type: '`Pick<FieldSchema, \'displayName\' | \'mandatory\'> | null`', default: '`null`', meaning: 'Supplies the accessible label and the required flag.' },
     { name: 'precision', type: '`number`', default: '`6`', meaning: 'Decimals kept on a float or a currency.' },
     { name: 'hoursPerDay', type: '`number`', default: '—', meaning: 'The site\'s working day. Without it the day unit on a duration is refused.' },
     { name: 'frameRate', type: '`number`', default: '—', meaning: 'Frames per second, for the frame form of a timecode and its one-frame step.' },

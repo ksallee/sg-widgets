@@ -3,7 +3,7 @@ import type { PropsFile } from './_types';
 export default {
   extends: { name: 'collection-control' },
   props: [
-    { name: 'source', type: '`EntitySource`', default: '—', meaning: 'The rows and the order behind them.' },
+    { name: 'source', type: '`EntitySource`', default: 'required', meaning: 'The rows and the order behind them.' },
     { name: 'groupBy', type: '`CollectionColumn`', default: '—', meaning: 'Column the rows are grouped on. The source is sorted on it. Not read with `groupKey`. One of the two is required.' },
     { name: 'groupKey', type: '`(row) => unknown`', default: '—', meaning: 'The value a row groups under, derived from the row and compared by its JSON text. The source\'s sort is left as the caller set it.' },
     { name: 'groupLabel', type: '`(value) => string`', default: '—', meaning: 'The header\'s text for a derived key; not read with `groupBy`. Without it the key reads as its own display name.' },

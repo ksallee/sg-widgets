@@ -2,7 +2,7 @@ import type { PropsFile } from './_types';
 
 export default {
   props: [
-    { name: 'errorMessage', type: '`(message: string) => ReactNode`', default: '—', meaning: 'Draws the line under the control.' },
+    { name: 'errorMessage', type: '`(message: string) => ReactNode` / `Snippet<[string]>`', default: '—', meaning: 'Draws the line under the control.' },
     { name: 'value', type: '`unknown`', default: '`null`', meaning: 'The raw attribute value, as the API returned it. Two-way in Svelte.' },
     { name: 'onValueChange', type: '`(value: unknown) => void`', default: '—', meaning: 'Called when the editor commits.' },
     { name: 'dataType', type: '`string`', default: 'the schema\'s, then `\'text\'`', meaning: 'Picks the editor.' },

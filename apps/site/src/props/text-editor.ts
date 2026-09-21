@@ -5,7 +5,7 @@ export default {
   props: [
     { name: 'value', type: '`string | null`', default: '`null`', meaning: 'The stored string. Two-way in Svelte.' },
     { name: 'onValueChange', type: '`(value: string | null) => void`', default: '—', meaning: 'Called when the input commits.' },
-    { name: 'field', type: '`FieldSchema | null`', default: '`null`', meaning: 'Supplies the accessible label and the required flag.' },
+    { name: 'field', type: '`Pick<FieldSchema, \'displayName\' | \'mandatory\'> | null`', default: '`null`', meaning: 'Supplies the accessible label and the required flag.' },
     { name: 'multiline', type: '`boolean`', default: '`false`', meaning: 'Renders a textarea.' },
     { name: 'rows', type: '`number`', default: '`3`', meaning: 'Rows of the textarea.' },
     { name: 'disabled', type: '`boolean`', default: '`false`' },

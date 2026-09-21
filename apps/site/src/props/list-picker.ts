@@ -5,9 +5,9 @@ export default {
   props: [
     { name: 'value', type: '`string | null`', default: '`null`', meaning: 'The stored string. Two-way in Svelte.' },
     { name: 'onValueChange', type: '`(value: string | null) => void`', default: '—', meaning: 'Called on every change.' },
-    { name: 'field', type: '`FieldSchema | null`', default: '`null`', meaning: 'Supplies the valid values, the labels and the hidden values.' },
+    { name: 'field', type: '`Pick<FieldSchema, \'displayName\' | \'mandatory\' | \'validValues\' | \'displayValues\' | \'hiddenValues\'> | null`', default: '`null`', meaning: 'Supplies the valid values, the labels and the hidden values.' },
     { name: 'projectId', type: '`number`', default: '—', meaning: 'Given, the field\'s hidden values are removed from the list.' },
-    { name: 'options', type: '`{ code, label }[]`', default: '—', meaning: 'The set on offer, of the caller\'s own making. Wins over the field.' },
+    { name: 'options', type: '`ListOption[]`', default: '—', meaning: 'The set on offer, of the caller\'s own making. Wins over the field.' },
     { name: 'slot', type: '`string`', default: '`\'list-picker\'`', meaning: 'The `data-slot` prefix every part of this picker carries.' },
     { name: 'picker', type: '`string`', default: '`\'list\'`', meaning: 'The `data-picker` the popup carries.' },
     { name: 'disabled', type: '`boolean`', default: '`false`', meaning: 'Greys the control and takes it out of the tab order.' },

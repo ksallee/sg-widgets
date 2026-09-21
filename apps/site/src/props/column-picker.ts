@@ -5,7 +5,6 @@ export default {
     { name: 'context', type: '`SgContext`', default: 'required', meaning: 'The widget context. The schema is read through it, once per page.' },
     { name: 'entityType', type: '`string`', default: 'required', meaning: 'The type every path starts on.' },
     { name: 'value', type: '`string[]`', default: '`[]`', meaning: 'The chosen dotted paths, in the order they are shown.' },
-    { name: 'onValueChange', type: '`(value: string[]) => void`', default: '—', meaning: 'Receives the new array on every add, remove and move.' },
     { name: 'layout', type: '`\'list\' | \'dual\'`', default: '`\'list\'`', meaning: '`list` is the field picker over the ordered list; `dual` is the two lists side by side.' },
     { name: 'showCount', type: '`boolean`', default: '`false`', meaning: 'Show how many columns are chosen under the list.' },
     { name: 'deepLinks', type: '`boolean`', default: '`true`', meaning: 'Allow descending through entity fields.' },

@@ -8,6 +8,6 @@ export default {
     { name: 'includeInactive', type: '`boolean`', default: '`false`', meaning: 'Offer people whose status is `dis`.' },
   ],
   events: [
-    { name: 'onValueChange', payload: '`EntityRef`, `PickerRow`', when: 'The selection changed.' },
+    { name: 'onValueChange', payload: '`EntityRef | null`, `PickerRow | null`', when: 'The selection changed.' },
   ],
 } satisfies PropsFile;

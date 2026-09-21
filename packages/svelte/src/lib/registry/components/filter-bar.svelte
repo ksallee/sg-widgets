@@ -66,7 +66,7 @@
 		renderKindFor,
 		setFacet,
 		asFilterGroup,
-		matchesTokens,
+		matchesEveryWord,
 		withoutPaths
 	} from '@sg-widgets/core';
 	import { Button } from '$lib/components/ui/button/index.js';
@@ -324,7 +324,7 @@
 						<StateLine state="empty" icon={SearchXIcon} label="No value." pad="none" />
 					</Command.Empty>
 					<!-- The box matches what it was given rather than what a read answered, so the rows drawn are the rows the list holds. -->
-					{#each (found[name]?.values ?? []).filter((option) => matchesTokens(facetQuery, option.label, option.key)) as option (option.key)}
+					{#each (found[name]?.values ?? []).filter((option) => matchesEveryWord(`${option.label} ${option.key}`, facetQuery)) as option (option.key)}
 						<Command.Item
 							value={option.key}
 							data-option={option.key}

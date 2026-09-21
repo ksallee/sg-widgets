@@ -24,7 +24,7 @@ import {
   renderKindFor,
   setFacet,
   asFilterGroup,
-  matchesTokens,
+  matchesEveryWord,
   withoutPaths,
 } from '@sg-widgets/core';
 import { PlusIcon, SearchX, TriangleAlert, XIcon } from 'lucide-react';
@@ -300,7 +300,7 @@ export function FilterBar({
     const selected = selectedOf(name);
     // The box matches what it was given rather than what a read answered, so the rows
     // drawn are the rows the list holds.
-    const shown = (tally[name]?.values ?? []).filter((option) => matchesTokens(facetQuery, option.label, option.key));
+    const shown = (tally[name]?.values ?? []).filter((option) => matchesEveryWord(`${option.label} ${option.key}`, facetQuery));
     const sampled = tally[name]?.sampled;
     return (
       <PopoverContent className="w-64 p-0" align="start">

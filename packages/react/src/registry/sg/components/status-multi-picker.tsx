@@ -8,7 +8,7 @@ import type {
   StatusOption,
   StatusRecord,
 } from '@sg-widgets/core';
-import { clearableForField, matchesTokens, NO_MATCH_LABEL } from '@sg-widgets/core';
+import { clearableForField, matchesEveryWord, NO_MATCH_LABEL } from '@sg-widgets/core';
 import { Combobox as ComboboxPrimitive } from '@base-ui/react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
@@ -221,7 +221,7 @@ export function StatusMultiPicker({
   ];
   // A status list has no substring operator, so the vocabulary is read once and the
   // search box narrows it here (field_types/status_list).
-  const shown = rows.filter((option) => matchesTokens(search, option.label, option.code));
+  const shown = rows.filter((option) => matchesEveryWord(`${option.label} ${option.code}`, search));
   const byCode = new Map(rows.map((option) => [option.code, option]));
 
   /**

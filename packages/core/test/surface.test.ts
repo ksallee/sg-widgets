@@ -22,8 +22,8 @@ describe('the root entry', () => {
   });
 
   it('names the search rule once', () => {
-    for (const name of ['queryTokens', 'highlightRuns']) expect(Object.keys(core)).not.toContain(name);
-    for (const name of ['searchWords', 'matchRuns']) expect(Object.keys(core)).toContain(name);
+    for (const name of ['queryTokens', 'highlightRuns', 'matchesTokens']) expect(Object.keys(core)).not.toContain(name);
+    for (const name of ['searchWords', 'matchRuns', 'matchesEveryWord']) expect(Object.keys(core)).toContain(name);
   });
 });
 

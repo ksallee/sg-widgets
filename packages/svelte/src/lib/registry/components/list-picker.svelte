@@ -16,7 +16,7 @@
 	import type { FieldSchema } from '@sg-widgets/core';
 	import {
 		clearableForField,
-		matchesTokens,
+		matchesEveryWord,
 		NO_ROWS_LABEL,
 		statusLabel,
 		usableStatuses
@@ -145,7 +145,7 @@
 	);
 	// The vocabulary is one read, so a search box narrows it here.
 	const shown = $derived(
-		searchable ? rows.filter((option) => matchesTokens(search, option.label, option.code)) : rows
+		searchable ? rows.filter((option) => matchesEveryWord(`${option.label} ${option.code}`, search)) : rows
 	);
 	const selected = $derived(value ? [value] : []);
 

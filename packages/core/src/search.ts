@@ -77,7 +77,11 @@ export function matchRuns(label: string, query: string): MatchRun[] {
   return runs;
 }
 
-/** True when every word of the query appears in the text, the server's own rule. */
+/**
+ * True when every word of the query appears in the text, the server's own rule.
+ * It is also the rule a list filters its own rows with, over the row's label and
+ * code joined into one text.
+ */
 export function matchesEveryWord(text: string, query: string): boolean {
   const haystack = text.toLowerCase();
   return searchWords(query).every((word) => haystack.includes(word.toLowerCase()));

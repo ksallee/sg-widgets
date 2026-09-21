@@ -52,6 +52,8 @@
 		invalid?: boolean;
 		clearable?: boolean;
 		placeholder?: string;
+		/** The combobox's accessible name, for a control whose placeholder is empty. */
+		label?: string;
 		searchPlaceholder?: string;
 		/** Whether the popup is showing, two-way. */
 		open?: boolean;
@@ -157,6 +159,7 @@
 		invalid = false,
 		clearable = true,
 		placeholder = '',
+		label,
 		searchPlaceholder = 'Search…',
 		open = $bindable(false),
 		onOpenChange,
@@ -193,6 +196,8 @@
 	let paging = false;
 
 	const loadingText = $derived(stateLine('loading', { loadingLabel }));
+	/** The caret is a combobox, so it is named even when the control shows no placeholder. */
+	const inputLabel = $derived(label || placeholder || triggerLabel);
 	const interactive = $derived(!readonly && !inert);
 	const showClear = $derived(clearable && labels.length > 0 && !readonly && !disabled);
 	/** Only a multi control's row weighs itself; a single one draws its chip and stops. */
@@ -415,7 +420,7 @@
 		bind:ref={inputEl}
 		data-slot={`${slot}-input`}
 		aria-invalid={invalid ? 'true' : undefined}
-		aria-label={placeholder}
+		aria-label={inputLabel}
 		readonly={readonly || undefined}
 		placeholder={inputPlaceholder ?? (labels.length > 0 ? '' : placeholder)}
 		oninput={(e) => typed(e.currentTarget.value)}
@@ -525,7 +530,7 @@
 				<Combobox.Input
 					bind:ref={inputEl}
 					data-slot={`${slot}-input`}
-					aria-label={placeholder}
+					aria-label={inputLabel}
 					readonly
 					onkeydown={onKey}
 					class="sr-only"

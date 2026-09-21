@@ -155,6 +155,8 @@ export interface PickerControlProps {
   invalid?: boolean;
   clearable?: boolean;
   placeholder?: string;
+  /** The combobox's accessible name, for a control whose placeholder is empty. */
+  label?: string;
   searchPlaceholder?: string;
   /** Whether the popup is showing. */
   open: boolean;
@@ -222,6 +224,7 @@ export function PickerControl({
   invalid = false,
   clearable = true,
   placeholder = '',
+  label,
   searchPlaceholder = 'Search…',
   open,
   onOpenChange,
@@ -256,6 +259,8 @@ export function PickerControl({
   const pagingRef = useRef(false);
 
   const loadingText = stateLine('loading', { loadingLabel });
+  /** The caret is a combobox, so it is named even when the control shows no placeholder. */
+  const inputLabel = label || placeholder || triggerLabel;
   const interactive = !readonly && !inert;
   const showClear = clearable && labels.length > 0 && !readonly && !disabled;
   /** Only a multi control's row weighs itself; a single one draws its chip and stops. */
@@ -433,7 +438,7 @@ export function PickerControl({
       ref={inputRef}
       data-slot={`${slot}-input`}
       aria-invalid={invalid ? 'true' : undefined}
-      aria-label={placeholder}
+      aria-label={inputLabel}
       readOnly={readonly || undefined}
       placeholder={inputPlaceholder ?? (labels.length > 0 ? '' : placeholder)}
       onKeyDown={onKey}
@@ -590,7 +595,7 @@ export function PickerControl({
             <ComboboxPrimitive.Input
               ref={inputRef}
               data-slot={`${slot}-input`}
-              aria-label={placeholder}
+              aria-label={inputLabel}
               readOnly
               onKeyDown={onKey}
               className="sr-only"

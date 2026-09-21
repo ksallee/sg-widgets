@@ -1,7 +1,7 @@
 import type { PropsFile } from './_types';
 
 export default {
-  extends: { name: 'picker-control', omit: ['slot', 'picker', 'multiple', 'keys', 'onSelect', 'labels', 'items', 'rowCount', 'chipKeys', 'chipsSlot', 'summary', 'max', 'chipRow', 'inline', 'tokenInput', 'inputPlaceholder', 'searchable', 'textValue', 'rowKey', 'inert', 'query', 'onQueryChange', 'onRemoveAt', 'onClear', 'anchored', 'loading', 'count', 'error', 'empty', 'hasMore', 'onLoadMore', 'clearLabel', 'triggerLabel', 'overflowLabel', 'itemToStringLabel', 'controlProps', 'chip', 'rows'] },
+  extends: { name: 'picker-control', omit: ['slot', 'picker', 'label', 'multiple', 'keys', 'onSelect', 'labels', 'items', 'rowCount', 'chipKeys', 'chipsSlot', 'summary', 'max', 'chipRow', 'inline', 'tokenInput', 'inputPlaceholder', 'searchable', 'textValue', 'rowKey', 'inert', 'query', 'onQueryChange', 'onRemoveAt', 'onClear', 'anchored', 'loading', 'count', 'error', 'empty', 'hasMore', 'onLoadMore', 'clearLabel', 'triggerLabel', 'overflowLabel', 'itemToStringLabel', 'controlProps', 'chip', 'rows'] },
   props: [
     { name: 'context', type: '`SgContext`', default: 'required', meaning: 'The widget context. The site\'s enabled types are read through it, once per page.' },
     { name: 'value', type: '`string | null`', default: '`null`', meaning: 'The chosen type code. Two-way in Svelte.' },

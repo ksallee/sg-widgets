@@ -1,7 +1,7 @@
 import type { PropsFile } from './_types';
 
 export default {
-  extends: { name: 'picker-control', omit: ['multiple', 'keys', 'onSelect', 'labels', 'items', 'rowCount', 'chipKeys', 'chipsSlot', 'summary', 'max', 'chipRow', 'inline', 'tokenInput', 'inputPlaceholder', 'textValue', 'rowKey', 'inert', 'query', 'onQueryChange', 'onRemoveAt', 'onClear', 'anchored', 'count', 'empty', 'hasMore', 'onLoadMore', 'overflowLabel', 'itemToStringLabel', 'controlProps', 'chip', 'rows'] },
+  extends: { name: 'picker-control', omit: ['multiple', 'label', 'keys', 'onSelect', 'labels', 'items', 'rowCount', 'chipKeys', 'chipsSlot', 'summary', 'max', 'chipRow', 'inline', 'tokenInput', 'inputPlaceholder', 'textValue', 'rowKey', 'inert', 'query', 'onQueryChange', 'onRemoveAt', 'onClear', 'anchored', 'count', 'empty', 'hasMore', 'onLoadMore', 'overflowLabel', 'itemToStringLabel', 'controlProps', 'chip', 'rows'] },
   props: [
     { name: 'value', type: '`string | null`', default: '`null`', meaning: 'The stored string. Two-way in Svelte.' },
     { name: 'onValueChange', type: '`(value: string | null) => void`', default: '—', meaning: 'Called on every change.' },

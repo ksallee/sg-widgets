@@ -1,9 +1,12 @@
 // The registry's own rules, on the widgets that were slipping on them.
 //
 //   pnpm qa --start --path /widgets/field-picker/ --framework both --drive tools/drives/registry-rule-slips.js
+//   pnpm qa --start --path /widgets/picker-control/ --framework both --drive tools/drives/registry-rule-slips.js
 //
-// The field picker's search box takes focus on open with the page where it was, and its
-// back, reset and descend controls carry the coarse-pointer box of `PICKER_ICON_BUTTON`.
+// Three readings, each on the page that holds its widget. The field picker's search box takes
+// focus on open with the page where it was, and its back, reset and descend controls carry the
+// coarse-pointer box of `PICKER_ICON_BUTTON`. A picker control with no placeholder still names
+// its combobox. Whichever of the three the page holds are read; a page that holds none fails.
 const notes = [];
 const pane = (name) => document.querySelector(`[data-pane="${name}"]`);
 /** The panes this run draws. Both islands stay mounted, so only a visible one is read. */
@@ -73,6 +76,20 @@ for (const framework of drawn) {
     input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
     await wait(400);
   }
+
+  /* the picker control ----------------------------------------------------- */
+  const control = root.querySelector('[data-demo-case="named"] [data-slot="department-named-picker-input"]');
+  if (control) {
+    readings += 1;
+    if (control.getAttribute('placeholder')) {
+      return fail(`${framework}: the named control shows a placeholder, so it proves nothing`);
+    }
+    const label = (control.getAttribute('aria-label') ?? '').trim();
+    if (label === '') return fail(`${framework}: a control with no placeholder leaves its combobox unnamed`);
+    notes.push(`${framework}: the control with no placeholder names its combobox "${label}"`);
+  }
+  const blank = root.querySelectorAll('[aria-label=""]').length;
+  if (blank > 0) return fail(`${framework}: ${blank} elements carry an empty aria-label`);
 }
 
 if (readings === 0) return { verdict: 'FAIL this page holds none of the widgets read here' };

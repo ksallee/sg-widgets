@@ -1,0 +1,74 @@
+# Publish @sg-widgets/core to npm when a GitHub release is published. Nothing else triggers it: a
+# tag alone does not, so a mistyped tag costs nothing and the release notes are written before
+# anything ships.
+#
+# No token anywhere. npm Trusted Publishing exchanges this workflow's OIDC identity for a
+# short-lived publish token, which is why `id-token: write` is here and no secret is. Trusted
+# publishing needs the package to exist, so the first publish is by hand: create the `sg-widgets`
+# org on npm, `npm login`, then from a clean `main`
+#
+#   pnpm --filter @sg-widgets/core publish --access public
+#
+# and configure the rest once on npmjs.com, under the package's Trusted Publisher settings:
+#
+#   owner              ksallee
+#   repository         sg-widgets
+#   workflow           release.yml
+#   environment        npm
+#
+# The `npm` environment is the second half of that: with it set, only a run in that environment can
+# claim the identity, so a workflow added by a pull request cannot publish.
+#
+# The version published is `version` in packages/core/package.json. npm refuses a version it already
+# has, so bump it in the same commit as the release, and never re-point a tag at new code.
+
+name: Release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  npm:
+    name: Build and publish to npm
+    runs-on: ubuntu-latest
+    environment: npm
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # The gates already build the package on every push. This builds it again from the tagged
+      # tree, because that is the tree being published and no other run has seen it.
+      - run: pnpm --filter @sg-widgets/core build
+
+      - name: The tarball imports before anyone can install it
+        working-directory: packages/core
+        run: |
+          npm pack --pack-destination /tmp
+          mkdir -p /tmp/check
+          cd /tmp/check
+          npm init -y >/dev/null
+          npm install /tmp/sg-widgets-core-*.tgz
+          node -e "import('@sg-widgets/core').then((m) => { if (!m.RestClient) throw new Error('no RestClient'); console.log('ok'); })"
+
+      # Trusted publishing needs npm 11.5.1 or newer; the runner's npm is older than the Node it
+      # ships with.
+      - run: npm install -g npm@latest
+
+      - name: Publish
+        working-directory: packages/core
+        run: npm publish --provenance --access public

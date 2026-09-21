@@ -4,6 +4,12 @@
   "description": "Headless, framework-agnostic model of Flow Production Tracking (ShotGrid) fields, filters, statuses and a client adapter, for building widgets.",
   "type": "module",
   "sideEffects": false,
+  "homepage": "https://sg-widgets.vercel.app",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ksallee/sg-widgets.git",
+    "directory": "packages/core"
+  },
   "main": "./dist/index.mjs",
   "types": "./dist/index.d.mts",
   "exports": {

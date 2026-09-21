@@ -70,6 +70,14 @@ jobs:
       # ships with.
       - run: npm install -g npm@latest
 
-      - name: Publish
+      # A version already on npm is left alone, so a release made for the record after a manual
+      # publish (the first one) passes instead of failing on the version it already has.
+      - name: Publish, unless this version is on npm already
         working-directory: packages/core
-        run: npm publish --provenance --access public
+        run: |
+          version=$(node -p "require('./package.json').version")
+          if npm view "sg-widgets-core@$version" version >/dev/null 2>&1; then
+            echo "sg-widgets-core@$version is on npm already; nothing to publish"
+            exit 0
+          fi
+          npm publish --provenance --access public

@@ -14,7 +14,7 @@ export default {
     { name: 'class / className', type: '`string`', default: '—', meaning: 'Merged after the widget\'s own classes.' },
   ],
   events: [
-    { name: 'onChange', payload: '`FilterGroup`', when: 'The tree was applied, by Apply, Clear all or the clear control, never while editing. Svelte also binds it with `bind:value`.' },
+    { name: 'onValueChange', payload: '`FilterGroup`', when: 'The tree was applied, by Apply, Clear all or the clear control, never while editing. Svelte also binds it with `bind:value`.' },
     { name: 'onOpenChange', payload: '`boolean`', when: 'The dialog opened or closed. Svelte also binds it with `bind:open`.' },
   ],
   keyboard: [

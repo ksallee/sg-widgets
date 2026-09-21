@@ -45,7 +45,7 @@
 		size?: SortPickerSize;
 		disabled?: boolean;
 		/** Both the keys and the `sort` string they serialise to. */
-		onChange?: (value: SortKey[], sort: string) => void;
+		onValueChange?: (value: SortKey[], sort: string) => void;
 		/** Whether the popover is showing, two-way. */
 		open?: boolean;
 		onOpenChange?: (open: boolean) => void;
@@ -61,7 +61,7 @@
 		options,
 		size = 'md',
 		disabled = false,
-		onChange,
+		onValueChange,
 		open = $bindable(false),
 		onOpenChange,
 		class: className,
@@ -121,7 +121,7 @@
 
 	function commit(next: SortKey[]): void {
 		value = next;
-		onChange?.(next, toSortString(next));
+		onValueChange?.(next, toSortString(next));
 	}
 
 	function move(index: number, delta: number): void {

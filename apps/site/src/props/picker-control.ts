@@ -32,7 +32,7 @@ export default {
     { name: 'open', type: '`boolean`', default: '`false`', meaning: 'Whether the popup is showing. Two-way in Svelte.' },
     { name: 'onOpenChange', type: '`(open: boolean) => void`', default: '—' },
     { name: 'query', type: '`string`', default: '`\'\'`', meaning: 'What the caret holds. Two-way in Svelte.' },
-    { name: 'onQueryChange', type: '`(query: string) => void`', default: '—', meaning: 'React: called when the caret changes.' , only: 'react' },
+    { name: 'onQueryChange', type: '`(query: string) => void`', default: '—', meaning: 'Called when the caret changes.' },
     { name: 'onRemoveAt', type: '`(index: number) => void`', default: '—', meaning: 'Remove the chip at `index`. Backspace walks the row through it.' },
     { name: 'onClear', type: '`() => void`', default: '—' },
     { name: 'anchored', type: '`boolean`', default: '`false`', meaning: 'The popup is as wide as the control it hangs off.' },

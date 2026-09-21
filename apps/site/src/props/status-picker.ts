@@ -7,7 +7,7 @@ export default {
     { name: 'projectId', type: '`number`', default: '—', meaning: 'Offer the codes this project allows.' },
     { name: 'projectIds', type: '`number[]`', default: '—', meaning: 'Offer the codes every one of these projects allows.' },
     { name: 'field', type: '`string`', default: 'status field', meaning: 'A list or status field other than the type\'s own.' },
-    { name: 'value', type: '`string`', default: '—', meaning: 'The selected code. `bind:value` in Svelte, `value` with `onValueChange` in React.' },
+    { name: 'value', type: '`string | null`', default: '`null`', meaning: 'The selected code, or `null` when nothing is chosen. `bind:value` in Svelte, `value` with `onValueChange` in React.' },
     { name: 'placeholder', type: '`string`', default: '`\'Select a status\'`', meaning: 'Shown with no selection.' },
     { name: 'emptyLabel', type: '`string`', default: '`\'No rows\'`', meaning: 'Shown when the field offers nothing.' },
     { name: 'loadingLabel', type: '`string`', default: '`\'Loading…\'`', meaning: 'Names the skeletons a read stands behind, for a screen reader.' },

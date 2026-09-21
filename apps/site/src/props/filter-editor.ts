@@ -13,7 +13,7 @@ export default {
     { name: 'class / className', type: '`string`', default: '—', meaning: 'Merged after the widget\'s own classes.' },
   ],
   events: [
-    { name: 'onChange', payload: '`FilterGroup`', when: 'The whole tree changed, on every edit. Svelte also binds it with `bind:value`.' },
+    { name: 'onValueChange', payload: '`FilterGroup`', when: 'The whole tree changed, on every edit. Svelte also binds it with `bind:value`.' },
   ],
   slots: [
     { name: 'fieldChooser', receives: '`entityType`, the current `path`, `hidePaths`, `filterableOnly`, `disabled`, `onSelect(path)`.' },

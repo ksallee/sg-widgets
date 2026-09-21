@@ -182,7 +182,7 @@ export default function EntityTableDemo() {
                 baseFilter={scope}
                 size="sm"
                 value={filter}
-                onChange={setFilter}
+                onValueChange={setFilter}
               />
               <div className="flex flex-col gap-2">
                 <button type="button" className={toggle} aria-pressed={picking} onClick={() => setPicking(!picking)}>
@@ -206,7 +206,7 @@ export default function EntityTableDemo() {
             </>
           }
           toolbarEnd={
-            <SortPicker entityType="Version" context={context} size="sm" options={columns.map((column) => column.path)} value={sortKeys} onChange={setSortKeys} />
+            <SortPicker entityType="Version" context={context} size="sm" options={columns.map((column) => column.path)} value={sortKeys} onValueChange={setSortKeys} />
           }
         />
       </div>

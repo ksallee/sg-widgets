@@ -20,13 +20,13 @@ export default function StatusPickerDemo() {
   const context = getDemoContext();
   const projectId = context.projectId;
   const otherProjectId = context.projectFor(71);
-  const [inProjectA, setInProjectA] = useState<string | undefined>('ip');
-  const [inProjectB, setInProjectB] = useState<string | undefined>('pndad');
-  const [shared, setShared] = useState<string | undefined>(undefined);
-  const [project, setProject] = useState<string | undefined>('Active');
-  const [unknown, setUnknown] = useState<string | undefined>('zz_retired');
-  const [note, setNote] = useState<string | undefined>('opn');
-  const [switching, setSwitching] = useState<string | undefined>('part');
+  const [inProjectA, setInProjectA] = useState<string | null>('ip');
+  const [inProjectB, setInProjectB] = useState<string | null>('pndad');
+  const [shared, setShared] = useState<string | null>(null);
+  const [project, setProject] = useState<string | null>('Active');
+  const [unknown, setUnknown] = useState<string | null>('zz_retired');
+  const [note, setNote] = useState<string | null>('opn');
+  const [switching, setSwitching] = useState<string | null>('part');
   const [switchTo, setSwitchTo] = useState(otherProjectId);
   /** Whether each type's status field is mandatory, read from the schema and written on the cells. */
   const [mandatory, setMandatory] = useState<Record<string, boolean>>({});

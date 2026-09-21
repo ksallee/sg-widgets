@@ -528,7 +528,7 @@ export function ColumnPicker({
                     onSelect={() => activate(row)}
                     data-slot="column-picker-field"
                     data-path={row.path}
-                    data-chosen={value.includes(row.path) ? 'true' : undefined}
+                    data-checked={value.includes(row.path) ? 'true' : undefined}
                     className={TEXT[size]}
                   >
                     <Checkbox

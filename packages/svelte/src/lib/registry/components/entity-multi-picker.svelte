@@ -371,7 +371,7 @@
 					data-slot="entity-picker-option"
 					data-entity-type={row.type}
 					data-entity-id={row.id}
-					data-selected-entity={chosen ? 'true' : undefined}
+					data-checked={chosen ? 'true' : undefined}
 					value={entityKey(row)}
 					label={row.name}
 					class={PICKER_ROW}

@@ -22,9 +22,9 @@ export interface StatusPickerProps extends Omit<React.HTMLAttributes<HTMLDivElem
   projectIds?: number[];
   /** A list or status field other than the type's own. Project's is `sg_status`. */
   field?: string;
-  /** The selected code. */
-  value?: string;
-  onValueChange?: (value: string | undefined) => void;
+  /** The selected code, or `null` when nothing is chosen. */
+  value?: string | null;
+  onValueChange?: (value: string | null) => void;
   placeholder?: string;
   /** Shown when the field offers nothing. */
   emptyLabel?: string;
@@ -200,7 +200,7 @@ export function StatusPicker({
       Boolean(value) &&
       !query.options.some((o) => o.code === value);
     seen.current = codes;
-    if (dropped) onValueChange?.(undefined);
+    if (dropped) onValueChange?.(null);
   }, [query, value, onValueChange]);
 
   return (
@@ -210,7 +210,7 @@ export function StatusPicker({
       picker="status"
       options={query.options}
       value={value ?? null}
-      onValueChange={(next) => onValueChange?.(next ?? undefined)}
+      onValueChange={(next) => onValueChange?.(next)}
       placeholder={placeholder}
       emptyLabel={emptyLabel}
       loadingLabel={loadingLabel}

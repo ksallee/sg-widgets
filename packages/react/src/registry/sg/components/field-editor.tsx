@@ -433,8 +433,8 @@ export function FieldEditor({
           entityType={field?.entityType ?? ''}
           field={field?.name}
           projectId={projectId}
-          value={typeof value === 'string' ? value : undefined}
-          onValueChange={(next: string | undefined) => emit(next ?? null)}
+          value={typeof value === 'string' ? value : null}
+          onValueChange={emit}
           size={size}
           disabled={disabled}
           readonly={readonly}

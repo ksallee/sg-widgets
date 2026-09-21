@@ -74,7 +74,7 @@ const VALUE_ROW: Record<FilterBarSize, string> = { sm: 'max-h-5', md: 'max-h-6',
 const PILL =
   'border-border inline-flex max-w-full min-w-0 items-center overflow-hidden rounded-lg border text-sm shadow-xs';
 
-export interface FilterBarProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange'> {
+export interface FilterBarProps extends React.HTMLAttributes<HTMLDivElement> {
   /** The root element. */
   ref?: React.Ref<HTMLDivElement>;
 
@@ -101,7 +101,7 @@ export interface FilterBarProps extends Omit<React.HTMLAttributes<HTMLDivElement
   counts?: FacetCounts;
   /** Rows read for a tally. */
   sampleSize?: number;
-  onChange?: (value: FilterGroup) => void;
+  onValueChange?: (value: FilterGroup) => void;
   className?: string;
 }
 
@@ -132,7 +132,7 @@ export function FilterBar({
   counts,
   baseFilter = null,
   sampleSize = 200,
-  onChange,
+  onValueChange,
   className,
   ref,
   ...rest
@@ -293,7 +293,7 @@ export function FilterBar({
     const next = selected.some((v) => keyOf(v) === option.key)
       ? selected.filter((v) => keyOf(v) !== option.key)
       : [...selected, option.value];
-    onChange?.(setFacet(value, name, next, listOperator(name), fields[name]));
+    onValueChange?.(setFacet(value, name, next, listOperator(name), fields[name]));
   }
 
   const facetList = (name: string): ReactNode => {
@@ -361,7 +361,7 @@ export function FilterBar({
               size={CONTROL_BUTTON[size]}
               className="w-full"
               data-slot="filter-pill-clear"
-              onClick={() => onChange?.(setFacet(value, name, [], 'in', fields[name]))}
+              onClick={() => onValueChange?.(setFacet(value, name, [], 'in', fields[name]))}
             >
               Clear
             </Button>
@@ -392,7 +392,7 @@ export function FilterBar({
             data-slot="filter-pill-remove"
             aria-label={`Remove ${label} filter`}
             className={cn(REMOVE_CONTROL, 'disabled:pointer-events-none disabled:opacity-50')}
-            onClick={() => onChange?.(withoutPaths(value, [name]))}
+            onClick={() => onValueChange?.(withoutPaths(value, [name]))}
           >
             <XIcon aria-hidden="true" className={CHIP_CROSS[CROSS[size]]} />
           </button>
@@ -480,7 +480,7 @@ export function FilterBar({
           disabled={disabled}
           className="text-muted-foreground"
           data-slot="filter-clear-all"
-          onClick={() => onChange?.(withoutPaths(value, facets))}
+          onClick={() => onValueChange?.(withoutPaths(value, facets))}
         >
           Clear all
         </Button>
@@ -494,7 +494,7 @@ export function FilterBar({
         size={size}
         label="More filters"
         value={value}
-        onChange={(next) => onChange?.(next)}
+        onValueChange={(next) => onValueChange?.(next)}
       />
     </div>
   );

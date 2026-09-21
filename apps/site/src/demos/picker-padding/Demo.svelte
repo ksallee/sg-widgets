@@ -123,7 +123,7 @@
 				entityType="Version"
 				{projectId}
 				{size}
-				value={filled ? 'ip' : undefined}
+				value={filled ? 'ip' : null}
 			/>
 		</div>
 

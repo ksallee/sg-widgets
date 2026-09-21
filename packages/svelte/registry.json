@@ -54,9 +54,7 @@
         "local:date-editor",
         "local:date-time-editor",
         "local:list-picker",
-        "local:list-select",
         "local:list-multi-picker",
-        "local:list-multi-select",
         "local:url-editor",
         "local:color-editor",
         "local:field-editor",
@@ -921,22 +919,6 @@
       ]
     },
     {
-      "name": "list-select",
-      "type": "registry:component",
-      "title": "List Select",
-      "description": "Deprecated: the former name of list-picker, which it re-exports.",
-      "dependencies": [],
-      "registryDependencies": [
-        "local:list-picker"
-      ],
-      "files": [
-        {
-          "path": "src/lib/registry/components/list-select.ts",
-          "type": "registry:component"
-        }
-      ]
-    },
-    {
       "name": "list-multi-picker",
       "type": "registry:component",
       "title": "List Multi Picker",
@@ -958,22 +940,6 @@
       "files": [
         {
           "path": "src/lib/registry/components/list-multi-picker.svelte",
-          "type": "registry:component"
-        }
-      ]
-    },
-    {
-      "name": "list-multi-select",
-      "type": "registry:component",
-      "title": "List Multi Select",
-      "description": "Deprecated: the former name of list-multi-picker, which it re-exports.",
-      "dependencies": [],
-      "registryDependencies": [
-        "local:list-multi-picker"
-      ],
-      "files": [
-        {
-          "path": "src/lib/registry/components/list-multi-select.ts",
           "type": "registry:component"
         }
       ]

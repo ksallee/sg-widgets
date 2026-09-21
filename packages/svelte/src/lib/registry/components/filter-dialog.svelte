@@ -45,7 +45,7 @@
 		/** Replaces both button labels. Otherwise Add filters, then Edit filters. */
 		label?: string;
 		title?: string;
-		onChange?: (value: FilterGroup) => void;
+		onValueChange?: (value: FilterGroup) => void;
 		/** Whether the dialog is showing, two-way. */
 		open?: boolean;
 		onOpenChange?: (open: boolean) => void;
@@ -64,7 +64,7 @@
 		disabled = false,
 		label,
 		title = 'Filters',
-		onChange,
+		onValueChange,
 		open = $bindable(false),
 		onOpenChange,
 		fieldChooser,
@@ -81,7 +81,7 @@
 
 	function commit(next: FilterGroup): void {
 		value = next;
-		onChange?.(next);
+		onValueChange?.(next);
 	}
 
 	function apply(): void {

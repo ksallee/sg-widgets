@@ -105,13 +105,13 @@ for (const framework of ['svelte', 'react']) {
     await close();
     continue;
   }
-  const isTicked = () => rows().find((row) => row.getAttribute('data-selected-entity') === 'true');
+  const isTicked = () => rows().find((row) => row.getAttribute('data-checked') === 'true');
   await settle(rows()[0], isTicked);
   const ticked = isTicked();
   if (!ticked) {
     failures.push(`${framework}: a press on a row ticked nothing`);
   } else {
-    const plain = rows().find((row) => row.getAttribute('data-selected-entity') !== 'true');
+    const plain = rows().find((row) => row.getAttribute('data-checked') !== 'true');
     const labelX = (row) => {
       const label = row.querySelector('[data-slot="picker-row-text"]');
       return label ? Math.round(label.getBoundingClientRect().left - row.getBoundingClientRect().left) : null;

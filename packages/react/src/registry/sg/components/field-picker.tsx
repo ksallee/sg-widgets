@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState, type KeyboardEvent } from 'react';
+import { Fragment, useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import type { FieldHop, FieldOption, FieldPathOption, FieldSchema, SgContext } from '@sg-widgets/core';
 import {
   currentType,
@@ -222,6 +222,7 @@ export function FieldPicker({
     setUncontrolledOpen(next);
     onOpenChange?.(next);
   };
+  const inputRef = useRef<HTMLInputElement>(null);
   const [search, setSearch] = useState('');
   const [highlighted, setHighlighted] = useState('');
   const [hops, setHops] = useState<FieldHop[]>([]);
@@ -435,7 +436,16 @@ export function FieldPicker({
       className={cn('relative flex w-full min-w-0 items-center', className)}
       {...rest}
     >
-      <Popover open={open} onOpenChange={(next) => setOpen(readonly || disabled ? false : next)}>
+      <Popover
+        open={open}
+        onOpenChange={(next) => {
+          const showing = !(readonly || disabled) && next;
+          setOpen(showing);
+          // The search box takes focus on open, with the page still: the list scrolls its
+          // highlighted row into view, and a page dragged there with it is not the widget's.
+          if (showing) requestAnimationFrame(() => inputRef.current?.focus({ preventScroll: true }));
+        }}
+      >
         <PopoverTrigger
           data-slot="field-picker-trigger"
           role="combobox"
@@ -524,7 +534,7 @@ export function FieldPicker({
             onQueryChange={setSearch}
             onItemHighlighted={(next) => setHighlighted(typeof next === 'string' ? next : '')}
           >
-            <CommandInput autoFocus placeholder={choosing ? 'Which type?' : searchPlaceholder} />
+            <CommandInput ref={inputRef} placeholder={choosing ? 'Which type?' : searchPlaceholder} />
             <CommandList>
               {failure ? (
                 <StateLine

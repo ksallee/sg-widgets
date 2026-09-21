@@ -5,7 +5,7 @@ import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
 import react from '@astrojs/react';
 import svelte from '@astrojs/svelte';
-import node from '@astrojs/node';
+import vercel from '@astrojs/vercel';
 import tailwindcss from '@tailwindcss/vite';
 
 const packages = new URL('../../packages/', import.meta.url);
@@ -24,12 +24,12 @@ const paletteBoot = readFileSync(new URL('./src/scripts/palette-boot.js', import
 
 export default defineConfig({
   // Set so the sitemap Starlight emits has absolute URLs (and to silence its warning).
-  site: 'https://sg-widgets.dev',
+  site: 'https://sg-widgets.vercel.app',
   // Every page is prerendered. The adapter is here for the three endpoints under
   // src/pages/live/, which opt out with `export const prerender = false`: the two
   // App Session Launcher calls the browser cannot make itself, and the dev-only
-  // token endpoint.
-  adapter: node({ mode: 'standalone' }),
+  // token endpoint. They become one Vercel function; the pages stay static files.
+  adapter: vercel(),
   integrations: [
     starlight({
       title: 'SG Widgets',

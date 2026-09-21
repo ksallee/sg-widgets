@@ -38,8 +38,8 @@ One item per registry, `sg-widgets`, is the whole set: it carries no file and na
 item in `registryDependencies`, so a consumer installs everything in one command.
 
 ```sh
-pnpm dlx shadcn@latest add https://sg-widgets.dev/r/react/sg-widgets.json
-pnpm dlx shadcn-svelte@latest add https://sg-widgets.dev/r/svelte/sg-widgets.json
+pnpm dlx shadcn@latest add https://sg-widgets.vercel.app/r/react/sg-widgets.json
+pnpm dlx shadcn-svelte@latest add https://sg-widgets.vercel.app/r/svelte/sg-widgets.json
 ```
 
 It is the first entry of each `registry.json` and a new item is added to its list in the same
@@ -76,12 +76,13 @@ is rewritten rather than copied verbatim. `files[].path` is read relative to the
 ## 3. Dependencies between items
 
 - **React** uses the item's absolute URL:
-  `"registryDependencies": ["https://sg-widgets.dev/r/react/entity-chip.json"]`. This is what makes
-  the documented one-line install work with no edit to the consumer's `components.json`. The
-  namespaced form (`@sg-widgets/entity-chip`) also resolves, but only after the consumer adds
-  `"registries": { "@sg-widgets": "https://sg-widgets.dev/r/react/{name}.json" }`, so it is not the
-  default here. Never use a relative `./thing.json`: React reads that off the *consumer's* disk, not
-  relative to the item's URL.
+  `"registryDependencies": ["https://sg-widgets.vercel.app/r/react/entity-chip.json"]`. This is
+  what makes the documented one-line install work with no edit to the consumer's
+  `components.json`. The namespaced form (`@sg-widgets/entity-chip`) also resolves, but only after
+  the consumer adds
+  `"registries": { "@sg-widgets": "https://sg-widgets.vercel.app/r/react/{name}.json" }`, so it is
+  not the default here. Never use a relative `./thing.json`: React reads that off the *consumer's*
+  disk, not relative to the item's URL.
 
 - **Svelte** has no namespaces in 1.x. Use `"registryDependencies": ["local:entity-chip"]`;
   `registry build` rewrites it to `"./entity-chip.json"`, which `add` resolves against the parent
@@ -91,11 +92,17 @@ The trade-off is the same in both: a dependency is addressed by URL, so a regist
 different host resolves its own items only if that host is the one baked in. The Svelte form is
 relative and therefore host-independent; React has no relative option that reaches the network.
 
+The host is one literal, `sg-widgets.vercel.app`. It is spelled in both `registry.json` files,
+`packages/react/components.json`, `tools/registry-check.mjs`, `apps/site/astro.config.mjs`,
+`apps/site/src/components/Install.astro` and this file, and moving the registry to another domain
+is that one rename, made everywhere in one change.
+
 An item names the items its own files import, and only those. A dependency reached through another
 item is not restated: `entity-table` names `collection-footer`, and `collection-footer` names
 `select`. Anything from the upstream registries is referenced by its plain name (`"button"`) in
 both; the `@shadcn/button` form is not used. A primitive this registry ships is named as this
-registry's item (`https://sg-widgets.dev/r/react/command.json`, `local:command`), never plainly.
+registry's item (`https://sg-widgets.vercel.app/r/react/command.json`, `local:command`), never
+plainly.
 
 A Svelte widget may import a sibling widget by relative path (`./entity-picker.svelte`). Every
 component item lands flat at the components alias, so the path survives install. The sibling's item

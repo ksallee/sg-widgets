@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { UrlValue, UrlWriteValue } from '@sg-widgets/core';
+	import type { UrlValue, UrlWriteValue } from 'sg-widgets-core';
 	import UrlEditor from '$lib/registry/components/url-editor.svelte';
 
 	let web = $state<UrlValue | null>({

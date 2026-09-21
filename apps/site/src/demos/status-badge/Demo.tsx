@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import type { FieldSchema, NativeStatus, StatusRecord } from '@sg-widgets/core';
-import { NATIVE_STATUSES, STOCK_ICON_KEYS, statusPaint } from '@sg-widgets/core';
+import type { FieldSchema, NativeStatus, StatusRecord } from 'sg-widgets-core';
+import { NATIVE_STATUSES, STOCK_ICON_KEYS, statusPaint } from 'sg-widgets-core';
 import { StatusBadge } from '@/registry/sg/components/status-badge';
 import { StatusGlyph } from '@/registry/sg/components/status-glyph';
 import { DemoContextProvider, useSgContext } from '../_shared/react';

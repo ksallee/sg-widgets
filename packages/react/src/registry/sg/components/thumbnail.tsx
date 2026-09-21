@@ -1,6 +1,6 @@
 import type * as React from 'react';
 import { useState } from 'react';
-import { imageState } from '@sg-widgets/core';
+import { imageState } from 'sg-widgets-core';
 import { Hourglass, ImageIcon, Play } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { entityGlyph } from '@/registry/sg/components/entity-glyphs';

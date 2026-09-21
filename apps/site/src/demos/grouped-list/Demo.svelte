@@ -6,7 +6,7 @@
 		EntityRow,
 		SortSpec,
 		StatusRecord
-	} from '@sg-widgets/core';
+	} from 'sg-widgets-core';
 	import {
 		cellValue,
 		collapseAll,
@@ -15,7 +15,7 @@
 		displayNameOf,
 		expandAll,
 		resolveColumns
-	} from '@sg-widgets/core';
+	} from 'sg-widgets-core';
 	import GroupedList from '$lib/registry/components/grouped-list.svelte';
 	import StatusBadge from '$lib/registry/components/status-badge.svelte';
 	import { createDemoClient, createDemoContext } from '../_shared/client';

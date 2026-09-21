@@ -18,7 +18,7 @@
 		SgContext,
 		StatusRecord,
 		UrlLinkInfo
-	} from '@sg-widgets/core';
+	} from 'sg-widgets-core';
 	import {
 		COLOR_SENTINEL,
 		contextFromClient,
@@ -29,7 +29,7 @@
 		renderKindFor,
 		rgbToCss,
 		urlLink
-	} from '@sg-widgets/core';
+	} from 'sg-widgets-core';
 	import { Switch } from '$lib/components/ui/switch/index.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
 	import EntityChip, { type EntityChipVariant } from '$lib/registry/components/entity-chip.svelte';

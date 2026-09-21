@@ -12,7 +12,7 @@
         "flow-production-tracking"
       ],
       "dependencies": [
-        "@sg-widgets/core",
+        "sg-widgets-core",
         "lucide-react"
       ],
       "registryDependencies": [
@@ -90,7 +90,7 @@
         "atom"
       ],
       "dependencies": [
-        "@sg-widgets/core",
+        "sg-widgets-core",
         "@base-ui/react",
         "lucide-react",
         "cn"
@@ -140,7 +140,7 @@
         "atom"
       ],
       "dependencies": [
-        "@sg-widgets/core",
+        "sg-widgets-core",
         "cn"
       ],
       "registryDependencies": [],
@@ -162,7 +162,7 @@
         "atom"
       ],
       "dependencies": [
-        "@sg-widgets/core",
+        "sg-widgets-core",
         "lucide-react",
         "cn"
       ],
@@ -188,7 +188,7 @@
         "atom"
       ],
       "dependencies": [
-        "@sg-widgets/core",
+        "sg-widgets-core",
         "lucide-react",
         "cn"
       ],
@@ -216,7 +216,7 @@
         "widget"
       ],
       "dependencies": [
-        "@sg-widgets/core",
+        "sg-widgets-core",
         "lucide-react",
         "cn"
       ],
@@ -246,7 +246,7 @@
         "atom"
       ],
       "dependencies": [
-        "@sg-widgets/core",
+        "sg-widgets-core",
         "lucide-react",
         "cn"
       ],
@@ -271,7 +271,7 @@
         "atom"
       ],
       "dependencies": [
-        "@sg-widgets/core",
+        "sg-widgets-core",
         "lucide-react",
         "cn"
       ],
@@ -296,7 +296,7 @@
         "atom"
       ],
       "dependencies": [
-        "@sg-widgets/core",
+        "sg-widgets-core",
         "cn"
       ],
       "registryDependencies": [
@@ -324,7 +324,7 @@
         "atom"
       ],
       "dependencies": [
-        "@sg-widgets/core",
+        "sg-widgets-core",
         "cn"
       ],
       "registryDependencies": [
@@ -352,7 +352,7 @@
         "atom"
       ],
       "dependencies": [
-        "@sg-widgets/core",
+        "sg-widgets-core",
         "cn"
       ],
       "registryDependencies": [],
@@ -374,7 +374,7 @@
         "atom"
       ],
       "dependencies": [
-        "@sg-widgets/core",
+        "sg-widgets-core",
         "lucide-react",
         "cn"
       ],
@@ -521,7 +521,7 @@
         "editor"
       ],
       "dependencies": [
-        "@sg-widgets/core"
+        "sg-widgets-core"
       ],
       "registryDependencies": [],
       "docs": "Converts between YYYY-MM-DD and the Date the calendar takes.",
@@ -542,7 +542,7 @@
         "editor"
       ],
       "dependencies": [
-        "@sg-widgets/core",
+        "sg-widgets-core",
         "cn"
       ],
       "registryDependencies": [
@@ -567,7 +567,7 @@
         "atom"
       ],
       "dependencies": [
-        "@sg-widgets/core",
+        "sg-widgets-core",
         "lucide-react",
         "@base-ui/react",
         "cn"
@@ -595,7 +595,7 @@
         "atom"
       ],
       "dependencies": [
-        "@sg-widgets/core",
+        "sg-widgets-core",
         "lucide-react"
       ],
       "registryDependencies": [
@@ -621,7 +621,7 @@
         "picker"
       ],
       "dependencies": [
-        "@sg-widgets/core",
+        "sg-widgets-core",
         "@base-ui/react",
         "cn"
       ],
@@ -647,7 +647,7 @@
         "picker"
       ],
       "dependencies": [
-        "@sg-widgets/core",
+        "sg-widgets-core",
         "lucide-react",
         "@base-ui/react",
         "cn"
@@ -676,7 +676,7 @@
         "picker"
       ],
       "dependencies": [
-        "@sg-widgets/core",
+        "sg-widgets-core",
         "lucide-react",
         "cn"
       ],
@@ -705,7 +705,7 @@
         "utility"
       ],
       "dependencies": [
-        "@sg-widgets/core"
+        "sg-widgets-core"
       ],
       "registryDependencies": [],
       "docs": "Put the ref on the list element, `data-sortable-id` on each item and `data-sortable-handle` on each grip, then render the announcement in a polite live region.",
@@ -726,7 +726,7 @@
         "picker"
       ],
       "dependencies": [
-        "@sg-widgets/core",
+        "sg-widgets-core",
         "lucide-react",
         "cn"
       ],
@@ -758,7 +758,7 @@
         "editor"
       ],
       "dependencies": [
-        "@sg-widgets/core"
+        "sg-widgets-core"
       ],
       "registryDependencies": [
         "https://sg-widgets.vercel.app/r/react/value-editor.json",
@@ -784,7 +784,7 @@
         "editor"
       ],
       "dependencies": [
-        "@sg-widgets/core",
+        "sg-widgets-core",
         "lucide-react",
         "cn",
         "@base-ui/react"
@@ -813,7 +813,7 @@
         "editor"
       ],
       "dependencies": [
-        "@sg-widgets/core",
+        "sg-widgets-core",
         "cn"
       ],
       "registryDependencies": [
@@ -839,7 +839,7 @@
         "editor"
       ],
       "dependencies": [
-        "@sg-widgets/core",
+        "sg-widgets-core",
         "lucide-react",
         "cn"
       ],
@@ -870,7 +870,7 @@
         "editor"
       ],
       "dependencies": [
-        "@sg-widgets/core",
+        "sg-widgets-core",
         "lucide-react",
         "cn"
       ],
@@ -901,7 +901,7 @@
         "picker"
       ],
       "dependencies": [
-        "@sg-widgets/core",
+        "sg-widgets-core",
         "lucide-react",
         "@base-ui/react",
         "cn"
@@ -929,7 +929,7 @@
         "picker"
       ],
       "dependencies": [
-        "@sg-widgets/core",
+        "sg-widgets-core",
         "lucide-react",
         "@base-ui/react",
         "cn"
@@ -959,7 +959,7 @@
         "editor"
       ],
       "dependencies": [
-        "@sg-widgets/core"
+        "sg-widgets-core"
       ],
       "registryDependencies": [
         "https://sg-widgets.vercel.app/r/react/value-editor.json",
@@ -984,7 +984,7 @@
         "editor"
       ],
       "dependencies": [
-        "@sg-widgets/core",
+        "sg-widgets-core",
         "cn"
       ],
       "registryDependencies": [
@@ -1010,7 +1010,7 @@
         "editor"
       ],
       "dependencies": [
-        "@sg-widgets/core",
+        "sg-widgets-core",
         "@base-ui/react",
         "tw-animate-css",
         "cn"
@@ -1049,7 +1049,7 @@
         "filter"
       ],
       "dependencies": [
-        "@sg-widgets/core"
+        "sg-widgets-core"
       ],
       "registryDependencies": [],
       "docs": "useEntityFields(context, entityType) answers the fields by name, empty until the read lands.",
@@ -1070,7 +1070,7 @@
         "filter"
       ],
       "dependencies": [
-        "@sg-widgets/core",
+        "sg-widgets-core",
         "lucide-react",
         "cn"
       ],
@@ -1116,7 +1116,7 @@
         "filter"
       ],
       "dependencies": [
-        "@sg-widgets/core",
+        "sg-widgets-core",
         "lucide-react",
         "cn"
       ],
@@ -1145,7 +1145,7 @@
         "filter"
       ],
       "dependencies": [
-        "@sg-widgets/core",
+        "sg-widgets-core",
         "lucide-react",
         "cn"
       ],
@@ -1181,7 +1181,7 @@
         "filter"
       ],
       "dependencies": [
-        "@sg-widgets/core",
+        "sg-widgets-core",
         "lucide-react",
         "cn"
       ],
@@ -1213,7 +1213,7 @@
         "picker"
       ],
       "dependencies": [
-        "@sg-widgets/core"
+        "sg-widgets-core"
       ],
       "registryDependencies": [
         "https://sg-widgets.vercel.app/r/react/list-picker.json",
@@ -1240,7 +1240,7 @@
         "picker"
       ],
       "dependencies": [
-        "@sg-widgets/core",
+        "sg-widgets-core",
         "@base-ui/react",
         "cn"
       ],
@@ -1271,7 +1271,7 @@
         "collection"
       ],
       "dependencies": [
-        "@sg-widgets/core"
+        "sg-widgets-core"
       ],
       "registryDependencies": [],
       "docs": "useCollectionSource answers the snapshot and a retry for a failed page.",
@@ -1292,7 +1292,7 @@
         "collection"
       ],
       "dependencies": [
-        "@sg-widgets/core",
+        "sg-widgets-core",
         "@tanstack/react-virtual"
       ],
       "registryDependencies": [
@@ -1316,7 +1316,7 @@
         "collection"
       ],
       "dependencies": [
-        "@sg-widgets/core",
+        "sg-widgets-core",
         "lucide-react"
       ],
       "registryDependencies": [
@@ -1342,7 +1342,7 @@
         "collection"
       ],
       "dependencies": [
-        "@sg-widgets/core",
+        "sg-widgets-core",
         "lucide-react",
         "@tanstack/react-table",
         "cn"
@@ -1360,7 +1360,7 @@
         "button",
         "dropdown-menu"
       ],
-      "docs": "Takes an entity source and resolved columns from @sg-widgets/core. Sorting and grouping go through the server; an edit writes one field and re-reads the row.",
+      "docs": "Takes an entity source and resolved columns from sg-widgets-core. Sorting and grouping go through the server; an edit writes one field and re-reads the row.",
       "files": [
         {
           "path": "src/registry/sg/components/entity-table.tsx",
@@ -1378,7 +1378,7 @@
         "collection"
       ],
       "dependencies": [
-        "@sg-widgets/core",
+        "sg-widgets-core",
         "lucide-react",
         "cn"
       ],
@@ -1408,7 +1408,7 @@
         "collection"
       ],
       "dependencies": [
-        "@sg-widgets/core",
+        "sg-widgets-core",
         "lucide-react",
         "cn"
       ],
@@ -1440,7 +1440,7 @@
         "collection"
       ],
       "dependencies": [
-        "@sg-widgets/core",
+        "sg-widgets-core",
         "lucide-react",
         "cn"
       ],
@@ -1474,7 +1474,7 @@
         "picker"
       ],
       "dependencies": [
-        "@sg-widgets/core",
+        "sg-widgets-core",
         "@base-ui/react",
         "cn",
         "lucide-react"
@@ -1503,7 +1503,7 @@
         "picker"
       ],
       "dependencies": [
-        "@sg-widgets/core",
+        "sg-widgets-core",
         "@base-ui/react",
         "cn"
       ],
@@ -1532,7 +1532,7 @@
         "picker"
       ],
       "dependencies": [
-        "@sg-widgets/core"
+        "sg-widgets-core"
       ],
       "registryDependencies": [
         "https://sg-widgets.vercel.app/r/react/entity-picker.json"
@@ -1555,7 +1555,7 @@
         "picker"
       ],
       "dependencies": [
-        "@sg-widgets/core"
+        "sg-widgets-core"
       ],
       "registryDependencies": [
         "https://sg-widgets.vercel.app/r/react/entity-multi-picker.json"
@@ -1578,7 +1578,7 @@
         "picker"
       ],
       "dependencies": [
-        "@sg-widgets/core"
+        "sg-widgets-core"
       ],
       "registryDependencies": [
         "https://sg-widgets.vercel.app/r/react/entity-picker.json"
@@ -1601,7 +1601,7 @@
         "picker"
       ],
       "dependencies": [
-        "@sg-widgets/core"
+        "sg-widgets-core"
       ],
       "registryDependencies": [
         "https://sg-widgets.vercel.app/r/react/entity-multi-picker.json"
@@ -1624,7 +1624,7 @@
         "search"
       ],
       "dependencies": [
-        "@sg-widgets/core",
+        "sg-widgets-core",
         "lucide-react",
         "cn"
       ],
@@ -1655,7 +1655,7 @@
         "search"
       ],
       "dependencies": [
-        "@sg-widgets/core",
+        "sg-widgets-core",
         "lucide-react",
         "cn"
       ],
@@ -1684,7 +1684,7 @@
         "search"
       ],
       "dependencies": [
-        "@sg-widgets/core",
+        "sg-widgets-core",
         "lucide-react",
         "cn"
       ],

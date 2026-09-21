@@ -11,7 +11,7 @@ import type {
   Scalar,
   SgContext,
   TimeUnit,
-} from '@sg-widgets/core';
+} from 'sg-widgets-core';
 import {
   appendAt,
   applyPreset,
@@ -35,7 +35,7 @@ import {
   withListValue,
   withoutListValue,
   withRelativeWindow,
-} from '@sg-widgets/core';
+} from 'sg-widgets-core';
 import { PlusIcon, XIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
-import type { EntityTypeInfo, SgContext } from '@sg-widgets/core';
-import { entityTypeOptions, errorText, NO_MATCH_LABEL } from '@sg-widgets/core';
+import type { EntityTypeInfo, SgContext } from 'sg-widgets-core';
+import { entityTypeOptions, errorText, NO_MATCH_LABEL } from 'sg-widgets-core';
 import { Combobox as ComboboxPrimitive } from '@base-ui/react';
 import { cn } from '@/lib/utils';
 import {

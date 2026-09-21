@@ -15,8 +15,8 @@
 		StatusRecord,
 		UrlValue,
 		UrlWriteValue
-	} from '@sg-widgets/core';
-	import { condition, createEntitySource, group, resolveColumns, toSortSpecs } from '@sg-widgets/core';
+	} from 'sg-widgets-core';
+	import { condition, createEntitySource, group, resolveColumns, toSortSpecs } from 'sg-widgets-core';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import * as Popover from '$lib/components/ui/popover/index.js';
 	import CheckboxEditor from '$lib/registry/components/checkbox-editor.svelte';

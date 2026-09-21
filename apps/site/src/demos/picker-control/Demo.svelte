@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { matchesEveryWord } from '@sg-widgets/core';
+	import { matchesEveryWord } from 'sg-widgets-core';
 	import { Combobox } from 'bits-ui';
 	import PickerControl from '$lib/registry/components/picker-control.svelte';
 	import {

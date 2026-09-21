@@ -1,6 +1,6 @@
 import * as React from 'react';
-import type { FieldSchema } from '@sg-widgets/core';
-import { fromApiDateTime, timeZoneName, toApiDateTime } from '@sg-widgets/core';
+import type { FieldSchema } from 'sg-widgets-core';
+import { fromApiDateTime, timeZoneName, toApiDateTime } from 'sg-widgets-core';
 import { CalendarIcon } from 'lucide-react';
 import { buttonVariants } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';

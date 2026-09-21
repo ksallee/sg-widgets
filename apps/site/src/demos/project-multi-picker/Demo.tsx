@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import type { EntityRef } from '@sg-widgets/core';
+import type { EntityRef } from 'sg-widgets-core';
 import { ProjectMultiPicker } from '@/registry/sg/components/project-multi-picker';
 import { createDemoContext } from '../_shared/client';
 

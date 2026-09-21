@@ -20,7 +20,7 @@
  * two launcher endpoints forward for a page this site served, to a site on the
  * product's domains, and answer 403 to anything else.
  */
-import { createSessionTokenAuth, createSgContext, RestClient, type SgContext } from '@sg-widgets/core';
+import { createSessionTokenAuth, createSgContext, RestClient, type SgContext } from 'sg-widgets-core';
 
 const KEYS = {
   source: 'sg-demo:source',

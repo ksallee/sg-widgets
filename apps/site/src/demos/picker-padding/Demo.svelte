@@ -6,7 +6,7 @@
 	harness is read, not operated.
 -->
 <script lang="ts">
-	import type { EntityRef } from '@sg-widgets/core';
+	import type { EntityRef } from 'sg-widgets-core';
 	import ContextSelector, {
 		type WorkContext
 	} from '$lib/registry/components/context-selector.svelte';

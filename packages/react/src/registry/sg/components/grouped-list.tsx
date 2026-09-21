@@ -14,7 +14,7 @@ import type {
   SortSpec,
   SourceFilters,
   StatusRecord,
-} from '@sg-widgets/core';
+} from 'sg-widgets-core';
 import {
   asCollapseState,
   cellValue,
@@ -30,7 +30,7 @@ import {
   stateLine,
   toColumn,
   toggleCollapsed,
-} from '@sg-widgets/core';
+} from 'sg-widgets-core';
 import { ChevronRight, CircleAlert, Inbox } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';

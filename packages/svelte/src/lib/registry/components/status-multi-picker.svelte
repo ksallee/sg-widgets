@@ -1,13 +1,13 @@
 <script lang="ts" module>
-	import type { PickerSummary } from '@sg-widgets/core';
+	import type { PickerSummary } from 'sg-widgets-core';
 
 	export type StatusMultiPickerSize = 'sm' | 'md' | 'lg';
 </script>
 
 <script lang="ts">
 	import type { HTMLAttributes } from 'svelte/elements';
-	import type { FieldSchema, PickerRow, SgContext, StatusOption, StatusRecord } from '@sg-widgets/core';
-	import { clearableForField, errorText, matchesEveryWord, NO_MATCH_LABEL } from '@sg-widgets/core';
+	import type { FieldSchema, PickerRow, SgContext, StatusOption, StatusRecord } from 'sg-widgets-core';
+	import { clearableForField, errorText, matchesEveryWord, NO_MATCH_LABEL } from 'sg-widgets-core';
 	import { Combobox } from 'bits-ui';
 	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';

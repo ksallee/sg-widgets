@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { FieldSchema } from '@sg-widgets/core';
+import type { FieldSchema } from 'sg-widgets-core';
 import { FieldEditor } from '@/registry/sg/components/field-editor';
 import { getDemoContext } from '../_shared/client';
 

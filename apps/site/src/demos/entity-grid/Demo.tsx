@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { CollectionColumn, EntityRef, EntityRow } from '@sg-widgets/core';
-import { cellValue, condition, createEntitySource, displayNameOf, resolveColumns } from '@sg-widgets/core';
+import type { CollectionColumn, EntityRef, EntityRow } from 'sg-widgets-core';
+import { cellValue, condition, createEntitySource, displayNameOf, resolveColumns } from 'sg-widgets-core';
 import { EntityGrid } from '@/registry/sg/components/entity-grid';
 import { Thumbnail } from '@/registry/sg/components/thumbnail';
 import { createDemoContext } from '../_shared/client';

@@ -38,8 +38,8 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import type { HTMLAttributes } from 'svelte/elements';
-	import type { FieldSchema, NumberShape } from '@sg-widgets/core';
-	import { numberDraft, numberSteps, numberWire, parseNumberInput, stepNumber, storedNumber } from '@sg-widgets/core';
+	import type { FieldSchema, NumberShape } from 'sg-widgets-core';
+	import { numberDraft, numberSteps, numberWire, parseNumberInput, stepNumber, storedNumber } from 'sg-widgets-core';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { buttonVariants } from '$lib/components/ui/button/index.js';
 	import Minus from '@lucide/svelte/icons/minus';

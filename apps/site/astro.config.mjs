@@ -145,13 +145,13 @@ export default defineConfig({
       alias: [
         // Core is aliased to its TypeScript source rather than the `dist/index.mjs`
         // its package entry points name. Two reasons: `pnpm --filter site build` then
-        // needs no prior `pnpm --filter @sg-widgets/core build`, and `astro dev`
+        // needs no prior `pnpm --filter sg-widgets-core build`, and `astro dev`
         // hot-reloads an edit to packages/core straight into the open demo page,
         // which watching a build output does not.
         // The mock site is a second entry point, so it is aliased before the root one:
-        // these are prefix matches and `@sg-widgets/core` would otherwise swallow it.
-        { find: '@sg-widgets/core/mock', replacement: coreMockSrc },
-        { find: '@sg-widgets/core', replacement: coreSrc },
+        // these are prefix matches and `sg-widgets-core` would otherwise swallow it.
+        { find: 'sg-widgets-core/mock', replacement: coreMockSrc },
+        { find: 'sg-widgets-core', replacement: coreSrc },
         // A demo that builds a widget out of a registry part imports the same
         // primitive the part does. The site keeps no copy of either, so both point at
         // the workspace package's, which is also the copy the registry sources load:

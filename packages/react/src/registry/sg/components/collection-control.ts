@@ -24,7 +24,7 @@ import type {
   RowIdFn,
   SortSpec,
   SourceFilters,
-} from '@sg-widgets/core';
+} from 'sg-widgets-core';
 import {
   collectionBottom,
   collectionView,
@@ -41,7 +41,7 @@ import {
   shouldLoadNext,
   stateLine,
   toggleRef,
-} from '@sg-widgets/core';
+} from 'sg-widgets-core';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useCollectionSource, useLatest } from '@/registry/sg/components/collection-source';
 

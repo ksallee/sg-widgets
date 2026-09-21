@@ -4,7 +4,7 @@
  * The schema service caches, so this reaches the network once per type however
  * often the widget redraws (probe 002).
  */
-import type { FieldSchema, SgContext } from '@sg-widgets/core';
+import type { FieldSchema, SgContext } from 'sg-widgets-core';
 
 export interface EntityFields {
 	/** The fields by name. Empty until the first read lands. */

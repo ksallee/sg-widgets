@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react';
-import type { FilterGroup, SgContext } from '@sg-widgets/core';
-import { countActiveConditions, emptyFilter, isEmptyFilter } from '@sg-widgets/core';
+import type { FilterGroup, SgContext } from 'sg-widgets-core';
+import { countActiveConditions, emptyFilter, isEmptyFilter } from 'sg-widgets-core';
 import { ListFilterIcon, PencilIcon, Trash2Icon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {

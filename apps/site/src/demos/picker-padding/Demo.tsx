@@ -7,7 +7,7 @@
  */
 import { Fragment, useMemo } from 'react';
 import type { ReactNode } from 'react';
-import type { EntityRef } from '@sg-widgets/core';
+import type { EntityRef } from 'sg-widgets-core';
 import { ContextSelector, type WorkContext } from '@/registry/sg/components/context-selector';
 import { EntityMultiPicker } from '@/registry/sg/components/entity-multi-picker';
 import { EntityPicker } from '@/registry/sg/components/entity-picker';

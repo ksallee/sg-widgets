@@ -6,7 +6,7 @@ import type {
   RowAnatomy,
   RowFieldPlan,
   SgContext,
-} from '@sg-widgets/core';
+} from 'sg-widgets-core';
 import {
   isEmptyValue,
   pathOf,
@@ -17,7 +17,7 @@ import {
   rowThumbnail,
   secondaryType,
   subLabelType,
-} from '@sg-widgets/core';
+} from 'sg-widgets-core';
 import { cn } from '@/lib/utils';
 import { FieldValue } from '@/registry/sg/components/field-value';
 import { MatchText } from '@/registry/sg/components/match-text';

@@ -15,7 +15,7 @@ import type {
   SortSpec,
   SourceFilters,
   StatusRecord,
-} from '@sg-widgets/core';
+} from 'sg-widgets-core';
 import {
   asCollapseState,
   cellValue,
@@ -30,7 +30,7 @@ import {
   preferencesOf,
   sameCollapse,
   stateLine,
-} from '@sg-widgets/core';
+} from 'sg-widgets-core';
 import {
   columnGroupingFeature,
   columnOrderingFeature,

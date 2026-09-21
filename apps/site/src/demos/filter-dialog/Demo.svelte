@@ -1,6 +1,6 @@
 <script lang="ts">
-	import type { FilterGroup } from '@sg-widgets/core';
-	import { condition, emptyFilter, group, toApi3Hash } from '@sg-widgets/core';
+	import type { FilterGroup } from 'sg-widgets-core';
+	import { condition, emptyFilter, group, toApi3Hash } from 'sg-widgets-core';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import FilterDialog, { type FilterDialogSize } from '$lib/registry/components/filter-dialog.svelte';
 	import { createDemoContext } from '../_shared/client';

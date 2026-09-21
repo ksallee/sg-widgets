@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { ParseResult } from '@sg-widgets/core';
+	import type { ParseResult } from 'sg-widgets-core';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { CONTROL_BOX, type ControlSize } from '$lib/registry/components/control-classes.js';
 	import ValueEditor from '$lib/registry/components/value-editor.svelte';

@@ -5,7 +5,7 @@
  * often the widget redraws (probe 002).
  */
 import { useEffect, useState } from 'react';
-import type { FieldSchema, SgContext } from '@sg-widgets/core';
+import type { FieldSchema, SgContext } from 'sg-widgets-core';
 
 /** The fields by name. Empty until the first read lands. */
 export function useEntityFields(context: SgContext, entityType: string): Record<string, FieldSchema> {

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import type { EntityRef } from '@sg-widgets/core';
+import type { EntityRef } from 'sg-widgets-core';
 import { Button } from '@/components/ui/button';
 import { CONTROL_BUTTON, type ControlSize } from '@/registry/sg/components/control-classes';
 import { GlobalSearch } from '@/registry/sg/components/global-search';

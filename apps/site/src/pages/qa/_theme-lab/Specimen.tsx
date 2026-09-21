@@ -14,8 +14,8 @@ import type {
   StatusRecord,
   UrlValue,
   UrlWriteValue,
-} from '@sg-widgets/core';
-import { condition, createEntitySource, group, resolveColumns } from '@sg-widgets/core';
+} from 'sg-widgets-core';
+import { condition, createEntitySource, group, resolveColumns } from 'sg-widgets-core';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';

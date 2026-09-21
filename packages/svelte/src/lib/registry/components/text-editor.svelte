@@ -7,8 +7,8 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import type { HTMLAttributes } from 'svelte/elements';
-	import type { FieldSchema } from '@sg-widgets/core';
-	import { parseTextInput } from '@sg-widgets/core';
+	import type { FieldSchema } from 'sg-widgets-core';
+	import { parseTextInput } from 'sg-widgets-core';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Textarea } from '$lib/components/ui/textarea/index.js';
 	import type { WithElementRef } from '$lib/utils.js';

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { CollapseState, CollectionColumn, EditorPlacement, EntityRef, FilterGroup, PagingMode, SortKey, StatusRecord } from '@sg-widgets/core';
+	import type { CollapseState, CollectionColumn, EditorPlacement, EntityRef, FilterGroup, PagingMode, SortKey, StatusRecord } from 'sg-widgets-core';
 	import {
 		collapseAll,
 		condition,
@@ -9,7 +9,7 @@
 		group,
 		resolveColumns,
 		toSortSpecs
-	} from '@sg-widgets/core';
+	} from 'sg-widgets-core';
 	import ColumnPicker from '$lib/registry/components/column-picker.svelte';
 	import EntityTable from '$lib/registry/components/entity-table.svelte';
 	import FilterBar from '$lib/registry/components/filter-bar.svelte';

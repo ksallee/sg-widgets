@@ -18,8 +18,8 @@
       "bits-ui": ["../../packages/svelte/node_modules/bits-ui"],
       "$lib": ["../../packages/svelte/src/lib/index.ts"],
       "$lib/*": ["../../packages/svelte/src/lib/*"],
-      "@sg-widgets/core": ["../../packages/core/src/index.ts"],
-      "@sg-widgets/core/mock": ["../../packages/core/src/mock.ts"]
+      "sg-widgets-core": ["../../packages/core/src/index.ts"],
+      "sg-widgets-core/mock": ["../../packages/core/src/mock.ts"]
     }
   }
 }

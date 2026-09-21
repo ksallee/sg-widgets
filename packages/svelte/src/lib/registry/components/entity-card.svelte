@@ -30,7 +30,7 @@
 		SgClient,
 		SgContext,
 		StatusRecord
-	} from '@sg-widgets/core';
+	} from 'sg-widgets-core';
 	import {
 		cellValue,
 		contextFromClient,
@@ -47,7 +47,7 @@
 		renderKindFor,
 		stateLine,
 		urlLink
-	} from '@sg-widgets/core';
+	} from 'sg-widgets-core';
 	import CircleAlert from '@lucide/svelte/icons/circle-alert';
 	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';

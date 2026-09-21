@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { EntityRef } from '@sg-widgets/core';
+	import type { EntityRef } from 'sg-widgets-core';
 	import EntityMultiPicker from '$lib/registry/components/entity-multi-picker.svelte';
 	import { createDemoClient, getDemoContext } from '../_shared/client';
 

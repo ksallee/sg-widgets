@@ -1,6 +1,6 @@
 <script lang="ts">
-	import type { FilterGroup } from '@sg-widgets/core';
-	import { condition, group, toApi3Hash } from '@sg-widgets/core';
+	import type { FilterGroup } from 'sg-widgets-core';
+	import { condition, group, toApi3Hash } from 'sg-widgets-core';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import FilterEditor, { type FilterEditorSize } from '$lib/registry/components/filter-editor.svelte';
 	import { createDemoContext } from '../_shared/client';

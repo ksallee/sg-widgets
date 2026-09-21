@@ -23,8 +23,8 @@
 	import FilterIcon from '@lucide/svelte/icons/list-filter';
 	import PencilIcon from '@lucide/svelte/icons/pencil';
 	import Trash2Icon from '@lucide/svelte/icons/trash-2';
-	import type { FilterGroup, SgContext } from '@sg-widgets/core';
-	import { countActiveConditions, emptyFilter, isEmptyFilter } from '@sg-widgets/core';
+	import type { FilterGroup, SgContext } from 'sg-widgets-core';
+	import { countActiveConditions, emptyFilter, isEmptyFilter } from 'sg-widgets-core';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';

@@ -3,7 +3,7 @@
  *
  * By default demos never talk to a real Flow PT site: they need rows that are
  * identical on every run, look right in a screenshot, and cannot fail in CI.
- * `MockClient` from `@sg-widgets/core/mock` is that site -- fixtures generated from a
+ * `MockClient` from `sg-widgets-core/mock` is that site -- fixtures generated from a
  * seed, shaped exactly as the REST API returns them -- and `createSgContext`
  * wraps it the way a real app is expected to, so demos exercise the caching path
  * a widget's contract assumes rather than a shortcut. `latencyMs` is deliberately
@@ -15,8 +15,8 @@
  *
  * This lives in the site, not in the packages: choosing fixtures is a docs concern.
  */
-import { createSgContext, type SgClient, type SgContext } from '@sg-widgets/core';
-import { MockClient, MOCK_NOW, type MockClientOptions } from '@sg-widgets/core/mock';
+import { createSgContext, type SgClient, type SgContext } from 'sg-widgets-core';
+import { MockClient, MOCK_NOW, type MockClientOptions } from 'sg-widgets-core/mock';
 import { demoProject, isLive, liveContext } from './live';
 
 /** The project the mock fixtures are built around. */

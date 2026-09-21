@@ -1,6 +1,6 @@
 import type * as React from 'react';
-import type { EntityRef, SgClient, SgContext } from '@sg-widgets/core';
-import { contextFromClient, entityDetailUrl } from '@sg-widgets/core';
+import type { EntityRef, SgClient, SgContext } from 'sg-widgets-core';
+import { contextFromClient, entityDetailUrl } from 'sg-widgets-core';
 import { X } from 'lucide-react';
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card';
 import { cn } from '@/lib/utils';

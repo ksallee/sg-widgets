@@ -29,7 +29,7 @@
 		SEARCH_DEBOUNCE_MS,
 		searchView,
 		stateLine
-	} from '@sg-widgets/core';
+	} from 'sg-widgets-core';
 	import Search from '@lucide/svelte/icons/search';
 	import TriangleAlert from '@lucide/svelte/icons/triangle-alert';
 	import * as Command from '$lib/components/ui/command/index.js';

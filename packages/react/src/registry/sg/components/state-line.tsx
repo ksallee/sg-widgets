@@ -1,5 +1,5 @@
 import type * as React from 'react';
-import type { WidgetState } from '@sg-widgets/core';
+import type { WidgetState } from 'sg-widgets-core';
 import type { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 

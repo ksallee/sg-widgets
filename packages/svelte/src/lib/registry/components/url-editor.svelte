@@ -13,8 +13,8 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import type { HTMLAttributes } from 'svelte/elements';
-	import type { FieldSchema, UrlValue, UrlWriteValue } from '@sg-widgets/core';
-	import { parseUrlInput } from '@sg-widgets/core';
+	import type { FieldSchema, UrlValue, UrlWriteValue } from 'sg-widgets-core';
+	import { parseUrlInput } from 'sg-widgets-core';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import type { WithElementRef } from '$lib/utils.js';
 	import { CONTROL_BOX } from '$lib/registry/components/control-classes.js';

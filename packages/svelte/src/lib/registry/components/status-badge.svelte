@@ -10,8 +10,8 @@
 
 <script lang="ts">
 	import type { HTMLAttributes } from 'svelte/elements';
-	import type { FieldSchema, StatusRecord } from '@sg-widgets/core';
-	import { statusGlyph, statusLabel, statusPaint } from '@sg-widgets/core';
+	import type { FieldSchema, StatusRecord } from 'sg-widgets-core';
+	import { statusGlyph, statusLabel, statusPaint } from 'sg-widgets-core';
 	import X from '@lucide/svelte/icons/x';
 	import { cn, type WithElementRef } from '$lib/utils.js';
 	import { CHIP_BOX, CHIP_CROSS, CHIP_GLYPH, CHIP_PAD, CHIP_SPACING, LEAF_GLYPH, REMOVE_CONTROL } from '$lib/registry/components/leaf-classes.js';

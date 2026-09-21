@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { NumberField } from '@base-ui/react/number-field';
-import type { FieldSchema, NumberShape } from '@sg-widgets/core';
+import type { FieldSchema, NumberShape } from 'sg-widgets-core';
 import {
   numberDraft,
   numberSteps,
@@ -9,7 +9,7 @@ import {
   settleStep,
   stepNumber,
   storedNumber,
-} from '@sg-widgets/core';
+} from 'sg-widgets-core';
 import { Minus, Plus } from 'lucide-react';
 import { buttonVariants } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';

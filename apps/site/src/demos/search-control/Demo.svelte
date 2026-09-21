@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { hasMorePage, matchesEveryWord } from '@sg-widgets/core';
+	import { hasMorePage, matchesEveryWord } from 'sg-widgets-core';
 	import * as Command from '$lib/components/ui/command/index.js';
 	import SearchControl, { type SearchAnswer, type SearchRequest } from '$lib/registry/components/search-control.svelte';
 

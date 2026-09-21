@@ -7,7 +7,7 @@
 		SearchFieldSpec,
 		SgContext,
 		WireGroup
-	} from '@sg-widgets/core';
+	} from 'sg-widgets-core';
 
 	export type EntityPickerSize = 'sm' | 'md' | 'lg';
 
@@ -81,7 +81,7 @@
 		placeholderName,
 		rowThumbnail,
 		withSelectedPinned
-	} from '@sg-widgets/core';
+	} from 'sg-widgets-core';
 	import { Combobox } from 'bits-ui';
 	import EntityChip from '$lib/registry/components/entity-chip.svelte';
 	import PickerControl from '$lib/registry/components/picker-control.svelte';

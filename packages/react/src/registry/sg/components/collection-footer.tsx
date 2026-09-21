@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { EntitySource, PageRange } from '@sg-widgets/core';
+import type { EntitySource, PageRange } from 'sg-widgets-core';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';

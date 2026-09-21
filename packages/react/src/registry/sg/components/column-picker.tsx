@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useRef, useState, type KeyboardEvent } from 'react';
-import type { FieldHop, FieldOption, FieldSchema, SgContext } from '@sg-widgets/core';
+import type { FieldHop, FieldOption, FieldSchema, SgContext } from 'sg-widgets-core';
 import {
   currentType,
   deriveFieldOptions,
@@ -12,7 +12,7 @@ import {
   searchFieldOptions,
   stateLine,
   toggleFieldPath,
-} from '@sg-widgets/core';
+} from 'sg-widgets-core';
 import {
   Braces,
   Calendar,

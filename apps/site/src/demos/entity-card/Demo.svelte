@@ -1,6 +1,6 @@
 <script lang="ts">
-	import type { EntityRef, EntityRow, WireGroup } from '@sg-widgets/core';
-	import { entityCardFields } from '@sg-widgets/core';
+	import type { EntityRef, EntityRow, WireGroup } from 'sg-widgets-core';
+	import { entityCardFields } from 'sg-widgets-core';
 	import EntityCard from '$lib/registry/components/entity-card.svelte';
 	import EntityPicker from '$lib/registry/components/entity-picker.svelte';
 	import { createDemoContext } from '../_shared/client';

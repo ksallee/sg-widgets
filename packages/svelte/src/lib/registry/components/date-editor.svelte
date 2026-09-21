@@ -9,8 +9,8 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import type { HTMLAttributes } from 'svelte/elements';
-	import type { FieldSchema } from '@sg-widgets/core';
-	import { toApiDate } from '@sg-widgets/core';
+	import type { FieldSchema } from 'sg-widgets-core';
+	import { toApiDate } from 'sg-widgets-core';
 	import CalendarIcon from '@lucide/svelte/icons/calendar';
 	import { buttonVariants } from '$lib/components/ui/button/index.js';
 	import { Calendar } from '$lib/components/ui/calendar/index.js';

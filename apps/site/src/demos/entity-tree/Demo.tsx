@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import type { EntityRef, TreeNode } from '@sg-widgets/core';
+import type { EntityRef, TreeNode } from 'sg-widgets-core';
 import { Button } from '@/components/ui/button';
 import { CONTROL_BUTTON, type ControlSize } from '@/registry/sg/components/control-classes';
 import { EntityTree } from '@/registry/sg/components/entity-tree';

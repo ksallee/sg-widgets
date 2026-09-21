@@ -20,8 +20,8 @@
 	import GripVerticalIcon from '@lucide/svelte/icons/grip-vertical';
 	import XIcon from '@lucide/svelte/icons/x';
 	import type { HTMLAttributes } from 'svelte/elements';
-	import type { SgContext, SortKey } from '@sg-widgets/core';
-	import { friendlyFieldPath, isSortable, toSortString } from '@sg-widgets/core';
+	import type { SgContext, SortKey } from 'sg-widgets-core';
+	import { friendlyFieldPath, isSortable, toSortString } from 'sg-widgets-core';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import * as Popover from '$lib/components/ui/popover/index.js';
 	import { Separator } from '$lib/components/ui/separator/index.js';

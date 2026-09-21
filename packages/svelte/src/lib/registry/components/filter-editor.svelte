@@ -28,7 +28,7 @@
 		NodePath,
 		Operator,
 		Scalar
-	} from '@sg-widgets/core';
+	} from 'sg-widgets-core';
 
 	/** What the field slot is given. Its job is to call `onSelect` with a dotted path. */
 	export interface FieldChooserArgs {
@@ -102,7 +102,7 @@
 	import PlusIcon from '@lucide/svelte/icons/plus';
 	import XIcon from '@lucide/svelte/icons/x';
 	import type { HTMLAttributes } from 'svelte/elements';
-	import type { SgContext, TimeUnit } from '@sg-widgets/core';
+	import type { SgContext, TimeUnit } from 'sg-widgets-core';
 	import {
 		appendAt,
 		applyPreset,
@@ -126,7 +126,7 @@
 		withListValue,
 		withoutListValue,
 		withRelativeWindow
-	} from '@sg-widgets/core';
+	} from 'sg-widgets-core';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { CONTROL_BUTTON } from '$lib/registry/components/control-classes.js';
 	import * as Select from '$lib/components/ui/select/index.js';

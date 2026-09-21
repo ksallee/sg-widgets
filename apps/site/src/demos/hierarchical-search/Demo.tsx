@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import type { EntityRef } from '@sg-widgets/core';
+import type { EntityRef } from 'sg-widgets-core';
 import { HierarchicalSearch } from '@/registry/sg/components/hierarchical-search';
 import { EntityChip } from '@/registry/sg/components/entity-chip';
 import { createDemoContext } from '../_shared/client';

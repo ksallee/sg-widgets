@@ -1,5 +1,5 @@
-import type { EntityRef, PickerRow, ProjectPickerOptions } from '@sg-widgets/core';
-import { PROJECT_PICKER_FIELDS, projectPickerFilters } from '@sg-widgets/core';
+import type { EntityRef, PickerRow, ProjectPickerOptions } from 'sg-widgets-core';
+import { PROJECT_PICKER_FIELDS, projectPickerFilters } from 'sg-widgets-core';
 import {
   EntityMultiPicker,
   type EntityMultiPickerBaseProps,

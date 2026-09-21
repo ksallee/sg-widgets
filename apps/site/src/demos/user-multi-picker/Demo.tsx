@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { EntityRef } from '@sg-widgets/core';
+import type { EntityRef } from 'sg-widgets-core';
 import { UserMultiPicker } from '@/registry/sg/components/user-multi-picker';
 import { getDemoContext } from '../_shared/client';
 

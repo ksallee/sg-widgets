@@ -11,7 +11,7 @@
  * The checkbox is not one of them: it has no draft, so it writes on the toggle.
  */
 import * as React from 'react';
-import type { ParseResult } from '@sg-widgets/core';
+import type { ParseResult } from 'sg-widgets-core';
 import { cn } from '@/lib/utils';
 import { type ControlSize } from '@/registry/sg/components/control-classes';
 import { FieldError } from '@/registry/sg/components/field-error';

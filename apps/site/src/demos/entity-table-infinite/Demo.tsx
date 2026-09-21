@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { CollectionColumn, StatusRecord } from '@sg-widgets/core';
-import { condition, createEntitySource, resolveColumns } from '@sg-widgets/core';
+import type { CollectionColumn, StatusRecord } from 'sg-widgets-core';
+import { condition, createEntitySource, resolveColumns } from 'sg-widgets-core';
 import { EntityTable } from '@/registry/sg/components/entity-table';
 import { createDemoContext } from '../_shared/client';
 import { DemoContextProvider } from '../_shared/react';

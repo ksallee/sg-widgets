@@ -4,8 +4,8 @@
 
 <script lang="ts">
 	import type { HTMLAttributes } from 'svelte/elements';
-	import type { EntityTypeInfo, SgContext } from '@sg-widgets/core';
-	import { entityTypeOptions, errorText, NO_MATCH_LABEL } from '@sg-widgets/core';
+	import type { EntityTypeInfo, SgContext } from 'sg-widgets-core';
+	import { entityTypeOptions, errorText, NO_MATCH_LABEL } from 'sg-widgets-core';
 	import { Combobox } from 'bits-ui';
 	import { cn, type WithElementRef } from '$lib/utils.js';
 	import PickerControl from '$lib/registry/components/picker-control.svelte';

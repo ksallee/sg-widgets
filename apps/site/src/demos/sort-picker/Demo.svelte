@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { CollectionColumn, SortKey, SortSpec, StatusRecord } from '@sg-widgets/core';
+	import type { CollectionColumn, SortKey, SortSpec, StatusRecord } from 'sg-widgets-core';
 	import {
 		createEntitySource,
 		emptyFilter,
@@ -7,7 +7,7 @@
 		resolveColumns,
 		serializeSort,
 		toSortString
-	} from '@sg-widgets/core';
+	} from 'sg-widgets-core';
 	import EntityTable from '$lib/registry/components/entity-table.svelte';
 	import SortPicker from '$lib/registry/components/sort-picker.svelte';
 	import { CONTROL_BUTTON, type ControlSize } from '$lib/registry/components/control-classes.js';

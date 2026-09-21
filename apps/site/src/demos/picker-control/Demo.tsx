@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { ReactNode } from 'react';
-import { matchesEveryWord } from '@sg-widgets/core';
+import { matchesEveryWord } from 'sg-widgets-core';
 import { Combobox as ComboboxPrimitive } from '@base-ui/react';
 import { PickerControl } from '@/registry/sg/components/picker-control';
 import {

@@ -11,7 +11,7 @@ import type {
   SgContext,
   StatusRecord,
   WireGroup,
-} from '@sg-widgets/core';
+} from 'sg-widgets-core';
 import {
   conditionParts,
   conditionValues,
@@ -27,7 +27,7 @@ import {
   asFilterGroup,
   matchesEveryWord,
   withoutPaths,
-} from '@sg-widgets/core';
+} from 'sg-widgets-core';
 import { PlusIcon, SearchX, TriangleAlert, XIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';

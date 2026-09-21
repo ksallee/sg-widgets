@@ -28,6 +28,7 @@ export default {
     { name: 'invalid', type: '`boolean`', default: '`false`' },
     { name: 'clearable', type: '`boolean`', default: '`true`', meaning: 'The clear control is drawn once something is chosen.' },
     { name: 'placeholder', type: '`string`', default: '`\'\'`' },
+    { name: 'label', type: '`string`', default: 'the placeholder, then `triggerLabel`', meaning: "The combobox's accessible name, for a control whose placeholder is empty." },
     { name: 'searchPlaceholder', type: '`string`', default: '`\'Search…\'`' },
     { name: 'open', type: '`boolean`', default: '`false`', meaning: 'Whether the popup is showing. Two-way in Svelte.' },
     { name: 'onOpenChange', type: '`(open: boolean) => void`', default: '—' },

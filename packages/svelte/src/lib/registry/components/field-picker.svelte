@@ -1,21 +1,5 @@
 <script lang="ts" module>
 	export type FieldPickerSize = 'sm' | 'md' | 'lg';
-
-	/**
-	 * Controls follow the input ladder of `docs/design-rules.md`. `data-empty` takes the
-	 * leading inset down one step, so an empty control is tighter than a filled one. The
-	 * height is fixed, so there is no vertical inset to take.
-	 */
-	const BOX: Record<FieldPickerSize, string> = {
-		sm: 'h-7 px-2 data-empty:pl-1.5',
-		md: 'h-8 px-3 data-empty:pl-2',
-		lg: 'h-9 px-3 data-empty:pl-2'
-	};
-	const GLYPH: Record<FieldPickerSize, string> = {
-		sm: 'size-4',
-		md: 'size-4',
-		lg: 'size-5'
-	};
 </script>
 
 <script lang="ts">
@@ -68,7 +52,13 @@
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
 	import StateLine from '$lib/registry/components/state-line.svelte';
-	import { PICKER_ICON_BUTTON } from '$lib/registry/components/picker-classes.js';
+	import {
+		PICKER_CONTROL,
+		PICKER_GLYPH,
+		PICKER_ICON_BUTTON,
+		PICKER_TEXT_BOX,
+		PICKER_TRAILING
+	} from '$lib/registry/components/picker-classes.js';
 
 	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>, HTMLDivElement> & {
 		/** The widget context. The schema is read through it, once per page. */
@@ -157,13 +147,6 @@
 
 	// The context's own service, so every widget on the page shares one schema read.
 	const schema = $derived(context.schema);
-
-	/** The trailing controls ride the first row, so they stay with it when the value wraps. */
-const TRAILING: Record<FieldPickerSize, string> = {
-	sm: 'h-7',
-	md: 'h-8',
-	lg: 'h-9'
-}
 
 const ICONS: Record<string, typeof Type> = {
 		braces: Braces,
@@ -462,8 +445,10 @@ const ICONS: Record<string, typeof Type> = {
 			{disabled}
 			title={label ?? placeholder}
 			class={cn(
-				'border-input bg-background hover:bg-muted/30 focus-visible:ring-ring focus-visible:ring-offset-background aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 flex w-full min-w-0 items-center rounded-lg border text-sm shadow-xs outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 aria-invalid:ring-2',
-				BOX[size],
+				PICKER_CONTROL,
+				/* The trigger is the focusable element itself, not a box round an input. */
+				'focus-visible:ring-ring focus-visible:ring-offset-background aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 aria-invalid:ring-2',
+				PICKER_TEXT_BOX[size],
 				readonly ? 'pr-3' : showClear ? 'pr-14' : 'pr-8'
 			)}
 		>
@@ -500,7 +485,7 @@ const ICONS: Record<string, typeof Type> = {
 						aria-label="Go back one level"
 						title="Back (Left arrow)"
 						onclick={back}
-						class="hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring focus-visible:ring-offset-background shrink-0 rounded-sm p-0.5 opacity-70 outline-none transition-colors duration-150 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-2 motion-safe:active:scale-[0.98]"
+						class={PICKER_ICON_BUTTON}
 					>
 						<ChevronLeft aria-hidden="true" class="size-4" />
 					</button>
@@ -524,7 +509,7 @@ const ICONS: Record<string, typeof Type> = {
 						aria-label="Back to the root type"
 						title="Reset"
 						onclick={reset}
-						class="hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring focus-visible:ring-offset-background shrink-0 rounded-sm p-0.5 opacity-70 outline-none transition-colors duration-150 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-2 motion-safe:active:scale-[0.98]"
+						class={PICKER_ICON_BUTTON}
 					>
 						<RotateCcw aria-hidden="true" class="size-4" />
 					</button>
@@ -619,7 +604,7 @@ const ICONS: Record<string, typeof Type> = {
 											event.stopPropagation();
 											if (row.field) descendInto(row.field);
 										}}
-										class="hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring focus-visible:ring-offset-background shrink-0 rounded-sm p-0.5 opacity-70 outline-none transition-colors duration-150 hover:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-2 motion-safe:active:scale-[0.98]"
+										class={PICKER_ICON_BUTTON}
 									>
 										<ChevronRight aria-hidden="true" class="size-4" />
 									</button>
@@ -633,7 +618,7 @@ const ICONS: Record<string, typeof Type> = {
 	</Popover.Root>
 
 	{#if !readonly}
-		<div class={cn('pointer-events-none absolute top-0 right-2 flex items-center gap-1', TRAILING[size])}>
+		<div class={cn('pointer-events-none absolute top-0 right-2 flex items-center gap-1', PICKER_TRAILING[size])}>
 			{#if showClear}
 				<button
 					type="button"
@@ -642,10 +627,10 @@ const ICONS: Record<string, typeof Type> = {
 					onclick={() => emit('')}
 					class={PICKER_ICON_BUTTON}
 				>
-					<X aria-hidden="true" class={GLYPH[size]} />
+					<X aria-hidden="true" class={PICKER_GLYPH[size]} />
 				</button>
 			{/if}
-			<ChevronDown aria-hidden="true" class={cn('shrink-0 opacity-50', GLYPH[size])} />
+			<ChevronDown aria-hidden="true" class={cn('shrink-0 opacity-50', PICKER_GLYPH[size])} />
 		</div>
 	{/if}
 </div>

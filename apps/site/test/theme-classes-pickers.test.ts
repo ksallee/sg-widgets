@@ -5,7 +5,7 @@
  * widget chrome above them. A picker draws its own bordered field rather than the
  * `Input` primitive, so the field has to carry what the primitive carries: the
  * shadow, the border token and the radius. Every picker takes its field from
- * `picker-classes.ts`, and the four that draw one of their own are read beside it.
+ * `picker-classes.ts`, and the three that draw one of their own are read beside it.
  *
  * The placements are tweakcn's preview, which is plain `new-york-v4`: `shadow-xs` on
  * an input and on a select trigger, nothing on a badge or a ghost button, `shadow-md`
@@ -61,12 +61,6 @@ const FIELDS: Part[] = [
     name: "every picker's control",
     files: ['picker-classes.ts', 'picker-classes.ts'],
     anchor: 'has-[:focus-visible]:ring-ring',
-    wears: ['shadow-xs', 'border-input', 'rounded-lg'],
-  },
-  {
-    name: "the field picker's trigger",
-    files: ['field-picker.tsx', 'field-picker.svelte'],
-    anchor: 'hover:bg-muted/30',
     wears: ['shadow-xs', 'border-input', 'rounded-lg'],
   },
   {

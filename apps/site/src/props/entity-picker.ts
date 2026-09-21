@@ -1,7 +1,7 @@
 import type { PropsFile } from './_types';
 
 export default {
-  extends: { name: 'picker-control', omit: ['slot', 'picker', 'multiple', 'keys', 'onSelect', 'labels', 'items', 'rowCount', 'chipKeys', 'chipsSlot', 'summary', 'max', 'chipRow', 'inline', 'tokenInput', 'inputPlaceholder', 'searchable', 'textValue', 'rowKey', 'inert', 'query', 'onQueryChange', 'onRemoveAt', 'onClear', 'anchored', 'loading', 'count', 'error', 'empty', 'hasMore', 'onLoadMore', 'clearLabel', 'triggerLabel', 'overflowLabel', 'itemToStringLabel', 'controlProps', 'chip', 'rows'] },
+  extends: { name: 'picker-control', omit: ['slot', 'picker', 'label', 'multiple', 'keys', 'onSelect', 'labels', 'items', 'rowCount', 'chipKeys', 'chipsSlot', 'summary', 'max', 'chipRow', 'inline', 'tokenInput', 'inputPlaceholder', 'searchable', 'textValue', 'rowKey', 'inert', 'query', 'onQueryChange', 'onRemoveAt', 'onClear', 'anchored', 'loading', 'count', 'error', 'empty', 'hasMore', 'onLoadMore', 'clearLabel', 'triggerLabel', 'overflowLabel', 'itemToStringLabel', 'controlProps', 'chip', 'rows'] },
   props: [
     { name: 'entityTypes', type: '`string[]`', default: 'required', meaning: 'Types to search. Several make the picker polymorphic.' },
     { name: 'context', type: '`SgContext`', default: 'required', meaning: 'The widget context. Every read goes through it, so widgets on a page share one cache.' },

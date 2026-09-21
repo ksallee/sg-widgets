@@ -3,7 +3,7 @@
 import * as React from "react"
 import { Autocomplete as AutocompletePrimitive } from "@base-ui/react/autocomplete"
 import { watchOverflow } from "@sg-widgets/core"
-import { cn } from "cn"
+import { cn } from "@/lib/utils"
 
 import {
   Dialog,

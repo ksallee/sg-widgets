@@ -19,6 +19,7 @@ import {
   pathOf,
   resolveTreeFields,
   rowSubLabel,
+  rowThumbnail,
   sameIds,
   stateLine,
   subLabelType,
@@ -337,12 +338,6 @@ export function EntityTree({
     );
   }
 
-  function thumbOf(node: TreeNode): string | null {
-    if (thumbnail === false) return null;
-    const raw = node.values[thumbnail];
-    return typeof raw === 'string' ? raw : null;
-  }
-
   function statusOf(node: TreeNode): string {
     const field = node.entity ? plan.status[node.entity.type] : null;
     const code = field ? node.values[field.name] : null;
@@ -608,8 +603,8 @@ export function EntityTree({
                       <>
                     {thumbnail !== false ? (
                       <span className={cn('flex shrink-0 items-center', LEAD[size])}>
-                        {thumbOf(node) ? (
-                          <Thumbnail src={thumbOf(node)} aspect="square" size={LEAF[size]} entityType={node.entity?.type ?? null} />
+                        {rowThumbnail(node.values, { thumbnail }) ? (
+                          <Thumbnail src={rowThumbnail(node.values, { thumbnail })} aspect="square" size={LEAF[size]} entityType={node.entity?.type ?? null} />
                         ) : null}
                       </span>
                     ) : null}

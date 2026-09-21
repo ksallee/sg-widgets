@@ -43,6 +43,8 @@
 	let sizedQuery = $state<Record<string, string>>({ sm: '', md: '', lg: '' });
 	let invalid = $state<string[]>([]);
 	let invalidQuery = $state('');
+	let named = $state<string[]>([]);
+	let namedQuery = $state('');
 	let crew = $state<string[]>(['light']);
 	let crewQuery = $state('');
 
@@ -109,6 +111,31 @@
 			</PickerControl>
 		</div>
 		<span class={readout}>{JSON.stringify(one)}</span>
+	</div>
+
+	<div class={field} data-demo-case="named">
+		<span class={label}>Named by a label of its own, with no placeholder</span>
+		<div class={box}>
+			<PickerControl
+				slot="department-named-picker"
+				picker="department-named"
+				keys={named}
+				onSelect={(keys) => (named = keys)}
+				labels={named.map(labelOf)}
+				rowCount={matching(namedQuery).length}
+				label="Department"
+				bind:query={namedQuery}
+				onRemoveAt={() => (named = [])}
+				onClear={() => (named = [])}
+				empty={matching(namedQuery).length === 0}
+				triggerLabel="Show the departments"
+			>
+				{#snippet chip(index: number, armed: boolean, hidden: boolean)}
+					{@render chipOf('department-named-picker', labelOf(named[index] ?? ''), armed, hidden, 'md')}
+				{/snippet}
+				{#snippet rows()}{@render plainRows('department-named-picker', matching(namedQuery))}{/snippet}
+			</PickerControl>
+		</div>
 	</div>
 
 	<div class={field} data-demo-case="text">

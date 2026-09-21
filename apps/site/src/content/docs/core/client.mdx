@@ -5,10 +5,12 @@ description: The one interface every widget reads through, and what it writes.
 
 A client is an `SgClient`. `RestClient` speaks to the REST API with a token, `ProxyClient` speaks to
 an app's own endpoints behind `createProxyHandler`, and `MockClient` answers from a generated site.
-Every example below runs against the mock, so the writes land nowhere.
+The mock is a subpath of its own, so an app that ships without it ships none of its fixtures. Every
+example below runs against the mock, so the writes land nowhere.
 
 ```ts
-import { MockClient, createQueryCache } from '@sg-widgets/core';
+import { createQueryCache } from '@sg-widgets/core';
+import { MockClient } from '@sg-widgets/core/mock';
 
 const client = createQueryCache(new MockClient());
 ```

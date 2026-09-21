@@ -30,7 +30,8 @@ import type {
   UploadFile,
   UploadResult,
 } from './client.js';
-import { EVENT_LOG_FIELDS, eventLogFilters, normalizeEventLogEntry, pluralPath, SgApiError } from './client.js';
+import { EVENT_LOG_FIELDS, eventLogFilters, normalizeEventLogEntry, SgApiError } from './client.js';
+import { pluralPath } from './entity-path.js';
 import type { EntityRef, TextSearchFilter, WireCondition, WireGroup } from './filter.js';
 import { toFilterArray } from './filter.js';
 import type { Operator, TimeUnit } from './field-types.js';

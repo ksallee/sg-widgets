@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { ReactNode } from 'react';
-import { matchesTokens } from '@sg-widgets/core';
+import { matchesEveryWord } from '@sg-widgets/core';
 import { Combobox as ComboboxPrimitive } from '@base-ui/react';
 import { PickerControl } from '@/registry/sg/components/picker-control';
 import {
@@ -26,7 +26,7 @@ const SIZES = ['sm', 'md', 'lg'] as const;
 
 const labelOf = (code: string) => DEPARTMENTS.find((d) => d.code === code)?.label ?? code;
 const leadOf = (code: string) => DEPARTMENTS.find((d) => d.code === code)?.lead ?? '';
-const matching = (query: string) => DEPARTMENTS.filter((d) => matchesTokens(query, d.label, d.code));
+const matching = (query: string) => DEPARTMENTS.filter((d) => matchesEveryWord(`${d.label} ${d.code}`, query));
 const codes = (query: string) => matching(query).map((d) => d.code);
 
 const field = 'flex w-full flex-col gap-2';

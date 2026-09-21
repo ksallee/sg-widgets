@@ -13,6 +13,7 @@
 import type { HierarchyPath, SgClient, TextSearchRow } from './client.js';
 import type { EntityRef, WireCondition } from './filter.js';
 import { displayNameOf } from './schema.js';
+import type { WidgetState } from './state.js';
 
 /** The words the API matches on: whitespace-separated, empties dropped. */
 export function searchWords(text: string): string[] {
@@ -76,7 +77,11 @@ export function matchRuns(label: string, query: string): MatchRun[] {
   return runs;
 }
 
-/** True when every word of the query appears in the text, the server's own rule. */
+/**
+ * True when every word of the query appears in the text, the server's own rule.
+ * It is also the rule a list filters its own rows with, over the row's label and
+ * code joined into one text.
+ */
 export function matchesEveryWord(text: string, query: string): boolean {
   const haystack = text.toLowerCase();
   return searchWords(query).every((word) => haystack.includes(word.toLowerCase()));
@@ -251,9 +256,6 @@ export function queryPlan(query: string, readsEmpty: boolean): QueryPlan {
   return readsEmpty ? 'now' : 'clear';
 }
 
-/** Which of the four things a search list shows in place of its rows. */
-export type SearchView = 'error' | 'loading' | 'empty' | 'rows';
-
 export interface SearchViewState {
   /** What the failed read said, or null. */
   error: string | null;
@@ -268,7 +270,7 @@ export interface SearchViewState {
  * What a search list draws. The skeletons stand for a first page only: a page on the
  * way under rows already on screen leaves those rows where they are.
  */
-export function searchView(state: SearchViewState): SearchView {
+export function searchView(state: SearchViewState): WidgetState {
   if (state.error !== null && state.error !== '') return 'error';
   if (state.loading && state.count === 0) return 'loading';
   if (state.count === 0 && state.asked) return 'empty';

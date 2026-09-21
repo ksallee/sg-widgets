@@ -7,8 +7,8 @@
  * boundary; until a non-English studio asks for one, these are the strings.
  */
 
-/** The three states a data widget draws instead of its rows. */
-export type WidgetState = 'empty' | 'loading' | 'error';
+/** What a data widget is showing: one of the three state blocks, or its rows. */
+export type WidgetState = 'error' | 'loading' | 'empty' | 'rows';
 
 /** What a data widget calls its empty, loading and error states. */
 export interface StateLabels {

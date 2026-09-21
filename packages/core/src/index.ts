@@ -10,7 +10,6 @@ export * from './client.js';
 export * from './query.js';
 export * from './picker.js';
 export * from './picker-keys.js';
-export * from './mock.js';
 export * from './schema-service.js';
 export * from './status-service.js';
 export * from './proxy-client.js';

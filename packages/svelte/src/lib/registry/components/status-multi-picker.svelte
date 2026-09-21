@@ -7,7 +7,7 @@
 <script lang="ts">
 	import type { HTMLAttributes } from 'svelte/elements';
 	import type { FieldSchema, PickerRow, SgContext, StatusOption, StatusRecord } from '@sg-widgets/core';
-	import { clearableForField, matchesTokens, NO_MATCH_LABEL } from '@sg-widgets/core';
+	import { clearableForField, matchesEveryWord, NO_MATCH_LABEL } from '@sg-widgets/core';
 	import { Combobox } from 'bits-ui';
 	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
@@ -174,7 +174,7 @@
 	]);
 	// A status list has no substring operator, so the vocabulary is read once and the
 	// search box narrows it here (field_types/status_list).
-	const shown = $derived(rows.filter((option) => matchesTokens(search, option.label, option.code)));
+	const shown = $derived(rows.filter((option) => matchesEveryWord(`${option.label} ${option.code}`, search)));
 	const byCode = $derived(new Map(rows.map((option) => [option.code, option])));
 
 	/**

@@ -9,7 +9,6 @@ import {
   fieldPathOf,
   filterEntityTypes,
   friendlyFieldPath,
-  matchesTokens,
   moveFieldPath,
   pathTypes,
   resolveFieldPathOptions,
@@ -31,16 +30,6 @@ async function fieldsOf(type: string): Promise<Record<string, FieldSchema>> {
 function pathsOf(options: { path: string }[]): string[] {
   return options.map((o) => o.path);
 }
-
-describe('matchesTokens', () => {
-  it('needs every token, in any order and any field', () => {
-    expect(matchesTokens('due date', 'Due Date', 'due_date')).toBe(true);
-    expect(matchesTokens('date due', 'Due Date', 'due_date')).toBe(true);
-    expect(matchesTokens('due code', 'Due Date', 'due_date')).toBe(false);
-    expect(matchesTokens('', 'anything')).toBe(true);
-    expect(matchesTokens('STATUS', 'Status', 'sg_status_list')).toBe(true);
-  });
-});
 
 describe('filterEntityTypes', () => {
   const types = [

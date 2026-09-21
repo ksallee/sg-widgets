@@ -13,6 +13,7 @@
 import type { EntityRow } from './client.js';
 import type { EntitySourceState, GroupBy, RowGroup, SourceMode } from './collection.js';
 import { groupRows } from './collection.js';
+import type { WidgetState } from './state.js';
 
 /** How a collection walks a set: a page number, a load-more row, or the scroller. */
 export type PagingMode = 'pages' | 'more' | 'scroll';
@@ -92,16 +93,13 @@ export function groupRowsKeyed(rows: readonly EntityRow[], by: GroupBy): KeyedRo
   }));
 }
 
-/** Which of the four things a collection's body shows. */
-export type CollectionView = 'error' | 'loading' | 'empty' | 'rows';
-
 /**
  * What a collection draws in place of its rows.
  *
  * A read that failed with rows already loaded is not this block: those rows stay and
  * the error goes under them, which is what `hasFailedPage` answers.
  */
-export function collectionView(state: EntitySourceState, lines: number): CollectionView {
+export function collectionView(state: EntitySourceState, lines: number): WidgetState {
   if (state.status === 'error' && !hasFailedPage(state)) return 'error';
   if (state.status === 'loading') return 'loading';
   return lines === 0 ? 'empty' : 'rows';

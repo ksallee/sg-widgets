@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { matchesTokens } from '@sg-widgets/core';
+	import { matchesEveryWord } from '@sg-widgets/core';
 	import { Combobox } from 'bits-ui';
 	import PickerControl from '$lib/registry/components/picker-control.svelte';
 	import {
@@ -26,7 +26,7 @@
 	const labelOf = (code: string) => DEPARTMENTS.find((d) => d.code === code)?.label ?? code;
 	const leadOf = (code: string) => DEPARTMENTS.find((d) => d.code === code)?.lead ?? '';
 	const matching = (query: string) =>
-		DEPARTMENTS.filter((d) => matchesTokens(query, d.label, d.code));
+		DEPARTMENTS.filter((d) => matchesEveryWord(`${d.label} ${d.code}`, query));
 
 	let one = $state<string[]>([]);
 	let oneQuery = $state('');

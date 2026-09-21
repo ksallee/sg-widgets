@@ -2,33 +2,57 @@
   "name": "@sg-widgets/core",
   "version": "0.0.1",
   "description": "Headless, framework-agnostic model of Flow Production Tracking (ShotGrid) fields, filters, statuses and a client adapter, for building widgets.",
-  "type": "module",
-  "sideEffects": false,
+  "keywords": [
+    "shotgrid",
+    "flow-production-tracking",
+    "autodesk",
+    "headless",
+    "typescript",
+    "vfx"
+  ],
   "homepage": "https://sg-widgets.vercel.app",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/ksallee/sg-widgets.git",
     "directory": "packages/core"
   },
+  "bugs": {
+    "url": "https://github.com/ksallee/sg-widgets/issues"
+  },
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
   "main": "./dist/index.mjs",
   "types": "./dist/index.d.mts",
   "exports": {
     ".": {
       "types": "./dist/index.d.mts",
       "import": "./dist/index.mjs"
-    }
+    },
+    "./mock": {
+      "types": "./dist/mock.d.mts",
+      "import": "./dist/mock.mjs"
+    },
+    "./package.json": "./package.json"
   },
   "files": [
-    "dist"
+    "dist",
+    "README.md",
+    "LICENSE"
   ],
+  "engines": {
+    "node": ">=22"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
-    "build": "tsdown src/index.ts --format esm --dts",
+    "build": "tsdown src/index.ts src/mock.ts --format esm --dts",
     "test": "vitest run",
     "test:watch": "vitest",
     "check": "tsc --noEmit",
-    "prepare": "tsdown src/index.ts --format esm --dts"
+    "prepare": "tsdown src/index.ts src/mock.ts --format esm --dts"
   },
-  "license": "MIT",
   "devDependencies": {
     "tsdown": "^0.23.0",
     "typescript": "^7.0.2",

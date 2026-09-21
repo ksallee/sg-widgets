@@ -6,6 +6,7 @@
  * against their own proxy. `RestClient` is the reference implementation against
  * the REST API itself, for tests, tools and apps that can hold a token.
  */
+import { pluralPath } from './entity-path.js';
 import type { TextSearchFilter, WireCondition, WireGroup } from './filter.js';
 import { toFilterArray } from './filter.js';
 import type { FieldSchema, RawFieldSchema, RawFieldsResponse } from './schema.js';
@@ -435,14 +436,6 @@ function toHashGroup(filter: TextSearchFilter): WireGroup {
   return filter;
 }
 
-function pluralPath(entityType: string): string {
-  // The REST API addresses types by a lowercased, underscored plural: HumanUser -> human_users, Status -> statuses.
-  const snake = entityType.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase();
-  if (snake.endsWith('s')) return `${snake}es`;
-  if (snake.endsWith('y') && !/[aeiou]y$/.test(snake)) return `${snake.slice(0, -1)}ies`;
-  return `${snake}s`;
-}
-
 export class RestClient implements SgClient {
   private readonly base: string;
   private readonly siteRoot: string;
@@ -826,5 +819,3 @@ function toStatusIcon(a: Record<string, unknown>): StatusRecord['icon'] {
       return null;
   }
 }
-
-export { pluralPath };

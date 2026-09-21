@@ -64,6 +64,7 @@ jobs:
           npm init -y >/dev/null
           npm install /tmp/sg-widgets-core-*.tgz
           node -e "import('@sg-widgets/core').then((m) => { if (!m.RestClient) throw new Error('no RestClient'); console.log('ok'); })"
+          node -e "import('@sg-widgets/core/mock').then((m) => { if (!m.MockClient) throw new Error('no MockClient'); console.log('ok'); })"
 
       # Trusted publishing needs npm 11.5.1 or newer; the runner's npm is older than the Node it
       # ships with.

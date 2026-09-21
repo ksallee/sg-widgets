@@ -111,25 +111,37 @@ if (stillShut.length > 0) {
 }
 for (let i = 0; i < 60 && items().length <= nodesBefore; i += 1) await wait(250);
 if (items().length <= nodesBefore) return { verdict: `FAIL * opened no level under ${level().length} sequences`, notes };
+// The walk under the branches keeps reading rows after the first level lands, and a branch
+// it is still walking reads busy. It reopens what is collapsed under it, so wait it out.
+const busyRows = () => items().filter((n) => n.getAttribute('aria-busy') === 'true');
+for (let i = 0; i < 80 && busyRows().length > 0; i += 1) await wait(250);
+if (busyRows().length > 0) return { verdict: `FAIL ${busyRows().length} rows still read busy after *`, notes };
 notes.push(`* opened ${shutBefore} shut sequences, ${nodesBefore} nodes to ${items().length}`);
 
 // The search asks the server, opens the tree onto the hit and marks it.
 const search = pane().querySelector('[data-slot="entity-tree-search"]');
+const searching = () => search.getAttribute('aria-busy') === 'true';
 const typeInto = (text) => {
   Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(search, text);
   search.dispatchEvent(new Event('input', { bubbles: true }));
   search.dispatchEvent(new Event('change', { bubbles: true }));
 };
 at('/Project/70/Shot')?.click();
-await wait(300);
+for (let i = 0; i < 40 && items().length > 3; i += 1) await wait(200);
 const shutAgain = items().length;
+if (shutAgain !== 3) return { verdict: `FAIL collapsing the Shots branch left ${shutAgain} nodes, expected 3`, notes };
 typeInto('sh030_0020');
 for (let i = 0; i < 60 && items().length <= shutAgain; i += 1) await wait(250);
+// The walk opens a level at a time and the hits are marked only when it ends, so rows
+// read as matched or dimmed once the input stops reading busy, not when the first ones land.
+for (let i = 0; i < 60 && searching(); i += 1) await wait(250);
+if (searching()) return { verdict: 'FAIL the search never stopped reading busy', notes };
 const hit = items().find((n) => labelOf(n) === 'sh030_0020');
 if (!hit) return { verdict: `FAIL the search opened ${items().length} nodes and none was the hit`, notes };
 if (!hit.querySelector('[data-slot="entity-tree-label"] .font-semibold')) {
   return { verdict: 'FAIL the hit is not marked', notes };
 }
+if (hit.className.includes('text-muted-foreground')) return { verdict: 'FAIL the hit itself was dimmed', notes };
 const dimmed = items().filter((n) => n.className.includes('text-muted-foreground'));
 if (dimmed.length === 0) return { verdict: 'FAIL nothing outside the hit was dimmed', notes };
 notes.push(`searching opened ${shutAgain} nodes to ${items().length}, marked the hit and dimmed ${dimmed.length} rows`);

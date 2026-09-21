@@ -36,7 +36,7 @@ const COUNT_CHIP =
   'bg-secondary text-secondary-foreground inline-flex shrink-0 items-center rounded-md border tabular-nums';
 
 export interface FilterDialogProps
-  extends Omit<React.HTMLAttributes<HTMLDivElement>, 'title' | 'onChange'> {
+  extends Omit<React.HTMLAttributes<HTMLDivElement>, 'title'> {
   /** The root element. */
   ref?: React.Ref<HTMLDivElement>;
 
@@ -50,7 +50,7 @@ export interface FilterDialogProps
   /** Replaces both button labels. Otherwise Add filters, then Edit filters. */
   label?: string;
   title?: string;
-  onChange?: (value: FilterGroup) => void;
+  onValueChange?: (value: FilterGroup) => void;
   /** Whether the dialog is showing. */
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -77,7 +77,7 @@ export function FilterDialog({
   disabled = false,
   label,
   title = 'Filters',
-  onChange,
+  onValueChange,
   open: openProp,
   onOpenChange,
   fieldChooser,
@@ -98,12 +98,12 @@ export function FilterDialog({
 
   function apply() {
     // A tree of blank rows is not a filter; it applies as no filter at all.
-    onChange?.(isEmptyFilter(draft) ? emptyFilter() : draft);
+    onValueChange?.(isEmptyFilter(draft) ? emptyFilter() : draft);
     setOpen(false);
   }
 
   function clearAll() {
-    onChange?.(emptyFilter());
+    onValueChange?.(emptyFilter());
     setOpen(false);
   }
 
@@ -163,7 +163,7 @@ export function FilterDialog({
             hidePaths={hidePaths}
             size={size}
             value={draft}
-            onChange={setDraft}
+            onValueChange={setDraft}
             fieldChooser={fieldChooser}
             valueEditor={valueEditor}
             entityEditor={entityEditor}
@@ -191,7 +191,7 @@ export function FilterDialog({
           disabled={disabled}
           aria-label="Clear filters"
           data-slot="filter-clear"
-          onClick={() => onChange?.(emptyFilter())}
+          onClick={() => onValueChange?.(emptyFilter())}
         >
           <Trash2Icon />
         </Button>

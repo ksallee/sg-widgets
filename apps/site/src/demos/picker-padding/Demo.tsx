@@ -54,7 +54,7 @@ export default function PickerPaddingDemo() {
       ['user-multi-picker', <UserMultiPicker context={context} size={size} value={filled ? [PERSON] : []} />],
       ['project-picker', <ProjectPicker context={context} size={size} value={filled ? project : null} />],
       ['project-multi-picker', <ProjectMultiPicker context={context} size={size} value={filled ? [project] : []} />],
-      ['status-picker', <StatusPicker context={context} entityType="Version" projectId={projectId} size={size} value={filled ? 'ip' : undefined} />],
+      ['status-picker', <StatusPicker context={context} entityType="Version" projectId={projectId} size={size} value={filled ? 'ip' : null} />],
       ['status-multi-picker', <StatusMultiPicker context={context} entityType="Version" projectId={projectId} size={size} value={filled ? ['ip', 'apr'] : []} />],
       ['entity-type-picker', <EntityTypePicker context={context} size={size} value={filled ? 'Shot' : null} />],
       ['entity-type-multi-picker', <EntityTypeMultiPicker context={context} size={size} value={filled ? ['Shot', 'Asset'] : []} />],

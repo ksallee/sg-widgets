@@ -58,6 +58,7 @@
 		onOpenChange?: (open: boolean) => void;
 		/** What the caret holds, two-way. */
 		query?: string;
+		onQueryChange?: (query: string) => void;
 		/** Remove the chip at `index`. Backspace walks the row through it. */
 		onRemoveAt?: (index: number) => void;
 		onClear?: () => void;
@@ -161,6 +162,7 @@
 		open = $bindable(false),
 		onOpenChange,
 		query = $bindable(''),
+		onQueryChange,
 		onRemoveAt,
 		onClear,
 		anchored = false,
@@ -255,10 +257,17 @@
 	);
 	const counted = $derived(summary === 'count' && chipRow && multiple);
 
+	/** The caret's text, written back and announced, as `setOpen` is to `open`. */
+	function setQuery(next: string): void {
+		if (next === query) return;
+		query = next;
+		onQueryChange?.(next);
+	}
+
 	/** A press anywhere in the field opens the list, and a token field takes the caret. */
 	/** Typing asks for the list: a press may have closed it a moment ago. */
 	function typed(next: string): void {
-		query = next;
+		setQuery(next);
 		if (interactive && !open) setOpen(true);
 	}
 
@@ -291,7 +300,7 @@
 			return;
 		}
 		const wanted = interactive ? next : false;
-		if (!wanted) query = '';
+		if (!wanted) setQuery('');
 		if (wanted === open) return;
 		open = wanted;
 		onOpenChange?.(open);

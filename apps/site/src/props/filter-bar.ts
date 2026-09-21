@@ -17,7 +17,7 @@ export default {
     { name: 'class / className', type: '`string`', default: '—', meaning: 'Merged after the widget\'s own classes.' },
   ],
   events: [
-    { name: 'onChange', payload: '`FilterGroup`', when: 'The tree changed, on every tick and on Apply in the dialog. Svelte also binds it with `bind:value`.' },
+    { name: 'onValueChange', payload: '`FilterGroup`', when: 'The tree changed, on every tick and on Apply in the dialog. Svelte also binds it with `bind:value`.' },
   ],
   keyboard: [
     { key: '`Tab`', does: 'Moves from pill to pill, and to a pill\'s remove control.' },

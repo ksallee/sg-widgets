@@ -29,7 +29,7 @@ const COUNT: Record<SortPickerSize, ChipSize> = { sm: 'xs', md: 'sm', lg: 'md' }
 const COUNT_CHIP =
   'bg-secondary text-secondary-foreground inline-flex shrink-0 items-center rounded-md border tabular-nums';
 
-export interface SortPickerProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange'> {
+export interface SortPickerProps extends React.HTMLAttributes<HTMLDivElement> {
   /** The root element. */
   ref?: React.Ref<HTMLDivElement>;
 
@@ -46,7 +46,7 @@ export interface SortPickerProps extends Omit<React.HTMLAttributes<HTMLDivElemen
   size?: SortPickerSize;
   disabled?: boolean;
   /** Both the keys and the `sort` string they serialise to. */
-  onChange?: (value: SortKey[], sort: string) => void;
+  onValueChange?: (value: SortKey[], sort: string) => void;
   /** Whether the popover is showing. */
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -78,7 +78,7 @@ export function SortPicker({
   options,
   size = 'md',
   disabled = false,
-  onChange,
+  onValueChange,
   open: openProp,
   onOpenChange,
   className,
@@ -122,7 +122,7 @@ export function SortPicker({
   const nameOf = (field: string): string => labels[`${entityType}|${field}`] ?? field;
 
   const label = value.length === 0 ? 'Sort' : value.map((k) => nameOf(k.field)).join(', ');
-  const commit = (next: SortKey[]) => onChange?.(next, toSortString(next));
+  const commit = (next: SortKey[]) => onValueChange?.(next, toSortString(next));
 
   function add(path: string) {
     if (path) commit([...value, { field: path, direction: 'asc' }]);

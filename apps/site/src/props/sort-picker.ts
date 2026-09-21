@@ -14,7 +14,7 @@ export default {
     { name: 'class / className', type: '`string`', default: '—', meaning: 'Merged after the widget\'s own classes.' },
   ],
   events: [
-    { name: 'onChange', payload: '`SortKey[]`, `string`', when: 'The keys and the `sort` string changed, on every edit. Svelte also binds it with `bind:value`.' },
+    { name: 'onValueChange', payload: '`SortKey[]`, `string`', when: 'The keys and the `sort` string changed, on every edit. Svelte also binds it with `bind:value`.' },
     { name: 'onOpenChange', payload: '`boolean`', when: 'The popover opened or closed. Svelte also binds it with `bind:open`.' },
   ],
   keyboard: [

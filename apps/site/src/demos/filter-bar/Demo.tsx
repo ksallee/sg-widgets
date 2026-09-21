@@ -120,7 +120,7 @@ export default function FilterBarDemo() {
           labels={{ sg_shot_type: 'Kind' }}
           baseFilter={scope}
           value={value}
-          onChange={setValue}
+          onValueChange={setValue}
         />
 
         <section className="flex min-w-0 flex-col gap-2">
@@ -159,7 +159,7 @@ export default function FilterBarDemo() {
             labels={{ sg_shot_type: 'Kind' }}
             baseFilter={scope}
             value={seeded}
-            onChange={setSeeded}
+            onValueChange={setSeeded}
           />
         </section>
 
@@ -173,7 +173,7 @@ export default function FilterBarDemo() {
             counts={noteCounts}
             baseFilter={scope}
             value={readState}
-            onChange={setReadState}
+            onValueChange={setReadState}
           />
           <p className="text-muted-foreground text-sm tabular-nums" data-testid="note-count" data-for={readWire}>
             {matchLabel(notes.wire === readWire ? notes.count : { kind: 'counting' }, 'Note')}
@@ -200,7 +200,7 @@ export default function FilterBarDemo() {
                     size={size}
                     baseFilter={scope}
                     value={sized[size]}
-                    onChange={(next) => setSized({ ...sized, [size]: next })}
+                    onValueChange={(next) => setSized({ ...sized, [size]: next })}
                   />
                 </div>
                 <Button variant="outline" size={size === 'md' ? 'default' : size}>

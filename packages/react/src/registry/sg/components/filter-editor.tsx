@@ -174,7 +174,7 @@ interface EditorContext {
   pickPreset: (path: NodePath, node: FilterCondition, id: string) => void;
 }
 
-export interface FilterEditorProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange'> {
+export interface FilterEditorProps extends React.HTMLAttributes<HTMLDivElement> {
   /** The root element. */
   ref?: React.Ref<HTMLDivElement>;
 
@@ -191,7 +191,7 @@ export interface FilterEditorProps extends Omit<React.HTMLAttributes<HTMLDivElem
   emptyLabel?: string;
   size?: FilterEditorSize;
   disabled?: boolean;
-  onChange?: (value: FilterGroup) => void;
+  onValueChange?: (value: FilterGroup) => void;
   fieldChooser?: (args: FieldChooserArgs) => ReactNode;
   valueEditor?: (args: ValueEditorArgs) => ReactNode;
   entityEditor?: (args: ValueEditorArgs) => ReactNode;
@@ -221,7 +221,7 @@ export function FilterEditor({
   emptyLabel = NOTHING_CHOSEN_LABEL,
   size = 'md',
   disabled = false,
-  onChange,
+  onValueChange,
   fieldChooser,
   valueEditor,
   entityEditor,
@@ -270,7 +270,7 @@ export function FilterEditor({
   };
 
   const dataTypeOf = (path: string): string => fieldOf(path)?.dataType ?? '';
-  const commit = (next: FilterGroup) => onChange?.(next);
+  const commit = (next: FilterGroup) => onValueChange?.(next);
 
   const ctx: EditorContext = {
     entityType,
@@ -577,7 +577,7 @@ function ValueSlot({ ctx, path, node }: { ctx: EditorContext; path: NodePath; no
           projectId={ctx.projectId}
           entityType={field?.entityType ?? ctx.entityType}
           field={field?.name}
-          value={typeof node.value === 'string' && node.value !== '' ? node.value : undefined}
+          value={typeof node.value === 'string' && node.value !== '' ? node.value : null}
           onValueChange={(next) => set(next ?? '')}
         />
       ) : kind === 'options' && arity === 'many' ? (

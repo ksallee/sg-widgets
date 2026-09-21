@@ -23,9 +23,9 @@
 		projectIds?: number[];
 		/** A list or status field other than the type's own. Project's is `sg_status`. */
 		field?: string;
-		/** The selected code. */
-		value?: string;
-		onValueChange?: (value: string | undefined) => void;
+		/** The selected code, or `null` when nothing is chosen. */
+		value?: string | null;
+		onValueChange?: (value: string | null) => void;
 		placeholder?: string;
 		/** Shown when the field offers nothing. */
 		emptyLabel?: string;
@@ -59,7 +59,7 @@
 		projectId = undefined,
 		projectIds = undefined,
 		field = undefined,
-		value = $bindable(undefined),
+		value = $bindable(null),
 		onValueChange,
 		placeholder = 'Select a status',
 		emptyLabel = NO_ROWS_LABEL,
@@ -153,13 +153,13 @@
 			seen !== null && seen !== codes && Boolean(value) && !query.options.some((o) => o.code === value);
 		seen = codes;
 		if (dropped) {
-			value = undefined;
-			onValueChange?.(undefined);
+			value = null;
+			onValueChange?.(null);
 		}
 	});
 
 	function pick(next: string | null): void {
-		value = next ?? undefined;
+		value = next;
 		onValueChange?.(value);
 	}
 </script>

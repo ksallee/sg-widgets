@@ -8,13 +8,13 @@
 	const projectId = context.projectId;
 	const otherProjectId = context.projectFor(71);
 
-	let inProjectA = $state<string | undefined>('ip');
-	let inProjectB = $state<string | undefined>('pndad');
-	let shared = $state<string | undefined>(undefined);
-	let project = $state<string | undefined>('Active');
-	let unknown = $state<string | undefined>('zz_retired');
-	let note = $state<string | undefined>('opn');
-	let switching = $state<string | undefined>('part');
+	let inProjectA = $state<string | null>('ip');
+	let inProjectB = $state<string | null>('pndad');
+	let shared = $state<string | null>(null);
+	let project = $state<string | null>('Active');
+	let unknown = $state<string | null>('zz_retired');
+	let note = $state<string | null>('opn');
+	let switching = $state<string | null>('part');
 	let switchTo = $state(otherProjectId);
 
 	/** Whether each type's status field is mandatory, read from the schema and written on the cells. */

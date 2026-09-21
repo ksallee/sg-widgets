@@ -106,7 +106,7 @@
 		counts?: FacetCounts;
 		/** Rows read for a tally. */
 		sampleSize?: number;
-		onChange?: (value: FilterGroup) => void;
+		onValueChange?: (value: FilterGroup) => void;
 		class?: string;
 	};
 
@@ -123,7 +123,7 @@
 		counts,
 		baseFilter = null,
 		sampleSize = 200,
-		onChange,
+		onValueChange,
 		class: className,
 		ref = $bindable(null),
 		...rest
@@ -203,7 +203,7 @@
 
 	function commit(next: FilterGroup): void {
 		value = next;
-		onChange?.(next);
+		onValueChange?.(next);
 	}
 
 	/** The list operator the checklist writes: the one the pill already holds, else `in`. */
@@ -494,6 +494,6 @@
 		{size}
 		label="More filters"
 		bind:value
-		onChange={(next) => onChange?.(next)}
+		onValueChange={(next) => onValueChange?.(next)}
 	/>
 </div>

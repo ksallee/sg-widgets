@@ -74,8 +74,8 @@ the toolbar and none of them reaches into `source`.
   filters={filter}
   selection={selected}
   onSelectionChange={setSelected}
-  toolbarStart={<FilterBar entityType="Version" context={context} facets={['sg_status_list']} value={filter} onChange={setFilter} />}
-  toolbarEnd={<SortPicker entityType="Version" context={context} value={sortKeys} onChange={setSortKeys} />}
+  toolbarStart={<FilterBar entityType="Version" context={context} facets={['sg_status_list']} value={filter} onValueChange={setFilter} />}
+  toolbarEnd={<SortPicker entityType="Version" context={context} value={sortKeys} onValueChange={setSortKeys} />}
 />
 ```
 

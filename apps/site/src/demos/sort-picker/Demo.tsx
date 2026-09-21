@@ -82,7 +82,7 @@ export default function SortPickerDemo() {
   return (
     <DemoContextProvider context={context}>
       <div className="flex min-w-0 flex-col gap-4">
-        <SortPicker entityType="Shot" context={context} value={value} onChange={setValue} />
+        <SortPicker entityType="Shot" context={context} value={value} onValueChange={setValue} />
 
         <section className="flex flex-col gap-2">
           <h4 className={label}>sort</h4>

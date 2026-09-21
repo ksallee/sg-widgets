@@ -47,8 +47,8 @@ The root carries the size and, while the options load, `data-loading`.
 
 <Props name="status-picker" kind="events" />
 
-`onValueChange` fires with the code, or with `undefined` when the selection is cleared. It also fires
-once with `undefined` when a new option set drops the selected code, which is what a project change
+`onValueChange` fires with the code, or with `null` when the selection is cleared. It also fires
+once with `null` when a new option set drops the selected code, which is what a project change
 does.
 
 `onOpenChange` fires when the popup opens or closes. Svelte also binds it with `bind:open`.

@@ -5,7 +5,7 @@
 <script lang="ts">
 	import type { HTMLAttributes } from 'svelte/elements';
 	import type { EntityTypeInfo, SgContext } from '@sg-widgets/core';
-	import { entityTypeOptions, NO_MATCH_LABEL } from '@sg-widgets/core';
+	import { entityTypeOptions, errorText, NO_MATCH_LABEL } from '@sg-widgets/core';
 	import { Combobox } from 'bits-ui';
 	import { cn, type WithElementRef } from '$lib/utils.js';
 	import PickerControl from '$lib/registry/components/picker-control.svelte';
@@ -90,7 +90,7 @@
 				if (live) loaded = types;
 			})
 			.catch((error: unknown) => {
-				if (live) failure = error instanceof Error ? error.message : String(error);
+				if (live) failure = errorText(error);
 			});
 		return () => {
 			live = false;

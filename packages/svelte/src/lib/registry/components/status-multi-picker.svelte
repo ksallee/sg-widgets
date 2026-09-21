@@ -7,7 +7,7 @@
 <script lang="ts">
 	import type { HTMLAttributes } from 'svelte/elements';
 	import type { FieldSchema, PickerRow, SgContext, StatusOption, StatusRecord } from '@sg-widgets/core';
-	import { clearableForField, matchesEveryWord, NO_MATCH_LABEL } from '@sg-widgets/core';
+	import { clearableForField, errorText, matchesEveryWord, NO_MATCH_LABEL } from '@sg-widgets/core';
 	import { Combobox } from 'bits-ui';
 	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
@@ -147,7 +147,7 @@
 				state.loading = false;
 			},
 			(error: unknown) => {
-				state.error = error instanceof Error ? error.message : String(error);
+				state.error = errorText(error);
 				state.loading = false;
 			}
 		);

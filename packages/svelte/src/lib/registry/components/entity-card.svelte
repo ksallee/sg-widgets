@@ -37,6 +37,7 @@
 		describeEntityCard,
 		entityCardSlot,
 		entityDetailUrl,
+		errorText,
 		fieldText,
 		imageState,
 		isEmptyValue,
@@ -394,7 +395,7 @@
 			<StateLine
 				state="error"
 				icon={CircleAlert}
-				label={stateLine('error', { errorLabel }, error.message)}
+				label={stateLine('error', { errorLabel }, errorText(error))}
 			/>
 		{/await}
 	</div>
@@ -475,7 +476,7 @@
 			<StateLine
 				state="error"
 				icon={CircleAlert}
-				label={stateLine('error', { errorLabel }, error.message)}
+				label={stateLine('error', { errorLabel }, errorText(error))}
 			/>
 		{/await}
 	</div>

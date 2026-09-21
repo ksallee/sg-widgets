@@ -8,7 +8,7 @@ import type {
   StatusOption,
   StatusRecord,
 } from '@sg-widgets/core';
-import { clearableForField, matchesEveryWord, NO_MATCH_LABEL } from '@sg-widgets/core';
+import { clearableForField, errorText, matchesEveryWord, NO_MATCH_LABEL } from '@sg-widgets/core';
 import { Combobox as ComboboxPrimitive } from '@base-ui/react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
@@ -129,7 +129,7 @@ function statusOptionStore(
     (error: unknown) =>
       settle({
         loading: false,
-        error: error instanceof Error ? error.message : String(error),
+        error: errorText(error),
         options: [],
         field: null,
         statuses: new Map(),

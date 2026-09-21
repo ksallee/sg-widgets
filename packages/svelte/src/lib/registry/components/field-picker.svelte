@@ -24,6 +24,7 @@
 	import {
 		currentType,
 		deriveFieldOptions,
+		errorText,
 		friendlyFieldPath,
 		iconNameFor,
 		NO_MATCH_LABEL,
@@ -246,7 +247,7 @@ const ICONS: Record<string, typeof Type> = {
 				if (live) loaded = { type: wanted, fields };
 			})
 			.catch((error: unknown) => {
-				if (live) failure = error instanceof Error ? error.message : String(error);
+				if (live) failure = errorText(error);
 			});
 		return () => {
 			live = false;

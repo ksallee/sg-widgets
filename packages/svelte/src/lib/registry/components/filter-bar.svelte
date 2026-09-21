@@ -59,6 +59,7 @@
 		conditionValues,
 		describeCondition,
 		emptyFilter,
+		errorText,
 		facetLists,
 		facetScopes,
 		facetShape,
@@ -348,7 +349,7 @@
 						state="error"
 						slotName="filter-bar-error"
 						icon={TriangleAlertIcon}
-						label={error.message}
+						label={errorText(error)}
 					/>
 				{/await}
 			</Command.List>

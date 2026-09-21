@@ -17,6 +17,7 @@ import {
   conditionValues,
   describeCondition,
   emptyFilter,
+  errorText,
   facetLists,
   facetScopes,
   facetShape,
@@ -187,7 +188,7 @@ export function FilterBar({
         if (live) setTally(found);
       })
       .catch((error: unknown) => {
-        if (live) setFailure(error instanceof Error ? error.message : String(error));
+        if (live) setFailure(errorText(error));
       })
       .finally(() => {
         if (live) setCounting(false);

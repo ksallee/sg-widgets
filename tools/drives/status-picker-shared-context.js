@@ -40,9 +40,12 @@ const statuses = reads.statuses ?? 0;
 if (statuses !== 1) return { verdict: `FAIL ${drawn} status pickers made ${statuses} statuses reads`, notes };
 
 // The options come from the schema, and one field on one project is read once whatever asks.
+// The page picks a status on three types -- Version, Project and Note -- so it reads three field
+// sets at site scope, and its Version pickers scope to two projects, so it reads that one field
+// twice more against a project: five reads. A sixth is a picker asking for what the page already has.
 const schemaReads = (reads.fields ?? 0) + (reads.fieldWithProject ?? 0);
 notes.push(`schema reads: ${schemaReads}`);
-if (schemaReads > 4) return { verdict: `FAIL ${drawn} pickers made ${schemaReads} schema reads`, notes };
+if (schemaReads > 5) return { verdict: `FAIL ${drawn} pickers made ${schemaReads} schema reads`, notes };
 
 return {
   verdict: `PASS ${drawn} status pickers over two panes made one statuses read and ${schemaReads} schema reads`,

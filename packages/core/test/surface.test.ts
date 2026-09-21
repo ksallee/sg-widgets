@@ -13,6 +13,11 @@ describe('the root entry', () => {
     expect(Object.keys(core)).not.toContain('pluralPath');
   });
 
+  it('formats a timecode through one function', () => {
+    expect(Object.keys(core)).not.toContain('formatTimecodeFrames');
+    expect(Object.keys(core)).toContain('formatTimecode');
+  });
+
   it('names the search rule once', () => {
     for (const name of ['queryTokens', 'highlightRuns']) expect(Object.keys(core)).not.toContain(name);
     for (const name of ['searchWords', 'matchRuns']) expect(Object.keys(core)).toContain(name);

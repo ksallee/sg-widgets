@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
+import { formatTimecode } from '../src/render.js';
 import {
   colorToHex,
   editorKindFor,
   editorPlacementFor,
   formatNumberInput,
-  formatTimecodeFrames,
   fromApiDateTime,
   editorNeedsContext,
   INT32_MAX,
@@ -199,12 +199,12 @@ describe('parseTimecodeInput', () => {
   });
 });
 
-describe('formatTimecodeFrames', () => {
+describe('formatTimecode with a frame rate', () => {
   it('renders milliseconds the way the server groups them', () => {
     // 500 groups as 00:00:00:12 and 3600000 as 01:00:00:00 (field_types/timecode).
-    expect(formatTimecodeFrames(500, 23.976)).toBe('00:00:00:12');
-    expect(formatTimecodeFrames(3600000, 23.976)).toBe('01:00:00:00');
-    expect(formatTimecodeFrames(86400000, 23.976)).toBe('24:00:00:00');
+    expect(formatTimecode(500, { frameRate: 23.976 })).toBe('00:00:00:12');
+    expect(formatTimecode(3600000, { frameRate: 23.976 })).toBe('01:00:00:00');
+    expect(formatTimecode(86400000, { frameRate: 23.976 })).toBe('24:00:00:00');
   });
 });
 

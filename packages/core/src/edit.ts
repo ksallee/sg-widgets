@@ -201,11 +201,6 @@ export function parseTimecodeInput(raw: string, options: TimecodeOptions = {}): 
   return { value: total };
 }
 
-/** Milliseconds as `HH:MM:SS:FF`, for putting a stored timecode back in an input. */
-export function formatTimecodeFrames(ms: number, frameRate: number): string {
-  return formatTimecode(ms, { frameRate });
-}
-
 // --- stepping ----------------------------------------------------------------
 
 /** The bounds and the amount one step moves, for one numeric data type. */
@@ -362,7 +357,7 @@ export function numberDraft(value: unknown, dataType: string, shape: NumberShape
       // round trip through the parse. The working day is a parse unit only.
       return formatDuration(n);
     case 'timecode':
-      return shape.frameRate === undefined ? formatTimecode(n) : formatTimecodeFrames(n, shape.frameRate);
+      return formatTimecode(n, shape.frameRate === undefined ? {} : { frameRate: shape.frameRate });
     default:
       return Number.isFinite(n)
         ? formatNumberInput(n, shape.locale === undefined ? {} : { locale: shape.locale })

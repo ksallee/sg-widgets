@@ -159,7 +159,12 @@ export function FilterBar({
 
   useEffect(() => {
     const present = facets.map((name) => fields[name]).filter((f): f is FieldSchema => Boolean(f));
-    if (present.length === 0) return;
+    // Nothing to count is a finished count: a facet whose field the type does not carry
+    // has an empty list, not a running one.
+    if (present.length === 0) {
+      setCounting(false);
+      return;
+    }
     let live = true;
     setCounting(true);
     setFailure(null);

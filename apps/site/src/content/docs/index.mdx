@@ -1,10 +1,15 @@
 ---
 title: SG Widgets
-description: shadcn-compatible widgets for Flow Production Tracking.
-# The page is the site, so the document title is the site's name once.
+description: Widgets for ShotGrid, now Flow Production Tracking, in React and Svelte, themed by your shadcn tokens.
+# The page is the site, so the document title is the site's name once, and the card a
+# link to it draws is the site rather than one article of it.
 head:
   - tag: title
     content: SG Widgets
+  - tag: meta
+    attrs:
+      property: 'og:type'
+      content: website
 template: splash
 hero:
   tagline: Status badges, pickers, a filter editor and more, for React and Svelte, themed by your shadcn tokens.
@@ -20,4 +25,5 @@ import { CardGrid, LinkCard } from '@astrojs/starlight/components';
   <LinkCard title="Widgets" href="/widgets/" description="Every widget, in both frameworks, with its props and its keyboard map." />
   <LinkCard title="Themes" href="/themes/" description="Paste a shadcn theme, see the widgets wearing it, and take it away with its status roles." />
   <LinkCard title="PyQt" href="https://github.com/ksallee/sg-widgets-qt" description="Looking for the same widgets in PyQt? We got you: sg-widgets-qt, the same set on Qt." />
+  <LinkCard title="Code" href="https://github.com/ksallee/sg-widgets" description="The monorepo: the core package, the two registries and this site." />
 </CardGrid>

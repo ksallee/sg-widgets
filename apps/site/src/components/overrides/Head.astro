@@ -1,0 +1,19 @@
+---
+/**
+ * Starlight's head, with the two Twitter tags that carry the page's own words.
+ *
+ * Starlight writes `og:title` and `og:description` per page and `twitter:card` and the
+ * image site-wide, and it has no `twitter:title` or `twitter:description`. A head entry
+ * in the config is one value for the whole site, so these are written here, where the
+ * route's own frontmatter is in reach.
+ */
+import Default from '@astrojs/starlight/components/Head.astro';
+import { SITE_DESCRIPTION } from '../../site-nav';
+
+const { entry } = Astro.locals.starlightRoute;
+const description = entry.data.description ?? SITE_DESCRIPTION;
+---
+
+<Default><slot /></Default>
+<meta name="twitter:title" content={entry.data.title} />
+<meta name="twitter:description" content={description} />

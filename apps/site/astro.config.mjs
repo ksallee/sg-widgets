@@ -8,6 +8,7 @@ import svelte from '@astrojs/svelte';
 import vercel from '@astrojs/vercel';
 import sitemap from '@astrojs/sitemap';
 import tailwindcss from '@tailwindcss/vite';
+import { SITE_DESCRIPTION, SITE_NAME, SITE_URL, starlightSidebar } from './src/site-nav';
 
 const packages = new URL('../../packages/', import.meta.url);
 const reactSrc = fileURLToPath(new URL('react/src', packages));
@@ -26,7 +27,7 @@ const paletteBoot = readFileSync(new URL('./src/scripts/palette-boot.js', import
 
 export default defineConfig({
   // Set so the sitemap Starlight emits has absolute URLs (and to silence its warning).
-  site: 'https://sg-widgets.vercel.app',
+  site: SITE_URL,
   // Every page is prerendered. The adapter is here for the three endpoints under
   // src/pages/live/, which opt out with `export const prerender = false`: the two
   // App Session Launcher calls the browser cannot make itself, and the dev-only
@@ -38,13 +39,24 @@ export default defineConfig({
     // the site.
     sitemap({ filter: (page) => !new URL(page).pathname.startsWith('/qa/') }),
     starlight({
-      title: 'SG Widgets',
-      description: 'shadcn-compatible widgets for Flow Production Tracking, for React and Svelte.',
+      title: SITE_NAME,
+      description: SITE_DESCRIPTION,
+      social: [{ icon: 'github', label: 'GitHub', href: 'https://github.com/ksallee/sg-widgets' }],
       // The mark alone, with the default palette's values pinned and its dark values
       // behind a `prefers-color-scheme` query inside the file, so it follows the OS.
       favicon: '/favicon.svg',
       customCss: ['./src/styles/global.css'],
-      head: [{ tag: 'script', content: paletteBoot }],
+      // The preview card a link to the site draws. The image is absolute, as the
+      // crawlers require, and site-wide: every page shows the same screen. Starlight
+      // writes `og:title`, `og:description` and `twitter:card` itself, and the Head
+      // override mirrors the two it writes onto their `twitter:` names.
+      head: [
+        { tag: 'script', content: paletteBoot },
+        { tag: 'meta', attrs: { property: 'og:image', content: `${SITE_URL}/og.png` } },
+        { tag: 'meta', attrs: { property: 'og:image:width', content: '1200' } },
+        { tag: 'meta', attrs: { property: 'og:image:height', content: '630' } },
+        { tag: 'meta', attrs: { name: 'twitter:image', content: `${SITE_URL}/og.png` } },
+      ],
       // The code block is a surface of the page like a card is: the frame, its border
       // and its corners come from the tokens, and only the syntax colours stay
       // Starlight's own. Starlight already draws the frame background from
@@ -62,50 +74,16 @@ export default defineConfig({
       // The palette and what the demos read are site-wide, so they sit in the header
       // beside the search box and the theme select. Starlight's own header takes no
       // props and offers no slot, so the override is a copy of it. The site title is
-      // the wordmark.
+      // the wordmark. The head override adds the two tags that mirror the page.
       components: {
+        Head: './src/components/overrides/Head.astro',
         Header: './src/components/overrides/Header.astro',
         SiteTitle: './src/components/overrides/SiteTitle.astro',
       },
-      sidebar: [
-        {
-          label: 'Start',
-          items: [
-            { label: 'Introduction', slug: 'start/introduction' },
-            { label: 'Install', slug: 'start/install' },
-          ],
-        },
-        {
-          label: 'Core',
-          items: [{ autogenerate: { directory: 'core' } }],
-        },
-        {
-          label: 'Widgets',
-          items: [
-            { label: 'Overview', slug: 'widgets' },
-            {
-              label: 'Foundations',
-              items: [
-                ...['thumbnail', 'user-avatar', 'text-editor', 'number-editor', 'checkbox-editor', 'date-editor', 'date-time-editor', 'url-editor', 'color-editor', 'picker-control', 'search-control', 'collection-control', 'value-editor', 'state-line'].map((n) => ({ slug: `widgets/${n}` })),
-                // A page of its own rather than a docs page, so the sidebar names the link.
-                { label: 'Themes', link: '/themes/' },
-              ],
-            },
-            {
-              label: 'Display',
-              items: ['status-badge', 'entity-chip', 'entity-card', 'field-value', 'match-text'].map((n) => ({ slug: `widgets/${n}` })),
-            },
-            {
-              label: 'Pickers',
-              items: ['entity-picker', 'entity-multi-picker', 'user-picker', 'user-multi-picker', 'project-picker', 'project-multi-picker', 'status-picker', 'status-multi-picker', 'list-picker', 'list-multi-picker', 'entity-type-picker', 'entity-type-multi-picker', 'field-picker', 'column-picker', 'field-editor', 'global-search', 'hierarchical-search', 'context-selector'].map((n) => ({ slug: `widgets/${n}` })),
-            },
-            {
-              label: 'Queries and collections',
-              items: ['filter-editor', 'filter-dialog', 'filter-bar', 'sort-picker', 'entity-table', 'entity-grid', 'grouped-list', 'entity-tree'].map((n) => ({ slug: `widgets/${n}` })),
-            },
-          ],
-        },
-      ],
+      // The pages and their categories are in `src/site-nav.ts`, which the agent files
+      // at /llms.txt and /llms-full.txt section by the same groups. The sidebar is
+      // explicit so URLs stay flat.
+      sidebar: starlightSidebar(),
     }),
     react(),
     svelte(),

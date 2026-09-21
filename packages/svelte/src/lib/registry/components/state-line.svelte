@@ -5,7 +5,7 @@
 	export type StateLinePad = 'popover' | 'table' | 'none';
 
 	const LINE = 'flex items-center justify-center gap-1.5 text-center text-sm';
-	const TONE: Record<Exclude<WidgetState, 'loading'>, string> = {
+	const TONE: Record<Exclude<WidgetState, 'loading' | 'rows'>, string> = {
 		empty: 'text-muted-foreground',
 		error: 'text-destructive'
 	};
@@ -20,7 +20,7 @@
 
 	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>> & {
 		/** Which state this is. An error is destructive, an empty state muted. */
-		state: Exclude<WidgetState, 'loading'>;
+		state: Exclude<WidgetState, 'loading' | 'rows'>;
 		/** The line to show. */
 		label: string;
 		/** The glyph in front of it. */

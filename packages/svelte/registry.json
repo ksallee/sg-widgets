@@ -1295,7 +1295,9 @@
         "local:checkbox",
         "skeleton",
         "button",
-        "dropdown-menu"
+        "dropdown-menu",
+        "local:column-picker",
+        "popover"
       ],
       "files": [
         {

@@ -17,8 +17,11 @@ import type {
   StatusRecord,
 } from 'sg-widgets-core';
 import {
+  arrangeColumns,
   asCollapseState,
   cellValue,
+  columnPaths,
+  columnsStorageKey,
   collapseStateFrom,
   editorPlacementFor,
   errorText,
@@ -28,7 +31,12 @@ import {
   matchingOffer,
   nextEnabledIndex,
   NO_ROWS_LABEL,
+  parseColumnChoice,
   preferencesOf,
+  resolveColumnChoice,
+  sameColumnPaths,
+  serializeColumnChoice,
+  unreadPaths,
   sameCollapse,
   selectionKeyIntent,
   stateLine,
@@ -53,10 +61,12 @@ import {
   ChevronRight,
   ChevronsUpDown,
   CircleAlert,
+  Columns3,
   EllipsisVertical,
   EyeOff,
   Inbox,
   PinOff,
+  RotateCcw,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -67,6 +77,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
@@ -77,6 +88,7 @@ import {
   useLatest,
 } from '@/registry/sg/components/collection-control';
 import { CollectionFooter } from '@/registry/sg/components/collection-footer';
+import { ColumnPicker } from '@/registry/sg/components/column-picker';
 import { FieldEditor } from '@/registry/sg/components/field-editor';
 import { FieldValue } from '@/registry/sg/components/field-value';
 import { PICKER_ICON_BUTTON } from '@/registry/sg/components/picker-classes';
@@ -109,6 +121,8 @@ const CELL: Record<EntityTableDensity, string> = { compact: 'px-3 py-1', default
 /** A row's text and the head it sits under, on the ladder of `docs/design-rules.md`. */
 const TEXT: Record<EntityTableSize, string> = { sm: 'text-xs', md: 'text-sm', lg: 'text-base' };
 const HEAD: Record<EntityTableSize, string> = { sm: 'h-9', md: 'h-10', lg: 'h-11' };
+/** The Columns trigger, on the control ladder beside the sort picker's. */
+const TRIGGER: Record<EntityTableSize, string> = { sm: 'h-7 px-2', md: 'h-8 px-3', lg: 'h-9 px-3' };
 
 /** The popups a cell editor opens. Each is portalled out of the table's own tree. */
 const EDITOR_POPUP = '[data-slot="popover-content"],[data-slot="select-content"],[data-picker]';
@@ -122,6 +136,24 @@ const EDIT_HINT = 'Double-click or press Enter to edit';
 /** What a press inside a row leaves to the element it landed on. */
 const OWN_PRESS =
   'a,button:not([data-slot="checkbox"]),input,textarea,select,[contenteditable],[data-slot="entity-table-editor"]';
+
+function readChoice(key: string): string[] | null {
+  try {
+    return parseColumnChoice(localStorage.getItem(key));
+  } catch {
+    return null;
+  }
+}
+
+/** Keep a choice, or forget it when it is the defaults. Storage may refuse; the table still shows it. */
+function keepChoice(key: string, paths: string[] | null): void {
+  try {
+    if (paths === null) localStorage.removeItem(key);
+    else localStorage.setItem(key, serializeColumnChoice(paths));
+  } catch {
+    // Private mode or a full quota: the choice lasts for the page.
+  }
+}
 
 /** True where a key belongs to a control inside the table rather than to the rows. */
 function ownsKeys(target: HTMLElement | null): boolean {
@@ -219,6 +251,14 @@ export interface EntityTableProps extends Omit<React.HTMLAttributes<HTMLDivEleme
   showCode?: boolean;
   /** A menu on every header: sort, hide and pin. Off unless a caller has a use for it. */
   columnMenu?: boolean;
+  /**
+   * A Columns button at the end of the toolbar: the user adds, removes and reorders
+   * the entity type's fields, and the choice is kept in this browser. The columns
+   * first passed are the defaults Reset puts back. Needs `context` and `onColumnsChange`.
+   */
+  columnPicker?: boolean;
+  /** Where the column choice is kept in localStorage. Default one key per entity type. */
+  columnsKey?: string;
   /** How the set is walked: a footer with a page number, a load-more row, or the scroller. */
   paging?: PagingMode;
   /** Rows per page offered in the footer. `pages` mode only. */
@@ -310,6 +350,8 @@ export function EntityTable({
   editorPlacement,
   showCode = false,
   columnMenu = false,
+  columnPicker = false,
+  columnsKey,
   paging = 'pages',
   pageSizes = [25, 50, 100],
   maxHeight = '28rem',
@@ -588,10 +630,65 @@ export function EntityTable({
     );
   }
 
+  /* column choice -------------------------------------------------------- */
+
+  const storageKey = columnsStorageKey(source.entityType, columnsKey);
+  /** The columns the host passed first under this key, which Reset puts back. */
+  const [defaults, setDefaults] = useState<{ key: string; columns: CollectionColumn[] } | null>(null);
+  if (columns.length > 0 && defaults?.key !== storageKey) setDefaults({ key: storageKey, columns });
+  /** Each choice carries a ticket, so a slow resolve never lands over a later one. */
+  const ticket = useRef(0);
+  const [pickerOpen, setPickerOpen] = useState(false);
+
+  function writeColumns(next: CollectionColumn[]): void {
+    onColumnsChange?.(next);
+    // A column the source does not read yet reads the loaded rows again with it.
+    const unread = unreadPaths(source.fields, columnPaths(next));
+    if (unread.length > 0) void source.addFields(unread);
+  }
+
+  function remember(next: CollectionColumn[]): void {
+    if (!columnPicker || !defaults) return;
+    const paths = columnPaths(next);
+    keepChoice(storageKey, sameColumnPaths(paths, columnPaths(defaults.columns)) ? null : paths);
+  }
+
+  async function choose(paths: string[], keep = true): Promise<void> {
+    const mine = ++ticket.current;
+    const known = [...columns, ...(defaults?.columns ?? [])];
+    const next = context
+      ? await resolveColumnChoice(context.schema, source.entityType, paths, known)
+      : arrangeColumns(paths, known);
+    if (mine !== ticket.current) return;
+    writeColumns(next);
+    if (keep) remember(next);
+  }
+  const chooseLatest = useLatest(choose);
+  const columnsLatest = useLatest(columns);
+
+  // A kept choice replaces the defaults once they are known, and again when the key moves.
+  useEffect(() => {
+    if (!columnPicker || !defaults) return;
+    const paths = readChoice(defaults.key);
+    if (paths && !sameColumnPaths(paths, columnPaths(columnsLatest.current))) void chooseLatest.current(paths, false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [columnPicker, defaults]);
+
+  const customised = defaults !== null && !sameColumnPaths(columnPaths(columns), columnPaths(defaults.columns));
+
+  function resetColumns(): void {
+    if (!defaults) return;
+    ticket.current += 1;
+    writeColumns(defaults.columns);
+    keepChoice(storageKey, null);
+  }
+
   /* column menu ---------------------------------------------------------- */
 
   function hideColumn(path: string): void {
-    onColumnsChange?.(columns.filter((column) => column.path !== path));
+    const next = columns.filter((column) => column.path !== path);
+    onColumnsChange?.(next);
+    remember(next);
   }
 
   /* column reorder ------------------------------------------------------- */
@@ -720,13 +817,48 @@ export function EntityTable({
 
   return (
     <div ref={root} data-slot="entity-table" className={cn(COLLECTION_ROOT, className)} {...rest}>
-      {toolbarStart || toolbarEnd ? (
+      {toolbarStart || toolbarEnd || (columnPicker && context) ? (
         <div data-slot="entity-table-toolbar" className="flex w-full min-w-0 flex-wrap items-center justify-between gap-2">
           <div data-slot="entity-table-toolbar-start" className="flex min-w-0 flex-wrap items-center gap-2">
             {toolbarStart}
           </div>
           <div data-slot="entity-table-toolbar-end" className="flex min-w-0 flex-wrap items-center gap-2">
             {toolbarEnd}
+            {columnPicker && context ? (
+              <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
+                <PopoverTrigger
+                  data-slot="entity-table-columns"
+                  className={cn(
+                    'border-border bg-background hover:bg-muted focus-visible:border-ring focus-visible:ring-ring/50 inline-flex min-w-0 items-center gap-1.5 rounded-lg border text-sm font-medium shadow-xs outline-none focus-visible:ring-3',
+                    TRIGGER[size],
+                  )}
+                >
+                  <Columns3 aria-hidden="true" className={cn('shrink-0', size === 'lg' ? 'size-5' : 'size-4')} />
+                  <span>Columns</span>
+                </PopoverTrigger>
+                <PopoverContent data-picker="columns" className="flex w-80 flex-col gap-3 p-3" align="end">
+                  <ColumnPicker
+                    context={context}
+                    entityType={source.entityType}
+                    size="sm"
+                    value={columnPaths(columns)}
+                    onValueChange={(paths) => void choose(paths)}
+                  />
+                  {customised ? (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="self-start"
+                      data-slot="entity-table-columns-reset"
+                      onClick={resetColumns}
+                    >
+                      <RotateCcw aria-hidden="true" />
+                      Reset columns
+                    </Button>
+                  ) : null}
+                </PopoverContent>
+              </Popover>
+            ) : null}
           </div>
         </div>
       ) : null}

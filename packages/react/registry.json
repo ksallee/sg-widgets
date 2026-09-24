@@ -1358,7 +1358,9 @@
         "checkbox",
         "skeleton",
         "button",
-        "dropdown-menu"
+        "dropdown-menu",
+        "https://sg-widgets.vercel.app/r/react/column-picker.json",
+        "https://sg-widgets.vercel.app/r/react/popover.json"
       ],
       "docs": "Takes an entity source and resolved columns from sg-widgets-core. Sorting and grouping go through the server; an edit writes one field and re-reads the row.",
       "files": [

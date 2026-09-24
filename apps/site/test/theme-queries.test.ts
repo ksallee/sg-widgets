@@ -122,7 +122,7 @@ const GROUP_HEADERS: Part[] = [
   {
     name: "the table's group row",
     files: [join(react, 'entity-table.tsx'), join(svelte, 'entity-table.svelte')],
-    anchor: 'hover:bg-muted',
+    anchor: 'bg-muted hover:bg-muted',
     wears: ['bg-muted', 'hover:bg-muted'],
     bare: ['bg-muted/50', 'hover:bg-muted/50'],
   },

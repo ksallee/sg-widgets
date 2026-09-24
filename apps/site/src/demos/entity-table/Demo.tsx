@@ -1,7 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { CollapseState, CollectionColumn, EditorPlacement, EntityRef, FilterGroup, PagingMode, SortKey, StatusRecord } from 'sg-widgets-core';
 import { collapseAll, condition, createEntitySource, emptyFilter, expandAll, group, resolveColumns, toSortSpecs } from 'sg-widgets-core';
-import { ColumnPicker } from '@/registry/sg/components/column-picker';
 import { EntityTable } from '@/registry/sg/components/entity-table';
 import { FilterBar } from '@/registry/sg/components/filter-bar';
 import { SortPicker } from '@/registry/sg/components/sort-picker';
@@ -65,7 +64,6 @@ export default function EntityTableDemo() {
   const [filter, setFilter] = useState<FilterGroup>(emptyFilter());
   const [sortKeys, setSortKeys] = useState<SortKey[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [picking, setPicking] = useState(false);
   const [grouped, setGrouped] = useState(false);
   const [collapsed, setCollapsed] = useState<CollapseState>(expandAll);
   const [compact, setCompact] = useState(false);
@@ -84,17 +82,6 @@ export default function EntityTableDemo() {
     setSelected(refs);
   }
   const sort = useMemo(() => toSortSpecs(sortKeys), [sortKeys]);
-
-  const pickColumns = useCallback(
-    (paths: string[]) => {
-      void resolveColumns(
-        context.schema,
-        'Version',
-        paths.map((path) => ({ path, width: WIDTHS[path] })),
-      ).then(setColumns);
-    },
-    [context],
-  );
 
   useEffect(() => {
     let live = true;
@@ -178,6 +165,7 @@ export default function EntityTableDemo() {
           statuses={statuses}
           context={context}
           selectable
+          columnPicker
           editable
           paging={paging}
           editorPlacement={placement}
@@ -186,36 +174,15 @@ export default function EntityTableDemo() {
           collapsed={collapsed}
           onCollapsedChange={setCollapsed}
           toolbarStart={
-            <>
-              <FilterBar
-                entityType="Version"
-                context={context}
-                facets={FACETS}
-                baseFilter={scope}
-                size="sm"
-                value={filter}
-                onValueChange={setFilter}
-              />
-              <div className="flex flex-col gap-2">
-                <button type="button" className={toggle} aria-pressed={picking} onClick={() => setPicking(!picking)}>
-                  Columns
-                </button>
-                {picking ? (
-                  <div className="w-56">
-                    <ColumnPicker
-                      context={context}
-                      entityType="Version"
-                      size="sm"
-                      deepLinks
-                      filter={(_field, path) => PATHS.includes(path) || PATHS.some((p) => p.startsWith(`${path}.`))}
-                      placeholder="Add a column"
-                      value={columns.map((column) => column.path)}
-                      onValueChange={pickColumns}
-                    />
-                  </div>
-                ) : null}
-              </div>
-            </>
+            <FilterBar
+              entityType="Version"
+              context={context}
+              facets={FACETS}
+              baseFilter={scope}
+              size="sm"
+              value={filter}
+              onValueChange={setFilter}
+            />
           }
           toolbarEnd={
             <SortPicker entityType="Version" context={context} size="sm" options={columns.map((column) => column.path)} value={sortKeys} onValueChange={setSortKeys} />

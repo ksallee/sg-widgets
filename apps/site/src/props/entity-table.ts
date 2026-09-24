@@ -20,6 +20,8 @@ export default {
     { name: 'editorPlacement', type: '`\'inline\' | \'popover\'`', default: 'per data type', meaning: 'Where every cell editor opens. A column\'s own `editorPlacement` wins over it.' },
     { name: 'showCode', type: '`boolean`', default: '`false`', meaning: 'Show the programmatic field path beside the header\'s display name.' },
     { name: 'columnMenu', type: '`boolean`', default: '`false`', meaning: 'A menu on every header: sort, hide and pin left.' },
+    { name: 'columnPicker', type: '`boolean`', default: '`false`', meaning: 'A Columns button in the toolbar: the user adds, removes and reorders the type\'s fields, kept in this browser. Needs `context`.' },
+    { name: 'columnsKey', type: '`string`', default: 'one per entity type', meaning: 'The localStorage key the column choice is kept under.' },
     { name: 'paging', type: '`\'pages\' | \'more\' | \'scroll\'`', default: '`\'pages\'`', meaning: 'How the set is walked: a page number, a load-more row, or the scroller.' },
     { name: 'pageSizes', type: '`number[]`', default: '`[25, 50, 100]`', meaning: 'Rows per page offered in the footer. `pages` only.' },
     { name: 'maxHeight', type: '`string`', default: '`\'28rem\'`', meaning: 'Height of the scrolling body.' },
@@ -30,7 +32,7 @@ export default {
     { name: 'class / className', type: '`string`', default: '—', meaning: 'Merged after the widget\'s own classes.' },
   ],
   events: [
-    { name: 'onColumnsChange', payload: '`CollectionColumn[]`', when: 'A column was hidden from its header menu.' },
+    { name: 'onColumnsChange', payload: '`CollectionColumn[]`', when: 'A column was hidden from its header menu, or chosen in the column picker.' },
     { name: 'onSelectionChange', payload: '`EntityRef[]`', when: 'The selection changed.' },
     { name: 'onCollapsedChange', payload: '`CollapseState`', when: 'A group header was opened or shut.' },
     { name: 'onSortChange', payload: '`SortSpec[]`', when: 'The source\'s sort changed, from a header or from the prop.' },

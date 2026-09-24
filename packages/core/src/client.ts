@@ -29,6 +29,14 @@ export interface EntityRow {
   relationships: Record<string, { data: EntityRef | EntityRef[] | null }>;
 }
 
+/** What `read` asks for. */
+export interface ReadOptions {
+  /** The fields to return. Dotted paths are allowed. */
+  fields?: string[];
+  /** Read a retired row, which answers 404 otherwise; a live row then answers 404 (get_entity_type_id, 103_batch_delete_revive). */
+  retired?: boolean;
+}
+
 export interface SearchResult {
   data: EntityRow[];
   /** True when another page exists. Computed from data length, not `links.next`, which is emitted on empty pages too (probe 006). */
@@ -311,6 +319,15 @@ export interface SgClient {
   fieldWithProject(entityType: string, field: string, projectId: number): Promise<FieldSchema>;
   search(entityType: string, options: SearchOptions): Promise<SearchResult>;
   /**
+   * One row by id, in the `_search` row shape.
+   *
+   * A row that is not there rejects 404 code 104, and a retired row answers the same
+   * 404 unless read with `retired`: only that second read tells the two apart
+   * (get_entity_type_id). A batch create with no `project` answers an id this read
+   * never reaches (recipes/002).
+   */
+  read(entityType: string, id: number, options?: ReadOptions): Promise<EntityRow>;
+  /**
    * Free-text search across several types at once. Every word must match, each as
    * a case-insensitive substring of the row's name or of the linked row's name
    * (probe 053). Page size is 1 to 25 and 25 is also the default; there is no
@@ -570,6 +587,15 @@ export class RestClient implements SgClient {
     if (options.sort) body['sort'] = options.sort;
     const res = await this.request<{ data: EntityRow[] }>('POST', `/entity/${pluralPath(entityType)}/_search`, body);
     return { data: res.data, hasMore: res.data.length === size };
+  }
+
+  async read(entityType: string, id: number, options: ReadOptions = {}): Promise<EntityRow> {
+    const params: Record<string, string | undefined> = {
+      fields: options.fields?.join(','),
+      'options[return_only]': options.retired ? 'retired' : undefined,
+    };
+    const res = await this.request<{ data: EntityRow }>('GET', `/entity/${pluralPath(entityType)}/${id}`, undefined, params);
+    return res.data;
   }
 
   async textSearch(

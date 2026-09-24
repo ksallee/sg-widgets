@@ -1182,6 +1182,46 @@ describe('delete and revive', () => {
   });
 });
 
+describe('a read of one row', () => {
+  const notFound = (detail: string) => ({ errors: [{ status: 404, code: 104, title: 'Not Found', detail }] });
+
+  it('answers the row in the search shape, with the fields asked for', async () => {
+    const c = client();
+    const [row] = (await c.search('Shot', { filters: only('id', 'is', 862), fields: ['code', 'sg_sequence'] })).data;
+    expect(await c.read('Shot', 862, { fields: ['code', 'sg_sequence'] })).toEqual(row);
+  });
+
+  it('rejects an id that never existed with the 404 the site answers (get_entity_type_id)', async () => {
+    const rejected = client().read('Task', 999999999);
+    await expect(rejected).rejects.toMatchObject({ status: 404, message: 'Task: 999999999 not found', body: notFound('Task: 999999999 not found') });
+  });
+
+  it('reads a retired row only when asked for it as retired', async () => {
+    const c = client();
+    await expect(c.read('Shot', 862, { retired: true })).rejects.toMatchObject({ status: 404 });
+    await c.delete('Shot', 862);
+    await expect(c.read('Shot', 862)).rejects.toMatchObject({ status: 404, message: 'Shot: 862 not found' });
+    expect((await c.read('Shot', 862, { retired: true, fields: ['code'] })).attributes['code']).toBe('sh010_0010');
+  });
+
+  it('does not reach a row a batch created with no project (recipes/002)', async () => {
+    const c = client();
+    const [made] = await c.batch([{ request_type: 'create', entity: 'Version', data: { code: 'v001' } }]);
+    if (made?.request_type !== 'create') throw new Error('shape');
+    await expect(c.read('Version', made.data.id)).rejects.toMatchObject({ status: 404 });
+  });
+
+  it('carries the 404 detail on an update, a delete and a rolled-back batch (put_entity_type_id, recipes/017)', async () => {
+    const c = client();
+    const detail = 'Entity of type [Task] with id=999999999 does not exist.';
+    await expect(c.update('Task', 999999999, { content: 'x' })).rejects.toMatchObject({ status: 404, body: notFound(detail) });
+    await expect(c.delete('Task', 999999999)).rejects.toMatchObject({ body: notFound(detail) });
+    const sentinel = { request_type: 'update' as const, entity: 'Task', record_id: 999999999, data: { content: 'x' } };
+    await expect(c.batch([{ request_type: 'delete', entity: 'Task', record_id: 5700 }, sentinel])).rejects.toMatchObject({ body: notFound(detail) });
+    expect((await c.read('Task', 5700)).id).toBe(5700);
+  });
+});
+
 describe('batch', () => {
   const project = { type: 'Project', id: 70 };
 

@@ -25,6 +25,7 @@ import type {
   FollowingOptions,
   HierarchyNode,
   HierarchyPath,
+  ReadOptions,
   SearchOptions,
   SearchResult,
   SgClient,
@@ -121,6 +122,7 @@ export function createQueryCache(client: SgClient, options: QueryCacheOptions = 
 
   function invalidateSearches(entityType: string): void {
     drop(`search:[${JSON.stringify(entityType)}`);
+    drop(`read:[${JSON.stringify(entityType)}`);
     drop('textSearch');
     drop(`summarize:[${JSON.stringify(entityType)}`);
   }
@@ -140,7 +142,7 @@ export function createQueryCache(client: SgClient, options: QueryCacheOptions = 
    * revive puts them back (089_task_delete_side_effects). Every row read goes.
    */
   function invalidateAllRows(): void {
-    for (const prefix of ['search', 'textSearch', 'summarize', 'threadContents', 'hierarchyExpand', 'hierarchySearch']) drop(prefix);
+    for (const prefix of ['search', 'read', 'textSearch', 'summarize', 'threadContents', 'hierarchyExpand', 'hierarchySearch']) drop(prefix);
   }
 
   return {
@@ -156,6 +158,9 @@ export function createQueryCache(client: SgClient, options: QueryCacheOptions = 
     },
     search(entityType: string, searchOptions: SearchOptions): Promise<SearchResult> {
       return run('search', [entityType, searchOptions], () => client.search(entityType, searchOptions));
+    },
+    read(entityType: string, id: number, readOptions?: ReadOptions): Promise<EntityRow> {
+      return run('read', [entityType, id, readOptions ?? null], () => client.read(entityType, id, readOptions));
     },
     textSearch(
       text: string,

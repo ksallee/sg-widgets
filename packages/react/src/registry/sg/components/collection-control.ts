@@ -18,6 +18,8 @@ import { useEffect, useRef, useState } from 'react';
 import type {
   EntityRef,
   EntityRow,
+  SelectionAnchor,
+  SelectionStep,
   EntitySource,
   PagingMode,
   RowDisabledFn,
@@ -29,7 +31,10 @@ import {
   collectionBottom,
   collectionView,
   describePaging,
+  extendByStep,
+  extendRange,
   firstEnabledIndex,
+  gestureOf,
   hasFailedPage,
   loadsOnArrowDown,
   rowIdOf,
@@ -38,9 +43,10 @@ import {
   sameRefs,
   selectableRefs,
   selectionState,
+  setRefs,
   shouldLoadNext,
   stateLine,
-  toggleRef,
+  toggleRow,
 } from 'sg-widgets-core';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useCollectionSource, useLatest } from '@/registry/sg/components/collection-source';
@@ -103,10 +109,20 @@ export function useCollectionControl(options: CollectionControlOptions) {
     onSelectionChange?.(next);
   }
 
+  /** Where the next Shift gesture ranges from. A ref: nothing draws it. */
+  const anchor = useRef<SelectionAnchor | null>(null);
+  const indexOf = (row: EntityRow): number => rows.findIndex((entry) => rowKey(entry) === rowKey(row));
+  function take(step: SelectionStep): void {
+    anchor.current = step.anchor;
+    setSelection(step.selection);
+  }
+
   return {
     source,
     paging,
     snapshot,
+    /** The selection in force: the caller's, or the collection's own. */
+    selection,
     rows,
     pager,
     pageError,
@@ -121,15 +137,20 @@ export function useCollectionControl(options: CollectionControlOptions) {
     disabledAt,
 
     isSelected: (row: EntityRow): boolean => chosenKeys.has(rowKey(row)),
-    /** Add or drop one row. A disabled row refuses. */
-    toggle: (row: EntityRow): void => {
-      if (rowDisabled(row)) return;
-      setSelection(toggleRef(selection, { type: row.type, id: row.id }));
+    /** Add or drop one row and anchor on it. A disabled row refuses. */
+    toggle: (row: EntityRow): void => take(toggleRow(selection, anchor.current, rows, indexOf(row), isRowDisabled)),
+    /** A press on a row: Shift ranges from the anchor, anything else toggles. */
+    press: (row: EntityRow, event: { shiftKey?: boolean; metaKey?: boolean; ctrlKey?: boolean }): void => {
+      const range = gestureOf(event) === 'range' ? extendRange : toggleRow;
+      take(range(selection, anchor.current, rows, indexOf(row), isRowDisabled));
     },
+    /** Shift+arrow: the cursor moved from one loaded row to another, carrying the range. */
+    extend: (from: number, to: number): void =>
+      take(extendByStep(selection, anchor.current, rows, from, to, isRowDisabled)),
     /** The tri-state a header checkbox reads. */
     allSelected: selectionState(rows, selection, isRowDisabled),
-    /** Take or drop every loaded row that is not disabled. */
-    toggleAll: (on: boolean): void => setSelection(on ? selectableRefs(rows, isRowDisabled) : []),
+    /** Take or drop every loaded row that is not disabled, keeping picks the loaded rows do not hold. */
+    toggleAll: (on: boolean): void => setSelection(setRefs(selection, selectableRefs(rows, isRowDisabled), on)),
   };
 }
 

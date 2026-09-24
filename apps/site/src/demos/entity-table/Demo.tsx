@@ -72,6 +72,17 @@ export default function EntityTableDemo() {
   const [paging, setPaging] = useState<PagingMode>('pages');
   const [placement, setPlacement] = useState<EditorPlacement>('popover');
   const [selected, setSelected] = useState<EntityRef[]>([]);
+
+  /** Every row the filter matches, read a page of ids at a time: the table never reads past its own pages. */
+  async function selectAllMatching(): Promise<void> {
+    const refs: EntityRef[] = [];
+    for (let number = 1; ; number += 1) {
+      const page = await context.client.search('Version', { filters: source.filters, fields: ['id'], page: { size: 500, number } });
+      refs.push(...page.data.map((row) => ({ type: row.type, id: row.id })));
+      if (!page.hasMore) break;
+    }
+    setSelected(refs);
+  }
   const sort = useMemo(() => toSortSpecs(sortKeys), [sortKeys]);
 
   const pickColumns = useCallback(
@@ -161,6 +172,7 @@ export default function EntityTableDemo() {
           onColumnsChange={setColumns}
           selection={selected}
           onSelectionChange={setSelected}
+          onSelectAllMatching={selectAllMatching}
           filters={scope ? group('and', [scope, filter]) : filter}
           sort={sort}
           statuses={statuses}

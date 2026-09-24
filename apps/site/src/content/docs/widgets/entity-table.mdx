@@ -110,6 +110,35 @@ Cancel and Save, so a cell's width never squeezes it. A checkbox is one press an
 spec forces it for that column.
 
 
+## Selection
+
+With `selectable`, a press anywhere on a row toggles it, as a press on its checkbox does, and
+anchors there. Cmd or Ctrl with a press toggles one row as well. Shift with a press takes every row
+from the anchor to the one pressed, and selects or clears the range as the anchor went; a second
+Shift+press moves the far end rather than adding a second range. A press on a link, a button or an
+open editor inside a cell is left to it.
+
+The header box adds or drops the loaded rows and keeps picks made on other pages; it reads
+indeterminate when some loaded rows are picked. `onSelectAllMatching` offers the rest of the set:
+once every loaded row is picked and the set holds more, a line above the table offers every
+matching row, and the host reads their ids and writes the selection. The table never reads past its
+own pages.
+
+```ts
+async function selectAllMatching() {
+  const refs = [];
+  for (let number = 1; ; number += 1) {
+    const page = await client.search('Version', { filters: source.filters, fields: ['id'], page: { size: 500, number } });
+    refs.push(...page.data.map((row) => ({ type: row.type, id: row.id })));
+    if (!page.hasMore) break;
+  }
+  setSelected(refs);
+}
+```
+
+The selection model is core's `toggleRow`, `extendRange`, `extendByStep` and `setRefs`, for a host
+holding a list of its own.
+
 ## Column menu
 
 With `columnMenu`, every header carries a menu: sort ascending, sort descending, clear sort, hide

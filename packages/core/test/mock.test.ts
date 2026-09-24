@@ -32,7 +32,9 @@ describe('fixtures', () => {
     expect(c.rowsOf('Shot')).toHaveLength(33);
     expect(c.rowsOf('Asset')).toHaveLength(10);
     expect(c.rowsOf('Version')).toHaveLength(60);
-    expect(c.rowsOf('Task')).toHaveLength(40);
+    // One per Shot and Asset, and nine template tasks with no project.
+    expect(c.rowsOf('Task')).toHaveLength(49);
+    expect(c.rowsOf('TaskTemplate')).toHaveLength(2);
     expect(c.rowsOf('HumanUser')).toHaveLength(8);
     expect(c.rowsOf('ApiUser')).toHaveLength(2);
 
@@ -169,7 +171,8 @@ describe('filter operators on status_list, list and number', () => {
   });
 
   it('greater_than / less_than / between on a date', async () => {
-    const due = c.rowsOf('Task').map((r) => String(r['due_date']));
+    // A template task has no dates, and a comparison never matches a null.
+    const due = c.rowsOf('Task').filter((r) => r['due_date'] !== null).map((r) => String(r['due_date']));
     expect(await count(c, 'Task', only('due_date', 'greater_than', '2026-03-01'))).toBe(due.filter((d) => d > '2026-03-01').length);
     expect(await count(c, 'Task', only('due_date', 'between', ['2026-02-01', '2026-03-01']))).toBe(
       due.filter((d) => d >= '2026-02-01' && d <= '2026-03-01').length,
@@ -1305,5 +1308,263 @@ describe('batch', () => {
     ]);
     await expect(rejected).rejects.toMatchObject({ status: 404, message: 'Entity of type [Shot] with id=862 does not exist.' });
     expect(await count(c, 'Version', null)).toBe(before);
+  });
+});
+
+describe('task templates', () => {
+  const template = (id: number): EntityRef => ({ type: 'TaskTemplate', id });
+  const project = { type: 'Project', id: 70 };
+
+  it('declares the types and the fields a template workflow reads', async () => {
+    const c = client();
+    const tt = await c.fields('TaskTemplate');
+    expect(tt['projects']?.validTypes).toEqual(['Project']);
+    // Flagged not editable, and still written on create and by PUT (entity_types/TaskTemplate).
+    expect(tt['entity_type']).toMatchObject({ dataType: 'entity_type', editable: false });
+    expect(tt['task_count']).toMatchObject({ dataType: 'number', editable: false });
+    expect(tt['project']).toBeUndefined();
+    const task = await c.fields('Task');
+    expect(task['task_template']?.validTypes).toEqual(['TaskTemplate']);
+    expect(task['template_task']?.validTypes).toEqual(['Task']);
+    expect(task['downstream_tasks']?.dataType).toBe('multi_entity');
+    expect((await c.fields('Shot'))['task_template']?.validTypes).toEqual(['TaskTemplate']);
+    expect((await c.fields('Asset'))['task_template']?.validTypes).toEqual(['TaskTemplate']);
+    const projectFields = await c.fields('Project');
+    expect(projectFields['tracking_settings']?.dataType).toBe('serializable');
+    expect(projectFields['task_templates']?.validTypes).toEqual(['TaskTemplate']);
+  });
+
+  it('holds templates whose tasks have no project and no entity, and a count read as a string', async () => {
+    const c = client();
+    const templates = (await c.search('TaskTemplate', { fields: ['code', 'entity_type', 'task_count'] })).data;
+    expect(templates.map((t) => [t.id, t.attributes['entity_type'], t.attributes['task_count']])).toEqual([
+      [40, 'Shot', '6'],
+      [41, 'Asset', '3'],
+    ]);
+    const tasks = (await c.search('Task', { filters: only('task_template', 'is', template(40)), fields: ['project', 'entity', 'sg_sort_order', 'upstream_tasks'] })).data;
+    expect(tasks).toHaveLength(6);
+    expect(tasks.every((t) => t.relationships['project']?.data === null && t.relationships['entity']?.data === null)).toBe(true);
+    expect(tasks.map((t) => t.attributes['sg_sort_order'])).toEqual([10, 20, 30, 40, 50, 60]);
+    // A chain: every template task but the first depends on the one before it.
+    expect(tasks.slice(1).every((t, i) => (t.relationships['upstream_tasks']?.data as EntityRef[])[0]?.id === tasks[i]?.id)).toBe(true);
+  });
+
+  it("names a project's default template in tracking_settings (088_project_template_defaults)", async () => {
+    const c = client();
+    const [p70] = (await c.search('Project', { filters: only('id', 'is', 70), fields: ['tracking_settings', 'task_templates'] })).data;
+    expect(p70?.attributes['tracking_settings']).toEqual({
+      default_task_template: { Shot: { type: 'TaskTemplate', id: 40, name: 'Shot basic', valid: 'valid' } },
+    });
+    // A separate list, and not the default.
+    expect(p70?.relationships['task_templates']?.data).toEqual([{ type: 'TaskTemplate', id: 41, name: 'Asset build' }]);
+    await expect(c.search('Project', { filters: only('tracking_settings', 'is_not', null) })).rejects.toMatchObject({ status: 400 });
+  });
+
+  it('links the Tasks of a templated Shot to the template tasks they came from', async () => {
+    const c = client();
+    const shot = await c.read('Shot', 862, { fields: ['task_template', 'tasks'] });
+    expect(shot.relationships['task_template']?.data).toMatchObject(template(40));
+    const [taskRef] = shot.relationships['tasks']?.data as EntityRef[];
+    const task = await c.read('Task', taskRef!.id, { fields: ['step', 'template_task', 'task_template'] });
+    expect(task.relationships['task_template']?.data).toBeNull();
+    const source = await c.read('Task', (task.relationships['template_task']?.data as EntityRef).id, { fields: ['step', 'task_template'] });
+    expect(source.relationships['task_template']?.data).toMatchObject(template(40));
+    expect((source.relationships['step']?.data as EntityRef).id).toBe((task.relationships['step']?.data as EntityRef).id);
+  });
+
+  it('creates a template task with no project, and refuses one with a project (entity_types/TaskTemplate)', async () => {
+    const c = client();
+    const made = await c.create('Task', { content: 'Paint', task_template: template(41) });
+    expect(made.relationships['project']?.data).toBeNull();
+    expect((await c.read('TaskTemplate', 41, { fields: ['task_count'] })).attributes['task_count']).toBe('4');
+    await expect(c.create('Task', { content: 'Paint', task_template: template(41), project })).rejects.toMatchObject({
+      status: 400,
+      message: 'API create() Invalid Task: a task template may not have a project',
+    });
+  });
+
+  it('takes entity_type on create and PUT, refuses an unknown one, and refuses task_count', async () => {
+    const c = client();
+    const made = await c.create('TaskTemplate', {});
+    expect(made.attributes['code']).toBe(`New TaskTemplate ${made.id}`);
+    const set = await c.update('TaskTemplate', made.id, { entity_type: 'Asset' });
+    expect(set.attributes['entity_type']).toBe('Asset');
+    await expect(c.create('TaskTemplate', { entity_type: 'Nope' })).rejects.toMatchObject({
+      status: 400,
+      message: expect.stringMatching(/^Update failed for \[TaskTemplate\.entity_type\]: 'Nope' is not a valid entity type\. Valid entity types: 'Project', /),
+    });
+    await expect(c.update('TaskTemplate', made.id, { task_count: '3' })).rejects.toMatchObject({
+      message: 'API update() TaskTemplate.task_count is read only.',
+    });
+  });
+
+  it('keeps Project.task_templates and TaskTemplate.projects as one link', async () => {
+    const c = client();
+    await c.update('TaskTemplate', 40, { projects: [project] });
+    const p70 = await c.read('Project', 70, { fields: ['task_templates'] });
+    expect((p70.relationships['task_templates']?.data as EntityRef[]).map((r) => r.id)).toEqual([41, 40]);
+    await c.update('Project', 70, { task_templates: [] });
+    expect((await c.read('TaskTemplate', 41, { fields: ['projects'] })).relationships['projects']?.data).toEqual([]);
+  });
+
+  it('stores a template written on a Shot and creates no Task: the apply is not modelled', async () => {
+    const c = client();
+    const before = c.rowsOf('Task').length;
+    await c.update('Shot', 870, { task_template: template(40) });
+    expect(c.rowsOf('Task')).toHaveLength(before);
+  });
+
+  it('retires the template tasks with their template', async () => {
+    const c = client();
+    await c.delete('TaskTemplate', 41);
+    expect(await count(c, 'Task', only('task_template', 'is', template(41)))).toBe(0);
+    await expect(c.read('Task', 5606)).rejects.toMatchObject({ status: 404 });
+    expect((await c.read('Task', 5606, { retired: true })).id).toBe(5606);
+  });
+});
+
+describe('task dependencies', () => {
+  const task = (id: number): EntityRef => ({ type: 'Task', id });
+  const edges = async (c: MockClient, id: number): Promise<{ up: number[]; down: number[] }> => {
+    const row = await c.read('Task', id, { fields: ['upstream_tasks', 'downstream_tasks'] });
+    const ids = (field: string): number[] => (row.relationships[field]?.data as EntityRef[]).map((r) => r.id);
+    return { up: ids('upstream_tasks'), down: ids('downstream_tasks') };
+  };
+
+  it('makes a row that reads backwards, with the default type (085_task_dependency_types)', async () => {
+    const c = client();
+    const row = await c.create('TaskDependency', { task: task(5701), dependent_task: task(5700) });
+    expect(row.attributes).toMatchObject({
+      cached_display_name: 'Task 5701 dependent on Task 5700',
+      dependency_type: 'finish-to-start-next-day',
+      offset_days: null,
+      task_id: 5701,
+      dependent_task_id: 5700,
+    });
+    expect(await edges(c, 5701)).toEqual({ up: [5700], down: [] });
+    expect(await edges(c, 5700)).toEqual({ up: [], down: [5701] });
+  });
+
+  it('refuses a bad type, a second row for a pair, and a loop of any length', async () => {
+    const c = client();
+    const failed = 'Create failed for [TaskDependency]: ';
+    await expect(c.create('TaskDependency', { task: task(5701), dependent_task: task(5700), dependency_type: 'zz_bogus' })).rejects.toMatchObject({
+      status: 400,
+      message: `${failed}Validation failed: Dependency type Dependency type 'zz_bogus' is invalid, accepted values are finish-to-start-next-day, start-to-start, finish-to-finish, start-to-finish-next-day.`,
+    });
+    await expect(c.create('TaskDependency', { task: task(5701), dependent_task: task(5700), dependency_type: null })).rejects.toMatchObject({
+      message: expect.stringContaining("Dependency type '' is invalid"),
+    });
+    await c.create('TaskDependency', { task: task(5701), dependent_task: task(5700) });
+    await c.create('TaskDependency', { task: task(5702), dependent_task: task(5701) });
+    await expect(c.create('TaskDependency', { task: task(5701), dependent_task: task(5700), dependency_type: 'start-to-start' })).rejects.toMatchObject({
+      message: `${failed}Validation failed: There is already a connection between the entities.`,
+    });
+    const loop = `${failed}Can't create this dependency as it causes a loop.`;
+    await expect(c.create('TaskDependency', { task: task(5700), dependent_task: task(5700) })).rejects.toMatchObject({ message: loop });
+    await expect(c.create('TaskDependency', { task: task(5700), dependent_task: task(5701) })).rejects.toMatchObject({ message: loop });
+    // A three-Task loop, and inside a batch it rolls back whole (107_dependency_three_task_loop).
+    const rejected = c.batch([
+      { request_type: 'create', entity: 'TaskDependency', data: { task: task(5703), dependent_task: task(5702) } },
+      { request_type: 'create', entity: 'TaskDependency', data: { task: task(5700), dependent_task: task(5702) } },
+    ]);
+    await expect(rejected).rejects.toMatchObject({ message: loop });
+    expect(await edges(c, 5703)).toEqual({ up: [], down: [] });
+  });
+
+  it('turns an upstream_tasks write into rows, and a removal erases the row for good (086, 095)', async () => {
+    const c = client();
+    await c.update('Task', 5702, { upstream_tasks: [task(5700), task(5701)] });
+    const rows = (await c.search('TaskDependency', { filters: only('task', 'is', task(5702)), fields: ['dependent_task', 'dependency_type', 'offset_days'] })).data;
+    expect(rows.map((r) => [(r.relationships['dependent_task']?.data as EntityRef).id, r.attributes['dependency_type'], r.attributes['offset_days']])).toEqual([
+      [5700, 'finish-to-start-next-day', null],
+      [5701, 'finish-to-start-next-day', null],
+    ]);
+    await c.update('Task', 5700, { downstream_tasks: [] });
+    expect(await edges(c, 5702)).toEqual({ up: [5701], down: [] });
+    await expect(c.revive('TaskDependency', rows[0]!.id)).rejects.toMatchObject({ status: 404 });
+    const made = await c.create('Task', { project: { type: 'Project', id: 70 }, upstream_tasks: [task(5701)] });
+    expect(await edges(c, 5701)).toEqual({ up: [], down: [5702, made.id] });
+  });
+
+  it('retires a deleted edge and revives it with its type and offset, unless the pair is linked again', async () => {
+    const c = client();
+    const row = await c.create('TaskDependency', { task: task(5701), dependent_task: task(5700), dependency_type: 'start-to-start', offset_days: 2 });
+    await c.delete('TaskDependency', row.id);
+    expect(await edges(c, 5701)).toEqual({ up: [], down: [] });
+    expect(await c.revive('TaskDependency', row.id)).toBe(true);
+    expect((await c.read('TaskDependency', row.id, { fields: ['dependency_type', 'offset_days'] })).attributes).toEqual({ dependency_type: 'start-to-start', offset_days: 2 });
+    expect(await edges(c, 5701)).toEqual({ up: [5700], down: [] });
+    await c.delete('TaskDependency', row.id);
+    await c.create('TaskDependency', { task: task(5701), dependent_task: task(5700) });
+    await expect(c.revive('TaskDependency', row.id)).rejects.toMatchObject({
+      status: 400,
+      message: `Revive failed for [TaskDependency with id=${row.id}]: Can't unretire the entity because a field has a non-unique value for a unique index: sgcu_task_dependencies`,
+    });
+  });
+
+  it('retires the edges of a deleted Task, unlinks its Versions and PublishedFiles, and a revive restores all of it (089, 103)', async () => {
+    for (const how of ['delete', 'batch'] as const) {
+      const c = client();
+      await c.update('Task', 5701, { upstream_tasks: [task(5700)] });
+      await c.update('Task', 5702, { upstream_tasks: [task(5701)] });
+      const onVersion = (await c.search('Version', { filters: only('sg_task', 'is', task(5701)), fields: ['id'] })).data.map((r) => r.id);
+      const onFile = (await c.search('PublishedFile', { filters: only('task', 'is', task(5701)), fields: ['id'] })).data.map((r) => r.id);
+      expect(onVersion.length).toBeGreaterThan(0);
+      expect(onFile.length).toBeGreaterThan(0);
+      const edgeRows = (await c.search('TaskDependency', { fields: ['id'], page: { size: 500 } })).data.length;
+
+      if (how === 'delete') await c.delete('Task', 5701);
+      else await c.batch([{ request_type: 'delete', entity: 'Task', record_id: 5701 }]);
+      expect(await edges(c, 5700)).toEqual({ up: [], down: [] });
+      expect(await edges(c, 5702)).toEqual({ up: [], down: [] });
+      expect((await c.search('TaskDependency', { fields: ['id'], page: { size: 500 } })).data.length).toBe(edgeRows - 2);
+      expect(await count(c, 'Version', only('sg_task', 'is', task(5701)))).toBe(0);
+      expect(await count(c, 'PublishedFile', only('task', 'is', task(5701)))).toBe(0);
+
+      expect(await c.revive('Task', 5701)).toBe(true);
+      expect(await edges(c, 5701)).toEqual({ up: [5700], down: [5702] });
+      expect((await c.search('Version', { filters: only('sg_task', 'is', task(5701)), fields: ['id'] })).data.map((r) => r.id)).toEqual(onVersion);
+      expect((await c.search('PublishedFile', { filters: only('task', 'is', task(5701)), fields: ['id'] })).data.map((r) => r.id)).toEqual(onFile);
+    }
+  });
+});
+
+describe('published files', () => {
+  it('links files to their Task and Version, and needs a project to create one (entity_types/PublishedFile)', async () => {
+    const c = client();
+    const files = (await c.search('PublishedFile', { fields: ['code', 'task', 'version', 'project'], page: { size: 500 } })).data;
+    expect(files.length).toBeGreaterThan(0);
+    expect(files.every((f) => f.relationships['task']?.data && f.relationships['version']?.data)).toBe(true);
+    await expect(c.create('PublishedFile', { code: 'charA.v001.ma' })).rejects.toMatchObject({
+      status: 400,
+      message: 'API create() missing \'project\' attribute: {"code":"charA.v001.ma"}',
+    });
+    const made = await c.create('PublishedFile', { project: { type: 'Project', id: 70 } });
+    expect(made.attributes['code']).toBe(`New Published File ${made.id}`);
+  });
+});
+
+describe('status codes on write (field_types/status_list)', () => {
+  const project = { type: 'Project', id: 70 };
+  const valid = "Valid statuses: 'wtg', 'ip', 'fin', 'apr', 'dis', 'na', 'hld', 'rev', 'omt', 'ready'.";
+
+  it('refuses a code outside valid_values on create, in a batch and on update, and takes a hidden one or a clear', async () => {
+    const c = client();
+    const bad = "Update failed for [Task.sg_status_list]: 'zz_bad' is not a valid status. " + valid;
+    await expect(c.create('Task', { project, sg_status_list: 'zz_bad' })).rejects.toMatchObject({
+      status: 400,
+      message: `Invalid field value, update failed [5 - ${bad}]`,
+    });
+    await expect(c.batch([{ request_type: 'create', entity: 'Task', data: { project, sg_status_list: 'zz_bad' } }])).rejects.toMatchObject({
+      message: `Invalid field value, update failed [5 - ${bad}]`,
+    });
+    await expect(c.update('Task', 5700, { sg_status_list: 'Final' })).rejects.toMatchObject({
+      status: 400,
+      message: "Update failed for [Task.sg_status_list]: 'Final' is not a valid status. " + valid,
+    });
+    // Hidden in project 70, and still written: the write path never reads hidden_values.
+    expect((await c.update('Task', 5700, { sg_status_list: 'omt' })).attributes['sg_status_list']).toBe('omt');
+    expect((await c.update('Task', 5700, { sg_status_list: '' })).attributes['sg_status_list']).toBeNull();
   });
 });

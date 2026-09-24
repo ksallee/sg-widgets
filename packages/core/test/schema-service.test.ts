@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { MockClient } from '../src/mock.js';
 import { createQueryCache } from '../src/query.js';
 import { createSchemaService } from '../src/schema-service.js';
-import type { EntityRow, EntityTypeInfo, EventLogOptions, EventLogResult, FollowingOptions, HierarchyNode, HierarchyPath, SummarizeOptions, SummarizeResult, SearchOptions, SearchResult, SgClient, TextSearchRow, ThreadRow, UploadFile, UploadResult } from '../src/client.js';
+import type { BatchRequest, BatchResult, EntityRow, EntityTypeInfo, EventLogOptions, EventLogResult, FollowingOptions, HierarchyNode, HierarchyPath, SummarizeOptions, SummarizeResult, SearchOptions, SearchResult, SgClient, TextSearchRow, ThreadRow, UploadFile, UploadResult } from '../src/client.js';
 import type { EntityRef, TextSearchFilter } from '../src/filter.js';
 import type { FieldSchema } from '../src/schema.js';
 import type { StatusRecord } from '../src/status.js';
@@ -42,6 +42,18 @@ function counting(inner: SgClient): { client: SgClient; calls: string[] } {
     upload(entityType: string, id: number, file: UploadFile): Promise<UploadResult> {
       calls.push(`upload ${entityType} ${id}`);
       return inner.upload(entityType, id, file);
+    },
+    delete(entityType: string, id: number): Promise<void> {
+      calls.push(`delete ${entityType} ${id}`);
+      return inner.delete(entityType, id);
+    },
+    revive(entityType: string, id: number): Promise<boolean> {
+      calls.push(`revive ${entityType} ${id}`);
+      return inner.revive(entityType, id);
+    },
+    batch(requests: BatchRequest[]): Promise<BatchResult[]> {
+      calls.push(`batch ${requests.map((r) => `${r.request_type} ${r.entity}`).join(', ')}`);
+      return inner.batch(requests);
     },
     update(entityType: string, id: number, patch: Record<string, unknown>): Promise<EntityRow> {
       calls.push(`update ${entityType} ${id}`);

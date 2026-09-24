@@ -11,6 +11,8 @@
  * statuses and dates.
  */
 import type {
+  BatchRequest,
+  BatchResult,
   EntityRow,
   EntityTypeInfo,
   EventLogOptions,
@@ -1208,6 +1210,11 @@ export class MockClient implements SgClient {
   private readonly latencyMs: number;
   private readonly clock: () => number;
   private pendingFailure: MockFailure | null;
+  /** Rows a delete retired, by `Type:id`. Reads skip them and a revive puts them back. */
+  private readonly retired = new Map<string, Row>();
+  /** Rows a batch created with no `project`: no read reaches them, a delete does (report 001). */
+  private readonly unreadable = new Map<string, Row>();
+  private deletes = 0;
 
   constructor(options: MockClientOptions = {}) {
     this.fixtures = buildFixtures(options.seed ?? 1, options.counts ?? {});
@@ -1351,6 +1358,10 @@ export class MockClient implements SgClient {
 
   async update(entityType: string, id: number, patch: Record<string, unknown>): Promise<EntityRow> {
     await this.gate();
+    return this.updateRow(entityType, id, patch);
+  }
+
+  private updateRow(entityType: string, id: number, patch: Record<string, unknown>): EntityRow {
     const spec = this.schemaOf(entityType);
     const row = this.fixtures.index.get(`${entityType}:${id}`);
     // The 404 names the type and the id (put_entity_type_id).
@@ -1724,14 +1735,31 @@ export class MockClient implements SgClient {
    */
   async create(entityType: string, body: Record<string, unknown>): Promise<EntityRow> {
     await this.gate();
+    return this.createRow(entityType, body, false);
+  }
+
+  /**
+   * A create, alone or inside a batch. The batch skips the `project` check and stores
+   * the row where no read reaches it (report 001), and it spells an unknown field its
+   * own way (recipes/002).
+   */
+  private createRow(entityType: string, body: Record<string, unknown>, inBatch: boolean): EntityRow {
     const spec = this.schemaOf(entityType);
+    const orphan = spec['project'] !== undefined && body['project'] === undefined;
     // `{}` and the identity field alone both answer this, with the body echoed.
-    if (spec['project'] && body['project'] === undefined) {
+    if (orphan && !inBatch) {
       throw new SgApiError(400, null, `API create() missing 'project' attribute: ${JSON.stringify(body)}`);
     }
     const identity = IDENTITY_FIELD[entityType];
     for (const [name, value] of Object.entries(body)) {
       const field = spec[name];
+      if (!field && inBatch) {
+        throw new SgApiError(
+          400,
+          null,
+          `Invalid field value, update failed [2 - Invalid field name: field [${entityType}.${name}] does not exist or user does not have access permission.]`,
+        );
+      }
       if (!field) throw new SgApiError(400, null, `API create() ${entityType}.${name} doesn't exist.`);
       if (field.editable === false && !field.createOnly) throw new SgApiError(400, null, `API create() ${entityType}.${name} is read only.`);
       this.checkLink('create', entityType, name, field, value);
@@ -1768,12 +1796,119 @@ export class MockClient implements SgClient {
         ? [values['subject'], values['content']].filter(Boolean).join(' - ')
         : displayNameOf({ ...values, cached_display_name: null }, '');
     const row: Row = { type: entityType, id, values };
+    if (orphan) {
+      this.unreadable.set(`${entityType}:${id}`, row);
+      return this.project(row, spec);
+    }
     const rows = this.fixtures.rows.get(entityType);
     if (rows) rows.push(row);
     else this.fixtures.rows.set(entityType, [row]);
     this.fixtures.index.set(`${entityType}:${id}`, row);
     this.linkBack(row);
     return this.project(row, spec);
+  }
+
+  /**
+   * Retire one row: reads skip it and a second delete is 404 (delete_entity_type_id).
+   * The mock retires only the row; what a delete does to rows that link to it
+   * (probe 060, 089_task_delete_side_effects) is not modelled.
+   */
+  async delete(entityType: string, id: number): Promise<void> {
+    await this.gate();
+    this.deleteRow(entityType, id);
+  }
+
+  private deleteRow(entityType: string, id: number): void {
+    this.schemaOf(entityType);
+    const key = `${entityType}:${id}`;
+    const row = this.fixtures.index.get(key) ?? this.unreadable.get(key);
+    if (!row) throw new SgApiError(404, null, `Entity of type [${entityType}] with id=${id} does not exist.`);
+    this.unreadable.delete(key);
+    this.fixtures.index.delete(key);
+    const rows = this.fixtures.rows.get(entityType) ?? [];
+    const at = rows.indexOf(row);
+    if (at >= 0) rows.splice(at, 1);
+    this.retired.set(key, row);
+  }
+
+  /** Bring a retired row back with its values; `false` for a row that is already live (post_entity_type_id). */
+  async revive(entityType: string, id: number): Promise<boolean> {
+    await this.gate();
+    this.schemaOf(entityType);
+    const key = `${entityType}:${id}`;
+    if (this.fixtures.index.has(key)) return false;
+    const row = this.retired.get(key);
+    if (!row) throw new SgApiError(404, null, `Entity of type [${entityType}] with id=${id} does not exist.`);
+    this.retired.delete(key);
+    const rows = this.fixtures.rows.get(entityType) ?? [];
+    const at = rows.findIndex((r) => r.id > id);
+    rows.splice(at < 0 ? rows.length : at, 0, row);
+    this.fixtures.rows.set(entityType, rows);
+    this.fixtures.index.set(key, row);
+    return true;
+  }
+
+  /**
+   * Apply the requests in order, and undo all of them when one fails (recipes/002).
+   * A create or update row carries the record under `data`; a delete row is flat.
+   */
+  async batch(requests: BatchRequest[]): Promise<BatchResult[]> {
+    await this.gate();
+    const restore = this.snapshot();
+    try {
+      return requests.map((request, i) => this.batchOne(request, i));
+    } catch (error) {
+      restore();
+      throw error;
+    }
+  }
+
+  private batchOne(request: BatchRequest, i: number): BatchResult {
+    const invalid = (source: Record<string, unknown>): SgApiError =>
+      new SgApiError(400, { errors: [{ status: 400, code: 103, title: 'Request Parameters invalid.', source }] }, 'Request Parameters invalid.');
+    const kind = request.request_type as string;
+    if (kind !== 'create' && kind !== 'update' && kind !== 'delete') {
+      throw invalid({ requests: { [i]: { request_type: ['request_type must be one of: create, update, delete'] } } });
+    }
+    if (!request.entity) throw invalid({ requests: { [i]: { entity: ['entity is missing'] } } });
+    // The URL slug or any other unknown name reads as an empty type (recipes/002).
+    if (!SPECS[request.entity]) throw new SgApiError(400, null, 'Invalid entity type: entity type [] does not exist.');
+    // A missing `record_id` is read as 0, which no row has (recipes/002).
+    const id = 'record_id' in request ? (request.record_id ?? 0) : 0;
+    if (request.request_type === 'delete') {
+      this.deleteRow(request.entity, id);
+      this.deletes += 1;
+      const uuid = `00000000-0000-4000-8000-${this.deletes.toString(16).padStart(12, '0')}`;
+      return { request_type: 'delete', type: request.entity, id, uuid, did_delete: true };
+    }
+    const data = request.data as Record<string, unknown> | undefined;
+    if (data === null || typeof data !== 'object') {
+      throw invalid({ data: ['data hash containing field/value pairs is required for the given request'] });
+    }
+    if (request.request_type === 'create') return { request_type: 'create', data: this.createRow(request.entity, data, true) };
+    return { request_type: 'update', data: this.updateRow(request.entity, id, data) };
+  }
+
+  /** Everything a batch can change, and a function that puts it back. */
+  private snapshot(): () => void {
+    const rows = new Map([...this.fixtures.rows].map(([type, list]) => [type, [...list]] as const));
+    const index = new Map(this.fixtures.index);
+    const values = new Map([...index.values()].map((row) => [row, structuredClone(row.values)] as const));
+    const retired = new Map(this.retired);
+    const unreadable = new Map(this.unreadable);
+    const deletes = this.deletes;
+    const refill = <K, V>(target: Map<K, V>, from: Map<K, V>): void => {
+      target.clear();
+      for (const [k, v] of from) target.set(k, v);
+    };
+    return () => {
+      refill(this.fixtures.rows, rows);
+      refill(this.fixtures.index, index);
+      for (const [row, saved] of values) row.values = saved;
+      refill(this.retired, retired);
+      refill(this.unreadable, unreadable);
+      this.deletes = deletes;
+    };
   }
 
   /**
@@ -1876,7 +2011,11 @@ export class MockClient implements SgClient {
 
   /** The next free id of a type, which is what a create takes. */
   private nextId(entityType: string): number {
-    return (this.fixtures.rows.get(entityType) ?? []).reduce((max, row) => Math.max(max, row.id), 0) + 1;
+    const live = (this.fixtures.rows.get(entityType) ?? []).reduce((max, row) => Math.max(max, row.id), 0);
+    // A retired row keeps its id, so a create never reuses it.
+    let taken = live;
+    for (const row of [...this.retired.values(), ...this.unreadable.values()]) if (row.type === entityType) taken = Math.max(taken, row.id);
+    return taken + 1;
   }
 
   /** The reverse view of a link the server fills in: a Reply lands in `Note.replies`. */

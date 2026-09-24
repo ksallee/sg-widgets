@@ -21,6 +21,17 @@ rows of types it does not name.
 
 ## Reads
 
+### One row
+
+`read` answers one row by id in the `search` row shape, with the fields asked for. A row that is
+not there rejects with a 404, and so does a retired one: pass `retired` to read it, and the same
+id then tells the two apart (`get_entity_type_id`).
+
+```ts
+const shot = await client.read('Shot', 862, { fields: ['code', 'sg_sequence'] });
+const gone = await client.read('Shot', 862, { retired: true }).catch(() => null);
+```
+
 ### A note thread
 
 `threadContents` answers a Note, its Attachments and its Replies as one list in time order. The

@@ -10,7 +10,6 @@
 		resolveColumns,
 		toSortSpecs
 	} from 'sg-widgets-core';
-	import ColumnPicker from '$lib/registry/components/column-picker.svelte';
 	import EntityTable from '$lib/registry/components/entity-table.svelte';
 	import FilterBar from '$lib/registry/components/filter-bar.svelte';
 	import SortPicker from '$lib/registry/components/sort-picker.svelte';
@@ -58,7 +57,6 @@
 	let filter = $state<FilterGroup>(emptyFilter());
 	let sortKeys = $state<SortKey[]>([]);
 	let selected = $state<EntityRef[]>([]);
-	let picking = $state(false);
 	let grouped = $state(false);
 	let collapsed = $state<CollapseState>(expandAll());
 	let compact = $state(false);
@@ -82,12 +80,15 @@
 		return { statuses: Object.fromEntries(table) };
 	}
 
-	async function pickColumns(paths: string[]): Promise<void> {
-		columns = await resolveColumns(
-			context.schema,
-			'Version',
-			paths.map((path) => ({ path, width: WIDTHS[path] }))
-		);
+	/** Every row the filter matches, read a page of ids at a time: the table never reads past its own pages. */
+	async function selectAllMatching(): Promise<void> {
+		const refs: EntityRef[] = [];
+		for (let number = 1; ; number += 1) {
+			const page = await context.client.search('Version', { filters: source.filters, fields: ['id'], page: { size: 500, number } });
+			refs.push(...page.data.map((row) => ({ type: row.type, id: row.id })));
+			if (!page.hasMore) break;
+		}
+		selected = refs;
 	}
 
 	const toggle =
@@ -146,11 +147,13 @@
 			{source}
 			bind:columns
 			bind:selection={selected}
+			onSelectAllMatching={selectAllMatching}
 			filters={scope ? group('and', [scope, filter]) : filter}
 			sort={toSortSpecs(sortKeys)}
 			{statuses}
 			{context}
 			selectable
+			columnPicker
 			editable
 			{paging}
 			editorPlacement={placement}
@@ -160,25 +163,6 @@
 		>
 			{#snippet toolbarStart()}
 				<FilterBar entityType="Version" {context} facets={FACETS} baseFilter={scope} size="sm" bind:value={filter} />
-				<div class="flex flex-col gap-2">
-					<button type="button" class={toggle} aria-pressed={picking} onclick={() => (picking = !picking)}>
-						Columns
-					</button>
-					{#if picking}
-						<div class="w-56">
-							<ColumnPicker
-								{context}
-								entityType="Version"
-								size="sm"
-								deepLinks
-								filter={(_field, path) => PATHS.includes(path) || PATHS.some((p) => p.startsWith(`${path}.`))}
-								placeholder="Add a column"
-								value={columns.map((column) => column.path)}
-								onValueChange={(paths) => void pickColumns(paths)}
-							/>
-						</div>
-					{/if}
-				</div>
 			{/snippet}
 			{#snippet toolbarEnd()}
 				<SortPicker entityType="Version" {context} size="sm" options={columns.map((column) => column.path)} bind:value={sortKeys} />

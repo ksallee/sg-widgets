@@ -26,6 +26,7 @@ function counting(inner: SgClient): { client: SgClient; calls: () => number } {
       following: (...a) => inner.following(...a),
       delete: (...a) => inner.delete(...a),
       revive: (...a) => inner.revive(...a),
+      read: (...a) => inner.read(...a),
       batch: (...a) => inner.batch(...a),
       statuses: () => {
         calls += 1;

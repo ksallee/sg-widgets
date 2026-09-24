@@ -103,6 +103,22 @@ describe('schema', () => {
     expect(statusFieldFor('Version', { sg_status_list: f })).toBe(f);
     expect(statusFieldFor('Project')).toBe('sg_status');
   });
+  it('keeps visible.editable as hideable, and leaves it out when the schema does', () => {
+    const raw = (visible?: { value: boolean; editable: boolean }) => ({
+      name: { value: 'Code', editable: true },
+      entity_type: { value: 'Project', editable: false },
+      data_type: { value: 'text', editable: false },
+      editable: { value: true, editable: false },
+      mandatory: { value: false, editable: false },
+      unique: { value: false, editable: false },
+      properties: {},
+      ...(visible ? { visible } : {}),
+    });
+    // 056_stock_vs_custom_field: false is stock; true is every custom field and a few stock ones.
+    expect(normalizeField('code', raw({ value: true, editable: true })).hideable).toBe(true);
+    expect(normalizeField('code', raw({ value: true, editable: false })).hideable).toBe(false);
+    expect('hideable' in normalizeField('code', raw())).toBe(false);
+  });
   it('the conventional status field wins over another status_list the site added', () => {
     const shape = (name: string, displayName: string) => ({
       name,

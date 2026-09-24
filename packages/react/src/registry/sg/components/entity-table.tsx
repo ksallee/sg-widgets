@@ -17,18 +17,28 @@ import type {
   StatusRecord,
 } from 'sg-widgets-core';
 import {
+  arrangeColumns,
   asCollapseState,
   cellValue,
+  columnPaths,
+  columnsStorageKey,
   collapseStateFrom,
   editorPlacementFor,
   errorText,
   expandAll,
   isCollapsed,
   isEditableType,
+  matchingOffer,
   nextEnabledIndex,
   NO_ROWS_LABEL,
+  parseColumnChoice,
   preferencesOf,
+  resolveColumnChoice,
+  sameColumnPaths,
+  serializeColumnChoice,
+  unreadPaths,
   sameCollapse,
+  selectionKeyIntent,
   stateLine,
 } from 'sg-widgets-core';
 import {
@@ -51,10 +61,12 @@ import {
   ChevronRight,
   ChevronsUpDown,
   CircleAlert,
+  Columns3,
   EllipsisVertical,
   EyeOff,
   Inbox,
   PinOff,
+  RotateCcw,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -65,6 +77,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
@@ -75,6 +88,7 @@ import {
   useLatest,
 } from '@/registry/sg/components/collection-control';
 import { CollectionFooter } from '@/registry/sg/components/collection-footer';
+import { ColumnPicker } from '@/registry/sg/components/column-picker';
 import { FieldEditor } from '@/registry/sg/components/field-editor';
 import { FieldValue } from '@/registry/sg/components/field-value';
 import { PICKER_ICON_BUTTON } from '@/registry/sg/components/picker-classes';
@@ -107,6 +121,8 @@ const CELL: Record<EntityTableDensity, string> = { compact: 'px-3 py-1', default
 /** A row's text and the head it sits under, on the ladder of `docs/design-rules.md`. */
 const TEXT: Record<EntityTableSize, string> = { sm: 'text-xs', md: 'text-sm', lg: 'text-base' };
 const HEAD: Record<EntityTableSize, string> = { sm: 'h-9', md: 'h-10', lg: 'h-11' };
+/** The Columns trigger, on the control ladder beside the sort picker's. */
+const TRIGGER: Record<EntityTableSize, string> = { sm: 'h-7 px-2', md: 'h-8 px-3', lg: 'h-9 px-3' };
 
 /** The popups a cell editor opens. Each is portalled out of the table's own tree. */
 const EDITOR_POPUP = '[data-slot="popover-content"],[data-slot="select-content"],[data-picker]';
@@ -116,6 +132,33 @@ const SELECT = '__select';
 
 /** Said on every editable cell, because nothing else on it says an edit is possible. */
 const EDIT_HINT = 'Double-click or press Enter to edit';
+
+/** What a press inside a row leaves to the element it landed on. */
+const OWN_PRESS =
+  'a,button:not([data-slot="checkbox"]),input,textarea,select,[contenteditable],[data-slot="entity-table-editor"]';
+
+function readChoice(key: string): string[] | null {
+  try {
+    return parseColumnChoice(localStorage.getItem(key));
+  } catch {
+    return null;
+  }
+}
+
+/** Keep a choice, or forget it when it is the defaults. Storage may refuse; the table still shows it. */
+function keepChoice(key: string, paths: string[] | null): void {
+  try {
+    if (paths === null) localStorage.removeItem(key);
+    else localStorage.setItem(key, serializeColumnChoice(paths));
+  } catch {
+    // Private mode or a full quota: the choice lasts for the page.
+  }
+}
+
+/** True where a key belongs to a control inside the table rather than to the rows. */
+function ownsKeys(target: HTMLElement | null): boolean {
+  return Boolean(target?.closest('input,textarea,select,[contenteditable],[data-slot="entity-table-editor"]'));
+}
 
 /** What a `row` render prop is handed. It draws the cells of one row, not the row's box. */
 export interface EntityTableRowContext {
@@ -171,6 +214,12 @@ export interface EntityTableProps extends Omit<React.HTMLAttributes<HTMLDivEleme
   /** The selected rows. Controlled, with the table's own selection as the fallback. */
   selection?: EntityRef[];
   onSelectionChange?: (rows: EntityRef[]) => void;
+  /**
+   * Offers every row the filter matches once every loaded row is selected and the
+   * set holds more. The host reads the set and writes the selection; the table never
+   * reads past its own pages.
+   */
+  onSelectAllMatching?: () => void | Promise<void>;
   /** How a row is keyed, in the DOM and in the selection. Default `Type:id`. */
   getRowId?: RowIdFn;
   /** True for a row that cannot be selected, edited or reached by the keyboard. */
@@ -202,6 +251,14 @@ export interface EntityTableProps extends Omit<React.HTMLAttributes<HTMLDivEleme
   showCode?: boolean;
   /** A menu on every header: sort, hide and pin. Off unless a caller has a use for it. */
   columnMenu?: boolean;
+  /**
+   * A Columns button at the end of the toolbar: the user adds, removes and reorders
+   * the entity type's fields, and the choice is kept in this browser. The columns
+   * first passed are the defaults Reset puts back. Needs `context` and `onColumnsChange`.
+   */
+  columnPicker?: boolean;
+  /** Where the column choice is kept in localStorage. Default one key per entity type. */
+  columnsKey?: string;
   /** How the set is walked: a footer with a page number, a load-more row, or the scroller. */
   paging?: PagingMode;
   /** Rows per page offered in the footer. `pages` mode only. */
@@ -278,6 +335,7 @@ export function EntityTable({
   selectable = false,
   selection: selectionProp,
   onSelectionChange,
+  onSelectAllMatching,
   getRowId,
   isRowDisabled,
   groupBy = null,
@@ -292,6 +350,8 @@ export function EntityTable({
   editorPlacement,
   showCode = false,
   columnMenu = false,
+  columnPicker = false,
+  columnsKey,
   paging = 'pages',
   pageSizes = [25, 50, 100],
   maxHeight = '28rem',
@@ -477,16 +537,80 @@ export function EntityTable({
    * next page instead, and the cursor stays where it is until those rows arrive.
    */
   function onRowsKeyDown(event: React.KeyboardEvent): void {
-    if (editing !== null || (event.key !== 'ArrowDown' && event.key !== 'ArrowUp')) return;
     const target = event.target as HTMLElement | null;
+    if (editing !== null || ownsKeys(target)) return;
     const tr = target?.closest<HTMLElement>('tr[data-row-key]');
     if (!tr) return;
     const from = rows.findIndex((row) => control.rowId(row) === tr.dataset['rowKey']);
     if (from < 0) return;
     const column = target?.closest<HTMLElement>('td[data-column]')?.dataset['column'] ?? null;
+    if (selectionKeys(event, from, column)) return;
+    if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
     event.preventDefault();
     if (event.key === 'ArrowDown' && body.askForPage(from + 1, column)) return;
     body.focusRow(nextEnabledIndex(rows.length, from, event.key === 'ArrowDown' ? 1 : -1, control.disabledAt), column);
+  }
+
+  /* selection gestures --------------------------------------------------- */
+
+  /** A press on a row, or on its checkbox: Shift ranges from the anchor, anything else toggles. */
+  function onRowPress(event: React.MouseEvent, row: EntityRow): void {
+    if (!selectable || event.button !== 0) return;
+    const target = event.target as HTMLElement | null;
+    if (editing !== null || target?.closest(OWN_PRESS)) return;
+    control.press(row, event);
+  }
+
+  /** Shift+press would otherwise select the text between the two rows. */
+  function onRowPointerDown(event: React.MouseEvent): void {
+    if (selectable && event.shiftKey) event.preventDefault();
+  }
+
+  /** Cmd or Ctrl+A anywhere in the table takes every loaded row. */
+  function onTableKeyDown(event: React.KeyboardEvent): void {
+    if (!selectable || editing !== null || ownsKeys(event.target as HTMLElement | null)) return;
+    if (selectionKeyIntent(event) !== 'all') return;
+    event.preventDefault();
+    control.toggleAll(true);
+  }
+
+  /** Space toggles the row the cursor is on; Shift and an arrow carry the range. */
+  function selectionKeys(event: React.KeyboardEvent, from: number, column: string | null): boolean {
+    const intent = selectable && editing === null ? selectionKeyIntent(event) : null;
+    const row = rows[from];
+    if (!row || intent === null || intent === 'all') return false;
+    // The checkbox answers Space with a press of its own, which reaches the row.
+    if (intent === 'toggle' && (event.target as HTMLElement).closest('[data-slot="checkbox"]')) return true;
+    event.preventDefault();
+    if (intent === 'toggle') {
+      control.toggle(row);
+      return true;
+    }
+    const to = nextEnabledIndex(rows.length, from, intent === 'extend-down' ? 1 : -1, control.disabledAt);
+    if (to !== from && to >= 0) {
+      control.extend(from, to);
+      body.focusRow(to, column);
+    }
+    return true;
+  }
+
+  const [selectingAll, setSelectingAll] = useState(false);
+  const offer = matchingOffer({
+    allLoaded: control.allSelected.all,
+    loaded: rows.length,
+    selected: control.selection.length,
+    hasMore: snapshot.hasMore,
+    total: snapshot.total,
+  });
+  const loadedCount = rows.filter((row) => !control.rowDisabled(row)).length;
+
+  async function selectAllMatching(): Promise<void> {
+    setSelectingAll(true);
+    try {
+      await onSelectAllMatching?.();
+    } finally {
+      setSelectingAll(false);
+    }
   }
 
   /* sorting -------------------------------------------------------------- */
@@ -506,10 +630,65 @@ export function EntityTable({
     );
   }
 
+  /* column choice -------------------------------------------------------- */
+
+  const storageKey = columnsStorageKey(source.entityType, columnsKey);
+  /** The columns the host passed first under this key, which Reset puts back. */
+  const [defaults, setDefaults] = useState<{ key: string; columns: CollectionColumn[] } | null>(null);
+  if (columns.length > 0 && defaults?.key !== storageKey) setDefaults({ key: storageKey, columns });
+  /** Each choice carries a ticket, so a slow resolve never lands over a later one. */
+  const ticket = useRef(0);
+  const [pickerOpen, setPickerOpen] = useState(false);
+
+  function writeColumns(next: CollectionColumn[]): void {
+    onColumnsChange?.(next);
+    // A column the source does not read yet reads the loaded rows again with it.
+    const unread = unreadPaths(source.fields, columnPaths(next));
+    if (unread.length > 0) void source.addFields(unread);
+  }
+
+  function remember(next: CollectionColumn[]): void {
+    if (!columnPicker || !defaults) return;
+    const paths = columnPaths(next);
+    keepChoice(storageKey, sameColumnPaths(paths, columnPaths(defaults.columns)) ? null : paths);
+  }
+
+  async function choose(paths: string[], keep = true): Promise<void> {
+    const mine = ++ticket.current;
+    const known = [...columns, ...(defaults?.columns ?? [])];
+    const next = context
+      ? await resolveColumnChoice(context.schema, source.entityType, paths, known)
+      : arrangeColumns(paths, known);
+    if (mine !== ticket.current) return;
+    writeColumns(next);
+    if (keep) remember(next);
+  }
+  const chooseLatest = useLatest(choose);
+  const columnsLatest = useLatest(columns);
+
+  // A kept choice replaces the defaults once they are known, and again when the key moves.
+  useEffect(() => {
+    if (!columnPicker || !defaults) return;
+    const paths = readChoice(defaults.key);
+    if (paths && !sameColumnPaths(paths, columnPaths(columnsLatest.current))) void chooseLatest.current(paths, false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [columnPicker, defaults]);
+
+  const customised = defaults !== null && !sameColumnPaths(columnPaths(columns), columnPaths(defaults.columns));
+
+  function resetColumns(): void {
+    if (!defaults) return;
+    ticket.current += 1;
+    writeColumns(defaults.columns);
+    keepChoice(storageKey, null);
+  }
+
   /* column menu ---------------------------------------------------------- */
 
   function hideColumn(path: string): void {
-    onColumnsChange?.(columns.filter((column) => column.path !== path));
+    const next = columns.filter((column) => column.path !== path);
+    onColumnsChange?.(next);
+    remember(next);
   }
 
   /* column reorder ------------------------------------------------------- */
@@ -638,19 +817,75 @@ export function EntityTable({
 
   return (
     <div ref={root} data-slot="entity-table" className={cn(COLLECTION_ROOT, className)} {...rest}>
-      {toolbarStart || toolbarEnd ? (
+      {toolbarStart || toolbarEnd || (columnPicker && context) ? (
         <div data-slot="entity-table-toolbar" className="flex w-full min-w-0 flex-wrap items-center justify-between gap-2">
           <div data-slot="entity-table-toolbar-start" className="flex min-w-0 flex-wrap items-center gap-2">
             {toolbarStart}
           </div>
           <div data-slot="entity-table-toolbar-end" className="flex min-w-0 flex-wrap items-center gap-2">
             {toolbarEnd}
+            {columnPicker && context ? (
+              <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
+                <PopoverTrigger
+                  data-slot="entity-table-columns"
+                  className={cn(
+                    'border-border bg-background hover:bg-muted focus-visible:border-ring focus-visible:ring-ring/50 inline-flex min-w-0 items-center gap-1.5 rounded-lg border text-sm font-medium shadow-xs outline-none focus-visible:ring-3',
+                    TRIGGER[size],
+                  )}
+                >
+                  <Columns3 aria-hidden="true" className={cn('shrink-0', size === 'lg' ? 'size-5' : 'size-4')} />
+                  <span>Columns</span>
+                </PopoverTrigger>
+                <PopoverContent data-picker="columns" className="flex w-80 flex-col gap-3 p-3" align="end">
+                  <ColumnPicker
+                    context={context}
+                    entityType={source.entityType}
+                    size="sm"
+                    value={columnPaths(columns)}
+                    onValueChange={(paths) => void choose(paths)}
+                  />
+                  {customised ? (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="self-start"
+                      data-slot="entity-table-columns-reset"
+                      onClick={resetColumns}
+                    >
+                      <RotateCcw aria-hidden="true" />
+                      Reset columns
+                    </Button>
+                  ) : null}
+                </PopoverContent>
+              </Popover>
+            ) : null}
           </div>
+        </div>
+      ) : null}
+
+      {selectable && onSelectAllMatching && offer.show ? (
+        <div
+          data-slot="entity-table-select-all"
+          className="bg-muted flex w-full min-w-0 flex-wrap items-center justify-center gap-2 rounded-lg px-3 py-1.5 text-sm"
+        >
+          <span className="text-muted-foreground">
+            All {loadedCount} {paging === 'pages' ? 'rows on this page' : 'loaded rows'} are selected.
+          </span>
+          <Button
+            variant="link"
+            size="sm"
+            className="h-auto p-0"
+            disabled={selectingAll}
+            onClick={() => void selectAllMatching()}
+          >
+            {selectingAll ? 'Selecting…' : offer.total === null ? 'Select all matching' : `Select all ${offer.total} matching`}
+          </Button>
         </div>
       ) : null}
 
       <div
         ref={body.scrollRef}
+        onKeyDown={onTableKeyDown}
         data-slot="entity-table-scroll"
         style={{ maxHeight }}
         className="border-border relative w-full overflow-auto rounded-lg border [&>[data-slot=table-container]]:overflow-visible"
@@ -909,6 +1144,8 @@ export function EntityTable({
                     <TableRow
                       key={key}
                       data-row-key={key}
+                      onClick={(event) => onRowPress(event, row)}
+                      onMouseDown={onRowPointerDown}
                       data-state={selected ? 'selected' : undefined}
                       data-disabled={disabled ? 'true' : undefined}
                       aria-disabled={disabled ? 'true' : undefined}
@@ -930,12 +1167,8 @@ export function EntityTable({
                                 style={pinStyle(leaf)}
                                 className={cn(cellClass, 'bg-inherit text-center')}
                               >
-                                <Checkbox
-                                  aria-label="Select row"
-                                  checked={selected}
-                                  disabled={disabled}
-                                  onCheckedChange={() => control.toggle(row)}
-                                />
+                                {/* A press and Space reach the row, which reads their modifiers; the box shows the state. */}
+                                <Checkbox aria-label="Select row" checked={selected} disabled={disabled} />
                               </TableCell>
                             );
                           }

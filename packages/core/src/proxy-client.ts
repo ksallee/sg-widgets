@@ -19,6 +19,7 @@ import type {
   BatchResult,
   EntityRow,
   EntityTypeInfo,
+  ReadOptions,
   EventLogOptions,
   EventLogResult,
   FollowingOptions,
@@ -102,6 +103,10 @@ export class ProxyClient implements SgClient {
 
   search(entityType: string, options: SearchOptions): Promise<SearchResult> {
     return this.post('search', { entityType, options });
+  }
+
+  read(entityType: string, id: number, options: ReadOptions = {}): Promise<EntityRow> {
+    return this.post('read', { entityType, id, options });
   }
 
   textSearch(

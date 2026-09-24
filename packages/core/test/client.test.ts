@@ -486,3 +486,26 @@ describe('a batch on the wire', () => {
     await expect(rejected).rejects.toMatchObject({ name: 'SgApiError', status: 404, message: title, body });
   });
 });
+
+describe('a read of one row on the wire', () => {
+  it('sends GET with the fields as a comma list and answers the row', async () => {
+    const row = { type: 'Version', id: 17055, attributes: { code: 'v001' }, relationships: { entity: { data: { type: 'Asset', id: 1230 } } } };
+    const { client, calls } = answering(200, { data: row });
+    await expect(client.read('Version', 17055, { fields: ['code', 'entity'] })).resolves.toEqual(row);
+    expect(calls).toEqual([
+      { method: 'GET', url: 'https://studio.example.com/api/v1/entity/versions/17055?fields=code%2Centity', contentType: undefined, body: undefined },
+    ]);
+  });
+
+  it('asks for a retired row with options[return_only]=retired', async () => {
+    const { client, calls } = answering(200, { data: { type: 'Shot', id: 7653, attributes: {}, relationships: {} } });
+    await client.read('Shot', 7653, { retired: true });
+    expect(calls[0]?.url).toBe('https://studio.example.com/api/v1/entity/shots/7653?options%5Breturn_only%5D=retired');
+  });
+
+  it('rejects a row that is not there with the 404 the site answers', async () => {
+    const body = { errors: [{ status: 404, code: 104, title: 'Not Found', detail: 'Task: 999999999 not found' }] };
+    const { client } = answering(404, body);
+    await expect(client.read('Task', 999999999)).rejects.toMatchObject({ name: 'SgApiError', status: 404, body });
+  });
+});

@@ -9,6 +9,14 @@
  *
  * Fixtures are generated from a seed, so two runs produce identical ids, codes,
  * statuses and dates.
+ *
+ * Task templates are rows and links, and the server's work on them is not modelled:
+ * writing `task_template` on a Shot or an Asset, on create or later, stores the link
+ * and makes, re-syncs or rewires no Task (083 to 112 measure what the site does). No
+ * date moves when a dependency or a date changes (085, 087, 092), `pinned` and
+ * `dependency_violation` do not exist, and an `upstream_tasks` write is not checked
+ * for loops. There is no permission model: every call runs as an all-permitted script,
+ * so none of 094's refusals is answered.
  */
 import type {
   BatchRequest,
@@ -20,6 +28,7 @@ import type {
   FollowingOptions,
   HierarchyNode,
   HierarchyPath,
+  ReadOptions,
   SearchOptions,
   SearchResult,
   SgClient,
@@ -84,6 +93,12 @@ interface Row {
   values: Record<string, unknown>;
 }
 
+/** What a Task delete took from other rows: its retired edges and the links it nulled. */
+interface Cascade {
+  edges: string[];
+  unlinked: Array<{ row: Row; field: string; value: EntityRef }>;
+}
+
 /* -------------------------------------------------------------------------- */
 /* field schemas                                                              */
 /* -------------------------------------------------------------------------- */
@@ -99,6 +114,8 @@ interface FieldSpec {
    * (entity_types/Attachment).
    */
   createOnly?: boolean;
+  /** Flagged `editable: false` and still taken by a create and a `PUT`, as `TaskTemplate.entity_type` is (entity_types/TaskTemplate). */
+  writable?: boolean;
   mandatory?: boolean;
   unique?: boolean;
   validTypes?: string[];
@@ -160,6 +177,10 @@ const VERSION_TYPES = ['Type A', 'Type B', 'Type C'];
 const BAR_COLORS = ['253,94,99', '110,180,200', '240,190,90', '90,200,160'];
 /** Project's own status field is a plain `list` with no Status row behind it (entity_types/Project). */
 const PROJECT_STATUSES = ['Active', 'Bidding', 'Complete', 'On Hold'];
+/** PublishedFile's list is site configuration; this site keeps the three the probed one held (entity_types/PublishedFile). */
+const PUBLISHED_FILE_STATUSES = ['wtg', 'ip', 'cmpt'];
+/** The four `TaskDependency.dependency_type` values, the first the default (085_task_dependency_types). */
+const DEPENDENCY_TYPES = ['finish-to-start-next-day', 'start-to-start', 'finish-to-finish', 'start-to-finish-next-day'];
 
 const AUDIT: Record<string, FieldSpec> = {
   id: { displayName: 'Id', dataType: 'number', editable: false },
@@ -202,6 +223,10 @@ const SPECS: Record<string, Record<string, FieldSpec>> = {
     image: { displayName: 'Thumbnail', dataType: 'image' },
     landing_page_url: { displayName: 'Landing Page URL', dataType: 'text', editable: false },
     users: { displayName: 'Users', dataType: 'multi_entity', validTypes: ['HumanUser'] },
+    // `default_task_template.<Type>` names the project's default template per type; `task_templates`
+    // is a separate list and the reverse of `TaskTemplate.projects` (088_project_template_defaults).
+    tracking_settings: { displayName: 'Tracking Settings', dataType: 'serializable' },
+    task_templates: { displayName: 'Task Templates', dataType: 'multi_entity', validTypes: ['TaskTemplate'] },
   },
   Sequence: {
     ...AUDIT,
@@ -213,6 +238,7 @@ const SPECS: Record<string, Record<string, FieldSpec>> = {
     image: { displayName: 'Thumbnail', dataType: 'image' },
     project: { displayName: 'Project', dataType: 'entity', mandatory: true, validTypes: ['Project'] },
     shots: { displayName: 'Shots', dataType: 'multi_entity', validTypes: ['Shot'] },
+    task_template: { displayName: 'Task Template', dataType: 'entity', validTypes: ['TaskTemplate'] },
   },
   Shot: {
     ...AUDIT,
@@ -234,6 +260,7 @@ const SPECS: Record<string, Record<string, FieldSpec>> = {
     sg_sequence: { displayName: 'Sequence', dataType: 'entity', validTypes: ['Sequence'] },
     assets: { displayName: 'Assets', dataType: 'multi_entity', validTypes: ['Asset'] },
     tasks: { displayName: 'Tasks', dataType: 'multi_entity', validTypes: ['Task'] },
+    task_template: { displayName: 'Task Template', dataType: 'entity', validTypes: ['TaskTemplate'] },
   },
   Asset: {
     ...AUDIT,
@@ -250,6 +277,7 @@ const SPECS: Record<string, Record<string, FieldSpec>> = {
     shots: { displayName: 'Shots', dataType: 'multi_entity', validTypes: ['Shot'] },
     sequences: { displayName: 'Sequences', dataType: 'multi_entity', validTypes: ['Sequence'] },
     tasks: { displayName: 'Tasks', dataType: 'multi_entity', validTypes: ['Task'] },
+    task_template: { displayName: 'Task Template', dataType: 'entity', validTypes: ['TaskTemplate'] },
   },
   Version: {
     ...AUDIT,
@@ -301,7 +329,55 @@ const SPECS: Record<string, Record<string, FieldSpec>> = {
     step: { displayName: 'Pipeline Step', dataType: 'entity', validTypes: ['Step'] },
     task_assignees: { displayName: 'Assigned To', dataType: 'multi_entity', validTypes: ['Group', 'HumanUser'] },
     task_reviewers: { displayName: 'Reviewers', dataType: 'multi_entity', validTypes: ['Group', 'HumanUser'] },
+    // Both lists are views of the TaskDependency rows: a write to either makes or erases rows
+    // (entity_types/Task, 086_batch_tasks_with_dependencies, 095_dependency_remove_undo).
     upstream_tasks: { displayName: 'Upstream Tasks', dataType: 'multi_entity', validTypes: ['Task'] },
+    downstream_tasks: { displayName: 'Downstream Tasks', dataType: 'multi_entity', validTypes: ['Task'] },
+    sg_sort_order: { displayName: 'Sort Order', dataType: 'number' },
+    // Set on a template's own task, which has no project and no entity.
+    task_template: { displayName: 'Task Template', dataType: 'entity', validTypes: ['TaskTemplate'] },
+    // Set on a Task made from a template, naming the template task it was copied from.
+    template_task: { displayName: 'Template Task', dataType: 'entity', validTypes: ['Task'] },
+  },
+  // Site-wide: no `project` field. Its tasks are Task rows with `task_template` set
+  // (entity_types/TaskTemplate).
+  TaskTemplate: {
+    ...AUDIT,
+    code: { displayName: 'Template Name', dataType: 'text', mandatory: true },
+    description: { displayName: 'Description', dataType: 'text' },
+    entity_type: { displayName: 'Entity Type', dataType: 'entity_type', editable: false, writable: true },
+    projects: { displayName: 'Projects', dataType: 'multi_entity', validTypes: ['Project'] },
+    // A number read as a string, the count of the template's tasks.
+    task_count: { displayName: 'Task Count', dataType: 'number', editable: false },
+  },
+  // The join row behind `upstream_tasks`, site-wide. The names read backwards: `task` is the
+  // downstream Task and `dependent_task` the one it depends on (085_task_dependency_types).
+  TaskDependency: {
+    ...AUDIT,
+    task: { displayName: 'Task', dataType: 'entity', validTypes: ['Task'] },
+    dependent_task: { displayName: 'Dependent Task', dataType: 'entity', validTypes: ['Task'] },
+    dependency_type: { displayName: 'Dependency Type', dataType: 'text', defaultValue: DEPENDENCY_TYPES[0] },
+    offset_days: { displayName: 'Offset Days', dataType: 'number' },
+    shift_ratio: { displayName: 'Shift Ratio', dataType: 'float' },
+    task_id: { displayName: 'Task Id', dataType: 'number', editable: false },
+    dependent_task_id: { displayName: 'Dependent Task Id', dataType: 'number', editable: false },
+  },
+  // `project` is flagged not mandatory and a create needs it; `code` the reverse (entity_types/PublishedFile).
+  PublishedFile: {
+    ...AUDIT,
+    code: { displayName: 'Published File Name', dataType: 'text', mandatory: true },
+    name: { displayName: 'Name', dataType: 'text' },
+    description: { displayName: 'Description', dataType: 'text' },
+    version_number: { displayName: 'Version Number', dataType: 'number' },
+    path: { displayName: 'Path', dataType: 'url' },
+    path_cache: { displayName: 'Path Cache', dataType: 'text' },
+    sg_status_list: statusSpec(PUBLISHED_FILE_STATUSES, 'wtg'),
+    image: { displayName: 'Thumbnail', dataType: 'image' },
+    project: { displayName: 'Project', dataType: 'entity', validTypes: ['Project'] },
+    entity: { displayName: 'Link', dataType: 'entity', validTypes: ['Asset', 'Shot', 'Sequence'] },
+    task: { displayName: 'Task', dataType: 'entity', validTypes: ['Task'] },
+    version: { displayName: 'Version', dataType: 'entity', validTypes: ['Version'] },
+    published_file_type: { displayName: 'Published File Type', dataType: 'entity', validTypes: ['PublishedFileType'] },
   },
   Note: {
     ...AUDIT,
@@ -439,15 +515,26 @@ const SPECS: Record<string, Record<string, FieldSpec>> = {
 const IDENTITY_FIELD: Record<string, string> = {
   Project: 'name', Sequence: 'code', Shot: 'code', Asset: 'code', Version: 'code',
   Task: 'content', Note: 'subject', Reply: 'content', Attachment: 'display_name',
+  TaskTemplate: 'code', PublishedFile: 'code',
 };
 
-const GENERATED_IDENTITY: ReadonlySet<string> = new Set(['Sequence', 'Shot', 'Asset', 'Version', 'Task']);
+const GENERATED_IDENTITY: ReadonlySet<string> = new Set(['Sequence', 'Shot', 'Asset', 'Version', 'Task', 'TaskTemplate', 'PublishedFile']);
+
+/** The name a generated identity starts with, where it is not the display name (entity_types/TaskTemplate). */
+const GENERATED_NAME: Record<string, string> = { TaskTemplate: 'TaskTemplate' };
+
+/** Where one side of a link is written, the other side follows (088_project_template_defaults). */
+const MIRRORED: Record<string, [string, string]> = {
+  'Project.task_templates': ['TaskTemplate', 'projects'],
+  'TaskTemplate.projects': ['Project', 'task_templates'],
+};
 
 const DISPLAY_NAMES: Record<string, string> = {
   Project: 'Project', Sequence: 'Sequence', Shot: 'Shot', Asset: 'Asset', Version: 'Version',
   Task: 'Task', HumanUser: 'Person', ApiUser: 'Script', Step: 'Pipeline Step',
   Status: 'Status', Icon: 'Icon', Note: 'Note', Reply: 'Reply', Attachment: 'Attachment',
-  EventLogEntry: 'Event Log Entry',
+  EventLogEntry: 'Event Log Entry', TaskTemplate: 'Task Template', TaskDependency: 'Task Dependency',
+  PublishedFile: 'Published File',
 };
 
 /**
@@ -455,6 +542,18 @@ const DISPLAY_NAMES: Record<string, string> = {
  * `project_id` changes (009_status_lists), and it is not a subset of
  * `valid_values`: the probed site hid `blk` and `rdy`, neither of them valid.
  */
+/**
+ * The fields this site may hide, `visible.editable` true: its own additions and a few
+ * stock fields, `Project.code` among them. Every other field reads false, `sg_` prefix
+ * or not (056_stock_vs_custom_field).
+ */
+const HIDEABLE: ReadonlySet<string> = new Set([
+  'Project.code',
+  'Shot.sg_complexity', 'Shot.sg_lens', 'Shot.sg_shot_notes_url',
+  'Asset.sg_build_days', 'Asset.sg_complexity',
+  'Version.sg_department', 'Version.sg_bar_color',
+]);
+
 const HIDDEN_VALUES: Record<number, Record<string, string[]>> = {
   70: {
     'Version.sg_status_list': ['part', 'pass', 'pndad', 'pndl', 'pndvs', 'pndng'],
@@ -1176,6 +1275,124 @@ function buildFixtures(seed: number, counts: { versions?: number } = {}): Fixtur
     eventId += eventId % 7 === 0 ? 3 : 1;
   }
 
+  /* task templates, their dependencies, and published files ------------------ */
+  // A template's tasks are Task rows with `task_template` set and no project or entity; the
+  // Tasks made from one name their source in `template_task` (entity_types/TaskTemplate).
+  let dependencyId = 1;
+  const depend = (downstream: Row, upstream: Row): void => {
+    add('TaskDependency', dependencyId, {
+      cached_display_name: `Task ${downstream.id} dependent on Task ${upstream.id}`,
+      task: ref(downstream),
+      dependent_task: ref(upstream),
+      dependency_type: DEPENDENCY_TYPES[0],
+      offset_days: null,
+      shift_ratio: null,
+      task_id: downstream.id,
+      dependent_task_id: upstream.id,
+      created_at: isoDateTime(-180),
+      updated_at: isoDateTime(-180),
+      created_by: ref(bot),
+      updated_by: ref(bot),
+    });
+    dependencyId += 1;
+  };
+  let templateTaskId = 5600;
+  const templates = [
+    { id: 40, code: 'Shot basic', entityType: 'Shot' },
+    { id: 41, code: 'Asset build', entityType: 'Asset' },
+  ].map((t) => {
+    const template = add('TaskTemplate', t.id, {
+      code: t.code,
+      cached_display_name: t.code,
+      description: `Every ${t.entityType} step, one after the other.`,
+      entity_type: t.entityType,
+      projects: [],
+      task_count: null,
+      created_at: isoDateTime(-190),
+      updated_at: isoDateTime(-190),
+      created_by: ref(bot),
+      updated_by: ref(bot),
+    });
+    let previous: Row | null = null;
+    steps.filter((st) => st.values['entity_type'] === t.entityType).forEach((st, i) => {
+      const content = String(st.values['code']);
+      const templateTask = add('Task', templateTaskId, {
+        content,
+        cached_display_name: content,
+        sg_description: null,
+        sg_status_list: 'wtg',
+        start_date: null,
+        due_date: null,
+        duration: null,
+        est_in_mins: null,
+        time_logs_sum: 0,
+        time_percent_of_est: null,
+        color: 'pipeline_step',
+        milestone: false,
+        project: null,
+        entity: null,
+        step: ref(st),
+        task_assignees: [],
+        task_reviewers: [],
+        sg_sort_order: (i + 1) * 10,
+        task_template: ref(template),
+        template_task: null,
+        created_at: isoDateTime(-190),
+        updated_at: isoDateTime(-190),
+        created_by: ref(bot),
+        updated_by: ref(bot),
+      });
+      templateTaskId += 1;
+      if (previous) depend(templateTask, previous);
+      previous = templateTask;
+    });
+    return template;
+  });
+  const [shotTemplate, assetTemplate] = templates as [Row, Row];
+  // Project 70 defaults its Shots to one template and lists the other (088_project_template_defaults).
+  p0.values['tracking_settings'] = {
+    default_task_template: { Shot: { type: 'TaskTemplate', id: shotTemplate.id, name: shotTemplate.values['code'], valid: 'valid' } },
+  };
+  p1.values['tracking_settings'] = { default_task_template: {} };
+  p2.values['tracking_settings'] = {};
+  for (const p of projects) p.values['task_templates'] = [];
+  p0.values['task_templates'] = [ref(assetTemplate)];
+  assetTemplate.values['projects'] = [ref(p0)];
+  // The first sequence's Shots were made from the Shot template: each Task names the template task at its step.
+  const shotTemplateTasks = (rows.get('Task') ?? []).filter((t) => (t.values['task_template'] as EntityRef | null)?.id === shotTemplate.id);
+  for (const shot of shots.filter((sh) => (sh.values['sg_sequence'] as EntityRef).id === sequences[0]?.id)) {
+    shot.values['task_template'] = ref(shotTemplate);
+    for (const taskRef of shot.values['tasks'] as EntityRef[]) {
+      const task = index.get(`Task:${taskRef.id}`) as Row;
+      const source = shotTemplateTasks.find((t) => (t.values['step'] as EntityRef).id === (task.values['step'] as EntityRef).id);
+      task.values['template_task'] = source ? ref(source) : null;
+    }
+  }
+  // A publish per Version on its Task, for the first dozen Versions.
+  versions.slice(0, 12).forEach((version, i) => {
+    const code = `${String(version.values['code'])}.exr`;
+    add('PublishedFile', 3000 + i, {
+      code,
+      cached_display_name: code,
+      name: code.replace(/_v\d+\.exr$/, '.exr'),
+      description: null,
+      version_number: 1,
+      path: null,
+      path_cache: null,
+      sg_status_list: 'cmpt',
+      image: null,
+      project: version.values['project'] as EntityRef,
+      entity: version.values['entity'] as EntityRef,
+      task: version.values['sg_task'] as EntityRef | null,
+      version: ref(version),
+      published_file_type: null,
+      created_at: version.values['created_at'],
+      updated_at: version.values['created_at'],
+      created_by: ref(bot),
+      updated_by: ref(bot),
+    });
+  });
+
   /* what each person follows ------------------------------------------------- */
   // A follow is a type and an id and nothing else: no name, and no date the follow
   // started (get_entity_human_users_id_following).
@@ -1214,6 +1431,10 @@ export class MockClient implements SgClient {
   private readonly retired = new Map<string, Row>();
   /** Rows a batch created with no `project`: no read reaches them, a delete does (report 001). */
   private readonly unreadable = new Map<string, Row>();
+  /** What a Task delete did to other rows, by `Task:id`, for its revive to undo (089_task_delete_side_effects). */
+  private readonly cascades = new Map<string, Cascade>();
+  /** The highest id handed out per type, so an erased row's id is never reused. */
+  private readonly issued = new Map<string, number>();
   private deletes = 0;
 
   constructor(options: MockClientOptions = {}) {
@@ -1221,6 +1442,7 @@ export class MockClient implements SgClient {
     this.latencyMs = options.latencyMs ?? 0;
     this.clock = toClock(options.now);
     this.pendingFailure = options.failNext ?? null;
+    this.derive();
   }
 
   /**
@@ -1272,6 +1494,7 @@ export class MockClient implements SgClient {
         editable: s.editable ?? true,
         mandatory: s.mandatory ?? false,
         unique: s.unique ?? false,
+        hideable: HIDEABLE.has(`${entityType}.${name}`),
       };
       if (s.validTypes) field.validTypes = s.validTypes;
       if (s.validValues) field.validValues = s.validValues;
@@ -1312,6 +1535,16 @@ export class MockClient implements SgClient {
       // Same rule as RestClient: `links.next` is emitted forever, so a full page is the only signal (006_pagination).
       hasMore: page.length === size,
     };
+  }
+
+  async read(entityType: string, id: number, options: ReadOptions = {}): Promise<EntityRow> {
+    await this.gate();
+    const spec = this.schemaOf(entityType);
+    const key = `${entityType}:${id}`;
+    // Live and retired are read apart; a batch-created orphan is neither (get_entity_type_id, recipes/002).
+    const row = options.retired ? this.retired.get(key) : this.fixtures.index.get(key);
+    if (!row) throw notFound(`${entityType}: ${id} not found`);
+    return this.project(row, spec, options.fields);
   }
 
   async textSearch(
@@ -1358,26 +1591,36 @@ export class MockClient implements SgClient {
 
   async update(entityType: string, id: number, patch: Record<string, unknown>): Promise<EntityRow> {
     await this.gate();
-    return this.updateRow(entityType, id, patch);
+    return this.updateRow(entityType, id, patch, false);
   }
 
-  private updateRow(entityType: string, id: number, patch: Record<string, unknown>): EntityRow {
+  private updateRow(entityType: string, id: number, patch: Record<string, unknown>, inBatch: boolean): EntityRow {
     const spec = this.schemaOf(entityType);
     const row = this.fixtures.index.get(`${entityType}:${id}`);
     // The 404 names the type and the id (put_entity_type_id).
-    if (!row) throw new SgApiError(404, null, `Entity of type [${entityType}] with id=${id} does not exist.`);
+    if (!row) throw notFound(`Entity of type [${entityType}] with id=${id} does not exist.`);
     for (const [name, value] of Object.entries(patch)) {
       const field = spec[name];
       // `API create() Reply.project doesn't exist.` is the create spelling of this 400
       // (entity_types/Reply); a write to a read-only field is `is read only.` (entity_types/Sequence).
       if (!field) throw new SgApiError(400, null, `API update() ${entityType}.${name} doesn't exist.`);
       if (field.createOnly) throw new SgApiError(400, null, `API update() ${entityType}.${name} is editable on create only.`);
-      if (field.editable === false) throw new SgApiError(400, null, `API update() ${entityType}.${name} is read only.`);
+      if (field.editable === false && !field.writable) throw new SgApiError(400, null, `API update() ${entityType}.${name} is read only.`);
       this.checkLink('update', entityType, name, field, value);
+      this.checkValue(inBatch, entityType, name, field, value);
+    }
+    for (const [name, value] of Object.entries(patch)) {
+      const field = spec[name] as FieldSpec;
+      if (entityType === 'Task' && (name === 'upstream_tasks' || name === 'downstream_tasks')) {
+        this.writeEdges(row, name, value);
+        continue;
+      }
       // Writing "" to a text field stores null: the two are one value (field_types/text).
-      row.values[name] = field.dataType === 'text' && value === '' ? null : value;
+      row.values[name] = (field.dataType === 'text' || field.dataType === 'status_list') && value === '' ? null : value;
+      this.mirror(row, name);
     }
     if (spec['updated_at'] && Object.keys(patch).length > 0) row.values['updated_at'] = isoDateTime(0);
+    this.derive();
     // A PUT answers the whole record, changed fields and untouched ones alike (024_read_after_write).
     return this.project(row, spec);
   }
@@ -1745,10 +1988,15 @@ export class MockClient implements SgClient {
    */
   private createRow(entityType: string, body: Record<string, unknown>, inBatch: boolean): EntityRow {
     const spec = this.schemaOf(entityType);
-    const orphan = spec['project'] !== undefined && body['project'] === undefined;
+    // A template's own task has no project, and may not have one (entity_types/TaskTemplate).
+    const templateTask = entityType === 'Task' && !isNullish(body['task_template']);
+    const orphan = spec['project'] !== undefined && body['project'] === undefined && !templateTask;
     // `{}` and the identity field alone both answer this, with the body echoed.
     if (orphan && !inBatch) {
       throw new SgApiError(400, null, `API create() missing 'project' attribute: ${JSON.stringify(body)}`);
+    }
+    if (templateTask && !isNullish(body['project'])) {
+      throw new SgApiError(400, null, 'API create() Invalid Task: a task template may not have a project');
     }
     const identity = IDENTITY_FIELD[entityType];
     for (const [name, value] of Object.entries(body)) {
@@ -1761,13 +2009,15 @@ export class MockClient implements SgClient {
         );
       }
       if (!field) throw new SgApiError(400, null, `API create() ${entityType}.${name} doesn't exist.`);
-      if (field.editable === false && !field.createOnly) throw new SgApiError(400, null, `API create() ${entityType}.${name} is read only.`);
+      if (field.editable === false && !field.createOnly && !field.writable) throw new SgApiError(400, null, `API create() ${entityType}.${name} is read only.`);
       this.checkLink('create', entityType, name, field, value);
+      this.checkValue(true, entityType, name, field, value);
       // Omitting the identity field and sending an empty one are different (entity_types/Shot).
       if (name === identity && value === '') {
         throw new SgApiError(400, null, `Create failed for [${entityType}]: Cannot set identifier field to empty. (${entityType})`);
       }
     }
+    if (entityType === 'TaskDependency') this.checkEdge(body);
     const id = this.nextId(entityType);
     const values: Record<string, unknown> = {};
     for (const [name, field] of Object.entries(spec)) {
@@ -1789,8 +2039,9 @@ export class MockClient implements SgClient {
     // An authored `created_at` or `updated_at` in the body is stored as sent (070_authored_timestamps).
     Object.assign(values, body, { id });
     if (identity && values[identity] === null && GENERATED_IDENTITY.has(entityType)) {
-      values[identity] = `New ${DISPLAY_NAMES[entityType] ?? entityType} ${id}`;
+      values[identity] = `New ${GENERATED_NAME[entityType] ?? DISPLAY_NAMES[entityType] ?? entityType} ${id}`;
     }
+    if (entityType === 'TaskDependency' && values['dependency_type'] === null) values['dependency_type'] = DEPENDENCY_TYPES[0];
     values['cached_display_name'] =
       entityType === 'Note'
         ? [values['subject'], values['content']].filter(Boolean).join(' - ')
@@ -1805,13 +2056,21 @@ export class MockClient implements SgClient {
     else this.fixtures.rows.set(entityType, [row]);
     this.fixtures.index.set(`${entityType}:${id}`, row);
     this.linkBack(row);
+    for (const name of Object.keys(body)) {
+      if (entityType === 'Task' && (name === 'upstream_tasks' || name === 'downstream_tasks')) this.writeEdges(row, name, body[name]);
+      else this.mirror(row, name);
+    }
+    this.derive();
     return this.project(row, spec);
   }
 
   /**
    * Retire one row: reads skip it and a second delete is 404 (delete_entity_type_id).
-   * The mock retires only the row; what a delete does to rows that link to it
-   * (probe 060, 089_task_delete_side_effects) is not modelled.
+   * A Task takes its TaskDependency rows with it and leaves `Version.sg_task` and
+   * `PublishedFile.task` null until its revive (089_task_delete_side_effects), alone or
+   * in a batch (103_batch_delete_revive). A TaskTemplate retires its tasks
+   * (entity_types/TaskTemplate). What a Shot delete does to its Versions (probe 060)
+   * is not modelled.
    */
   async delete(entityType: string, id: number): Promise<void> {
     await this.gate();
@@ -1822,30 +2081,239 @@ export class MockClient implements SgClient {
     this.schemaOf(entityType);
     const key = `${entityType}:${id}`;
     const row = this.fixtures.index.get(key) ?? this.unreadable.get(key);
-    if (!row) throw new SgApiError(404, null, `Entity of type [${entityType}] with id=${id} does not exist.`);
+    if (!row) throw notFound(`Entity of type [${entityType}] with id=${id} does not exist.`);
+    if (entityType === 'TaskTemplate') {
+      for (const task of this.live('Task').filter((t) => refsOf(t.values['task_template'])[0]?.id === id)) this.deleteRow('Task', task.id);
+    }
+    if (entityType === 'Task') {
+      const cascade: Cascade = { edges: [], unlinked: [] };
+      for (const edge of this.edgesOf(id)) {
+        this.retire(edge);
+        cascade.edges.push(`TaskDependency:${edge.id}`);
+      }
+      for (const [type, field] of [['Version', 'sg_task'], ['PublishedFile', 'task']] as const) {
+        for (const other of this.live(type)) {
+          const value = other.values[field] as EntityRef | null;
+          if (value?.type !== 'Task' || value.id !== id) continue;
+          other.values[field] = null;
+          cascade.unlinked.push({ row: other, field, value });
+        }
+      }
+      this.cascades.set(key, cascade);
+    }
     this.unreadable.delete(key);
-    this.fixtures.index.delete(key);
-    const rows = this.fixtures.rows.get(entityType) ?? [];
-    const at = rows.indexOf(row);
-    if (at >= 0) rows.splice(at, 1);
-    this.retired.set(key, row);
+    this.retire(row);
+    this.derive();
   }
 
-  /** Bring a retired row back with its values; `false` for a row that is already live (post_entity_type_id). */
+  /**
+   * Bring a retired row back with its values; `false` for a row that is already live
+   * (post_entity_type_id). A Task gets back what its delete took (089_task_delete_side_effects).
+   * A TaskDependency whose pair is linked again refuses, the pair being a unique index
+   * (095_dependency_remove_undo). A TaskTemplate's tasks stay retired: unmeasured.
+   */
   async revive(entityType: string, id: number): Promise<boolean> {
     await this.gate();
     this.schemaOf(entityType);
     const key = `${entityType}:${id}`;
     if (this.fixtures.index.has(key)) return false;
     const row = this.retired.get(key);
-    if (!row) throw new SgApiError(404, null, `Entity of type [${entityType}] with id=${id} does not exist.`);
-    this.retired.delete(key);
-    const rows = this.fixtures.rows.get(entityType) ?? [];
-    const at = rows.findIndex((r) => r.id > id);
-    rows.splice(at < 0 ? rows.length : at, 0, row);
-    this.fixtures.rows.set(entityType, rows);
-    this.fixtures.index.set(key, row);
+    if (!row) throw notFound(`Entity of type [${entityType}] with id=${id} does not exist.`);
+    if (entityType === 'TaskDependency' && this.pairTaken(row)) {
+      throw new SgApiError(
+        400,
+        null,
+        `Revive failed for [TaskDependency with id=${id}]: Can't unretire the entity because a field has a non-unique value for a unique index: sgcu_task_dependencies`,
+      );
+    }
+    this.unretire(row);
+    const cascade = this.cascades.get(key);
+    if (cascade) {
+      this.cascades.delete(key);
+      for (const edgeKey of cascade.edges) {
+        const edge = this.retired.get(edgeKey);
+        if (edge && !this.pairTaken(edge)) this.unretire(edge);
+      }
+      for (const { row: other, field, value } of cascade.unlinked) {
+        if (this.fixtures.index.get(`${other.type}:${other.id}`) === other && other.values[field] === null) other.values[field] = value;
+      }
+    }
+    this.derive();
     return true;
+  }
+
+  private retire(row: Row): void {
+    const key = `${row.type}:${row.id}`;
+    this.fixtures.index.delete(key);
+    const rows = this.fixtures.rows.get(row.type) ?? [];
+    const at = rows.indexOf(row);
+    if (at >= 0) rows.splice(at, 1);
+    this.retired.set(key, row);
+  }
+
+  private unretire(row: Row): void {
+    const key = `${row.type}:${row.id}`;
+    this.retired.delete(key);
+    const rows = this.fixtures.rows.get(row.type) ?? [];
+    const at = rows.findIndex((r) => r.id > row.id);
+    rows.splice(at < 0 ? rows.length : at, 0, row);
+    this.fixtures.rows.set(row.type, rows);
+    this.fixtures.index.set(key, row);
+  }
+
+  /** Remove a row for good: no read reaches it and no revive brings it back. */
+  private erase(row: Row): void {
+    this.fixtures.index.delete(`${row.type}:${row.id}`);
+    const rows = this.fixtures.rows.get(row.type) ?? [];
+    const at = rows.indexOf(row);
+    if (at >= 0) rows.splice(at, 1);
+  }
+
+  private live(entityType: string): Row[] {
+    return [...(this.fixtures.rows.get(entityType) ?? [])];
+  }
+
+  /* ---------------------------------------------------------------------- */
+  /* task dependencies                                                      */
+  /* ---------------------------------------------------------------------- */
+
+  /** The live TaskDependency rows with this Task at either end. */
+  private edgesOf(taskId: number): Row[] {
+    return this.live('TaskDependency').filter(
+      (d) => refsOf(d.values['task'])[0]?.id === taskId || refsOf(d.values['dependent_task'])[0]?.id === taskId,
+    );
+  }
+
+  /** Whether a live row already links this row's pair. */
+  private pairTaken(edge: Row): boolean {
+    const down = refsOf(edge.values['task'])[0]?.id;
+    const up = refsOf(edge.values['dependent_task'])[0]?.id;
+    return this.live('TaskDependency').some(
+      (d) => d !== edge && refsOf(d.values['task'])[0]?.id === down && refsOf(d.values['dependent_task'])[0]?.id === up,
+    );
+  }
+
+  /** Whether `from` depends on `target`, directly or through other Tasks. */
+  private dependsOn(from: number, target: number): boolean {
+    const seen = new Set<number>();
+    const queue = [from];
+    while (queue.length > 0) {
+      const at = queue.shift() as number;
+      if (at === target) return true;
+      if (seen.has(at)) continue;
+      seen.add(at);
+      for (const d of this.live('TaskDependency')) {
+        if (refsOf(d.values['task'])[0]?.id === at) {
+          const up = refsOf(d.values['dependent_task'])[0]?.id;
+          if (up !== undefined) queue.push(up);
+        }
+      }
+    }
+    return false;
+  }
+
+  /**
+   * The checks a TaskDependency create makes: one of four types, one row per pair, and
+   * no loop of any length (085_task_dependency_types, 107_dependency_three_task_loop).
+   */
+  private checkEdge(body: Record<string, unknown>): void {
+    const failed = (reason: string): SgApiError => new SgApiError(400, null, `Create failed for [TaskDependency]: ${reason}`);
+    if ('dependency_type' in body && !DEPENDENCY_TYPES.includes(body['dependency_type'] as string)) {
+      const sent = body['dependency_type'] === null ? '' : String(body['dependency_type']);
+      throw failed(`Validation failed: Dependency type Dependency type '${sent}' is invalid, accepted values are ${DEPENDENCY_TYPES.join(', ')}.`);
+    }
+    const down = refsOf(body['task'])[0]?.id;
+    const up = refsOf(body['dependent_task'])[0]?.id;
+    if (down === undefined || up === undefined) return;
+    if (this.live('TaskDependency').some((d) => refsOf(d.values['task'])[0]?.id === down && refsOf(d.values['dependent_task'])[0]?.id === up)) {
+      throw failed('Validation failed: There is already a connection between the entities.');
+    }
+    if (down === up || this.dependsOn(up, down)) throw failed("Can't create this dependency as it causes a loop.");
+  }
+
+  /**
+   * A write to `upstream_tasks` or `downstream_tasks`: a new neighbour gets a row of the
+   * default type and no offset, a dropped one's row is erased, not retired
+   * (086_batch_tasks_with_dependencies, 095_dependency_remove_undo).
+   */
+  private writeEdges(task: Row, field: 'upstream_tasks' | 'downstream_tasks', value: unknown): void {
+    const [own, other] = field === 'upstream_tasks' ? (['task', 'dependent_task'] as const) : (['dependent_task', 'task'] as const);
+    const wanted = refsOf(value).map((r) => r.id);
+    const current = this.live('TaskDependency').filter((d) => refsOf(d.values[own])[0]?.id === task.id);
+    for (const edge of current) if (!wanted.includes(refsOf(edge.values[other])[0]?.id as number)) this.erase(edge);
+    for (const id of wanted) {
+      if (current.some((d) => refsOf(d.values[other])[0]?.id === id)) continue;
+      const neighbour: EntityRef = { type: 'Task', id };
+      const [down, up] = own === 'task' ? [ref(task), neighbour] : [neighbour, ref(task)];
+      const edgeId = this.nextId('TaskDependency');
+      const author = this.fixtures.rows.get('ApiUser')?.[0];
+      const edge: Row = {
+        type: 'TaskDependency',
+        id: edgeId,
+        values: {
+          id: edgeId,
+          cached_display_name: null,
+          task: down,
+          dependent_task: up,
+          dependency_type: DEPENDENCY_TYPES[0],
+          offset_days: null,
+          shift_ratio: null,
+          task_id: down.id,
+          dependent_task_id: up.id,
+          created_at: isoDateTime(0),
+          updated_at: isoDateTime(0),
+          created_by: author ? ref(author) : null,
+          updated_by: author ? ref(author) : null,
+        },
+      };
+      const rows = this.fixtures.rows.get('TaskDependency');
+      if (rows) rows.push(edge);
+      else this.fixtures.rows.set('TaskDependency', [edge]);
+      this.fixtures.index.set(`TaskDependency:${edgeId}`, edge);
+    }
+  }
+
+  /** Where the written field is one side of a two-sided link, make the other side agree. */
+  private mirror(row: Row, name: string): void {
+    const pair = MIRRORED[`${row.type}.${name}`];
+    if (!pair) return;
+    const [otherType, otherField] = pair;
+    const linked = new Set(refsOf(row.values[name]).map((r) => r.id));
+    for (const other of this.live(otherType)) {
+      const list = refsOf(other.values[otherField]).filter((r) => !(r.type === row.type && r.id === row.id));
+      if (linked.has(other.id)) list.push(ref(row));
+      other.values[otherField] = list;
+    }
+  }
+
+  /**
+   * What the server derives from other rows: a Task's two edge lists from the
+   * TaskDependency rows, their ids and name, and a template's task count, a string.
+   */
+  private derive(): void {
+    const upstream = new Map<number, EntityRef[]>();
+    const downstream = new Map<number, EntityRef[]>();
+    const push = (map: Map<number, EntityRef[]>, key: number, value: EntityRef): void => {
+      map.set(key, [...(map.get(key) ?? []), { type: 'Task', id: value.id }]);
+    };
+    for (const edge of this.live('TaskDependency')) {
+      const down = refsOf(edge.values['task'])[0];
+      const up = refsOf(edge.values['dependent_task'])[0];
+      edge.values['task_id'] = down?.id ?? null;
+      edge.values['dependent_task_id'] = up?.id ?? null;
+      edge.values['cached_display_name'] = `Task ${down?.id ?? ''} dependent on Task ${up?.id ?? ''}`;
+      if (!down || !up) continue;
+      push(upstream, down.id, up);
+      push(downstream, up.id, down);
+    }
+    const counts = new Map<number, number>();
+    for (const task of this.live('Task')) {
+      task.values['upstream_tasks'] = upstream.get(task.id) ?? [];
+      task.values['downstream_tasks'] = downstream.get(task.id) ?? [];
+      const template = refsOf(task.values['task_template'])[0];
+      if (template) counts.set(template.id, (counts.get(template.id) ?? 0) + 1);
+    }
+    for (const template of this.live('TaskTemplate')) template.values['task_count'] = String(counts.get(template.id) ?? 0);
   }
 
   /**
@@ -1886,7 +2354,7 @@ export class MockClient implements SgClient {
       throw invalid({ data: ['data hash containing field/value pairs is required for the given request'] });
     }
     if (request.request_type === 'create') return { request_type: 'create', data: this.createRow(request.entity, data, true) };
-    return { request_type: 'update', data: this.updateRow(request.entity, id, data) };
+    return { request_type: 'update', data: this.updateRow(request.entity, id, data, true) };
   }
 
   /** Everything a batch can change, and a function that puts it back. */
@@ -1896,6 +2364,8 @@ export class MockClient implements SgClient {
     const values = new Map([...index.values()].map((row) => [row, structuredClone(row.values)] as const));
     const retired = new Map(this.retired);
     const unreadable = new Map(this.unreadable);
+    const cascades = new Map(this.cascades);
+    const issued = new Map(this.issued);
     const deletes = this.deletes;
     const refill = <K, V>(target: Map<K, V>, from: Map<K, V>): void => {
       target.clear();
@@ -1907,6 +2377,8 @@ export class MockClient implements SgClient {
       for (const [row, saved] of values) row.values = saved;
       refill(this.retired, retired);
       refill(this.unreadable, unreadable);
+      refill(this.cascades, cascades);
+      refill(this.issued, issued);
       this.deletes = deletes;
     };
   }
@@ -1922,7 +2394,7 @@ export class MockClient implements SgClient {
     await this.gate();
     const spec = this.schemaOf(entityType);
     const target = this.fixtures.index.get(`${entityType}:${id}`);
-    if (!target) throw new SgApiError(404, null, `Entity of type [${entityType}] with id=${id} does not exist.`);
+    if (!target) throw notFound(`Entity of type [${entityType}] with id=${id} does not exist.`);
     // `filename` is a required query parameter on the ticket call.
     if (!file.filename) throw new SgApiError(400, { filename: ['filename is missing'] }, 'Request Parameters invalid.');
     // The 404 for a field the type does not have is worded as a missing field.
@@ -2009,13 +2481,37 @@ export class MockClient implements SgClient {
     }
   }
 
+  /**
+   * Values the server checks beyond their shape. A status code must be in the site-wide
+   * `valid_values`, hidden ones included, and a create or any batch request wraps the
+   * refusal (field_types/status_list, recipes/002, 094_permission_preflight). A
+   * TaskTemplate's `entity_type` must name a type (entity_types/TaskTemplate).
+   */
+  private checkValue(wrapped: boolean, entityType: string, name: string, field: FieldSpec, value: unknown): void {
+    if (value === null || value === undefined || value === '') return;
+    let reason: string | null = null;
+    if (field.dataType === 'status_list' && !(field.validValues ?? []).includes(value as string)) {
+      const valid = (field.validValues ?? []).map((v) => `'${v}'`).join(', ');
+      reason = `Update failed for [${entityType}.${name}]: '${String(value)}' is not a valid status. Valid statuses: ${valid}.`;
+    }
+    if (field.dataType === 'entity_type' && field.writable && !SPECS[value as string]) {
+      const valid = Object.keys(SPECS).map((v) => `'${v}'`).join(', ');
+      throw new SgApiError(400, null, `Update failed for [${entityType}.${name}]: '${String(value)}' is not a valid entity type. Valid entity types: ${valid}.`);
+    }
+    if (reason === null) return;
+    throw new SgApiError(400, null, wrapped ? `Invalid field value, update failed [5 - ${reason}]` : reason);
+  }
+
   /** The next free id of a type, which is what a create takes. */
   private nextId(entityType: string): number {
     const live = (this.fixtures.rows.get(entityType) ?? []).reduce((max, row) => Math.max(max, row.id), 0);
     // A retired row keeps its id, so a create never reuses it.
     let taken = live;
     for (const row of [...this.retired.values(), ...this.unreadable.values()]) if (row.type === entityType) taken = Math.max(taken, row.id);
-    return taken + 1;
+    // Nor does it reuse an erased one.
+    const id = Math.max(taken, this.issued.get(entityType) ?? 0) + 1;
+    this.issued.set(entityType, id);
+    return id;
   }
 
   /** The reverse view of a link the server fills in: a Reply lands in `Note.replies`. */
@@ -2346,6 +2842,15 @@ function entityTypeNamed(name: string): string | null {
   if (SPECS[name]) return name;
   const wanted = name.toLowerCase();
   return Object.keys(SPECS).find((type) => type.toLowerCase() === wanted || pluralPath(type) === wanted) ?? null;
+}
+
+/**
+ * The 404 a row that is not there answers: code 104, title `Not Found`, the message in
+ * `detail` (put_entity_type_id, get_entity_notes_id_thread_contents). The message is the
+ * detail, as on every other mock error.
+ */
+function notFound(detail: string): SgApiError {
+  return new SgApiError(404, { errors: [{ status: 404, code: 104, title: 'Not Found', detail }] }, detail);
 }
 
 function isNullish(v: unknown): boolean {

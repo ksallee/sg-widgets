@@ -93,6 +93,11 @@ export interface EntitySource {
   loadMore(): Promise<void>;
   /** Read every page already shown again, keeping the row count. */
   refresh(): Promise<void>;
+  /**
+   * Read these paths as well. The rows already shown are read again when one of them
+   * is new, keeping the row count and the total; otherwise nothing is read.
+   */
+  addFields(paths: readonly string[]): Promise<void>;
   setFilters(filters: SourceFilters): Promise<void>;
   setSort(sort: SortSpec[]): Promise<void>;
   /** Show one page of the set. `pages` mode only. */
@@ -156,7 +161,7 @@ function asError(value: unknown): Error {
 export function createEntitySource(options: EntitySourceOptions): EntitySource {
   const { client, entityType } = options;
   // `id` is what a row is keyed and re-read on, so it is never left out of a projection.
-  const fields = [...new Set(['id', ...options.fields])];
+  let fields = [...new Set(['id', ...options.fields])];
 
   let state: EntitySourceState = {
     rows: [],
@@ -244,7 +249,9 @@ export function createEntitySource(options: EntitySourceOptions): EntitySource {
 
   const source: EntitySource = {
     entityType,
-    fields,
+    get fields(): readonly string[] {
+      return fields;
+    },
     get rows(): EntityRow[] {
       return state.rows;
     },
@@ -298,6 +305,17 @@ export function createEntitySource(options: EntitySourceOptions): EntitySource {
       }
       const pages = Math.max(1, Math.ceil(state.rows.length / state.pageSize));
       set({ total: null });
+      return run(() => read(pages, 'loading', [], 1));
+    },
+
+    addFields(paths: readonly string[]): Promise<void> {
+      const added = paths.filter((path) => path && !fields.includes(path));
+      if (added.length === 0) return Promise.resolve();
+      fields = [...fields, ...new Set(added)];
+      if (state.status === 'idle') return Promise.resolve();
+      // The set is the same, only the projection grew, so the total stands.
+      if (state.mode === 'pages') return run(() => read(1, 'loading', [], state.page));
+      const pages = Math.max(1, Math.ceil(state.rows.length / state.pageSize));
       return run(() => read(pages, 'loading', [], 1));
     },
 

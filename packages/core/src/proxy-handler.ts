@@ -28,12 +28,12 @@
  * };
  * ```
  */
-import type { BatchRequest, EventLogOptions, FollowingOptions, SearchOptions, SgClient, SummarizeOptions, UploadFile } from './client.js';
+import type { BatchRequest, EventLogOptions, FollowingOptions, ReadOptions, SearchOptions, SgClient, SummarizeOptions, UploadFile } from './client.js';
 import { SgApiError } from './client.js';
 import type { EntityRef, TextSearchFilter } from './filter.js';
 
 /** The methods the protocol carries, one POST each. */
-export const PROXY_METHODS = ['entityTypes', 'fields', 'fieldWithProject', 'search', 'textSearch', 'statuses', 'create', 'update', 'upload', 'hierarchyExpand', 'hierarchySearch', 'summarize', 'threadContents', 'eventLog', 'following', 'delete', 'revive', 'batch'] as const;
+export const PROXY_METHODS = ['entityTypes', 'fields', 'fieldWithProject', 'search', 'read', 'textSearch', 'statuses', 'create', 'update', 'upload', 'hierarchyExpand', 'hierarchySearch', 'summarize', 'threadContents', 'eventLog', 'following', 'delete', 'revive', 'batch'] as const;
 
 export type ProxyMethod = (typeof PROXY_METHODS)[number];
 
@@ -182,6 +182,8 @@ function call(client: SgClient, method: ProxyMethod, p: Params): Promise<unknown
       return client.fieldWithProject(str(p.entityType, 'entityType'), str(p.field, 'field'), num(p.projectId, 'projectId'));
     case 'search':
       return client.search(str(p.entityType, 'entityType'), (p.options ?? {}) as SearchOptions);
+    case 'read':
+      return client.read(str(p.entityType, 'entityType'), num(p.id, 'id'), (p.options ?? {}) as ReadOptions);
     case 'textSearch':
       return client.textSearch(
         str(p.text, 'text'),

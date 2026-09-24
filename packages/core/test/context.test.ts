@@ -25,6 +25,10 @@ function counting(inner: SgClient): { client: SgClient; calls: string[] } {
       calls.push(`search ${entityType}`);
       return inner.search(entityType, options);
     },
+    read(entityType, id, options) {
+      calls.push(`read ${entityType} ${id}`);
+      return inner.read(entityType, id, options);
+    },
     textSearch(text: string, entityTypes: Record<string, TextSearchFilter>, page?: { size?: number; number?: number }): Promise<TextSearchRow[]> {
       calls.push(`textSearch ${text}`);
       return inner.textSearch(text, entityTypes, page);

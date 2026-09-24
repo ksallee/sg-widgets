@@ -18,6 +18,7 @@ import { untrack } from 'svelte';
 import type {
 	EntityRef,
 	EntityRow,
+	SelectionAnchor,
 	EntitySource,
 	PagingMode,
 	RowDisabledFn,
@@ -29,7 +30,10 @@ import {
 	collectionBottom,
 	collectionView,
 	describePaging,
+	extendByStep,
+	extendRange,
 	firstEnabledIndex,
+	gestureOf,
 	hasFailedPage,
 	loadsOnArrowDown,
 	rowIdOf,
@@ -38,9 +42,10 @@ import {
 	sameRefs,
 	selectableRefs,
 	selectionState,
+	setRefs,
 	shouldLoadNext,
 	stateLine,
-	toggleRef
+	toggleRow
 } from 'sg-widgets-core';
 import { Virtualizer, elementScroll, observeElementOffset, observeElementRect } from '@tanstack/virtual-core';
 import { bindSource, type Mirror, type SourceSnapshot } from '$lib/registry/components/collection-source.svelte.js';
@@ -96,6 +101,10 @@ export function createCollectionControl(options: CollectionControlOptions) {
 		selection.set(next);
 	}
 
+	/** Where the next Shift gesture ranges from. Not state: nothing draws it. */
+	let anchor: SelectionAnchor | null = null;
+	const indexOf = (row: EntityRow): number => rows.findIndex((entry) => rowKey(entry) === rowKey(row));
+
 	return {
 		source,
 		paging,
@@ -130,18 +139,35 @@ export function createCollectionControl(options: CollectionControlOptions) {
 		isSelected(row: EntityRow): boolean {
 			return chosenKeys.has(rowKey(row));
 		},
-		/** Add or drop one row. A disabled row refuses. */
+		/** Add or drop one row and anchor on it. A disabled row refuses. */
 		toggle(row: EntityRow): void {
-			if (!selection || rowDisabled(row)) return;
-			setSelection(toggleRef(selection.get() ?? [], { type: row.type, id: row.id }));
+			if (!selection) return;
+			const step = toggleRow(selection.get() ?? [], anchor, rows, indexOf(row), options.isRowDisabled?.());
+			anchor = step.anchor;
+			setSelection(step.selection);
+		},
+		/** A press on a row: Shift ranges from the anchor, anything else toggles. */
+		press(row: EntityRow, event: { shiftKey?: boolean; metaKey?: boolean; ctrlKey?: boolean }): void {
+			if (!selection) return;
+			const range = gestureOf(event) === 'range' ? extendRange : toggleRow;
+			const step = range(selection.get() ?? [], anchor, rows, indexOf(row), options.isRowDisabled?.());
+			anchor = step.anchor;
+			setSelection(step.selection);
+		},
+		/** Shift+arrow: the cursor moved from one loaded row to another, carrying the range. */
+		extend(from: number, to: number): void {
+			if (!selection) return;
+			const step = extendByStep(selection.get() ?? [], anchor, rows, from, to, options.isRowDisabled?.());
+			anchor = step.anchor;
+			setSelection(step.selection);
 		},
 		/** The tri-state a header checkbox reads. */
 		get allSelected() {
 			return selectionState(rows, selection?.get() ?? [], options.isRowDisabled?.());
 		},
-		/** Take or drop every loaded row that is not disabled. */
+		/** Take or drop every loaded row that is not disabled, keeping picks the loaded rows do not hold. */
 		toggleAll(on: boolean): void {
-			setSelection(on ? selectableRefs(rows, options.isRowDisabled?.()) : []);
+			setSelection(setRefs(selection?.get() ?? [], selectableRefs(rows, options.isRowDisabled?.()), on));
 		}
 	};
 }

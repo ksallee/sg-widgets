@@ -22,6 +22,7 @@ export * from './pickers.js';
 export * from './sortable.js';
 export * from './collection.js';
 export * from './collection-state.js';
+export * from './selection.js';
 export * from './row.js';
 export * from './presentation.js';
 export * from './entity-card.js';

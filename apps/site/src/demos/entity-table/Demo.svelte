@@ -82,6 +82,17 @@
 		return { statuses: Object.fromEntries(table) };
 	}
 
+	/** Every row the filter matches, read a page of ids at a time: the table never reads past its own pages. */
+	async function selectAllMatching(): Promise<void> {
+		const refs: EntityRef[] = [];
+		for (let number = 1; ; number += 1) {
+			const page = await context.client.search('Version', { filters: source.filters, fields: ['id'], page: { size: 500, number } });
+			refs.push(...page.data.map((row) => ({ type: row.type, id: row.id })));
+			if (!page.hasMore) break;
+		}
+		selected = refs;
+	}
+
 	async function pickColumns(paths: string[]): Promise<void> {
 		columns = await resolveColumns(
 			context.schema,
@@ -146,6 +157,7 @@
 			{source}
 			bind:columns
 			bind:selection={selected}
+			onSelectAllMatching={selectAllMatching}
 			filters={scope ? group('and', [scope, filter]) : filter}
 			sort={toSortSpecs(sortKeys)}
 			{statuses}

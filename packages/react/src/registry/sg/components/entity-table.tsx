@@ -25,10 +25,12 @@ import {
   expandAll,
   isCollapsed,
   isEditableType,
+  matchingOffer,
   nextEnabledIndex,
   NO_ROWS_LABEL,
   preferencesOf,
   sameCollapse,
+  selectionKeyIntent,
   stateLine,
 } from 'sg-widgets-core';
 import {
@@ -117,6 +119,15 @@ const SELECT = '__select';
 /** Said on every editable cell, because nothing else on it says an edit is possible. */
 const EDIT_HINT = 'Double-click or press Enter to edit';
 
+/** What a press inside a row leaves to the element it landed on. */
+const OWN_PRESS =
+  'a,button:not([data-slot="checkbox"]),input,textarea,select,[contenteditable],[data-slot="entity-table-editor"]';
+
+/** True where a key belongs to a control inside the table rather than to the rows. */
+function ownsKeys(target: HTMLElement | null): boolean {
+  return Boolean(target?.closest('input,textarea,select,[contenteditable],[data-slot="entity-table-editor"]'));
+}
+
 /** What a `row` render prop is handed. It draws the cells of one row, not the row's box. */
 export interface EntityTableRowContext {
   row: EntityRow;
@@ -171,6 +182,12 @@ export interface EntityTableProps extends Omit<React.HTMLAttributes<HTMLDivEleme
   /** The selected rows. Controlled, with the table's own selection as the fallback. */
   selection?: EntityRef[];
   onSelectionChange?: (rows: EntityRef[]) => void;
+  /**
+   * Offers every row the filter matches once every loaded row is selected and the
+   * set holds more. The host reads the set and writes the selection; the table never
+   * reads past its own pages.
+   */
+  onSelectAllMatching?: () => void | Promise<void>;
   /** How a row is keyed, in the DOM and in the selection. Default `Type:id`. */
   getRowId?: RowIdFn;
   /** True for a row that cannot be selected, edited or reached by the keyboard. */
@@ -278,6 +295,7 @@ export function EntityTable({
   selectable = false,
   selection: selectionProp,
   onSelectionChange,
+  onSelectAllMatching,
   getRowId,
   isRowDisabled,
   groupBy = null,
@@ -477,16 +495,80 @@ export function EntityTable({
    * next page instead, and the cursor stays where it is until those rows arrive.
    */
   function onRowsKeyDown(event: React.KeyboardEvent): void {
-    if (editing !== null || (event.key !== 'ArrowDown' && event.key !== 'ArrowUp')) return;
     const target = event.target as HTMLElement | null;
+    if (editing !== null || ownsKeys(target)) return;
     const tr = target?.closest<HTMLElement>('tr[data-row-key]');
     if (!tr) return;
     const from = rows.findIndex((row) => control.rowId(row) === tr.dataset['rowKey']);
     if (from < 0) return;
     const column = target?.closest<HTMLElement>('td[data-column]')?.dataset['column'] ?? null;
+    if (selectionKeys(event, from, column)) return;
+    if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
     event.preventDefault();
     if (event.key === 'ArrowDown' && body.askForPage(from + 1, column)) return;
     body.focusRow(nextEnabledIndex(rows.length, from, event.key === 'ArrowDown' ? 1 : -1, control.disabledAt), column);
+  }
+
+  /* selection gestures --------------------------------------------------- */
+
+  /** A press on a row, or on its checkbox: Shift ranges from the anchor, anything else toggles. */
+  function onRowPress(event: React.MouseEvent, row: EntityRow): void {
+    if (!selectable || event.button !== 0) return;
+    const target = event.target as HTMLElement | null;
+    if (editing !== null || target?.closest(OWN_PRESS)) return;
+    control.press(row, event);
+  }
+
+  /** Shift+press would otherwise select the text between the two rows. */
+  function onRowPointerDown(event: React.MouseEvent): void {
+    if (selectable && event.shiftKey) event.preventDefault();
+  }
+
+  /** Cmd or Ctrl+A anywhere in the table takes every loaded row. */
+  function onTableKeyDown(event: React.KeyboardEvent): void {
+    if (!selectable || editing !== null || ownsKeys(event.target as HTMLElement | null)) return;
+    if (selectionKeyIntent(event) !== 'all') return;
+    event.preventDefault();
+    control.toggleAll(true);
+  }
+
+  /** Space toggles the row the cursor is on; Shift and an arrow carry the range. */
+  function selectionKeys(event: React.KeyboardEvent, from: number, column: string | null): boolean {
+    const intent = selectable && editing === null ? selectionKeyIntent(event) : null;
+    const row = rows[from];
+    if (!row || intent === null || intent === 'all') return false;
+    // The checkbox answers Space with a press of its own, which reaches the row.
+    if (intent === 'toggle' && (event.target as HTMLElement).closest('[data-slot="checkbox"]')) return true;
+    event.preventDefault();
+    if (intent === 'toggle') {
+      control.toggle(row);
+      return true;
+    }
+    const to = nextEnabledIndex(rows.length, from, intent === 'extend-down' ? 1 : -1, control.disabledAt);
+    if (to !== from && to >= 0) {
+      control.extend(from, to);
+      body.focusRow(to, column);
+    }
+    return true;
+  }
+
+  const [selectingAll, setSelectingAll] = useState(false);
+  const offer = matchingOffer({
+    allLoaded: control.allSelected.all,
+    loaded: rows.length,
+    selected: control.selection.length,
+    hasMore: snapshot.hasMore,
+    total: snapshot.total,
+  });
+  const loadedCount = rows.filter((row) => !control.rowDisabled(row)).length;
+
+  async function selectAllMatching(): Promise<void> {
+    setSelectingAll(true);
+    try {
+      await onSelectAllMatching?.();
+    } finally {
+      setSelectingAll(false);
+    }
   }
 
   /* sorting -------------------------------------------------------------- */
@@ -649,8 +731,29 @@ export function EntityTable({
         </div>
       ) : null}
 
+      {selectable && onSelectAllMatching && offer.show ? (
+        <div
+          data-slot="entity-table-select-all"
+          className="bg-muted flex w-full min-w-0 flex-wrap items-center justify-center gap-2 rounded-lg px-3 py-1.5 text-sm"
+        >
+          <span className="text-muted-foreground">
+            All {loadedCount} {paging === 'pages' ? 'rows on this page' : 'loaded rows'} are selected.
+          </span>
+          <Button
+            variant="link"
+            size="sm"
+            className="h-auto p-0"
+            disabled={selectingAll}
+            onClick={() => void selectAllMatching()}
+          >
+            {selectingAll ? 'Selecting…' : offer.total === null ? 'Select all matching' : `Select all ${offer.total} matching`}
+          </Button>
+        </div>
+      ) : null}
+
       <div
         ref={body.scrollRef}
+        onKeyDown={onTableKeyDown}
         data-slot="entity-table-scroll"
         style={{ maxHeight }}
         className="border-border relative w-full overflow-auto rounded-lg border [&>[data-slot=table-container]]:overflow-visible"
@@ -909,6 +1012,8 @@ export function EntityTable({
                     <TableRow
                       key={key}
                       data-row-key={key}
+                      onClick={(event) => onRowPress(event, row)}
+                      onMouseDown={onRowPointerDown}
                       data-state={selected ? 'selected' : undefined}
                       data-disabled={disabled ? 'true' : undefined}
                       aria-disabled={disabled ? 'true' : undefined}
@@ -930,12 +1035,8 @@ export function EntityTable({
                                 style={pinStyle(leaf)}
                                 className={cn(cellClass, 'bg-inherit text-center')}
                               >
-                                <Checkbox
-                                  aria-label="Select row"
-                                  checked={selected}
-                                  disabled={disabled}
-                                  onCheckedChange={() => control.toggle(row)}
-                                />
+                                {/* A press and Space reach the row, which reads their modifiers; the box shows the state. */}
+                                <Checkbox aria-label="Select row" checked={selected} disabled={disabled} />
                               </TableCell>
                             );
                           }

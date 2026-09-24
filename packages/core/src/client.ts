@@ -262,6 +262,43 @@ export interface FollowingOptions {
   projectId?: number;
 }
 
+/**
+ * One write of a batch, in the shape `POST /entity/_batch` takes. `entity` is the
+ * schema name, never the URL slug, and the id key is `record_id` (recipes/002).
+ */
+export type BatchRequest =
+  | { request_type: 'create'; entity: string; data: Record<string, unknown> }
+  | { request_type: 'update'; entity: string; record_id: number; data: Record<string, unknown> }
+  | { request_type: 'delete'; entity: string; record_id: number };
+
+/**
+ * One row of a batch answer. A create or an update carries its record under `data`;
+ * a delete row is flat, and its `uuid` is generated per request (recipes/002).
+ */
+export type BatchResult =
+  | { request_type: 'create'; data: EntityRow }
+  | { request_type: 'update'; data: EntityRow }
+  | { request_type: 'delete'; type: string; id: number; uuid: string; did_delete: boolean };
+
+/** A row of the `_batch` answer before it is paired with its request. */
+export type RawBatchRow = { data: EntityRow } | { request_type: 'delete'; type: string; id: number; uuid: string; did_delete: boolean };
+
+/**
+ * Pair each row of a batch answer with the request at its position. Rows come back
+ * one per request in request order, so position is the key: two creates can share a
+ * `code` (recipes/002).
+ */
+export function batchResults(requests: readonly BatchRequest[], rows: readonly RawBatchRow[]): BatchResult[] {
+  return rows.map((row, i) => {
+    const kind = requests[i]?.request_type;
+    if (kind === 'delete' || !('data' in row)) {
+      const flat = row as Extract<RawBatchRow, { request_type: 'delete' }>;
+      return { request_type: 'delete', type: flat.type, id: flat.id, uuid: flat.uuid, did_delete: flat.did_delete };
+    }
+    return { request_type: kind === 'update' ? 'update' : 'create', data: row.data };
+  });
+}
+
 export interface SgClient {
   /** Enabled entity types on the site with their display names. */
   entityTypes(): Promise<EntityTypeInfo[]>;
@@ -361,6 +398,32 @@ export interface SgClient {
    * (get_entity_human_users_id_following).
    */
   following(userId: number, options?: FollowingOptions): Promise<EntityRef[]>;
+  /**
+   * Retire one row. It is not erased: it reads 404 and comes back with `revive`.
+   * A second delete is 404 (delete_entity_type_id). Deleting a row changes others:
+   * a Shot retires its Versions (probe 060), and a Task retires its dependencies and
+   * nulls `Version.sg_task` and `PublishedFile.task` without saying so
+   * (089_task_delete_side_effects).
+   */
+  delete(entityType: string, id: number): Promise<void>;
+  /**
+   * Bring a retired row back with the values it had, and answer whether it was
+   * retired: `false` means it was already live (post_entity_type_id). A revived Task
+   * gets its links back and its chain rescheduled (089_task_delete_side_effects).
+   */
+  revive(entityType: string, id: number): Promise<boolean>;
+  /**
+   * Apply creates, updates and deletes in one atomic call, one result per request in
+   * request order.
+   *
+   * One failing request rolls back every other one and rejects with its status and
+   * title. A request cannot point at a row another request of the same batch creates:
+   * send one batch per level. A create inside a batch skips the `project` check a
+   * single create makes and answers the id of a row no read reaches (report 001), so
+   * validate the payload first. A read timeout says nothing about what landed; keep a
+   * batch to about 200 requests and make it re-runnable (recipes/002).
+   */
+  batch(requests: BatchRequest[]): Promise<BatchResult[]>;
 }
 
 /** The node shape `/hierarchy/_expand` answers, before normalising. */
@@ -540,6 +603,23 @@ export class RestClient implements SgClient {
     // requirement (probe 004).
     const res = await this.request<{ data: EntityRow }>('POST', `/entity/${pluralPath(entityType)}`, body, undefined, 'application/json');
     return res.data;
+  }
+
+  async delete(entityType: string, id: number): Promise<void> {
+    // 204 with a zero-byte body (delete_entity_type_id).
+    await this.request<null>('DELETE', `/entity/${pluralPath(entityType)}/${id}`);
+  }
+
+  async revive(entityType: string, id: number): Promise<boolean> {
+    // `revive` is required and must be truthy; a body is discarded, so none is sent (post_entity_type_id).
+    const res = await this.request<{ meta?: { did_revive?: boolean } }>('POST', `/entity/${pluralPath(entityType)}/${id}`, undefined, { revive: 1 });
+    return res.meta?.did_revive === true;
+  }
+
+  async batch(requests: BatchRequest[]): Promise<BatchResult[]> {
+    // The list goes under `requests`, and the body is plain JSON: the vendor array type is 415 (recipes/002).
+    const res = await this.request<{ data: RawBatchRow[] }>('POST', '/entity/_batch', { requests }, undefined, 'application/json');
+    return batchResults(requests, res.data);
   }
 
   async upload(entityType: string, id: number, file: UploadFile): Promise<UploadResult> {

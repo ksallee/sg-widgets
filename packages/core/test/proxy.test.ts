@@ -100,6 +100,28 @@ describe('round trip', () => {
     expect(await client.upload('Note', 11030, file)).toEqual(await direct.upload('Note', 11030, file));
   });
 
+  it('carries a delete, a revive and a batch', async () => {
+    const direct = new MockClient();
+    const client = proxy(new MockClient());
+    await expect(client.delete('Shot', 862)).resolves.toBeUndefined();
+    await direct.delete('Shot', 862);
+    expect(await client.revive('Shot', 862)).toBe(await direct.revive('Shot', 862));
+    const requests = [
+      { request_type: 'update' as const, entity: 'Shot', record_id: 862, data: { description: 'batched' } },
+      { request_type: 'delete' as const, entity: 'Shot', record_id: 862 },
+    ];
+    const through = await client.batch(requests);
+    const straight = await direct.batch(requests);
+    expect(through.map((r) => r.request_type)).toEqual(['update', 'delete']);
+    expect(through[0]).toEqual(straight[0]);
+    expect(through[1]).toMatchObject({ type: 'Shot', id: 862, did_delete: true });
+  });
+
+  it('rejects a batch whose requests are not a list, before it reaches the client', async () => {
+    const client = proxy(new MockClient());
+    await expect(client.batch(null as never)).rejects.toThrow(/'requests' must be a list/);
+  });
+
   it('sends the headers the caller supplies, per request', async () => {
     const inner = new MockClient();
     const { fetch, seen } = wired(inner);

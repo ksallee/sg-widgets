@@ -15,6 +15,8 @@
  * ```
  */
 import type {
+  BatchRequest,
+  BatchResult,
   EntityRow,
   EntityTypeInfo,
   EventLogOptions,
@@ -116,6 +118,18 @@ export class ProxyClient implements SgClient {
 
   create(entityType: string, body: Record<string, unknown>): Promise<EntityRow> {
     return this.post('create', { entityType, body });
+  }
+
+  async delete(entityType: string, id: number): Promise<void> {
+    await this.post('delete', { entityType, id });
+  }
+
+  revive(entityType: string, id: number): Promise<boolean> {
+    return this.post('revive', { entityType, id });
+  }
+
+  batch(requests: BatchRequest[]): Promise<BatchResult[]> {
+    return this.post('batch', { requests });
   }
 
   /** The bytes cross the protocol base64-encoded; the handler runs the three calls. */

@@ -1146,3 +1146,112 @@ describe('upload', () => {
     await expect(c.upload('Shot', 999999, { filename: 'x.png', data: bytes })).rejects.toMatchObject({ status: 404 });
   });
 });
+
+describe('delete and revive', () => {
+  it('retires a row, refuses a second delete, and revives it with its values', async () => {
+    const c = client();
+    const before = await c.search('Shot', { filters: only('id', 'is', 862), fields: ['code', 'description'] });
+    await expect(c.delete('Shot', 862)).resolves.toBeUndefined();
+    expect(await count(c, 'Shot', only('id', 'is', 862))).toBe(0);
+    await expect(c.update('Shot', 862, { description: 'x' })).rejects.toMatchObject({ status: 404 });
+    // A second delete is 404: the effect is idempotent, the status is not (delete_entity_type_id).
+    await expect(c.delete('Shot', 862)).rejects.toMatchObject({
+      status: 404,
+      message: 'Entity of type [Shot] with id=862 does not exist.',
+    });
+    await expect(c.revive('Shot', 862)).resolves.toBe(true);
+    // Field values survive the retire and come back with the revive (post_entity_type_id).
+    expect(await c.search('Shot', { filters: only('id', 'is', 862), fields: ['code', 'description'] })).toEqual(before);
+  });
+
+  it('answers false for a live row and 404 for an id that never existed', async () => {
+    const c = client();
+    await expect(c.revive('Shot', 862)).resolves.toBe(false);
+    await expect(c.revive('Version', 999999999)).rejects.toMatchObject({
+      status: 404,
+      message: 'Entity of type [Version] with id=999999999 does not exist.',
+    });
+  });
+
+  it('never hands a retired id to a create', async () => {
+    const c = client();
+    const made = await c.create('Shot', { project: { type: 'Project', id: 70 } });
+    await c.delete('Shot', made.id);
+    const next = await c.create('Shot', { project: { type: 'Project', id: 70 } });
+    expect(next.id).toBeGreaterThan(made.id);
+  });
+});
+
+describe('batch', () => {
+  const project = { type: 'Project', id: 70 };
+
+  it('answers one row per request in request order', async () => {
+    const c = client();
+    const results = await c.batch([
+      { request_type: 'create', entity: 'Version', data: { project, code: 'v001', entity: { type: 'Shot', id: 862 } } },
+      { request_type: 'update', entity: 'Shot', record_id: 862, data: { description: 'batched' } },
+      { request_type: 'create', entity: 'Version', data: { project, code: 'v001', entity: { type: 'Shot', id: 862 } } },
+    ]);
+    expect(results.map((r) => r.request_type)).toEqual(['create', 'update', 'create']);
+    const [first, updated, second] = results;
+    if (first?.request_type !== 'create' || updated?.request_type !== 'update' || second?.request_type !== 'create') throw new Error('shape');
+    // Two creates of one code are two rows, told apart by position and id (recipes/002).
+    expect(first.data.attributes['code']).toBe('v001');
+    expect(second.data.id).not.toBe(first.data.id);
+    expect(updated.data.attributes['description']).toBe('batched');
+
+    const deleted = await c.batch([{ request_type: 'delete', entity: 'Version', record_id: first.data.id }]);
+    expect(deleted).toEqual([
+      { request_type: 'delete', type: 'Version', id: first.data.id, uuid: expect.any(String), did_delete: true },
+    ]);
+    expect(await count(c, 'Version', only('id', 'is', first.data.id))).toBe(0);
+  });
+
+  it('answers an empty list for no requests', async () => {
+    expect(await client().batch([])).toEqual([]);
+  });
+
+  it('rolls every request back when one fails', async () => {
+    const c = client();
+    const before = await count(c, 'Version', null);
+    const rejected = c.batch([
+      { request_type: 'create', entity: 'Version', data: { project, code: 'v001' } },
+      { request_type: 'update', entity: 'Shot', record_id: 862, data: { description: 'after' } },
+      { request_type: 'delete', entity: 'Version', record_id: 999999999 },
+    ]);
+    await expect(rejected).rejects.toMatchObject({ status: 404, message: 'Entity of type [Version] with id=999999999 does not exist.' });
+    expect(await count(c, 'Version', null)).toBe(before);
+    expect(await attrs(c, 'Shot', only('id', 'is', 862), 'description')).not.toEqual(['after']);
+  });
+
+  it('refuses an unknown field in a create in the batch spelling', async () => {
+    const rejected = client().batch([{ request_type: 'create', entity: 'Version', data: { project, sg_not_a_field: 1 } }]);
+    await expect(rejected).rejects.toMatchObject({
+      status: 400,
+      message:
+        'Invalid field value, update failed [2 - Invalid field name: field [Version.sg_not_a_field] does not exist or user does not have access permission.]',
+    });
+  });
+
+  it('lets a create with no project through, to a row only a delete reaches', async () => {
+    // report 001: the batch skips the check a single create makes, and the row is unreadable.
+    const c = client();
+    const [made] = await c.batch([{ request_type: 'create', entity: 'Version', data: { code: 'v001' } }]);
+    if (made?.request_type !== 'create') throw new Error('shape');
+    expect(await count(c, 'Version', only('id', 'is', made.data.id))).toBe(0);
+    await expect(c.update('Version', made.data.id, { code: 'v002' })).rejects.toMatchObject({ status: 404 });
+    await expect(c.delete('Version', made.data.id)).resolves.toBeUndefined();
+  });
+
+  it('refuses a delete of a deleted row and takes the batch down with it', async () => {
+    const c = client();
+    await c.delete('Shot', 862);
+    const before = await count(c, 'Version', null);
+    const rejected = c.batch([
+      { request_type: 'create', entity: 'Version', data: { project, code: 'v001' } },
+      { request_type: 'delete', entity: 'Shot', record_id: 862 },
+    ]);
+    await expect(rejected).rejects.toMatchObject({ status: 404, message: 'Entity of type [Shot] with id=862 does not exist.' });
+    expect(await count(c, 'Version', null)).toBe(before);
+  });
+});

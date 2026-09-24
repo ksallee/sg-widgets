@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createQueryCache } from '../src/query.js';
 import { MockClient } from '../src/mock.js';
 import { SgApiError } from '../src/client.js';
-import type { EntityRow, EntityTypeInfo, EventLogOptions, EventLogResult, FollowingOptions, HierarchyNode, HierarchyPath, SummarizeOptions, SummarizeResult, SearchOptions, SearchResult, SgClient, TextSearchRow, ThreadRow, UploadFile, UploadResult } from '../src/client.js';
+import type { BatchRequest, BatchResult, EntityRow, EntityTypeInfo, EventLogOptions, EventLogResult, FollowingOptions, HierarchyNode, HierarchyPath, SummarizeOptions, SummarizeResult, SearchOptions, SearchResult, SgClient, TextSearchRow, ThreadRow, UploadFile, UploadResult } from '../src/client.js';
 import type { EntityRef, TextSearchFilter } from '../src/filter.js';
 import type { FieldSchema } from '../src/schema.js';
 import type { StatusRecord } from '../src/status.js';
@@ -42,6 +42,18 @@ function counting(inner: SgClient): { client: SgClient; calls: string[] } {
     upload(entityType: string, id: number, file: UploadFile): Promise<UploadResult> {
       calls.push(`upload ${entityType} ${id}`);
       return inner.upload(entityType, id, file);
+    },
+    delete(entityType: string, id: number): Promise<void> {
+      calls.push(`delete ${entityType} ${id}`);
+      return inner.delete(entityType, id);
+    },
+    revive(entityType: string, id: number): Promise<boolean> {
+      calls.push(`revive ${entityType} ${id}`);
+      return inner.revive(entityType, id);
+    },
+    batch(requests: BatchRequest[]): Promise<BatchResult[]> {
+      calls.push(`batch ${requests.map((r) => `${r.request_type} ${r.entity}`).join(', ')}`);
+      return inner.batch(requests);
     },
     update(entityType: string, id: number, patch: Record<string, unknown>): Promise<EntityRow> {
       calls.push(`update ${entityType} ${id}`);
@@ -160,6 +172,40 @@ describe('the writes', () => {
     const edited = await cache.threadContents(11030);
     expect(edited[0]?.content).toBe('Edited.');
     expect(calls.filter((c) => c.startsWith('threadContents'))).toHaveLength(4);
+  });
+});
+
+describe('a delete, a revive and a batch', () => {
+  it('drop every cached row read, since a delete retires and unlinks rows of other types', async () => {
+    const { client, calls } = counting(new MockClient());
+    const cache = createQueryCache(client, { ttlMs: Number.POSITIVE_INFINITY });
+    const reads = async (): Promise<void> => {
+      await cache.search('Version', { fields: ['code'] });
+      await cache.summarize('Task');
+      await cache.threadContents(11030);
+    };
+    await reads();
+    // Deleting a Task nulls `Version.sg_task` and retires its dependencies (089_task_delete_side_effects).
+    await cache.delete('Shot', 862);
+    await reads();
+    await cache.revive('Shot', 862);
+    await reads();
+    await cache.batch([{ request_type: 'delete', entity: 'Shot', record_id: 862 }]);
+    await reads();
+    expect(calls.filter((c) => c.startsWith('search Version'))).toHaveLength(4);
+    expect(calls.filter((c) => c.startsWith('summarize Task'))).toHaveLength(4);
+    expect(calls.filter((c) => c.startsWith('threadContents'))).toHaveLength(4);
+  });
+
+  it('keeps reads of other types after a batch of creates and updates', async () => {
+    const { client, calls } = counting(new MockClient());
+    const cache = createQueryCache(client);
+    await cache.search('Asset', { fields: ['code'] });
+    await cache.search('Shot', { fields: ['code'] });
+    await cache.batch([{ request_type: 'update', entity: 'Shot', record_id: 862, data: { description: 'x' } }]);
+    await cache.search('Asset', { fields: ['code'] });
+    await cache.search('Shot', { fields: ['code'] });
+    expect(calls.filter((c) => c.startsWith('search'))).toEqual(['search Asset', 'search Shot', 'search Shot']);
   });
 });
 

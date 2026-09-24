@@ -399,3 +399,90 @@ describe('an upload on the wire', () => {
     expect(calls[2]?.url).toBe('https://studio.example.com/api/v1/entity/shots/862/image/_upload');
   });
 });
+
+interface Call {
+  method: string;
+  url: string;
+  contentType: string | undefined;
+  body: string | undefined;
+}
+
+/** A `RestClient` over a fetch that records the method and answers a canned status and body. */
+function answering(status: number, answer: unknown): { client: RestClient; calls: Call[] } {
+  const calls: Call[] = [];
+  const fetchFn = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const headers = (init?.headers ?? {}) as Record<string, string>;
+    calls.push({ method: String(init?.method), url: String(input), contentType: headers['Content-Type'], body: init?.body as string | undefined });
+    const text = answer === undefined ? null : JSON.stringify(answer);
+    return new Response(text, { status, headers: { 'content-type': 'application/json' } });
+  }) as typeof fetch;
+  return { client: new RestClient({ siteUrl: 'https://studio.example.com', token: () => 't', fetch: fetchFn }), calls };
+}
+
+describe('a delete on the wire', () => {
+  it('sends DELETE with no body and reads the empty 204', async () => {
+    const { client, calls } = answering(204, undefined);
+    await expect(client.delete('Shot', 7653)).resolves.toBeUndefined();
+    expect(calls).toEqual([{ method: 'DELETE', url: 'https://studio.example.com/api/v1/entity/shots/7653', contentType: undefined, body: undefined }]);
+  });
+
+  it('rejects a row that is not there with the 404 the site answers', async () => {
+    const title = 'Entity of type [Shot] with id=7653 does not exist.';
+    const { client } = answering(404, { errors: [{ status: 404, code: 104, title }] });
+    await expect(client.delete('Shot', 7653)).rejects.toMatchObject({ name: 'SgApiError', status: 404, message: title });
+  });
+});
+
+describe('a revive on the wire', () => {
+  it('posts revive=1 with no body and reads did_revive out of meta', async () => {
+    const { client, calls } = answering(200, {
+      data: { type: 'Shot', id: 7683 },
+      links: { self: '/api/v1/entity/shots/7683' },
+      meta: { did_revive: true },
+    });
+    await expect(client.revive('Shot', 7683)).resolves.toBe(true);
+    expect(calls).toEqual([{ method: 'POST', url: 'https://studio.example.com/api/v1/entity/shots/7683?revive=1', contentType: undefined, body: undefined }]);
+  });
+
+  it('answers false for a row that was already live', async () => {
+    const { client } = answering(200, { data: { type: 'Shot', id: 7683 }, links: {}, meta: { did_revive: false } });
+    await expect(client.revive('Shot', 7683)).resolves.toBe(false);
+  });
+});
+
+describe('a batch on the wire', () => {
+  it('posts the requests as plain JSON and pairs each row with its request by position', async () => {
+    const version = { type: 'Version', id: 29926, attributes: { code: 'v001' }, relationships: {}, links: { self: '/api/v1/entity/versions/29926' } };
+    const shot = { type: 'Shot', id: 7557, attributes: { description: 'batch 2' }, relationships: {} };
+    const deleted = { request_type: 'delete', type: 'Version', id: 29941, uuid: '906c4522-a701-11f1-b496-0a58a9feac02', did_delete: true };
+    const { client, calls } = answering(200, {
+      data: [{ data: version }, { data: shot, links: { self: '/api/v1/entity/shots/7557' }, status: 'success' }, deleted],
+    });
+    const requests = [
+      { request_type: 'create' as const, entity: 'Version', data: { project: { type: 'Project', id: 1234 }, code: 'v001' } },
+      { request_type: 'update' as const, entity: 'Shot', record_id: 7557, data: { description: 'batch 2' } },
+      { request_type: 'delete' as const, entity: 'Version', record_id: 29941 },
+    ];
+    const results = await client.batch(requests);
+    expect(calls[0]?.method).toBe('POST');
+    expect(calls[0]?.url).toBe('https://studio.example.com/api/v1/entity/_batch');
+    // Plain JSON; the vendor array type is a 415 here (recipes/002).
+    expect(calls[0]?.contentType).toBe('application/json');
+    // The list goes under `requests`, not `data` (post_entity_batch).
+    expect(JSON.parse(calls[0]?.body ?? 'null')).toEqual({ requests });
+    // A create or update row nests the record under `data`; a delete row is flat (recipes/002).
+    expect(results).toEqual([
+      { request_type: 'create', data: version },
+      { request_type: 'update', data: shot },
+      deleted,
+    ]);
+  });
+
+  it('rejects the whole batch with the status and title of the request that failed', async () => {
+    const title = 'Entity of type [Version] with id=999999999 does not exist.';
+    const body = { errors: [{ status: 404, code: 104, title }] };
+    const { client } = answering(404, body);
+    const rejected = client.batch([{ request_type: 'delete', entity: 'Version', record_id: 999999999 }]);
+    await expect(rejected).rejects.toMatchObject({ name: 'SgApiError', status: 404, message: title, body });
+  });
+});

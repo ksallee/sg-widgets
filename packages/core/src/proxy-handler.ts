@@ -28,12 +28,12 @@
  * };
  * ```
  */
-import type { EventLogOptions, FollowingOptions, SearchOptions, SgClient, SummarizeOptions, UploadFile } from './client.js';
+import type { BatchRequest, EventLogOptions, FollowingOptions, SearchOptions, SgClient, SummarizeOptions, UploadFile } from './client.js';
 import { SgApiError } from './client.js';
 import type { EntityRef, TextSearchFilter } from './filter.js';
 
 /** The methods the protocol carries, one POST each. */
-export const PROXY_METHODS = ['entityTypes', 'fields', 'fieldWithProject', 'search', 'textSearch', 'statuses', 'create', 'update', 'upload', 'hierarchyExpand', 'hierarchySearch', 'summarize', 'threadContents', 'eventLog', 'following'] as const;
+export const PROXY_METHODS = ['entityTypes', 'fields', 'fieldWithProject', 'search', 'textSearch', 'statuses', 'create', 'update', 'upload', 'hierarchyExpand', 'hierarchySearch', 'summarize', 'threadContents', 'eventLog', 'following', 'delete', 'revive', 'batch'] as const;
 
 export type ProxyMethod = (typeof PROXY_METHODS)[number];
 
@@ -76,6 +76,7 @@ interface Params {
   noteId?: unknown;
   entityFields?: unknown;
   userId?: unknown;
+  requests?: unknown;
 }
 
 class BadRequest extends Error {}
@@ -122,6 +123,13 @@ function entityRef(value: unknown, name: string): EntityRef {
   const ref = value as EntityRef | null;
   if (ref === null || typeof ref !== 'object') throw new BadRequest(`'${name}' must be a {type, id} object`);
   return { type: str(ref.type, `${name}.type`), id: num(ref.id, `${name}.id`) };
+}
+
+/** The list is passed on as sent; the API names what is wrong with a request (recipes/002). */
+function requestList(value: unknown, name: string): BatchRequest[] {
+  if (!Array.isArray(value)) throw new BadRequest(`'${name}' must be a list`);
+  for (const [i, request] of value.entries()) obj(request, `${name}[${i}]`);
+  return value as BatchRequest[];
 }
 
 function str(value: unknown, name: string): string {
@@ -203,5 +211,11 @@ function call(client: SgClient, method: ProxyMethod, p: Params): Promise<unknown
       return client.eventLog((p.options ?? {}) as EventLogOptions);
     case 'following':
       return client.following(num(p.userId, 'userId'), (p.options ?? {}) as FollowingOptions);
+    case 'delete':
+      return client.delete(str(p.entityType, 'entityType'), num(p.id, 'id')).then(() => null);
+    case 'revive':
+      return client.revive(str(p.entityType, 'entityType'), num(p.id, 'id'));
+    case 'batch':
+      return client.batch(requestList(p.requests, 'requests'));
   }
 }

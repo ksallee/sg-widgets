@@ -12,9 +12,12 @@
  * (probe 053). A read is invalidated by `invalidate()` or by a write through
  * this cache: `create`, `update` and `upload` are never cached, and each drops
  * every cached row read of the type it touched, and every cached thread, before
- * it returns.
+ * it returns. A delete or a revive, alone or in a batch, drops every row read of
+ * every type, because it changes rows of types it does not name.
  */
 import type {
+  BatchRequest,
+  BatchResult,
   EntityRow,
   EntityTypeInfo,
   EventLogOptions,
@@ -131,6 +134,15 @@ export function createQueryCache(client: SgClient, options: QueryCacheOptions = 
     drop('threadContents');
   }
 
+  /**
+   * A delete retires and unlinks rows of other types, a Shot's Versions (probe 060)
+   * and a Task's dependencies, `Version.sg_task` and `PublishedFile.task`, and a
+   * revive puts them back (089_task_delete_side_effects). Every row read goes.
+   */
+  function invalidateAllRows(): void {
+    for (const prefix of ['search', 'textSearch', 'summarize', 'threadContents', 'hierarchyExpand', 'hierarchySearch']) drop(prefix);
+  }
+
   return {
     entityTypes(): Promise<EntityTypeInfo[]> {
       return run('entityTypes', [], () => client.entityTypes());
@@ -199,6 +211,22 @@ export function createQueryCache(client: SgClient, options: QueryCacheOptions = 
       invalidateSearches(entityType);
       invalidateThreads();
       return row;
+    },
+    async delete(entityType: string, id: number): Promise<void> {
+      await client.delete(entityType, id);
+      invalidateAllRows();
+    },
+    async revive(entityType: string, id: number): Promise<boolean> {
+      const revived = await client.revive(entityType, id);
+      invalidateAllRows();
+      return revived;
+    },
+    async batch(requests: BatchRequest[]): Promise<BatchResult[]> {
+      const results = await client.batch(requests);
+      if (requests.some((r) => r.request_type === 'delete')) invalidateAllRows();
+      else for (const type of new Set(requests.map((r) => r.entity))) invalidateSearches(type);
+      invalidateThreads();
+      return results;
     },
     invalidate(prefix?: string): void {
       if (prefix === undefined) {

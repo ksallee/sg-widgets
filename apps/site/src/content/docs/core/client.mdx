@@ -16,7 +16,8 @@ const client = createQueryCache(new MockClient());
 ```
 
 The cache remembers reads for `ttlMs` and drops what a write makes stale: a row read of the type the
-write touched, and every note thread.
+write touched, and every note thread. A delete or a revive drops every row read, since it changes
+rows of types it does not name.
 
 ## Reads
 
@@ -100,6 +101,38 @@ const reply = await client.create('Reply', { entity: { type: 'Note', id: note.id
 The answer echoes the server's defaults, so read them off it: a fresh Note is `unread` and
 `published` (`entity_types/Note`). A create takes `created_at` although the schema flags it
 read-only; a later update refuses it (`070_authored_timestamps`).
+
+### Delete and revive
+
+`delete` retires a row: reads stop finding it and a second delete is a 404. `revive` brings it back
+with the values it had and answers `false` when the row was already live (`048_one_record_beyond_crud`).
+A delete changes other rows and says nothing: deleting a Task nulls the Task on its Versions and
+PublishedFiles and cuts its dependency chain, and a revive restores all of it
+(`089_task_delete_side_effects`).
+
+```ts
+await client.delete('Task', 5120);
+const revived = await client.revive('Task', 5120);
+```
+
+### A batch
+
+`batch` applies creates, updates and deletes in one call. It is atomic: one failing request rejects
+the call and nothing lands. The answer has one row per request, in request order, so pair them by
+position. A request cannot point at a row the same batch creates; send one batch per level
+(`recipes/002`).
+
+```ts
+const results = await client.batch([
+  { request_type: 'create', entity: 'Version', data: { project: { type: 'Project', id: 70 }, code: 'v001' } },
+  { request_type: 'update', entity: 'Shot', record_id: 862, data: { description: 'Rebuilt' } },
+  { request_type: 'delete', entity: 'Version', record_id: 7011 },
+]);
+```
+
+A create inside a batch skips the `project` check a single create makes, and answers the id of a row
+no read reaches (`reports/001`). Check the payload before sending it. A timeout says nothing about
+what landed, so keep a batch to about 200 requests.
 
 ### A file
 

@@ -592,6 +592,18 @@ describe('schema', () => {
     expect(usableStatuses(task!).map((s) => s.code)).not.toContain('blk');
   });
 
+  it('answers hideable on every field, true on the fields a site may hide (056_stock_vs_custom_field)', async () => {
+    const c = client();
+    const version = await c.fields('Version');
+    expect(version['sg_department']?.hideable).toBe(true);
+    // Stock whatever the prefix says.
+    expect(version['sg_status_list']?.hideable).toBe(false);
+    expect(version['sg_uploaded_movie']?.hideable).toBe(false);
+    // Stock and still hideable.
+    expect((await c.fields('Project'))['code']?.hideable).toBe(true);
+    expect(Object.values(version).every((f) => typeof f.hideable === 'boolean')).toBe(true);
+  });
+
   it("uses sg_status, a list, for Project's status field", async () => {
     const c = client();
     const project = await c.fields('Project');

@@ -21,6 +21,8 @@ export interface RawFieldSchema {
   editable: RawProperty<boolean>;
   mandatory: RawProperty<boolean>;
   unique: RawProperty<boolean>;
+  /** `editable` here says whether the site may hide the field (056_stock_vs_custom_field). */
+  visible?: RawProperty<boolean>;
   properties: Record<string, RawProperty<unknown>>;
 }
 
@@ -51,6 +53,12 @@ export interface FieldSchema {
   operators?: Operator[];
   defaultValue?: unknown;
   description?: string;
+  /**
+   * `visible.editable`: whether the site may hide the field. False is stock and safe to
+   * depend on; true is every custom field and a few stock ones, so a strong hint and not
+   * a proof. The `sg_` prefix decides nothing (056_stock_vs_custom_field).
+   */
+  hideable?: boolean;
 }
 
 /**
@@ -137,6 +145,7 @@ export function normalizeField(name: string, raw: RawFieldSchema): FieldSchema {
   if (defaultValue !== undefined) field.defaultValue = defaultValue;
   const description = prop<string>(props, 'description');
   if (description) field.description = description;
+  if (raw.visible) field.hideable = raw.visible.editable;
   return { ...field, ...fieldSchemaOverride(field.entityType, name) };
 }
 

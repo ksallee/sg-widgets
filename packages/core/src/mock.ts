@@ -456,6 +456,18 @@ const DISPLAY_NAMES: Record<string, string> = {
  * `project_id` changes (009_status_lists), and it is not a subset of
  * `valid_values`: the probed site hid `blk` and `rdy`, neither of them valid.
  */
+/**
+ * The fields this site may hide, `visible.editable` true: its own additions and a few
+ * stock fields, `Project.code` among them. Every other field reads false, `sg_` prefix
+ * or not (056_stock_vs_custom_field).
+ */
+const HIDEABLE: ReadonlySet<string> = new Set([
+  'Project.code',
+  'Shot.sg_complexity', 'Shot.sg_lens', 'Shot.sg_shot_notes_url',
+  'Asset.sg_build_days', 'Asset.sg_complexity',
+  'Version.sg_department', 'Version.sg_bar_color',
+]);
+
 const HIDDEN_VALUES: Record<number, Record<string, string[]>> = {
   70: {
     'Version.sg_status_list': ['part', 'pass', 'pndad', 'pndl', 'pndvs', 'pndng'],
@@ -1273,6 +1285,7 @@ export class MockClient implements SgClient {
         editable: s.editable ?? true,
         mandatory: s.mandatory ?? false,
         unique: s.unique ?? false,
+        hideable: HIDEABLE.has(`${entityType}.${name}`),
       };
       if (s.validTypes) field.validTypes = s.validTypes;
       if (s.validValues) field.validValues = s.validValues;

@@ -106,6 +106,8 @@ describe('round trip', () => {
     await expect(client.delete('Shot', 862)).resolves.toBeUndefined();
     await direct.delete('Shot', 862);
     expect(await client.revive('Shot', 862)).toBe(await direct.revive('Shot', 862));
+    expect(await client.read('Shot', 862, { fields: ['code'] })).toEqual(await direct.read('Shot', 862, { fields: ['code'] }));
+    await expect(client.read('Task', 999999999)).rejects.toMatchObject({ status: 404, body: await direct.read('Task', 999999999).catch((e: SgApiError) => e.body) });
     const requests = [
       { request_type: 'update' as const, entity: 'Shot', record_id: 862, data: { description: 'batched' } },
       { request_type: 'delete' as const, entity: 'Shot', record_id: 862 },

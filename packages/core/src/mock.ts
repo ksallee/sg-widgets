@@ -20,6 +20,7 @@ import type {
   FollowingOptions,
   HierarchyNode,
   HierarchyPath,
+  ReadOptions,
   SearchOptions,
   SearchResult,
   SgClient,
@@ -1314,6 +1315,16 @@ export class MockClient implements SgClient {
     };
   }
 
+  async read(entityType: string, id: number, options: ReadOptions = {}): Promise<EntityRow> {
+    await this.gate();
+    const spec = this.schemaOf(entityType);
+    const key = `${entityType}:${id}`;
+    // Live and retired are read apart; a batch-created orphan is neither (get_entity_type_id, recipes/002).
+    const row = options.retired ? this.retired.get(key) : this.fixtures.index.get(key);
+    if (!row) throw notFound(`${entityType}: ${id} not found`);
+    return this.project(row, spec, options.fields);
+  }
+
   async textSearch(
     text: string,
     entityTypes: Record<string, TextSearchFilter>,
@@ -1365,7 +1376,7 @@ export class MockClient implements SgClient {
     const spec = this.schemaOf(entityType);
     const row = this.fixtures.index.get(`${entityType}:${id}`);
     // The 404 names the type and the id (put_entity_type_id).
-    if (!row) throw new SgApiError(404, null, `Entity of type [${entityType}] with id=${id} does not exist.`);
+    if (!row) throw notFound(`Entity of type [${entityType}] with id=${id} does not exist.`);
     for (const [name, value] of Object.entries(patch)) {
       const field = spec[name];
       // `API create() Reply.project doesn't exist.` is the create spelling of this 400
@@ -1822,7 +1833,7 @@ export class MockClient implements SgClient {
     this.schemaOf(entityType);
     const key = `${entityType}:${id}`;
     const row = this.fixtures.index.get(key) ?? this.unreadable.get(key);
-    if (!row) throw new SgApiError(404, null, `Entity of type [${entityType}] with id=${id} does not exist.`);
+    if (!row) throw notFound(`Entity of type [${entityType}] with id=${id} does not exist.`);
     this.unreadable.delete(key);
     this.fixtures.index.delete(key);
     const rows = this.fixtures.rows.get(entityType) ?? [];
@@ -1838,7 +1849,7 @@ export class MockClient implements SgClient {
     const key = `${entityType}:${id}`;
     if (this.fixtures.index.has(key)) return false;
     const row = this.retired.get(key);
-    if (!row) throw new SgApiError(404, null, `Entity of type [${entityType}] with id=${id} does not exist.`);
+    if (!row) throw notFound(`Entity of type [${entityType}] with id=${id} does not exist.`);
     this.retired.delete(key);
     const rows = this.fixtures.rows.get(entityType) ?? [];
     const at = rows.findIndex((r) => r.id > id);
@@ -1922,7 +1933,7 @@ export class MockClient implements SgClient {
     await this.gate();
     const spec = this.schemaOf(entityType);
     const target = this.fixtures.index.get(`${entityType}:${id}`);
-    if (!target) throw new SgApiError(404, null, `Entity of type [${entityType}] with id=${id} does not exist.`);
+    if (!target) throw notFound(`Entity of type [${entityType}] with id=${id} does not exist.`);
     // `filename` is a required query parameter on the ticket call.
     if (!file.filename) throw new SgApiError(400, { filename: ['filename is missing'] }, 'Request Parameters invalid.');
     // The 404 for a field the type does not have is worded as a missing field.
@@ -2346,6 +2357,15 @@ function entityTypeNamed(name: string): string | null {
   if (SPECS[name]) return name;
   const wanted = name.toLowerCase();
   return Object.keys(SPECS).find((type) => type.toLowerCase() === wanted || pluralPath(type) === wanted) ?? null;
+}
+
+/**
+ * The 404 a row that is not there answers: code 104, title `Not Found`, the message in
+ * `detail` (put_entity_type_id, get_entity_notes_id_thread_contents). The message is the
+ * detail, as on every other mock error.
+ */
+function notFound(detail: string): SgApiError {
+  return new SgApiError(404, { errors: [{ status: 404, code: 104, title: 'Not Found', detail }] }, detail);
 }
 
 function isNullish(v: unknown): boolean {

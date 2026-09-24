@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createQueryCache } from '../src/query.js';
 import { MockClient } from '../src/mock.js';
 import { SgApiError } from '../src/client.js';
-import type { BatchRequest, BatchResult, EntityRow, EntityTypeInfo, EventLogOptions, EventLogResult, FollowingOptions, HierarchyNode, HierarchyPath, SummarizeOptions, SummarizeResult, SearchOptions, SearchResult, SgClient, TextSearchRow, ThreadRow, UploadFile, UploadResult } from '../src/client.js';
+import type { BatchRequest, BatchResult, EntityRow, EntityTypeInfo, ReadOptions, EventLogOptions, EventLogResult, FollowingOptions, HierarchyNode, HierarchyPath, SummarizeOptions, SummarizeResult, SearchOptions, SearchResult, SgClient, TextSearchRow, ThreadRow, UploadFile, UploadResult } from '../src/client.js';
 import type { EntityRef, TextSearchFilter } from '../src/filter.js';
 import type { FieldSchema } from '../src/schema.js';
 import type { StatusRecord } from '../src/status.js';
@@ -26,6 +26,10 @@ function counting(inner: SgClient): { client: SgClient; calls: string[] } {
     search(entityType: string, options: SearchOptions): Promise<SearchResult> {
       calls.push(`search ${entityType}`);
       return inner.search(entityType, options);
+    },
+    read(entityType: string, id: number, options?: ReadOptions): Promise<EntityRow> {
+      calls.push(`read ${entityType} ${id}`);
+      return inner.read(entityType, id, options);
     },
     textSearch(text: string, entityTypes: Record<string, TextSearchFilter>, page?: { size?: number; number?: number }): Promise<TextSearchRow[]> {
       calls.push(`textSearch ${text}`);
@@ -206,6 +210,24 @@ describe('a delete, a revive and a batch', () => {
     await cache.search('Asset', { fields: ['code'] });
     await cache.search('Shot', { fields: ['code'] });
     expect(calls.filter((c) => c.startsWith('search'))).toEqual(['search Asset', 'search Shot', 'search Shot']);
+  });
+});
+
+describe('a read of one row', () => {
+  it('is cached, dropped by a write to its type and by a delete, kept by a write to another type', async () => {
+    const { client, calls } = counting(new MockClient());
+    const cache = createQueryCache(client, { ttlMs: Number.POSITIVE_INFINITY });
+    const read = (): Promise<EntityRow> => cache.read('Shot', 862, { fields: ['description'] });
+    await read();
+    await read();
+    await cache.update('Version', 17055, { description: 'elsewhere' });
+    await read();
+    expect(calls.filter((c) => c === 'read Shot 862')).toHaveLength(1);
+    await cache.update('Shot', 862, { description: 'changed' });
+    expect((await read()).attributes['description']).toBe('changed');
+    await cache.delete('Task', 5700);
+    await read();
+    expect(calls.filter((c) => c === 'read Shot 862')).toHaveLength(3);
   });
 });
 

@@ -32,6 +32,7 @@
 		moveFieldPath,
 		NO_MATCH_LABEL,
 		NOTHING_CHOSEN_LABEL,
+		repeatedLabels,
 		searchFieldOptions,
 		stateLine,
 		toggleFieldPath
@@ -281,6 +282,9 @@
 	function labelOf(path: string): string | undefined {
 		return labels[`${entityType}::${path}`];
 	}
+
+	/** Labels two chosen columns share. Such a column shows its path. */
+	const repeated = $derived(repeatedLabels(value.flatMap((path) => labelOf(path) ?? [])));
 
 	function matchesType(target: string): boolean {
 		return target.toLowerCase().includes(search.trim().toLowerCase());
@@ -599,7 +603,15 @@
 					{#if labelOf(path) === undefined}
 						<Skeleton class="h-4 w-32" />
 					{:else}
-						<span class="min-w-0 flex-1 truncate" title={path}>{labelOf(path)}</span>
+						<span class="flex min-w-0 flex-1 items-center gap-1.5" title={path}>
+							<span class="min-w-0 truncate">{labelOf(path)}</span>
+							{#if repeated.has(labelOf(path) ?? '') && labelOf(path) !== path}
+								<span
+									data-slot="column-picker-path"
+									class="text-muted-foreground min-w-0 truncate font-mono text-xs">{path}</span
+								>
+							{/if}
+						</span>
 					{/if}
 					{#if !readonly}
 						<Button

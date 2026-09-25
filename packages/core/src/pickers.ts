@@ -262,6 +262,17 @@ export function searchFieldOptions(options: readonly FieldOption[], query: strin
   return options.filter((option) => matchesEveryWord(haystack(option.displayName, option.name, option.dataType), query));
 }
 
+/**
+ * The labels more than one entry carries, as given, so a list can show what tells them
+ * apart. Case and outer spaces do not count as a difference.
+ */
+export function repeatedLabels(labels: readonly string[]): Set<string> {
+  const counts = new Map<string, number>();
+  const key = (label: string): string => label.trim().toLowerCase();
+  for (const label of labels) counts.set(key(label), (counts.get(key(label)) ?? 0) + 1);
+  return new Set(labels.filter((label) => (counts.get(key(label)) ?? 0) > 1));
+}
+
 /* -------------------------------------------------------------------------- */
 /* chosen columns                                                             */
 /* -------------------------------------------------------------------------- */

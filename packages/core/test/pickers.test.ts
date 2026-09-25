@@ -11,6 +11,7 @@ import {
   friendlyFieldPath,
   moveFieldPath,
   pathTypes,
+  repeatedLabels,
   resolveFieldPathOptions,
   searchFieldOptions,
   searchFieldPathOptions,
@@ -327,5 +328,24 @@ describe('searchFieldPathOptions', () => {
     expect(pathsOf(searchFieldPathOptions(options, 'sg_nope'))).toEqual(['sg_nope']);
     expect(searchFieldPathOptions(options, '   ')).toHaveLength(3);
     expect(searchFieldPathOptions(options, 'zzznope')).toHaveLength(0);
+  });
+});
+
+describe('repeatedLabels', () => {
+  it('names every label that more than one entry carries', () => {
+    const repeated = repeatedLabels(['Cut In', 'Code', 'Cut In', 'Status']);
+    expect([...repeated]).toEqual(['Cut In']);
+  });
+
+  it('treats case and outer spaces as the same label', () => {
+    const repeated = repeatedLabels(['Cut In', 'cut in ', 'Cut Out']);
+    expect(repeated.has('Cut In')).toBe(true);
+    expect(repeated.has('cut in ')).toBe(true);
+    expect(repeated.has('Cut Out')).toBe(false);
+  });
+
+  it('is empty when every label is its own', () => {
+    expect(repeatedLabels(['Code', 'Status']).size).toBe(0);
+    expect(repeatedLabels([]).size).toBe(0);
   });
 });

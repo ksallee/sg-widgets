@@ -8,6 +8,7 @@ import {
   iconNameFor,
   NO_MATCH_LABEL,
   pickerKeyIntent,
+  repeatedLabels,
   resolveFieldPathOptions,
   searchFieldOptions,
   searchFieldPathOptions,
@@ -314,6 +315,8 @@ export function FieldPicker({
             dataType: row.dataType,
             field: row,
           }));
+  /** Labels two rows share, over the whole list so a search never changes a row. Such a row shows its code. */
+  const repeated = repeatedLabels(fixedRows ? fixedRows.map((row) => row.label) : derived.map((row) => row.displayName));
   const targets = choosing ? choosing.targets.filter((t) => t.toLowerCase().includes(query)) : [];
   /** Every row's value, in the order they are drawn: what the arrow keys walk. */
   const values = choosing ? targets : rows.map((row) => row.path);
@@ -578,13 +581,14 @@ export function FieldPicker({
                         onSelect={() => activate(row)}
                         data-checked={row.path === value ? 'true' : undefined}
                         data-traversable={row.field?.traversable ? 'true' : undefined}
+                        title={row.path}
                         className="items-start"
                       >
                         <Glyph aria-hidden="true" className="mt-0.5 size-4 shrink-0 opacity-70" />
                         <span className="flex min-w-0 flex-1 flex-col">
                           <span className="flex min-w-0 items-center gap-1.5">
                             <span className="truncate">{row.label}</span>
-                            {showCode && row.code !== '' && row.code !== row.label ? (
+                            {(showCode || repeated.has(row.label)) && row.code !== '' && row.code !== row.label ? (
                               <span className="text-muted-foreground shrink-0 font-mono text-xs">
                                 {row.code}
                               </span>

@@ -9,6 +9,7 @@ import {
   moveFieldPath,
   NO_MATCH_LABEL,
   NOTHING_CHOSEN_LABEL,
+  repeatedLabels,
   searchFieldOptions,
   stateLine,
   toggleFieldPath,
@@ -307,6 +308,9 @@ export function ColumnPicker({
   function labelOf(path: string): string | undefined {
     return labels[`${entityType}::${path}`];
   }
+
+  /** Labels two chosen columns share. Such a column shows its path. */
+  const repeated = repeatedLabels(value.flatMap((path) => labelOf(path) ?? []));
 
   function toggle(row: FieldOption): void {
     if (!editable) return;
@@ -625,8 +629,13 @@ export function ColumnPicker({
                 {labelOf(path) === undefined ? (
                   <Skeleton className="h-4 w-32" />
                 ) : (
-                  <span className="min-w-0 flex-1 truncate" title={path}>
-                    {labelOf(path)}
+                  <span className="flex min-w-0 flex-1 items-center gap-1.5" title={path}>
+                    <span className="min-w-0 truncate">{labelOf(path)}</span>
+                    {repeated.has(labelOf(path) ?? '') && labelOf(path) !== path ? (
+                      <span data-slot="column-picker-path" className="text-muted-foreground min-w-0 truncate font-mono text-xs">
+                        {path}
+                      </span>
+                    ) : null}
                   </span>
                 )}
                 {!readonly ? (

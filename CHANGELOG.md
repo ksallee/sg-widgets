@@ -3,6 +3,14 @@
 Releases of `sg-widgets-core` on npm and of the two registries at https://sg-widgets.vercel.app.
 The format is Keep a Changelog.
 
+## 0.3.1 - 2026-09-25
+
+- `sg-widgets-core`: `repeatedLabels(labels)` returns the labels more than one entry carries,
+  ignoring case and outer spaces (#351). The registry pickers import it, so a registry copy from
+  this release needs core 0.3.1.
+- Registries: FieldPicker and ColumnPicker tell apart fields that share a display name (#351). The
+  single picker closes after a pick and leaves its search empty (#353).
+
 ## 0.3.0 - 2026-09-24
 
 - Breaking for a hand-written `SgClient`: the interface gains a required

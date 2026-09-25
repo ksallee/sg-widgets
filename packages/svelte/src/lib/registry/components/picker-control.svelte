@@ -196,6 +196,8 @@
 	let armed = $state<number | null>(null);
 	/** A press on the load-more row is not a selection, and must not close the popup. */
 	let paging = false;
+	/** The search box is being put back after a pick, which is not typing. */
+	let restoring = false;
 
 	const loadingText = $derived(stateLine('loading', { loadingLabel }));
 	/** The caret is a combobox, so it is named even when the control shows no placeholder. */
@@ -272,6 +274,9 @@
 	/** A press anywhere in the field opens the list, and a token field takes the caret. */
 	/** Typing asks for the list: a press may have closed it a moment ago. */
 	function typed(next: string): void {
+		// The search box put back after a pick is not typing: a single pick has just
+		// closed the list, and reading the write as a keystroke would open it again.
+		if (restoring) return;
 		setQuery(next);
 		if (interactive && !open) setOpen(true);
 	}
@@ -422,13 +427,19 @@
 	/**
 	 * The primitive writes the chosen item's label into the search box. The box holds the
 	 * query and nothing else, so the write is put back as a write the primitive reads:
-	 * an unchanged query is not a new search.
+	 * an unchanged query is not a new search. Only the primitive reads it: the picker's
+	 * own handler would take it for typing and open the list a single pick just closed.
 	 */
 	function restoreSearchBox(): void {
 		void tick().then(() => {
 			if (!inputEl || inputEl.value === query) return;
 			inputEl.value = query;
-			inputEl.dispatchEvent(new Event('input', { bubbles: true }));
+			restoring = true;
+			try {
+				inputEl.dispatchEvent(new Event('input', { bubbles: true }));
+			} finally {
+				restoring = false;
+			}
 		});
 	}
 

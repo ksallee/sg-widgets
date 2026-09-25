@@ -656,6 +656,13 @@ export function PickerControl({
       details.cancel();
       return;
     }
+    // A single pick writes the chosen label into the box, and writes it again once the
+    // popup has closed. The box holds the query and nothing else, so both are refused:
+    // the chip already shows the value, and the next open starts from an empty search.
+    if (!multiple && (details.reason === 'item-press' || details.reason === 'none')) {
+      details.cancel();
+      return;
+    }
     onQueryChange(next);
     // Typing asks for the list: a press may have closed it a moment ago.
     if (details.reason === 'input-change' && interactive && !open) setOpen(true);

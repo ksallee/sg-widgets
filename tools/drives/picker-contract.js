@@ -49,7 +49,8 @@
 //   4 pick-then-chips    a press on a row leaves the caret where the next Backspace still
 //                        reaches the chips, with no focus call of the drive's own
 //   5 arrows-follow      the highlighted row stays inside the list's scroll box
-//   6 pick-open          a pick keeps a multi picker open and closes a single one
+//   6 pick-open          a pick keeps a multi picker open and closes a single one, which
+//                        stays closed with an empty caret
 //   7 outside-press      a press outside the control and the popup closes the list
 //   8 clear-control      the clear control is drawn only on a filled, editable control, and
 //                        a press on it empties the value
@@ -390,6 +391,13 @@ async function pickOpen(shape, note) {
     // A commit: the popup closes, whatever the caller then does with the value.
     const closed = await choose(row, () => !popupOf(shape));
     if (!closed) note('pick-open', 'a pick left a single picker open');
+    else {
+      // The list stays shut: a write the pick makes a tick later must not reopen it.
+      await wait(400);
+      if (popupOf(shape)) note('pick-open', 'a pick closed a single picker and it opened again');
+      const input = $('input', shape.el);
+      if (input && input.value !== '') note('pick-open', `a pick left "${input.value}" in the caret`);
+    }
   }
   await close(shape);
 }

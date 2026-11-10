@@ -25,6 +25,7 @@ const CONTROL = {
   'entity-type-multi-picker': '[data-slot="entity-type-picker-control"]',
   'list-picker': '[data-slot="list-picker-control"]',
   'list-multi-picker': '[data-slot="list-multi-picker-control"]',
+  'data-type-picker': '[data-slot="data-type-picker-control"]',
   'field-picker': '[data-slot="field-picker-trigger"]',
   'context-selector': '[data-slot="context-selector-trigger"]',
   'filter-bar': '[data-slot="filter-pill"]',

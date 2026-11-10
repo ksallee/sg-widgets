@@ -1,0 +1,87 @@
+---
+title: DataTypePicker
+description: One field data type, picked from the set the caller offers.
+---
+
+import Demo from '../../../components/Demo.astro';
+import Install from '../../../components/Install.astro';
+import Props from '../../../components/Props.astro';
+
+Picks one field data type from a set the caller passes, each drawn with its label and its glyph.
+
+It is the [list picker](/widgets/list-picker/) configured with a glyph row and a chip for its
+value: the same control, popup, press rule and keyboard as every other picker.
+
+## Install
+
+<Install item="data-type-picker" />
+
+<Demo name="data-type-picker" title="DataTypePicker: a given set, a search box, own labels, and types outside the set shown read-only" />
+
+## Input
+
+| chosen | emitted |
+|---|---|
+| a row | that data type's API name |
+| the clear control | `null` |
+
+The widget offers `types` and nothing else. It holds no list of its own, so which types can be
+created is the caller's to decide.
+
+A value outside `types` still draws, with its label and glyph, and keeps a row of its own. A value
+the widget has never heard of draws under the name it was given, with the document glyph. With
+`readonly` that is how a field read from a site shows its type, whatever the site answered. An empty
+string reads as no value.
+
+## Props
+
+<Props name="data-type-picker" />
+
+Every other attribute is spread onto the root: `id`, `aria-*`, `data-*`, key handlers and a `ref`
+to the root element.
+
+A row is the row anatomy of the design rules: the glyph as the leading mark, the label as the row's
+text, and the API name right-aligned where it differs from the label.
+
+The labels are this library's wording, since the API names a data type by its API name only. Pass
+`labels` to reword one, or to name a type the widget does not know.
+
+```ts
+import { dataTypeLabel, DATA_TYPE_LABELS } from 'sg-widgets-core';
+
+dataTypeLabel('date_time'); // 'Date and time'
+dataTypeLabel('sg_future_type'); // 'sg_future_type'
+```
+
+## Events
+
+<Props name="data-type-picker" kind="events" />
+
+`onOpenChange` fires when the popup opens or closes. Svelte also binds it with `bind:open`.
+
+## Slots
+
+None. The rows are the shared picker row; the closed state is a chip.
+
+## Keyboard
+
+<Props name="data-type-picker" kind="keyboard" />
+
+## FieldGlyphs
+
+The glyph a data type is drawn with. Core names a lucide icon per data type, and this map resolves
+the name to the icon component of each framework; a type core does not know takes the document.
+
+```ts
+import { fieldGlyph } from '@/components/field-glyphs';
+
+const Glyph = fieldGlyph('date_time');
+```
+
+## API behaviour
+
+A site refuses some data types at creation. One site created `text`, `float`, `number`, `date`,
+`date_time`, `list`, `url`, `duration`, `percent` and `footage` with no extra property, `checkbox`
+with a default value, and `entity` and `multi_entity` with one valid type; it refused `color`,
+`image` and `calculated` (019_create_fields). The set a caller offers follows what its own site
+accepts.

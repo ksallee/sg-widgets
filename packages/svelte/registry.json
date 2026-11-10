@@ -45,6 +45,8 @@
         "local:value-editor",
         "local:entity-type-picker",
         "local:entity-type-multi-picker",
+        "local:field-glyphs",
+        "local:data-type-picker",
         "local:field-picker",
         "local:sortable",
         "local:column-picker",
@@ -696,6 +698,46 @@
       "files": [
         {
           "path": "src/lib/registry/components/entity-type-multi-picker.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "field-glyphs",
+      "type": "registry:component",
+      "title": "Field Glyphs",
+      "description": "A glyph per field data type, with the document every unknown type takes.",
+      "dependencies": [
+        "sg-widgets-core",
+        "@lucide/svelte"
+      ],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "src/lib/registry/components/field-glyphs.ts",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "data-type-picker",
+      "type": "registry:component",
+      "title": "Data Type Picker",
+      "description": "One field data type, picked from the set the caller offers.",
+      "dependencies": [
+        "sg-widgets-core",
+        "clsx",
+        "tailwind-merge"
+      ],
+      "registryDependencies": [
+        "local:field-glyphs",
+        "local:leaf-classes",
+        "local:list-picker",
+        "local:picker-classes"
+      ],
+      "files": [
+        {
+          "path": "src/lib/registry/components/data-type-picker.svelte",
           "type": "registry:component"
         }
       ]

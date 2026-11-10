@@ -95,6 +95,7 @@ export const NAV: NavGroup[] = [
           'entity-type-picker',
           'entity-type-multi-picker',
           'field-picker',
+          'data-type-picker',
           'column-picker',
           'field-editor',
           'global-search',

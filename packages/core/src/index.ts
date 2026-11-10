@@ -1,4 +1,5 @@
 export * from './field-types.js';
+export * from './field-name.js';
 export * from './field-icons.js';
 export * from './filter.js';
 export * from './filter-ux.js';

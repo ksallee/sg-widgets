@@ -51,6 +51,8 @@ import type { FieldSchema } from './schema.js';
 import { displayNameOf, fieldSchemaOverride } from './schema.js';
 import type { StatusIcon, StatusRecord } from './status.js';
 
+export * from './schema-write-mock.js';
+
 /* -------------------------------------------------------------------------- */
 /* options                                                                    */
 /* -------------------------------------------------------------------------- */

@@ -161,3 +161,81 @@ console.log(result.uploadType, result.etag);
 The status of the PUT is the receipt; `etag` is present when the storage exposes one. A media field
 is not readable straight after: it answers a placeholder under `/images/status/transient/` on the
 site root until the transcode lands (`013_upload_media`).
+
+## Schema
+
+A `SchemaClient` reads one field and writes the schema. It is a client of its own beside
+`SgClient`: `RestSchemaClient` takes the options `RestClient` takes, `ProxySchemaClient` the options
+`ProxyClient` takes, and `MockSchemaClient` answers from memory over a `MockClient`.
+
+```ts
+import { MockClient, MockSchemaClient } from 'sg-widgets-core/mock';
+
+const schema = new MockSchemaClient({ client: new MockClient() });
+```
+
+No call here verifies a write. A refusal rejects with a `SchemaApiError` that carries the server's
+status, body, title, detail and source. A success proves the request parsed, so read the field back
+and compare (`028_loud_and_silent`).
+
+### One field
+
+`readField` answers one of three results. `found` carries the normalised field and `raw`, the
+wrapped record as it came, which is what to store as a snapshot. `missing` is the 404 that names the
+field; a retired field and a name never used read the same (`040_field_revive`). `undeclared` is a
+field the row answers and the schema leaves out (`068_note_read_state`). Any other failure rejects,
+a type the site does not have included. A project id reads the field at that project's scope.
+
+```ts
+const read = await schema.readField('Shot', 'sg_status_list', 70);
+if (read.status === 'found') console.log(read.field.dataType, read.raw.properties);
+```
+
+`readRawFields` answers every wrapped record of a type.
+
+### Create a field
+
+`createField` sends a data type, a display name and the other settings, and answers the
+programmatic name the server assigned, read from the response's self link. A display name already
+in use creates a suffixed field with no warning, so compare the answered name with the wanted one
+(`019_create_fields`). A checkbox needs `default_value`; an entity or multi-entity link needs
+`valid_types` with exactly one type.
+
+```ts
+const created = await schema.createField('Shot', {
+  dataType: 'entity',
+  displayName: 'Source Plate',
+  properties: { valid_types: ['Version'] },
+});
+console.log(created.name);
+```
+
+### Update, retire, revive
+
+`updateField` writes settings, at site scope or at a project's, and answers the record the server
+sent back. `retireField` retires a field and spends its programmatic name: the name does not create
+again, and no call frees it (`delete_schema_type_fields_field`). `reviveField` brings a retired field
+back at the data type it was created at, and answers `revived: false` with the server's status and
+message when the server declines.
+
+```ts
+await schema.updateField('Shot', created.name, { name: 'Plate' });
+await schema.retireField('Shot', created.name);
+const revive = await schema.reviveField('Shot', created.name);
+if (!revive.revived) console.log(revive.status, revive.message);
+```
+
+### Through the proxy
+
+The schema methods are not carried unless the host opts in, since they change the site for
+everyone. Hand `createProxyHandler` a schema client, and point a `ProxySchemaClient` at the same
+endpoints.
+
+```ts
+import { createProxyHandler, ProxySchemaClient, RestClient, RestSchemaClient } from 'sg-widgets-core';
+
+const handle = createProxyHandler(new RestClient({ siteUrl, token }), {
+  schema: new RestSchemaClient({ siteUrl, token }),
+});
+const schema = new ProxySchemaClient({ basePath: '/sg' });
+```

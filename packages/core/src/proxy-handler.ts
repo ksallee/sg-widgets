@@ -31,6 +31,8 @@
 import type { BatchRequest, EventLogOptions, FollowingOptions, ReadOptions, SearchOptions, SgClient, SummarizeOptions, UploadFile } from './client.js';
 import { SgApiError } from './client.js';
 import type { EntityRef, TextSearchFilter } from './filter.js';
+import type { SchemaClient } from './schema-write.js';
+import { createSchemaProxyHandler, isSchemaProxyMethod } from './schema-write.js';
 
 /** The methods the protocol carries, one POST each. */
 export const PROXY_METHODS = ['entityTypes', 'fields', 'fieldWithProject', 'search', 'read', 'textSearch', 'statuses', 'create', 'update', 'upload', 'hierarchyExpand', 'hierarchySearch', 'summarize', 'threadContents', 'eventLog', 'following', 'delete', 'revive', 'batch'] as const;
@@ -155,9 +157,19 @@ function fail(status: number, message: string, body: unknown = null): ProxyResul
   return { status, body: { error: { status, message, body } } };
 }
 
+export interface ProxyHandlerOptions {
+  /**
+   * Also carry `SCHEMA_PROXY_METHODS` to this client. Left out, they are a 404:
+   * a schema write changes the site for everyone, so a host opts in.
+   */
+  schema?: SchemaClient;
+}
+
 /** Wraps a client so a host app can expose it over its own HTTP endpoints. */
-export function createProxyHandler(client: SgClient): ProxyHandler {
+export function createProxyHandler(client: SgClient, options: ProxyHandlerOptions = {}): ProxyHandler {
+  const schema = options.schema ? createSchemaProxyHandler(options.schema) : null;
   return async function handle(method: string, body: unknown): Promise<ProxyResult> {
+    if (schema && isSchemaProxyMethod(method)) return schema(method, body);
     if (!isProxyMethod(method)) return fail(404, `Unknown method '${method}'`);
     if (body !== undefined && body !== null && typeof body !== 'object') return fail(400, 'Body must be a JSON object');
     const p = (body ?? {}) as Params;

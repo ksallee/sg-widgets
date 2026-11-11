@@ -65,9 +65,59 @@ describe('a create on the mock', () => {
       status: 400,
       message: "'valid_types' value expected Array with one element",
     });
+    expect(await refused({ dataType: 'multi_entity', displayName: 'a', properties: { valid_types: [] } })).toMatchObject({ status: 400 });
     expect(await refused({ dataType: 'text', displayName: 'a' })).toMatchObject({ name: 'sg_a' });
     expect(await refused({ dataType: 'entity', displayName: 'b', properties: { valid_types: ['Shot'] } })).toMatchObject({ name: 'sg_b' });
     expect(await refused({ dataType: 'checkbox', displayName: 'c', properties: { default_value: false } })).toMatchObject({ name: 'sg_c' });
+  });
+
+  it('takes several valid types on an entity link, and exactly one on a multi_entity', async () => {
+    // 116_field_settings_create_update.
+    const client = site();
+    const link = await client.createField('Version', { dataType: 'entity', displayName: 'Source', properties: { valid_types: ['Shot', 'Asset'] } });
+    expect(link.name).toBe('sg_source');
+    const read = await client.readField('Version', link.name);
+    expect(read.status === 'found' && read.raw.properties['valid_types']).toEqual({ value: ['Shot', 'Asset'], editable: true });
+    const many = await client.createField('Version', { dataType: 'multi_entity', displayName: 'Sources', properties: { valid_types: ['Shot'] } });
+    const readMany = await client.readField('Version', many.name);
+    expect(readMany.status === 'found' && readMany.raw.properties['valid_types']).toEqual({ value: ['Shot'], editable: false });
+  });
+
+  it('keeps custom_metadata at the top level of the record, as the server does', async () => {
+    // 002_schema, 009_status_lists.
+    const client = site();
+    const bare = await client.createField('Shot', { dataType: 'text', displayName: 'Plate Note' });
+    expect(bare.raw).toMatchObject({ custom_metadata: { value: '', editable: true } });
+    const { name, raw } = await client.createField('Shot', { dataType: 'text', displayName: 'Plate Source', properties: { custom_metadata: 'set:plates' } });
+    expect(raw).toMatchObject({ custom_metadata: { value: 'set:plates', editable: true } });
+    expect(raw?.['properties']).not.toHaveProperty('custom_metadata');
+    const updated = await client.updateField('Shot', name, { custom_metadata: 'set:shoot' });
+    expect(updated?.custom_metadata).toEqual({ value: 'set:shoot', editable: true });
+    expect(updated?.properties).not.toHaveProperty('custom_metadata');
+    expect((await client.readRawFields('Shot'))[name]?.custom_metadata?.value).toBe('set:shoot');
+    // A field of the site carries the key too, empty (056_stock_vs_custom_field).
+    expect((await client.readRawFields('Shot'))['code']?.custom_metadata).toEqual({ value: '', editable: true });
+  });
+
+  it('reads unique back at the top level, never editable', async () => {
+    // 116_field_settings_create_update.
+    const client = site();
+    const { name, raw } = await client.createField('Version', { dataType: 'text', displayName: 'Slate', properties: { unique: true } });
+    expect(raw).toMatchObject({ unique: { value: true, editable: false } });
+    expect(raw?.['properties']).not.toHaveProperty('unique');
+    const read = await client.readField('Version', name);
+    expect(read.status === 'found' && read.field.unique).toBe(true);
+  });
+
+  it('refuses a status_list without its valid values', async () => {
+    // 116_field_settings_create_update.
+    const client = site();
+    await expect(client.createField('Version', { dataType: 'status_list', displayName: 'Review' })).rejects.toMatchObject({
+      status: 400,
+      message: `API schema_field_create() missing required 'properties' ["valid_values"]`,
+    });
+    const made = await client.createField('Version', { dataType: 'status_list', displayName: 'Review', properties: { valid_values: ['na', 'rev', 'vwd'], default_value: 'rev' } });
+    expect(made.name).toBe('sg_review');
   });
 
   it('refuses a type the site does not have', async () => {
@@ -136,6 +186,110 @@ describe('an update on the mock', () => {
       message: "API schema_field_update() invalid property 'data_type'",
     });
     await expect(client.updateField('Shot', 'sg_status_list', { hidden_values: ['ip'] }, 70)).rejects.toMatchObject({ status: 400 });
+  });
+
+  // 116_field_settings_create_update, the table of what an update takes.
+  describe('what the server refuses after creation', () => {
+    const VALID_NAMES = '["name", "visible", "description", "summary_default", "valid_values", "default_value", "custom_metadata"]';
+
+    it('refuses unique: 400 on a field that is not unique, 500 on a text field created unique', async () => {
+      const client = site();
+      const list = await client.createField('Version', { dataType: 'list', displayName: 'Grade', properties: { valid_values: ['alpha', 'beta'] } });
+      await expect(client.updateField('Version', list.name, { unique: true })).rejects.toMatchObject({
+        status: 400,
+        message: `API schema_field_update() invalid property 'unique': Valid property names: ${VALID_NAMES}`,
+      });
+      const text = await client.createField('Version', { dataType: 'text', displayName: 'Slate', properties: { unique: true } });
+      await expect(client.updateField('Version', text.name, { unique: false })).rejects.toMatchObject({
+        status: 500,
+        code: 105,
+        message: "API schema_field_update() does not support updating 'unique'.",
+      });
+      const read = await client.readField('Version', text.name);
+      expect(read.status === 'found' && read.field.unique).toBe(true);
+    });
+
+    it('refuses valid_types on a multi_entity, the value it holds included, and takes them on an entity', async () => {
+      const client = site();
+      const many = await client.createField('Version', { dataType: 'multi_entity', displayName: 'Sources', properties: { valid_types: ['Shot'] } });
+      for (const value of [['Shot'], ['Asset'], ['Shot', 'Asset']]) {
+        const refused = await client.updateField('Version', many.name, { valid_types: value }).catch((e: unknown) => e);
+        expect(refused).toMatchObject({ status: 400 });
+        expect((refused as Error).message).toContain("API schema_field_update() can't update 'valid_types' on this field");
+      }
+      const link = await client.createField('Version', { dataType: 'entity', displayName: 'Source', properties: { valid_types: ['Shot', 'Asset'] } });
+      const updated = await client.updateField('Version', link.name, { valid_types: ['Asset', 'Sequence'] });
+      expect(updated?.properties['valid_types']).toEqual({ value: ['Asset', 'Sequence'], editable: true });
+    });
+
+    it('refuses to clear a default, with null or an empty string', async () => {
+      const client = site();
+      const list = await client.createField('Version', { dataType: 'list', displayName: 'Grade', properties: { valid_values: ['alpha', 'beta'], default_value: 'beta' } });
+      const box = await client.createField('Version', { dataType: 'checkbox', displayName: 'Hero', properties: { default_value: true } });
+      for (const [field, value] of [[list.name, null], [list.name, ''], [box.name, null], [box.name, '']] as const) {
+        await expect(client.updateField('Version', field, { default_value: value })).rejects.toMatchObject({
+          status: 400,
+          title: 'Request Parameters invalid.',
+          source: { properties: { '0': { value: ['value must be filled'] } } },
+        });
+      }
+      const read = await client.readField('Version', list.name);
+      expect(read.status === 'found' && read.field.defaultValue).toBe('beta');
+    });
+
+    it('refuses a default that is not a valid value, on a list and a status_list', async () => {
+      const client = site();
+      const list = await client.createField('Version', { dataType: 'list', displayName: 'Grade', properties: { valid_values: ['alpha', 'beta'], default_value: 'beta' } });
+      const refused = await client.updateField('Version', list.name, { default_value: 'zzz' }).catch((e: unknown) => e);
+      expect(refused).toMatchObject({ status: 400 });
+      expect((refused as Error).message).toContain("API schema_field_update() 'default_value' not in valid_values");
+      const status = await client.createField('Version', { dataType: 'status_list', displayName: 'Review', properties: { valid_values: ['na', 'rev'], default_value: 'rev' } });
+      await expect(client.updateField('Version', status.name, { default_value: 'zzz' })).rejects.toMatchObject({ status: 400 });
+      expect((await client.updateField('Version', list.name, { default_value: 'alpha' }))?.properties['default_value']?.value).toBe('alpha');
+      expect((await client.updateField('Version', status.name, { default_value: 'na' }))?.properties['default_value']?.value).toBe('na');
+    });
+
+    it('keeps a list default its values no longer hold, and refuses the same on a status_list', async () => {
+      const client = site();
+      const list = await client.createField('Version', { dataType: 'list', displayName: 'Grade', properties: { valid_values: ['alpha', 'beta'], default_value: 'alpha' } });
+      const updated = await client.updateField('Version', list.name, { valid_values: ['beta'] });
+      expect(updated?.properties['valid_values']?.value).toEqual(['beta']);
+      expect(updated?.properties['default_value']?.value).toBe('alpha');
+
+      const status = await client.createField('Version', { dataType: 'status_list', displayName: 'Review', properties: { valid_values: ['na', 'rev', 'vwd'], default_value: 'na' } });
+      await expect(client.updateField('Version', status.name, { valid_values: ['rev'] })).rejects.toMatchObject({
+        status: 400,
+        message: `API schema_field_update() 'valid_values' ["rev"] must include the 'default_value' 'na'`,
+      });
+      expect((await client.updateField('Version', status.name, { valid_values: ['na', 'rev'] }))?.properties['valid_values']?.value).toEqual(['na', 'rev']);
+    });
+
+    it('refuses an empty list of valid values, and an update with no properties', async () => {
+      const client = site();
+      const list = await client.createField('Version', { dataType: 'list', displayName: 'Grade', properties: { valid_values: ['alpha', 'beta'] } });
+      await expect(client.updateField('Version', list.name, { valid_values: [] })).rejects.toMatchObject({
+        status: 400,
+        source: { properties: { '0': { value: ['value must be filled'] } } },
+      });
+      const none = await client.updateField('Version', list.name, []).catch((e: unknown) => e);
+      expect(none).toMatchObject({ status: 400 });
+      expect((none as Error).message).toContain("can't create/update with no 'properties'");
+    });
+
+    it('refuses a default on a type that takes none after creation', async () => {
+      const client = site();
+      const { name } = await client.createField('Version', { dataType: 'currency', displayName: 'Budget' });
+      const refused = await client.updateField('Version', name, { default_value: 12 }).catch((e: unknown) => e);
+      expect(refused).toMatchObject({ status: 400 });
+      expect((refused as Error).message).toContain('default value is read-only for all data types except status_list, list, checkbox');
+    });
+
+    it('stores a checkbox default sent as a string as that string', async () => {
+      const client = site();
+      const { name } = await client.createField('Version', { dataType: 'checkbox', displayName: 'Hero', properties: { default_value: true } });
+      const updated = await client.updateField('Version', name, { default_value: 'false' });
+      expect(updated?.properties['default_value']?.value).toBe('false');
+    });
   });
 
   it('writes a field of the site it was given, and keeps a project write to that project', async () => {

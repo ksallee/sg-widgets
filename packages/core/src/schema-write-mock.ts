@@ -32,12 +32,21 @@ export interface MockSchemaClientOptions {
   failNext?: MockSchemaFailure | null;
 }
 
-/** The properties a custom field reads as editable (040_field_revive). */
-const EDITABLE_PROPERTIES = new Set(['description', 'custom_metadata']);
+/** The names an update's refusal lists as the ones it takes (116_field_settings_create_update). */
+const UPDATE_PROPERTIES = '["name", "visible", "description", "summary_default", "valid_values", "default_value", "custom_metadata"]';
 
-function refusal(status: number, error: { title?: string; detail?: string; source?: unknown }): SchemaApiError {
-  const first = { status, code: status === 404 ? 104 : 103, title: error.title ?? null, source: error.source ?? null, detail: error.detail ?? null, meta: null };
+/** The data types whose default an update may change (116_field_settings_create_update). */
+const DEFAULT_AFTER_CREATION = new Set(['status_list', 'list', 'checkbox']);
+
+function refusal(status: number, error: { title?: string; detail?: string; source?: unknown; code?: number }): SchemaApiError {
+  const code = error.code ?? (status === 404 ? 104 : 103);
+  const first = { status, code, title: error.title ?? null, source: error.source ?? null, detail: error.detail ?? null, meta: null };
   return new SchemaApiError(status, { errors: [first] });
+}
+
+/** The 400 for a value sent empty, naming the property by its place in the list (116_field_settings_create_update). */
+function unfilled(index: number): SchemaApiError {
+  return refusal(400, { title: 'Request Parameters invalid.', source: { properties: { [String(index)]: { value: ['value must be filled'] } } } });
 }
 
 function missing(entityType: string, field: string): SchemaApiError {
@@ -59,6 +68,8 @@ function rawFromField(field: FieldSchema): RawFieldSchema {
   return {
     name: wrap(field.displayName, true),
     ...(field.description ? { description: wrap(field.description, true) } : {}),
+    // Empty on every field of a site that set none (056_stock_vs_custom_field).
+    custom_metadata: wrap('', true),
     entity_type: wrap(field.entityType),
     data_type: wrap(String(field.dataType)),
     editable: wrap(field.editable),
@@ -75,10 +86,61 @@ function apply(raw: RawFieldSchema, changes: readonly SchemaProperty[]): RawFiel
     if (key === 'name') next.name = wrap(String(value), true);
     // The description reads back beside the name, not under `properties` (116_field_settings_create_update).
     else if (key === 'description') next.description = wrap(String(value), next.description?.editable ?? true);
+    // So does `custom_metadata` (002_schema), and `unique`, which never reads editable (116_field_settings_create_update).
+    else if (key === 'custom_metadata') next.custom_metadata = wrap(String(value), true);
+    else if (key === 'unique') next.unique = wrap(Boolean(value));
     else if (key === 'visible') next.visible = wrap(Boolean(value), next.visible?.editable ?? true);
-    else next.properties[key] = wrap(value, next.properties[key]?.editable ?? EDITABLE_PROPERTIES.has(key));
+    // An entity link's types can change after creation, a multi_entity's cannot (116_field_settings_create_update).
+    else if (key === 'valid_types') next.properties[key] = wrap(value, next.data_type.value === 'entity');
+    else next.properties[key] = wrap(value, next.properties[key]?.editable ?? false);
   }
   return next;
+}
+
+/**
+ * Throw what the server answers to an update it refuses (040_field_revive,
+ * 114_schema_admin_recheck, 116_field_settings_create_update). A default and
+ * its valid values changed in one update are not measured, and pass.
+ */
+function refuseUpdate(current: RawFieldSchema, changes: readonly SchemaProperty[]): void {
+  const type = current.data_type.value;
+  const sent = new Set(changes.map((change) => change.property_name));
+  const held = (key: string): unknown => current.properties[key]?.value;
+  for (const [index, { property_name: name, value }] of changes.entries()) {
+    if (name === 'data_type') throw refusal(400, { title: "API schema_field_update() invalid property 'data_type'" });
+    if (name === 'hidden_values') {
+      throw refusal(400, {
+        title: `API schema_field_update() invalid property 'hidden_values': Valid property names: ["name", "visible", "description", "summary_default", "default_value", "valid_values", "custom_metadata"]`,
+      });
+    }
+    if (name === 'unique') {
+      // 500 is measured on a text field created unique, 400 on a list and a currency that are not.
+      if (current.unique.value) throw refusal(500, { code: 105, title: "API schema_field_update() does not support updating 'unique'." });
+      throw refusal(400, { title: `API schema_field_update() invalid property 'unique': Valid property names: ${UPDATE_PROPERTIES}` });
+    }
+    if (name === 'valid_types' && type === 'multi_entity') {
+      throw refusal(400, { title: "API schema_field_update() can't update 'valid_types' on this field" });
+    }
+    if (name === 'default_value') {
+      // No request clears a default.
+      if (value === null || value === '') throw unfilled(index);
+      if (!DEFAULT_AFTER_CREATION.has(type)) {
+        throw refusal(400, { title: 'API schema_field_update() default value is read-only for all data types except status_list, list, checkbox' });
+      }
+      const values = held('valid_values');
+      if ((type === 'list' || type === 'status_list') && !sent.has('valid_values') && !(Array.isArray(values) && values.includes(value))) {
+        throw refusal(400, { title: `API schema_field_update() 'default_value' not in valid_values : ${JSON.stringify(values ?? [])}` });
+      }
+    }
+    if (name === 'valid_values' && (type === 'list' || type === 'status_list')) {
+      if (Array.isArray(value) && value.length === 0) throw unfilled(index);
+      // A list keeps a default its values no longer hold; a status_list refuses to.
+      const fallback = held('default_value');
+      if (type === 'status_list' && !sent.has('default_value') && typeof fallback === 'string' && Array.isArray(value) && !value.includes(fallback)) {
+        throw refusal(400, { title: `API schema_field_update() 'valid_values' ${JSON.stringify(value)} must include the 'default_value' '${fallback}'` });
+      }
+    }
+  }
 }
 
 export class MockSchemaClient implements SchemaClient {
@@ -171,14 +233,19 @@ export class MockSchemaClient implements SchemaClient {
     const valueOf = (key: string): unknown => given.find((p) => p.property_name === key)?.value;
     const type = input.dataType;
 
-    // What each data type needs, and the three that are refused (019_create_fields).
+    // What each data type needs, and the three that are refused (019_create_fields, 116_field_settings_create_update).
     if (type === 'color' || type === 'image') throw refusal(400, { title: 'Request Parameters invalid.', source: { data_type: ['data_type is not valid'] } });
     if (type === 'calculated') throw refusal(500, { title: 'NoMethodError' });
     if (type === 'checkbox' && typeof valueOf('default_value') !== 'boolean') throw refusal(500, { title: 'Only true or false allowed in checkbox' });
+    if (type === 'status_list' && valueOf('valid_values') === undefined) {
+      throw refusal(400, { title: `API schema_field_create() missing required 'properties' ["valid_values"]` });
+    }
     if (type === 'entity' || type === 'multi_entity') {
       const validTypes = valueOf('valid_types');
       if (validTypes === undefined) throw refusal(400, { title: "missing required 'properties'" });
-      if (!Array.isArray(validTypes) || validTypes.length !== 1) throw refusal(400, { title: "'valid_types' value expected Array with one element" });
+      // An entity link takes several types, a multi_entity exactly one. An empty list is not measured and is refused here.
+      const count = Array.isArray(validTypes) ? validTypes.length : 0;
+      if (type === 'multi_entity' ? count !== 1 : count < 1) throw refusal(400, { title: "'valid_types' value expected Array with one element" });
     }
 
     // A name in use is suffixed at 201; a name a retired field holds is refused (reports/006, 040_field_revive).
@@ -195,6 +262,7 @@ export class MockSchemaClient implements SchemaClient {
     const record = apply(
       {
         name: wrap(input.displayName, true),
+        custom_metadata: wrap('', true),
         entity_type: wrap(entityType),
         data_type: wrap(type),
         editable: wrap(true),
@@ -213,18 +281,11 @@ export class MockSchemaClient implements SchemaClient {
     this.gate();
     const key = `${entityType}.${field}`;
     const current = (await this.records(entityType))[field];
-    // The answer for a field that is not there is not measured; this is the 404 its delete answers.
+    // A retired field and a name never used answer the same 404 (119_field_absent_retired_live).
     if (!current) throw missing(entityType, field);
     const changes = toSchemaProperties(properties);
-    // The two properties measured as refused by name (040_field_revive, 114_schema_admin_recheck).
-    for (const { property_name: name } of changes) {
-      if (name === 'data_type') throw refusal(400, { title: "API schema_field_update() invalid property 'data_type'" });
-      if (name === 'hidden_values') {
-        throw refusal(400, {
-          title: `API schema_field_update() invalid property 'hidden_values': Valid property names: ["name", "visible", "description", "summary_default", "default_value", "valid_values", "custom_metadata"]`,
-        });
-      }
-    }
+    if (changes.length === 0) throw refusal(400, { title: "API schema_field_update() can't create/update with no 'properties'" });
+    refuseUpdate(current, changes);
     if (projectId === undefined) {
       this.live.set(key, apply(current, changes));
     } else {

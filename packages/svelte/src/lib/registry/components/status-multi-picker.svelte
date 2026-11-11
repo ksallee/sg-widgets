@@ -7,7 +7,13 @@
 <script lang="ts">
 	import type { HTMLAttributes } from 'svelte/elements';
 	import type { FieldSchema, PickerRow, SgContext, StatusOption, StatusRecord } from 'sg-widgets-core';
-	import { clearableForField, errorText, matchesEveryWord, NO_MATCH_LABEL } from 'sg-widgets-core';
+	import {
+		clearableForField,
+		errorText,
+		matchesEveryWord,
+		NO_MATCH_LABEL,
+		statusTableOptions
+	} from 'sg-widgets-core';
 	import { Combobox } from 'bits-ui';
 	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
 	import { cn, type WithElementRef } from '$lib/utils.js';
@@ -25,7 +31,8 @@
 	type Props = WithElementRef<HTMLAttributes<HTMLDivElement>, HTMLDivElement> & {
 		/** The widget context. The options and the status table are read through it, once per page. */
 		context: SgContext;
-		entityType: string;
+		/** The type whose status field is offered. Without one, every status of the site is. */
+		entityType?: string;
 		/** Offer the codes this project allows. */
 		projectId?: number;
 		/** Offer the codes every one of these projects allows. */
@@ -71,7 +78,7 @@
 
 	let {
 		context,
-		entityType,
+		entityType = undefined,
 		projectId = undefined,
 		projectIds = undefined,
 		field = undefined,
@@ -129,7 +136,7 @@
 	 * goes through the context's cache, so it is never an effect re-firing on
 	 * a "last seen" key.
 	 */
-	function load(type: string, ids: number[], name: string | undefined): Loaded {
+	function load(type: string | undefined, ids: number[], name: string | undefined): Loaded {
 		const state = $state<Loaded>({
 			loading: true,
 			error: null,
@@ -137,6 +144,21 @@
 			field: null,
 			statuses: new Map()
 		});
+		// No type, no field: the Status table is the whole vocabulary (probe 010).
+		if (type === undefined) {
+			statusTable.byCode().then(
+				(statuses) => {
+					state.options = statusTableOptions([...statuses.values()]);
+					state.statuses = statuses;
+					state.loading = false;
+				},
+				(error: unknown) => {
+					state.error = errorText(error);
+					state.loading = false;
+				}
+			);
+			return state;
+		}
 		// The field itself, for its display name and its `mandatory` flag.
 		const named = name === undefined ? schema.statusField(type) : schema.field(type, name);
 		Promise.all([optionsFor(type, ids, name), named, statusTable.byCode()]).then(
@@ -224,7 +246,8 @@
 <!--
 	Several statuses, picked from the codes a project offers.
 
-	The options are `valid_values` minus the project's `hidden_values`, read with
+	Without an entity type the options are every status of the site, which is what the
+	valid values of a status field are chosen from. With one, the options are `valid_values` minus the project's `hidden_values`, read with
 	`project_id`; over several projects they are the intersection of those sets. REST
 	does not enforce `hidden_values` on write, so the subtraction is the client's job
 	(probe 009). A selected code the option set does not carry keeps a row of its own,

@@ -12,6 +12,7 @@ export * from './picker.js';
 export * from './picker-keys.js';
 export * from './schema-service.js';
 export * from './status-service.js';
+export * from './valid-values.js';
 export * from './proxy-client.js';
 export * from './proxy-handler.js';
 export * from './session-auth.js';

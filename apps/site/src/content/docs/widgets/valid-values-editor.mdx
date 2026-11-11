@@ -1,0 +1,84 @@
+---
+title: ValidValuesEditor
+description: The valid values of a list or status list field, as ordered strings or as status codes picked from the site's statuses.
+---
+
+import Demo from '../../../components/Demo.astro';
+import Install from '../../../components/Install.astro';
+import Props from '../../../components/Props.astro';
+
+Edits the valid values of a list field or of a status list field, and emits them as an array of strings.
+
+## Install
+
+<Install item="valid-values-editor" />
+
+<Demo name="valid-values-editor" title="ValidValuesEditor: an ordered list, an empty one, unique values, a status list with and without a site, and the blocked states" />
+
+## Input
+
+A list is one row per value. The order of the rows is the order of the array, which is the order of
+the field's drop-down.
+
+| done | emitted |
+|---|---|
+| `Look Dev` typed in the add row, then Enter | the list with `"Look Dev"` appended |
+| `  padded  ` typed in a row | that row as `"padded"` |
+| a row emptied, or left with spaces only | the list without that row |
+| three lines pasted in the add row | the list with three values appended, in order |
+| three lines pasted in a row | the three values in that row's place |
+| a row dragged, or moved with the keyboard | the list in its new order |
+| the cross on a row | the list without that row |
+
+A blank line in a pasted text is dropped. A paste of one line is the input's own, so it lands at the
+caret. A row commits when it loses focus and on Enter, never on a keystroke.
+
+A repeated value is kept as typed. With `unique` the later one is dropped, compared byte for byte,
+so `Type A` and `type a` are two values.
+
+A status list is a picker over the site's statuses, each drawn with its icon, name and code. It is
+the [status multi picker](/widgets/status-multi-picker/) with no entity type and a chip row, and it
+emits the codes in the order they were picked; that order carries no meaning. It needs a `context` to
+read the statuses. Without one the codes are typed, one row per code, as a list's values are.
+
+## Props
+
+<Props name="valid-values-editor" />
+
+Every other attribute is spread onto the root: `id`, `aria-*`, `data-*`, key handlers and a `ref`
+to the root element.
+
+The trimming, the split into lines and the option to drop repeats are functions of the core package,
+for a caller that takes the values from somewhere else, a textarea or a file.
+
+```ts
+import { normalizeListValues, splitListValues } from 'sg-widgets-core';
+
+splitListValues('VFX\n  2D \n\nFull CG'); // ['VFX', '2D', 'Full CG']
+normalizeListValues(['a', ' a ', ''], { unique: true }); // ['a']
+```
+
+## Events
+
+<Props name="valid-values-editor" kind="events" />
+
+## Slots
+
+None.
+
+## Keyboard
+
+<Props name="valid-values-editor" kind="keyboard" />
+
+A status list takes the keyboard of the [status multi picker](/widgets/status-multi-picker/#keyboard).
+
+## API behaviour
+
+A list field's value is one of its valid values, compared byte for byte on write: another case and
+a trailing space are both a 400. So the editor trims a value where it is defined and never changes
+its case (field_types/list).
+
+A status list field holds a status code, never a label, and the icon and the colour of a code come
+from the site's Status table, which is site-wide and keyed by code (field_types/status_list, probe 010).
+
+The reordering is the registry's own sortable, the one the [sort picker](/widgets/sort-picker/) uses.

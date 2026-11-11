@@ -191,6 +191,7 @@
 	// The list writes the overflow variables the fade reads, which are Base UI's own.
 	$effect(() => watchOverflow(listEl));
 	let inputEl = $state<HTMLInputElement | null>(null);
+	let triggerEl = $state<HTMLElement | null>(null);
 	let chipsEl = $state<HTMLElement | null>(null);
 	/** The chip holding the caret. Backspace and Delete take it. */
 	let armed = $state<number | null>(null);
@@ -312,8 +313,27 @@
 		const wanted = interactive ? next : false;
 		if (!wanted) setQuery('');
 		if (wanted === open) return;
+		const handBack = !wanted && !inline && inputEl !== null && document.activeElement === inputEl;
 		open = wanted;
 		onOpenChange?.(open);
+		if (handBack) void tick().then(toTrigger);
+	}
+
+	/** The chevron opens the list on the arrow, as it does on Enter and Space. */
+	function openOnArrow(event: KeyboardEvent): void {
+		if (event.key !== 'ArrowDown' || open || !interactive) return;
+		event.preventDefault();
+		setOpen(true);
+	}
+
+	/**
+	 * A summary control's caret is in the popup and goes with it, so the chevron takes
+	 * it back: the next key is the picker's, and Tab leaves from where the picker stands.
+	 */
+	function toTrigger(): void {
+		const active = document.activeElement;
+		if (active && active !== document.body && active !== inputEl) return;
+		triggerEl?.focus({ preventScroll: true });
 	}
 
 	// A chip removed from under the caret takes it with it.
@@ -445,7 +465,9 @@
 
 	function clear(): void {
 		onClear?.();
+		// The clear control goes with the value, and the caret stays on the picker.
 		if (inline) inputEl?.focus({ preventScroll: true });
+		else triggerEl?.focus({ preventScroll: true });
 	}
 </script>
 
@@ -635,9 +657,11 @@
 				</button>
 			{/if}
 			<Combobox.Trigger
+				bind:ref={triggerEl}
 				data-slot={`${slot}-trigger`}
 				aria-label={triggerLabel}
 				disabled={inert}
+				onkeydown={openOnArrow}
 				class={PICKER_ICON_BUTTON}
 			>
 				<ChevronDown aria-hidden="true" class={PICKER_GLYPH[size]} />

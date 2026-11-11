@@ -86,6 +86,17 @@ for (const framework of ['svelte', 'react']) {
   if (note.picked.open > 0) fail('the list stayed open after the pick');
   if (!$('svg', chipOf(set))) fail('the chip has no glyph');
 
+  /* ------------------------------------------------- the arrow, on the chevron */
+
+  // The chevron is where Tab lands on a closed picker, so the arrow opens the list from it.
+  const chevron = $('[data-slot="data-type-picker-trigger"]', set);
+  chevron.focus({ preventScroll: true });
+  chevron.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+  note.arrowOpens = Boolean(await until(() => (live().length > 0 ? true : null), 1500));
+  if (!note.arrowOpens) fail('ArrowDown on the chevron opened no list');
+  document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+  if (!(await until(() => (live().length === 0 ? true : null), 1500))) fail('Escape left the list open');
+
   /* ------------------------------------------------------ the caller's labels */
 
   const worded = $('[data-demo="labels"]', pane);

@@ -38,7 +38,8 @@
 //   1 press-toggles      a press on the control opens the list, and a second closes it
 //   1 typing-opens       typing opens the list again (a control that holds a caret)
 //   2 caret-lands        the caret takes focus: the control's own inline, the popup's on a summary
-//   3 escape-closes      Escape closes the list and leaves the query empty
+//   3 escape-closes      Escape closes the list, leaves the query empty and leaves the caret
+//                        on the picker
 //   3 escape-closed      Escape on a closed picker opens nothing and keeps the value
 //   4 chip-keys          an empty query: Backspace takes the caret to the last chip of a multi
 //                        picker, the arrows walk the row, a second Backspace removes the chip
@@ -51,10 +52,10 @@
 //                        reaches the chips, with no focus call of the drive's own
 //   5 arrows-follow      the highlighted row stays inside the list's scroll box
 //   6 pick-open          a pick keeps a multi picker open and closes a single one, which
-//                        stays closed with an empty caret
+//                        stays closed with an empty caret that the picker still holds
 //   7 outside-press      a press outside the control and the popup closes the list
 //   8 clear-control      the clear control is drawn only on a filled, editable control, and
-//                        a press on it empties the value
+//                        a press on it empties the value and leaves the caret on the picker
 //   9 readonly           a readonly control keeps full contrast, drops the clear control and
 //                        the chevron, and opens for nobody
 //   10 disabled          a disabled control opens for nobody
@@ -187,6 +188,17 @@ const caretOf = (shape) => {
   const root = shape.inline ? shape.el : popupOf(shape);
   return root ? $(shape.caret, root) : null;
 };
+/**
+ * Whether the caret is the picker's: on its control, its trailing controls or its open popup.
+ * Read on the pickers of the base, which hands the caret back itself; a picker on the Popover
+ * leaves that to the primitive.
+ */
+const holdsCaret = (shape) => {
+  if (!shape.chevron) return true;
+  const active = document.activeElement;
+  if (!active || active === document.body) return false;
+  return boxOf(shape).contains(active) || Boolean(popupOf(shape)?.contains(active));
+};
 /** The keyboard cursor: `data-highlighted` on both comboboxes, `aria-selected` on a Command list. */
 const highlightedOf = (shape) => {
   const popup = popupOf(shape);
@@ -196,6 +208,9 @@ const highlightedOf = (shape) => {
 
 async function open(shape) {
   if (popupOf(shape)) return true;
+  // A real press takes the focus off whatever held it elsewhere on the page; this one cannot.
+  const active = document.activeElement;
+  if (active instanceof HTMLElement && active !== document.body && !boxOf(shape).contains(active)) active.blur();
   press(shape.el);
   return Boolean(await until(() => popupOf(shape)));
 }
@@ -266,12 +281,16 @@ async function escapeCloses(shape, note) {
     typeInto(caret, 'a');
     await wait(150);
   }
+  const held = holdsCaret(shape);
   key(caret ?? shape.el, 'Escape');
   if (!(await until(() => !popupOf(shape), 2000))) {
     note('escape-closes', 'Escape did not close the list');
     await close(shape);
     return;
   }
+  // The popup goes and the caret stays with the picker, where the next key is heard.
+  await wait(200);
+  if (held && !holdsCaret(shape)) note('escape-closes', 'Escape took the caret off the picker');
   // The query lives in the popup on a summary control, so it is read on the way back in.
   if (!caret || caret.readOnly) return;
   if (!(await open(shape))) {
@@ -279,8 +298,8 @@ async function escapeCloses(shape, note) {
     return;
   }
   const back = caretOf(shape);
-  const held = back ? back.value : '';
-  if (held !== '') note('escape-closes', `the query still reads "${held}" after Escape`);
+  const query = back ? back.value : '';
+  if (query !== '') note('escape-closes', `the query still reads "${query}" after Escape`);
   if (back) typeInto(back, '');
   await close(shape);
 }
@@ -390,12 +409,14 @@ async function pickOpen(shape, note) {
     else if (!popupOf(shape)) note('pick-open', 'a pick closed a multi picker');
   } else {
     // A commit: the popup closes, whatever the caller then does with the value.
+    const held = holdsCaret(shape);
     const closed = await choose(row, () => !popupOf(shape));
     if (!closed) note('pick-open', 'a pick left a single picker open');
     else {
       // The list stays shut: a write the pick makes a tick later must not reopen it.
       await wait(400);
       if (popupOf(shape)) note('pick-open', 'a pick closed a single picker and it opened again');
+      if (held && !holdsCaret(shape)) note('pick-open', 'a pick took the caret off the picker');
       const input = $('input', shape.el);
       if (input && input.value !== '') note('pick-open', `a pick left "${input.value}" in the caret`);
     }
@@ -542,8 +563,12 @@ async function clearControl(shape, note) {
     return;
   }
   if (!clear || !drawn(clear)) return;
+  clear.focus({ preventScroll: true });
   press(clear);
   if (!(await until(() => !filled(shape.el), 2000))) note('clear-control', 'a press on the clear control left the value');
+  // The control goes with the value it cleared, and the caret stays with the picker.
+  await wait(200);
+  if (!holdsCaret(shape)) note('clear-control', 'the clear control took the caret with it');
 }
 
 async function readonlyDrops(shape, note) {

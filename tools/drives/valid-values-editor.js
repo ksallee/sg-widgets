@@ -125,6 +125,31 @@ for (const framework of ['svelte', 'react']) {
   const drawn = inputsOf(list).map((input) => input.value);
   if (!same(drawn, emitted(list))) fail(`the rows read ${JSON.stringify(drawn)} after the move`);
 
+  /* ------------------------------------------------- carried by the keyboard */
+
+  // A row picked up on its grip moves a place per arrow, as far as it is taken, and the
+  // caret stays on the grip: the list is redrawn under it at every step.
+  const carried = emitted(list)[0];
+  const gripOf = () =>
+    $('[data-slot="valid-values-editor-grip"]', rowsOf(list).find((row) => row.dataset.value === carried));
+  gripOf().focus({ preventScroll: true });
+  key(gripOf(), ' ');
+  await wait(100);
+  for (const [arrow, places] of [['ArrowDown', [1, 2]], ['ArrowUp', [1, 0]]]) {
+    for (const place of places) {
+      key(gripOf(), arrow);
+      await until(() => (emitted(list)[place] === carried ? true : null), 2000);
+      await wait(150);
+      if (emitted(list)[place] !== carried) fail(`${arrow} while carrying: the list reads ${JSON.stringify(emitted(list))}`);
+      if (document.activeElement !== gripOf()) fail(`${arrow} while carrying took the caret off the grip`);
+    }
+  }
+  note.carriedBack = emitted(list)[0] === carried;
+  key(gripOf(), ' ');
+  await wait(150);
+  if ($('[data-dragging]', list)) fail('a dropped row still reads as carried');
+  if (document.activeElement !== gripOf()) fail('the drop took the caret off the grip');
+
   /* ---------------------------------------------------------------- remove */
 
   const count = emitted(list).length;

@@ -555,7 +555,23 @@ export function createSortableController(options: SortableControllerOptions): So
 
   /* keyboard */
 
-  let keyboard: { id: string; origin: string[] } | null = null;
+  let keyboard: { id: string; origin: string[]; redrawing: boolean } | null = null;
+
+  /**
+   * A move is drawn after the key that made it, and a row moved in the document
+   * loses the focus it held. That is the redraw, not the caret leaving: the carry
+   * goes on, and the grip takes the focus back once the list is drawn.
+   */
+  function holdThroughRedraw(handle: HTMLElement): void {
+    const carried = keyboard;
+    if (!carried) return;
+    carried.redrawing = true;
+    setTimeout(() => {
+      carried.redrawing = false;
+      if (keyboard !== carried || !container.contains(handle)) return;
+      if (handle.ownerDocument.activeElement !== handle) handle.focus({ preventScroll: true });
+    }, 0);
+  }
 
   function endKeyboard(): void {
     keyboard = null;
@@ -574,7 +590,7 @@ export function createSortableController(options: SortableControllerOptions): So
       if (event.key !== ' ' && event.key !== 'Enter') return;
       if (disabled?.() || drag) return;
       event.preventDefault();
-      keyboard = { id, origin: [...order()] };
+      keyboard = { id, origin: [...order()], redrawing: false };
       item.setAttribute('data-dragging', 'true');
       setActive(id);
       say(model().pickedUp(id));
@@ -588,6 +604,7 @@ export function createSortableController(options: SortableControllerOptions): So
       const next = held.keyboardMove(id, event.key === 'ArrowUp' ? 'up' : 'down');
       const to = next.indexOf(id);
       if (to === held.indexOf(id)) return;
+      holdThroughRedraw(handle);
       onOrderChange(next, id);
       say(held.movedTo(id, to));
       handle.scrollIntoView({ block: 'nearest' });
@@ -611,7 +628,7 @@ export function createSortableController(options: SortableControllerOptions): So
 
   /** Focus leaving the list drops what it was carrying rather than stranding it. */
   function onFocusOut(event: FocusEvent): void {
-    if (!keyboard) return;
+    if (!keyboard || keyboard.redrawing) return;
     const next = event.relatedTarget;
     if (next instanceof Node && container.contains(next)) return;
     say(model().dropped(keyboard.id));

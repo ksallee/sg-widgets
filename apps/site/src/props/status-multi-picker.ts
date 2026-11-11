@@ -3,6 +3,7 @@ import type { PropsFile } from './_types';
 export default {
   extends: { name: 'status-picker' },
   props: [
+    { name: 'entityType', type: '`string`', default: 'every status', meaning: 'The type whose status field is offered. Without one, every status of the site is.' },
     { name: 'value', type: '`string[]`', default: '`[]`', meaning: 'The selected codes. `bind:value` in Svelte, `value` with `onValueChange` in React.' },
     { name: 'placeholder', type: '`string`', default: '`\'Select statuses\'`', meaning: 'Shown with nothing selected.' },
     { name: 'searchPlaceholder', type: '`string`', default: '`\'Search statuses…\'`', meaning: 'Placeholder of the search box.' },

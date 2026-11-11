@@ -60,6 +60,7 @@ export const NAV: NavGroup[] = [
             'date-time-editor',
             'url-editor',
             'color-editor',
+            'valid-values-editor',
             'picker-control',
             'search-control',
             'collection-control',

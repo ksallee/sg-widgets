@@ -62,6 +62,7 @@
         "https://sg-widgets.vercel.app/r/react/sort-picker.json",
         "https://sg-widgets.vercel.app/r/react/status-picker.json",
         "https://sg-widgets.vercel.app/r/react/status-multi-picker.json",
+        "https://sg-widgets.vercel.app/r/react/valid-values-editor.json",
         "https://sg-widgets.vercel.app/r/react/collection-source.json",
         "https://sg-widgets.vercel.app/r/react/collection-control.json",
         "https://sg-widgets.vercel.app/r/react/collection-footer.json",
@@ -1308,6 +1309,33 @@
       "files": [
         {
           "path": "src/registry/sg/components/status-multi-picker.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "valid-values-editor",
+      "type": "registry:component",
+      "title": "Valid Values Editor",
+      "description": "The valid values of a list or status list field: ordered strings typed and dragged, or status codes picked from the site's statuses.",
+      "categories": [
+        "flow-production-tracking",
+        "editor"
+      ],
+      "dependencies": [
+        "sg-widgets-core",
+        "lucide-react",
+        "cn"
+      ],
+      "registryDependencies": [
+        "button",
+        "https://sg-widgets.vercel.app/r/react/sortable.json",
+        "https://sg-widgets.vercel.app/r/react/status-multi-picker.json"
+      ],
+      "docs": "dataType picks the mode. A status list needs a context to read the site's statuses; without one its codes are typed.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/valid-values-editor.tsx",
           "type": "registry:component"
         }
       ]

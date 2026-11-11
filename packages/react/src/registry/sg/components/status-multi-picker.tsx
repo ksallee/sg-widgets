@@ -8,7 +8,7 @@ import type {
   StatusOption,
   StatusRecord,
 } from 'sg-widgets-core';
-import { clearableForField, errorText, matchesEveryWord, NO_MATCH_LABEL } from 'sg-widgets-core';
+import { clearableForField, errorText, matchesEveryWord, NO_MATCH_LABEL, statusTableOptions } from 'sg-widgets-core';
 import { Combobox as ComboboxPrimitive } from '@base-ui/react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
@@ -31,7 +31,8 @@ export interface StatusMultiPickerProps extends React.HTMLAttributes<HTMLDivElem
 
   /** The widget context. The options and the status table are read through it, once per page. */
   context: SgContext;
-  entityType: string;
+  /** The type whose status field is offered. Without one, every status of the site is. */
+  entityType?: string;
   /** Offer the codes this project allows. */
   projectId?: number;
   /** Offer the codes every one of these projects allows. */
@@ -92,7 +93,7 @@ const LOADING: Loaded = { loading: true, error: null, options: [], field: null, 
  */
 function statusOptionStore(
   context: SgContext,
-  entityType: string,
+  entityType: string | undefined,
   projectKey: string,
   field: string | undefined,
 ) {
@@ -114,6 +115,23 @@ function statusOptionStore(
   function start(): void {
     if (started) return;
     started = true;
+    const failed = (error: unknown) =>
+      settle({ loading: false, error: errorText(error), options: [], field: null, statuses: new Map() });
+    // No type, no field: the Status table is the whole vocabulary (probe 010).
+    if (entityType === undefined) {
+      void statuses.byCode().then(
+        (table) =>
+          settle({
+            loading: false,
+            error: null,
+            options: statusTableOptions([...table.values()]),
+            field: null,
+            statuses: table,
+          }),
+        failed,
+      );
+      return;
+    }
     const options =
       first === undefined
         ? schema.statusOptions(entityType, undefined, field)
@@ -131,14 +149,7 @@ function statusOptionStore(
           field: typeof found === 'string' || found === undefined ? null : found,
           statuses: table,
         }),
-      (error: unknown) =>
-        settle({
-          loading: false,
-          error: errorText(error),
-          options: [],
-          field: null,
-          statuses: new Map(),
-        }),
+      failed,
     );
   }
 
@@ -157,7 +168,8 @@ function statusOptionStore(
 /**
  * Several statuses, picked from the codes a project offers.
  *
- * The options are `valid_values` minus the project's `hidden_values`, read with
+ * Without an entity type the options are every status of the site, which is what the
+ * valid values of a status field are chosen from. With one, the options are `valid_values` minus the project's `hidden_values`, read with
  * `project_id`; over several projects they are the intersection of those sets. REST
  * does not enforce `hidden_values` on write, so the subtraction is the client's job
  * (probe 009). A selected code the option set does not carry keeps a row of its own,

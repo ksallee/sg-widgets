@@ -67,6 +67,7 @@
         "local:sort-picker",
         "local:status-picker",
         "local:status-multi-picker",
+        "local:valid-values-editor",
         "local:collection-source",
         "local:collection-control",
         "local:collection-footer",
@@ -1254,6 +1255,29 @@
       "files": [
         {
           "path": "src/lib/registry/components/status-multi-picker.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "valid-values-editor",
+      "type": "registry:component",
+      "title": "Valid Values Editor",
+      "description": "The valid values of a list or status list field: ordered strings typed and dragged, or status codes picked from the site's statuses.",
+      "dependencies": [
+        "sg-widgets-core",
+        "@lucide/svelte",
+        "clsx",
+        "tailwind-merge"
+      ],
+      "registryDependencies": [
+        "button",
+        "local:sortable",
+        "local:status-multi-picker"
+      ],
+      "files": [
+        {
+          "path": "src/lib/registry/components/valid-values-editor.svelte",
           "type": "registry:component"
         }
       ]

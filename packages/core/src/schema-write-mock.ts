@@ -60,9 +60,9 @@ function rawFromField(field: FieldSchema): RawFieldSchema {
   if (field.validTypes) properties['valid_types'] = wrap(field.validTypes);
   if (field.displayValues) properties['display_values'] = wrap(field.displayValues);
   if (field.hiddenValues) properties['hidden_values'] = wrap(field.hiddenValues);
-  if (field.description) properties['description'] = wrap(field.description, true);
   return {
     name: wrap(field.displayName, true),
+    ...(field.description ? { description: wrap(field.description, true) } : {}),
     entity_type: wrap(field.entityType),
     data_type: wrap(String(field.dataType)),
     editable: wrap(field.editable),
@@ -77,6 +77,8 @@ function apply(raw: RawFieldSchema, changes: readonly SchemaProperty[]): RawFiel
   const next: RawFieldSchema = structuredClone(raw);
   for (const { property_name: key, value } of changes) {
     if (key === 'name') next.name = wrap(String(value), true);
+    // The description reads back beside the name, not under `properties` (116_field_settings_create_update).
+    else if (key === 'description') next.description = wrap(String(value), next.description?.editable ?? true);
     else if (key === 'visible') next.visible = wrap(Boolean(value), next.visible?.editable ?? true);
     else next.properties[key] = wrap(value, next.properties[key]?.editable ?? EDITABLE_PROPERTIES.has(key));
   }

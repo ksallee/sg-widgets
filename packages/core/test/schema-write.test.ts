@@ -80,6 +80,21 @@ describe('reading one field', () => {
     expect(result.field).toMatchObject({ name: 'sg_status_list', displayName: 'Status', entityType: 'Version', dataType: 'status_list', defaultValue: 'rev', hideable: false });
   });
 
+  it('reads the description at the top level of the record, beside the name', async () => {
+    // 116_field_settings_create_update: description reads back as `description.value`, not under `properties`.
+    const record = { ...STATUS_FIELD, description: { value: 'Where the review stands', editable: true } };
+    const { client } = rest({ status: 200, body: { data: record } });
+    const result = await client.readField('Version', 'sg_status_list');
+    expect(result.status === 'found' && result.field.description).toBe('Where the review stands');
+  });
+
+  it('ignores a description under properties, where the server never puts it', async () => {
+    const record = { ...STATUS_FIELD, properties: { ...STATUS_FIELD.properties, description: { value: 'misplaced', editable: true } } };
+    const { client } = rest({ status: 200, body: { data: record } });
+    const result = await client.readField('Version', 'sg_status_list');
+    expect(result.status === 'found' && result.field.description).toBeUndefined();
+  });
+
   it('passes the project as project_id', async () => {
     const { client, sent } = rest({ status: 200, body: { data: STATUS_FIELD } });
     const result = await client.readField('Version', 'sg_status_list', 70);

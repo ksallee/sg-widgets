@@ -102,6 +102,18 @@ describe('an update on the mock', () => {
     expect(read.status === 'found' && read.field).toMatchObject({ name, displayName: 'Plate Notes', description: 'From the shoot' });
   });
 
+  it('keeps the description at the top level of the record, as the server does', async () => {
+    // 116_field_settings_create_update.
+    const client = site();
+    const { name, raw } = await client.createField('Shot', { dataType: 'text', displayName: 'Plate Note', properties: { description: 'From the shoot' } });
+    expect(raw).toMatchObject({ description: { value: 'From the shoot', editable: true } });
+    expect(raw?.['properties']).not.toHaveProperty('description');
+    const updated = await client.updateField('Shot', name, { description: 'From the set' });
+    expect(updated?.description?.value).toBe('From the set');
+    expect(updated?.properties).not.toHaveProperty('description');
+    expect((await client.readRawFields('Shot'))[name]?.description?.value).toBe('From the set');
+  });
+
   it('refuses data_type and hidden_values by name', async () => {
     // 040_field_revive, 114_schema_admin_recheck.
     const client = site();

@@ -3,6 +3,28 @@
 Releases of `sg-widgets-core` on npm and of the two registries at https://sg-widgets.vercel.app.
 The format is Keep a Changelog.
 
+## 0.4.0 - 2026-11-10
+
+- `sg-widgets-core`: schema writes. `SchemaClient` creates, updates, retires and revives the fields
+  of an entity type and reads one field with its wrapped record, as `RestSchemaClient`,
+  `ProxySchemaClient` behind `createSchemaProxyHandler`, and `MockSchemaClient` from
+  `sg-widgets-core/mock` (#364). `createProxyHandler` takes `{ schema }` to carry those methods; left
+  out, they stay a 404.
+- `sg-widgets-core`: `predictFieldName` and `hasNonAscii` give the programmatic name a display name
+  becomes (#362, #369). `isEligibleProject` says which projects a field's visibility is set for
+  (#363). `dataTypeLabel` and `dataTypeOptions` name the data types (#365). `normalizeListValues`,
+  `splitListValues` and the other list helpers hold the valid values of a list field (#366).
+- Changed: `normalizeField` reads a field's description from the top level of its record, where the
+  API puts it, so `FieldSchema.description` is filled from a site (#370). A record that carried the
+  description under `properties` no longer yields one.
+- Fixed: a row carried by the keyboard in the sortable keeps its grip and its carry across more
+  than one arrow press (#371).
+- Registries: new `data-type-picker`, `valid-values-editor` and `field-glyphs` (#365, #366).
+  `status-multi-picker` offers every status of the site when `entityType` is left out (#366). A
+  summary picker gives the caret back to its chevron when the list closes or the value is cleared,
+  and the Svelte chevron opens the list on the down arrow (#371). The new items and
+  `status-multi-picker` import from core 0.4.0, so a registry copy from this release needs it.
+
 ## 0.3.1 - 2026-09-25
 
 - `sg-widgets-core`: `repeatedLabels(labels)` returns the labels more than one entry carries,

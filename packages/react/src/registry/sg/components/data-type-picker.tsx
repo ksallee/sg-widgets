@@ -130,6 +130,8 @@ export function DataTypePicker({
               CHIP_PAD[chip].text,
               CHIP_PAD[chip].lead,
               CHIP_SPACING[chip].glyph,
+              // The one chip of a summary control gives way to the control's width.
+              'shrink',
             )}
           >
             <Glyph aria-hidden="true" className={cn('shrink-0 opacity-70', CHIP_GLYPH[chip])} />

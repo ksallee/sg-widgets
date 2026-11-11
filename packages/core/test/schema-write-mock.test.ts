@@ -25,6 +25,19 @@ describe('a create on the mock', () => {
     expect((await client.createField('Version', { dataType: 'text', displayName: 'sg_already_prefixed' })).name).toBe('sg_sg_already_prefixed');
   });
 
+  it('names a field with a non-ASCII display name after its data type', async () => {
+    // 117_field_types_and_names.
+    const client = site();
+    const created = await client.createField('Version', { dataType: 'currency', displayName: 'zzprobe 117 Durée Écran ñ' });
+    expect(created.name).toBe('sg_currency');
+    const read = await client.readField('Version', 'sg_currency');
+    expect(read.status === 'found' && read.field.displayName).toBe('zzprobe 117 Durée Écran ñ');
+    await client.retireField('Version', 'sg_currency');
+    const refused = await client.createField('Version', { dataType: 'currency', displayName: 'zzprobe 117 日本語 поле' }).catch((e: unknown) => e);
+    expect(refused).toMatchObject({ status: 400 });
+    expect((refused as Error).message).toContain('retired field with the same field_name: sg_currency');
+  });
+
   it('suffixes a display name already in use, without a warning', async () => {
     const client = site();
     const names: string[] = [];

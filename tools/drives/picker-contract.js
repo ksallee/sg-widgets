@@ -4,7 +4,7 @@
 //
 //   [data-slot$="-control"]            every picker on the base: entity, entity multi, user,
 //                                      user multi, project, project multi, status, status multi,
-//                                      entity type, entity type multi, list, list multi, and the
+//                                      entity type, entity type multi, list, list multi, data type, and the
 //                                      department demos of the picker-control page
 //   [data-slot="field-picker-trigger"] the field picker, on the Popover and the Command list
 //   [data-slot="sort-trigger"]         the sort picker, on the Popover over an ordered panel
@@ -27,6 +27,7 @@
 //   pnpm qa --start --path /widgets/list-picker/              --framework both --drive tools/drives/picker-contract.js
 //   pnpm qa --start --path /widgets/list-multi-picker/        --framework both --drive tools/drives/picker-contract.js
 //   pnpm qa --start --path /widgets/field-picker/             --framework both --drive tools/drives/picker-contract.js
+//   pnpm qa --start --path /widgets/data-type-picker/         --framework both --drive tools/drives/picker-contract.js
 //   pnpm qa --start --path /widgets/sort-picker/              --framework both --drive tools/drives/picker-contract.js
 //   pnpm qa --start --path /widgets/column-picker/            --framework both --drive tools/drives/picker-contract.js
 //   pnpm qa --start --path /widgets/picker-control/           --framework both --drive tools/drives/picker-contract.js

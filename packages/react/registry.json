@@ -40,6 +40,8 @@
         "https://sg-widgets.vercel.app/r/react/search-control.json",
         "https://sg-widgets.vercel.app/r/react/entity-type-picker.json",
         "https://sg-widgets.vercel.app/r/react/entity-type-multi-picker.json",
+        "https://sg-widgets.vercel.app/r/react/field-glyphs.json",
+        "https://sg-widgets.vercel.app/r/react/data-type-picker.json",
         "https://sg-widgets.vercel.app/r/react/field-picker.json",
         "https://sg-widgets.vercel.app/r/react/sortable.json",
         "https://sg-widgets.vercel.app/r/react/column-picker.json",
@@ -662,6 +664,55 @@
       "files": [
         {
           "path": "src/registry/sg/components/entity-type-multi-picker.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "field-glyphs",
+      "type": "registry:component",
+      "title": "Field Glyphs",
+      "description": "A glyph per field data type, with the document every unknown type takes.",
+      "categories": [
+        "flow-production-tracking",
+        "atom"
+      ],
+      "dependencies": [
+        "sg-widgets-core",
+        "lucide-react"
+      ],
+      "registryDependencies": [],
+      "docs": "fieldGlyph(dataType) answers an icon component. A type it does not know takes the document.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/field-glyphs.ts",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "data-type-picker",
+      "type": "registry:component",
+      "title": "Data Type Picker",
+      "description": "One field data type, picked from the set the caller offers.",
+      "categories": [
+        "flow-production-tracking",
+        "picker"
+      ],
+      "dependencies": [
+        "sg-widgets-core",
+        "cn"
+      ],
+      "registryDependencies": [
+        "https://sg-widgets.vercel.app/r/react/field-glyphs.json",
+        "https://sg-widgets.vercel.app/r/react/leaf-classes.json",
+        "https://sg-widgets.vercel.app/r/react/list-picker.json",
+        "https://sg-widgets.vercel.app/r/react/picker-classes.json"
+      ],
+      "docs": "Pass the data types on offer; the widget names no set of its own. A type outside the set, or one it does not know, still draws.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/data-type-picker.tsx",
           "type": "registry:component"
         }
       ]

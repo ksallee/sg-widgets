@@ -40,6 +40,7 @@
 	import FilterEditor from '$lib/registry/components/filter-editor.svelte';
 	import GlobalSearch from '$lib/registry/components/global-search.svelte';
 	import ListMultiPicker from '$lib/registry/components/list-multi-picker.svelte';
+	import DataTypePicker from '$lib/registry/components/data-type-picker.svelte';
 	import ListPicker from '$lib/registry/components/list-picker.svelte';
 	import NumberEditor from '$lib/registry/components/number-editor.svelte';
 	import ProjectPicker from '$lib/registry/components/project-picker.svelte';
@@ -126,6 +127,7 @@
 	let approvedAt = $state<string | null>('2026-03-04T13:06:07Z');
 	let flagged = $state(true);
 	let listValue = $state<string | null>('Type A');
+	let dataType = $state<string | null>('date_time');
 	let listValues = $state<string[]>(['Type A', 'Type B']);
 	let colour = $state<string | null>('0,126,174');
 	let movie = $state<UrlValue | null>({
@@ -357,6 +359,10 @@
 				<div class={field} data-qa-widget="list-picker" data-qa-size="md">
 					<span class={fieldLabel}>Version type</span>
 					<ListPicker bind:value={listValue} field={versionType} />
+				</div>
+				<div class={field} data-qa-widget="data-type-picker" data-qa-size="md">
+					<span class={fieldLabel}>Data type</span>
+					<DataTypePicker bind:value={dataType} types={['text', 'number', 'date', 'date_time', 'list']} />
 				</div>
 				<div class={field} data-qa-widget="list-multi-picker" data-qa-size="md">
 					<span class={fieldLabel}>Version types</span>

@@ -1,6 +1,7 @@
 export * from './field-types.js';
 export * from './field-name.js';
 export * from './field-icons.js';
+export * from './data-type-labels.js';
 export * from './filter.js';
 export * from './filter-ux.js';
 export * from './render.js';

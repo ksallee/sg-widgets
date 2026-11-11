@@ -41,9 +41,10 @@ export function toSchemaProperties(properties?: SchemaProperties): SchemaPropert
 export interface CreateFieldInput {
   /**
    * `text float number date date_time list url duration percent footage` take
-   * nothing else. `checkbox` needs `default_value`; `entity` and `multi_entity`
-   * need `valid_types` holding exactly one type; `color`, `image` and
-   * `calculated` are refused (019_create_fields).
+   * nothing else. `checkbox` needs `default_value` and `status_list` its
+   * `valid_values`; `entity` needs `valid_types`, one type or several, and
+   * `multi_entity` exactly one; `color`, `image` and `calculated` are refused
+   * (019_create_fields, 116_field_settings_create_update).
    */
   dataType: string;
   /** Sent as the `name` property. The server derives the programmatic name from it. */

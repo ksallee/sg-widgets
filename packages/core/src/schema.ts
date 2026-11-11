@@ -23,6 +23,8 @@ export interface RawFieldSchema {
   unique: RawProperty<boolean>;
   /** At the top level beside `name`, not under `properties` (116_field_settings_create_update). */
   description?: RawProperty<string>;
+  /** At the top level too (002_schema). */
+  custom_metadata?: RawProperty<string>;
   /** `editable` here says whether the site may hide the field (056_stock_vs_custom_field). */
   visible?: RawProperty<boolean>;
   properties: Record<string, RawProperty<unknown>>;

@@ -198,8 +198,9 @@ if (read.status === 'found') console.log(read.field.dataType, read.raw.propertie
 `createField` sends a data type, a display name and the other settings, and answers the
 programmatic name the server assigned, read from the response's self link. A display name already
 in use creates a suffixed field with no warning, so compare the answered name with the wanted one
-(`019_create_fields`). A checkbox needs `default_value`; an entity or multi-entity link needs
-`valid_types` with exactly one type.
+(`019_create_fields`). A checkbox needs `default_value` and a status list its `valid_values`; an
+entity link needs `valid_types`, one type or several, and a multi-entity link exactly one
+(`116_field_settings_create_update`).
 
 ```ts
 const created = await schema.createField('Shot', {

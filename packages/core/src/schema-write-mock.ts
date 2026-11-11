@@ -11,6 +11,7 @@
  * ```
  */
 import type { SgClient } from './client.js';
+import { CUSTOM_FIELD_PREFIX, predictFieldName } from './field-name.js';
 import { SgApiError } from './client.js';
 import type { FieldSchema, RawFieldSchema, RawProperty } from './schema.js';
 import { undeclaredField } from './schema.js';
@@ -41,11 +42,6 @@ function refusal(status: number, error: { title?: string; detail?: string; sourc
 
 function missing(entityType: string, field: string): SchemaApiError {
   return refusal(404, { title: 'Not Found', detail: `Field '${entityType}.${field}' does not exist.` });
-}
-
-/** `sg_`, lower case, and `_` for whatever is not a letter or a digit (019_create_fields). */
-function programmaticName(displayName: string): string {
-  return `sg_${displayName.toLowerCase().replace(/[^a-z0-9]/g, '_')}`;
 }
 
 function wrap<T>(value: T, editable = false): RawProperty<T> {
@@ -184,7 +180,8 @@ export class MockSchemaClient implements SchemaClient {
     }
 
     // A name in use is suffixed at 201; a name a retired field holds is refused (reports/006, 040_field_revive).
-    const wanted = programmaticName(input.displayName);
+    // A blank display name is not measured; the bare prefix stands in for its name.
+    const wanted = predictFieldName(input.displayName, type) ?? CUSTOM_FIELD_PREFIX;
     let name = wanted;
     for (let n = 1; existing[name]; n += 1) name = `${wanted}_${n}`;
     if (this.retired.has(`${entityType}.${name}`)) {

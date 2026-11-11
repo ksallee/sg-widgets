@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CUSTOM_FIELD_PREFIX, predictFieldName } from '../src/field-name.js';
+import { CUSTOM_FIELD_PREFIX, hasNonAscii, predictFieldName } from '../src/field-name.js';
 
 describe('predictFieldName', () => {
   it('is the custom-field prefix', () => {
@@ -35,21 +35,65 @@ describe('predictFieldName', () => {
     expect(predictFieldName('\t\n')).toBeNull();
   });
 
-  // Unmeasured: the literal reading of the measured rule.
+  // Measured pairs, findings/117_field_types_and_names, on currency fields.
   it('does not trim surrounding whitespace', () => {
+    expect(predictFieldName('  zzprobe 117 spaces  ')).toBe('sg___zzprobe_117_spaces__');
     expect(predictFieldName(' cut ')).toBe('sg__cut_');
   });
 
-  it('treats only ASCII letters and digits as alphanumeric, one underscore per code point', () => {
-    expect(predictFieldName('Café')).toBe('sg_caf_');
-    expect(predictFieldName('日本')).toBe('sg___');
-    expect(predictFieldName('a🎬b')).toBe('sg_a_b');
-    expect(predictFieldName('Kelvin')).toBe('sg__elvin');
+  it('keeps every punctuation character as its own underscore', () => {
+    expect(predictFieldName('zzprobe 117 a--b..c!!d  e_f')).toBe('sg_zzprobe_117_a__b__c__d__e_f');
+    expect(predictFieldName('zzprobe 117 MiXed CASE')).toBe('sg_zzprobe_117_mixed_case');
   });
 
   it('keeps a leading digit and does not cut a long name', () => {
+    expect(predictFieldName('117 zzprobe digit')).toBe('sg_117_zzprobe_digit');
     expect(predictFieldName('3D Pass')).toBe('sg_3d_pass');
-    const long = 'x'.repeat(300);
-    expect(predictFieldName(long)).toBe(`sg_${long}`);
+    const long = 'zzprobe 117 long ' + 'abcdefghij'.repeat(10) + 'abc';
+    expect(long).toHaveLength(120);
+    expect(predictFieldName(long)).toHaveLength(123);
+    expect(predictFieldName('x'.repeat(300))).toBe(`sg_${'x'.repeat(300)}`);
+  });
+
+  it('names a field with a non-ASCII display name after its data type', () => {
+    expect(predictFieldName('zzprobe 117 Durée Écran ñ', 'currency')).toBe('sg_currency');
+    expect(predictFieldName('zzprobe 117 日本語 поле', 'currency')).toBe('sg_currency');
+  });
+
+  // Inferred from the currency measurement: the data type names the field on every type.
+  it('names it after any data type it is given', () => {
+    expect(predictFieldName('Café', 'text')).toBe('sg_text');
+    expect(predictFieldName('a🎬b', 'number')).toBe('sg_number');
+    expect(predictFieldName('\u212Aelvin', 'list')).toBe('sg_list');
+  });
+
+  it('predicts nothing for a non-ASCII display name without a data type', () => {
+    expect(predictFieldName('Café')).toBeNull();
+    expect(predictFieldName('日本')).toBeNull();
+    expect(predictFieldName('a🎬b')).toBeNull();
+    expect(predictFieldName('\u212Aelvin')).toBeNull();
+  });
+
+  it('ignores the data type for an ASCII display name', () => {
+    expect(predictFieldName('Plate Note', 'text')).toBe('sg_plate_note');
+  });
+
+  it('predicts nothing for a blank display name, with or without a data type', () => {
+    expect(predictFieldName('   ', 'text')).toBeNull();
+  });
+});
+
+describe('hasNonAscii', () => {
+  it('is true when any character is outside ASCII', () => {
+    expect(hasNonAscii('Café')).toBe(true);
+    expect(hasNonAscii('a🎬b')).toBe(true);
+    expect(hasNonAscii('\u212Aelvin')).toBe(true);
+    expect(hasNonAscii('nbsp\u00A0here')).toBe(true);
+  });
+
+  it('is false for ASCII, control characters and punctuation included', () => {
+    expect(hasNonAscii('zzprobe 117 a--b..c!!d  e_f')).toBe(false);
+    expect(hasNonAscii('tab\there~\u007F')).toBe(false);
+    expect(hasNonAscii('')).toBe(false);
   });
 });

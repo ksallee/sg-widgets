@@ -2,19 +2,29 @@
 export const CUSTOM_FIELD_PREFIX = 'sg_';
 
 /**
- * The programmatic name the server derives from a display name, or null for a blank one.
- *
- * The prefix, then the display name lowercased with each non-alphanumeric character
- * replaced by one underscore: no collapsing, no trimming, and a display name that already
- * starts with the prefix gets it twice (findings/019_create_fields). A display name that
- * is already taken comes back suffixed `_1`, `_2`, which this does not predict.
- *
- * Unmeasured, read literally: surrounding whitespace is kept, only ASCII letters and digits
- * count as alphanumeric (accented and non-Latin letters each become one underscore, per
- * code point), a leading digit stays, and a long name is not cut.
+ * Whether a display name holds a character outside ASCII. The server discards such a name
+ * whole when it derives the programmatic name (findings/117_field_types_and_names).
  */
-export function predictFieldName(displayName: string): string | null {
+export function hasNonAscii(displayName: string): boolean {
+  return /[^\u0000-\u007F]/u.test(displayName);
+}
+
+/**
+ * The programmatic name the server derives from a display name, or null when it cannot be
+ * predicted: a blank display name, or a non-ASCII one without its data type.
+ *
+ * An ASCII display name gives the prefix, then the name lowercased with each character
+ * outside `[a-z0-9_]` replaced by one underscore. Nothing is trimmed, collapsed or cut, a
+ * leading digit stays, and a prefix already there is doubled (findings/019_create_fields,
+ * findings/117_field_types_and_names).
+ *
+ * One non-ASCII character anywhere and the server ignores the display name: the field is
+ * `sg_<data_type>`. That is measured on a `currency` field and inferred for the other types.
+ * A name already taken comes back suffixed `_1`, `_2`, and a name a retired field holds is
+ * refused; neither is predicted here.
+ */
+export function predictFieldName(displayName: string, dataType?: string): string | null {
   if (displayName.trim() === '') return null;
-  const body = displayName.replace(/[A-Z]/g, (c) => c.toLowerCase()).replace(/[^a-z0-9]/gu, '_');
-  return CUSTOM_FIELD_PREFIX + body;
+  if (hasNonAscii(displayName)) return dataType ? CUSTOM_FIELD_PREFIX + dataType : null;
+  return CUSTOM_FIELD_PREFIX + displayName.toLowerCase().replace(/[^a-z0-9_]/g, '_');
 }

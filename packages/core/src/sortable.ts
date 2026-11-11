@@ -559,17 +559,18 @@ export function createSortableController(options: SortableControllerOptions): So
 
   /**
    * A move is drawn after the key that made it, and a row moved in the document
-   * loses the focus it held. That is the redraw, not the caret leaving: the carry
-   * goes on, and the grip takes the focus back once the list is drawn.
+   * loses the focus it held. That is the redraw, not the caret leaving: a carry
+   * goes on, and the grip takes the focus back once the list is drawn, unless
+   * the caret has gone somewhere else by then.
    */
   function holdThroughRedraw(handle: HTMLElement): void {
     const carried = keyboard;
-    if (!carried) return;
-    carried.redrawing = true;
+    if (carried) carried.redrawing = true;
     setTimeout(() => {
-      carried.redrawing = false;
+      if (carried) carried.redrawing = false;
       if (keyboard !== carried || !container.contains(handle)) return;
-      if (handle.ownerDocument.activeElement !== handle) handle.focus({ preventScroll: true });
+      const active = handle.ownerDocument.activeElement;
+      if (active === null || active === handle.ownerDocument.body) handle.focus({ preventScroll: true });
     }, 0);
   }
 
@@ -621,6 +622,7 @@ export function createSortableController(options: SortableControllerOptions): So
       event.stopPropagation();
       const restored = keyboard.origin;
       endKeyboard();
+      holdThroughRedraw(handle);
       onOrderChange([...restored], id);
       say(sortableAnnouncements.cancel());
     }

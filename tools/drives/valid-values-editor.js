@@ -150,6 +150,21 @@ for (const framework of ['svelte', 'react']) {
   if ($('[data-dragging]', list)) fail('a dropped row still reads as carried');
   if (document.activeElement !== gripOf()) fail('the drop took the caret off the grip');
 
+  // Escape puts a carried row back where it was picked up, and the caret stays on its grip.
+  key(gripOf(), 'Enter');
+  await wait(100);
+  for (const place of [1, 2]) {
+    key(gripOf(), 'ArrowDown');
+    await until(() => (emitted(list)[place] === carried ? true : null), 2000);
+    await wait(150);
+  }
+  key(gripOf(), 'Escape');
+  await until(() => (emitted(list)[0] === carried ? true : null), 2000);
+  await wait(150);
+  if (emitted(list)[0] !== carried) fail(`Escape while carrying left the list as ${JSON.stringify(emitted(list))}`);
+  if (document.activeElement !== gripOf()) fail('Escape while carrying took the caret off the grip');
+  if ($('[data-dragging]', list)) fail('a row put back still reads as carried');
+
   /* ---------------------------------------------------------------- remove */
 
   const count = emitted(list).length;

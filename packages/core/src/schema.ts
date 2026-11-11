@@ -21,6 +21,10 @@ export interface RawFieldSchema {
   editable: RawProperty<boolean>;
   mandatory: RawProperty<boolean>;
   unique: RawProperty<boolean>;
+  /** At the top level beside `name`, not under `properties` (116_field_settings_create_update). */
+  description?: RawProperty<string>;
+  /** At the top level too (002_schema). */
+  custom_metadata?: RawProperty<string>;
   /** `editable` here says whether the site may hide the field (056_stock_vs_custom_field). */
   visible?: RawProperty<boolean>;
   properties: Record<string, RawProperty<unknown>>;
@@ -143,7 +147,7 @@ export function normalizeField(name: string, raw: RawFieldSchema): FieldSchema {
   if (hiddenValues) field.hiddenValues = hiddenValues;
   const defaultValue = prop<unknown>(props, 'default_value');
   if (defaultValue !== undefined) field.defaultValue = defaultValue;
-  const description = prop<string>(props, 'description');
+  const description = raw.description?.value;
   if (description) field.description = description;
   if (raw.visible) field.hideable = raw.visible.editable;
   return { ...field, ...fieldSchemaOverride(field.entityType, name) };

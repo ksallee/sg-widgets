@@ -201,7 +201,8 @@ describe('the fields the schema types wrongly', () => {
       editable: { value: false, editable: false },
       mandatory: { value: false, editable: false },
       unique: { value: false, editable: false },
-      properties: { description: { value: 'Per person.', editable: true } },
+      description: { value: 'Per person.', editable: true },
+      properties: {},
     });
     expect(declared).toEqual({
       name: 'read_by_current_user',

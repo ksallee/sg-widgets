@@ -40,6 +40,8 @@
         "https://sg-widgets.vercel.app/r/react/search-control.json",
         "https://sg-widgets.vercel.app/r/react/entity-type-picker.json",
         "https://sg-widgets.vercel.app/r/react/entity-type-multi-picker.json",
+        "https://sg-widgets.vercel.app/r/react/field-glyphs.json",
+        "https://sg-widgets.vercel.app/r/react/data-type-picker.json",
         "https://sg-widgets.vercel.app/r/react/field-picker.json",
         "https://sg-widgets.vercel.app/r/react/sortable.json",
         "https://sg-widgets.vercel.app/r/react/column-picker.json",
@@ -60,6 +62,7 @@
         "https://sg-widgets.vercel.app/r/react/sort-picker.json",
         "https://sg-widgets.vercel.app/r/react/status-picker.json",
         "https://sg-widgets.vercel.app/r/react/status-multi-picker.json",
+        "https://sg-widgets.vercel.app/r/react/valid-values-editor.json",
         "https://sg-widgets.vercel.app/r/react/collection-source.json",
         "https://sg-widgets.vercel.app/r/react/collection-control.json",
         "https://sg-widgets.vercel.app/r/react/collection-footer.json",
@@ -667,6 +670,55 @@
       ]
     },
     {
+      "name": "field-glyphs",
+      "type": "registry:component",
+      "title": "Field Glyphs",
+      "description": "A glyph per field data type, with the document every unknown type takes.",
+      "categories": [
+        "flow-production-tracking",
+        "atom"
+      ],
+      "dependencies": [
+        "sg-widgets-core",
+        "lucide-react"
+      ],
+      "registryDependencies": [],
+      "docs": "fieldGlyph(dataType) answers an icon component. A type it does not know takes the document.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/field-glyphs.ts",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "data-type-picker",
+      "type": "registry:component",
+      "title": "Data Type Picker",
+      "description": "One field data type, picked from the set the caller offers.",
+      "categories": [
+        "flow-production-tracking",
+        "picker"
+      ],
+      "dependencies": [
+        "sg-widgets-core",
+        "cn"
+      ],
+      "registryDependencies": [
+        "https://sg-widgets.vercel.app/r/react/field-glyphs.json",
+        "https://sg-widgets.vercel.app/r/react/leaf-classes.json",
+        "https://sg-widgets.vercel.app/r/react/list-picker.json",
+        "https://sg-widgets.vercel.app/r/react/picker-classes.json"
+      ],
+      "docs": "Pass the data types on offer; the widget names no set of its own. A type outside the set, or one it does not know, still draws.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/data-type-picker.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
       "name": "field-picker",
       "type": "registry:component",
       "title": "Field Picker",
@@ -1257,6 +1309,33 @@
       "files": [
         {
           "path": "src/registry/sg/components/status-multi-picker.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "valid-values-editor",
+      "type": "registry:component",
+      "title": "Valid Values Editor",
+      "description": "The valid values of a list or status list field: ordered strings typed and dragged, or status codes picked from the site's statuses.",
+      "categories": [
+        "flow-production-tracking",
+        "editor"
+      ],
+      "dependencies": [
+        "sg-widgets-core",
+        "lucide-react",
+        "cn"
+      ],
+      "registryDependencies": [
+        "button",
+        "https://sg-widgets.vercel.app/r/react/sortable.json",
+        "https://sg-widgets.vercel.app/r/react/status-multi-picker.json"
+      ],
+      "docs": "dataType picks the mode. A status list needs a context to read the site's statuses; without one its codes are typed.",
+      "files": [
+        {
+          "path": "src/registry/sg/components/valid-values-editor.tsx",
           "type": "registry:component"
         }
       ]

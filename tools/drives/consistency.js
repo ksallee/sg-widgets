@@ -83,6 +83,7 @@ const CONTROL = {
   'date-time-editor': '[data-slot="date-time-editor-trigger"]',
   'list-picker': '[data-slot="list-picker-control"]',
   'list-multi-picker': '[data-slot="list-multi-picker-control"]',
+  'data-type-picker': '[data-slot="data-type-picker-control"]',
   'color-editor': '[data-slot="input"]',
   'url-editor': '[data-slot="url-editor-url"]',
 };

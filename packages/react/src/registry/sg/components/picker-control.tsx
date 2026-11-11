@@ -252,6 +252,7 @@ export function PickerControl({
   // The list writes the overflow variables the fade reads, which are Base UI's own.
   useEffect(() => watchOverflow(listEl), [listEl]);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
   const chipsRef = useRef<HTMLSpanElement | null>(null);
   /** The chip holding the caret. Backspace and Delete take it. */
   const [armedChip, setArmedChip] = useState<number | null>(null);
@@ -630,7 +631,9 @@ export function PickerControl({
           aria-label={clearLabel}
           onClick={() => {
             onClear?.();
+            // The clear control goes with the value, and the caret stays on the picker.
             if (inline) inputRef.current?.focus({ preventScroll: true });
+            else triggerRef.current?.focus({ preventScroll: true });
           }}
           className={PICKER_ICON_BUTTON}
         >
@@ -638,6 +641,7 @@ export function PickerControl({
         </button>
       ) : null}
       <ComboboxPrimitive.Trigger
+        ref={triggerRef}
         data-slot={`${slot}-trigger`}
         aria-label={triggerLabel}
         disabled={inert}

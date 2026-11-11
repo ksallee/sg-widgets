@@ -38,6 +38,7 @@ import { FieldPicker } from '@/registry/sg/components/field-picker';
 import { FilterBar } from '@/registry/sg/components/filter-bar';
 import { FilterEditor } from '@/registry/sg/components/filter-editor';
 import { GlobalSearch } from '@/registry/sg/components/global-search';
+import { DataTypePicker } from '@/registry/sg/components/data-type-picker';
 import { ListMultiPicker } from '@/registry/sg/components/list-multi-picker';
 import { ListPicker } from '@/registry/sg/components/list-picker';
 import { NumberEditor } from '@/registry/sg/components/number-editor';
@@ -68,6 +69,8 @@ const SHOWN = Object.keys(WIDTHS);
 const ASSET: EntityRef = { type: 'Asset', id: 1226, name: 'charAda' };
 const PERSON: EntityRef = { type: 'HumanUser', id: 20, name: 'Ada Lovelace' };
 const SHOT: EntityRef = { type: 'Shot', id: 862, name: 'sh010_0010' };
+
+const DATA_TYPES_ON_OFFER = ['text', 'number', 'date', 'date_time', 'list'];
 
 const VERSION_TYPE: Pick<FieldSchema, 'displayName' | 'mandatory' | 'validValues'> = {
   displayName: 'Version Type',
@@ -142,6 +145,7 @@ export default function CompositionDemo() {
   const [approvedAt, setApprovedAt] = useState<string | null>('2026-03-04T13:06:07Z');
   const [flagged, setFlagged] = useState<boolean | undefined>(true);
   const [listValue, setListValue] = useState<string | null>('Type A');
+  const [dataType, setDataType] = useState<string | null>('date_time');
   const [listValues, setListValues] = useState<string[]>(['Type A', 'Type B']);
   const [colour, setColour] = useState<string | null>('0,126,174');
   const [movie, setMovie] = useState<UrlValue | null>({
@@ -322,6 +326,10 @@ export default function CompositionDemo() {
             <div className={field} data-qa-widget="list-picker" data-qa-size="md">
               <span className={fieldLabel}>Version type</span>
               <ListPicker value={listValue} onValueChange={setListValue} field={VERSION_TYPE} />
+            </div>
+            <div className={field} data-qa-widget="data-type-picker" data-qa-size="md">
+              <span className={fieldLabel}>Data type</span>
+              <DataTypePicker value={dataType} onValueChange={setDataType} types={DATA_TYPES_ON_OFFER} />
             </div>
             <div className={field} data-qa-widget="list-multi-picker" data-qa-size="md">
               <span className={fieldLabel}>Version types</span>

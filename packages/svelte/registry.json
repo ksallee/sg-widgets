@@ -45,6 +45,8 @@
         "local:value-editor",
         "local:entity-type-picker",
         "local:entity-type-multi-picker",
+        "local:field-glyphs",
+        "local:data-type-picker",
         "local:field-picker",
         "local:sortable",
         "local:column-picker",
@@ -65,6 +67,7 @@
         "local:sort-picker",
         "local:status-picker",
         "local:status-multi-picker",
+        "local:valid-values-editor",
         "local:collection-source",
         "local:collection-control",
         "local:collection-footer",
@@ -701,6 +704,46 @@
       ]
     },
     {
+      "name": "field-glyphs",
+      "type": "registry:component",
+      "title": "Field Glyphs",
+      "description": "A glyph per field data type, with the document every unknown type takes.",
+      "dependencies": [
+        "sg-widgets-core",
+        "@lucide/svelte"
+      ],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "src/lib/registry/components/field-glyphs.ts",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "data-type-picker",
+      "type": "registry:component",
+      "title": "Data Type Picker",
+      "description": "One field data type, picked from the set the caller offers.",
+      "dependencies": [
+        "sg-widgets-core",
+        "clsx",
+        "tailwind-merge"
+      ],
+      "registryDependencies": [
+        "local:field-glyphs",
+        "local:leaf-classes",
+        "local:list-picker",
+        "local:picker-classes"
+      ],
+      "files": [
+        {
+          "path": "src/lib/registry/components/data-type-picker.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
       "name": "field-picker",
       "type": "registry:component",
       "title": "Field Picker",
@@ -1212,6 +1255,29 @@
       "files": [
         {
           "path": "src/lib/registry/components/status-multi-picker.svelte",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "valid-values-editor",
+      "type": "registry:component",
+      "title": "Valid Values Editor",
+      "description": "The valid values of a list or status list field: ordered strings typed and dragged, or status codes picked from the site's statuses.",
+      "dependencies": [
+        "sg-widgets-core",
+        "@lucide/svelte",
+        "clsx",
+        "tailwind-merge"
+      ],
+      "registryDependencies": [
+        "button",
+        "local:sortable",
+        "local:status-multi-picker"
+      ],
+      "files": [
+        {
+          "path": "src/lib/registry/components/valid-values-editor.svelte",
           "type": "registry:component"
         }
       ]

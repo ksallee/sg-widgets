@@ -37,3 +37,5 @@ export * from './paging.js';
 export * from './state.js';
 export * from './list-chrome.js';
 export * from './table-width.js';
+export * from './bulk-edit.js';
+export * from './list-source.js';

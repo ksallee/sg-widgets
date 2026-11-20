@@ -92,6 +92,9 @@
 	/** The key a cell's error and write state are held under. */
 	const cellKey = (key: string, path: string): string => `${key}\u0000${path}`;
 
+	/** Editors whose one pick is the whole edit: in the cell, the pick commits. */
+	const PICK_KINDS = new Set(['checkbox', 'list', 'status_list', 'entity']);
+
 	/** The popups a cell editor opens. Each is portalled out of the table's own tree. */
 	const EDITOR_POPUP = '[data-slot="popover-content"],[data-slot="select-content"],[data-picker]';
 </script>
@@ -122,6 +125,7 @@
 		sameColumnPaths,
 		serializeColumnChoice,
 		unreadPaths,
+		editorKindFor,
 		editorPlacementFor,
 		errorText,
 		isEditableType,
@@ -736,6 +740,10 @@
 	function lockReason(column: CollectionColumn, row: EntityRow): string | null {
 		if (!editable || !column.editable || control.rowDisabled(row)) return null;
 		return editLock?.(row, column) || null;
+	}
+
+	function commitsOnPick(dataType: string): boolean {
+		return PICK_KINDS.has(editorKindFor(dataType));
 	}
 
 	function canEditColumn(column: CollectionColumn, row: EntityRow): boolean {
@@ -1392,7 +1400,14 @@
 															>
 																<FieldEditor
 																	value={draft}
-																	onValueChange={(next) => (draft = next)}
+																	onValueChange={(next) => {
+																		draft = next;
+																		// A single pick in the cell is the edit itself, as a checkbox press is.
+																		if (placement === 'inline' && commitsOnPick(column.dataType)) {
+																			releaseEditor();
+																			void commit(row, column, next);
+																		}
+																	}}
 																	dataType={column.dataType}
 																	field={column.field}
 																	{statuses}

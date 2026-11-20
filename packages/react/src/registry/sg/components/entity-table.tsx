@@ -26,6 +26,7 @@ import {
   columnPaths,
   columnsStorageKey,
   collapseStateFrom,
+  editorKindFor,
   editorPlacementFor,
   errorText,
   expandAll,
@@ -100,6 +101,9 @@ import { FieldEditor } from '@/registry/sg/components/field-editor';
 import { FieldValue } from '@/registry/sg/components/field-value';
 import { PICKER_ICON_BUTTON } from '@/registry/sg/components/picker-classes';
 import { StateLine } from '@/registry/sg/components/state-line';
+
+/** Editors whose one pick is the whole edit: in the cell, the pick commits. */
+const PICK_KINDS = new Set(['checkbox', 'list', 'status_list', 'entity']);
 
 export type EntityTableDensity = 'compact' | 'default';
 export type EntityTableSize = 'sm' | 'md' | 'lg';
@@ -1363,6 +1367,11 @@ export function EntityTable({
                                       onValueChange={(next) => {
                                         draft.current = next;
                                         setDraftValue(next);
+                                        // A single pick in the cell is the edit itself, as a checkbox press is.
+                                        if (placementFor(column) === 'inline' && PICK_KINDS.has(editorKindFor(column.dataType))) {
+                                          releaseEditor();
+                                          void commit(row, column, next);
+                                        }
                                       }}
                                       dataType={column.dataType}
                                       field={column.field}

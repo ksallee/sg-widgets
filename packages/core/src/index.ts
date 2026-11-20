@@ -36,3 +36,4 @@ export * from './tree.js';
 export * from './paging.js';
 export * from './state.js';
 export * from './list-chrome.js';
+export * from './table-width.js';

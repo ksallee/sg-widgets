@@ -49,7 +49,7 @@
 		siteUrl?: string;
 		/** How an entity or multi_entity value draws: a chip, a link or bare text. */
 		entityVariant?: EntityChipVariant;
-		/** The density of the collection around the value. Compact drops its chip and badge a step. */
+		/** The density of the collection around the value. Compact drops its chip and badge a step, and keeps free text to one line. */
 		density?: FieldValueDensity;
 		/** Field paths shown in a hover card on a linked row. Needs a context. */
 		preview?: string[];
@@ -225,7 +225,11 @@
 	{:else if kind === 'list'}
 		<span class="truncate">{text}</span>
 	{:else}
-		<!-- `text` keeps its newlines: a description is free text and often multi-line. -->
-		<span class="min-w-0 break-words whitespace-pre-wrap">{text}</span>
+		<!-- `text` keeps its newlines: a description is free text and often multi-line. Compact keeps it to one line, whole in the title. -->
+		{#if density === 'compact'}
+			<span class="min-w-0 truncate" title={text}>{text}</span>
+		{:else}
+			<span class="min-w-0 break-words whitespace-pre-wrap">{text}</span>
+		{/if}
 	{/if}
 </span>

@@ -45,7 +45,7 @@ export interface FieldValueProps extends Omit<React.HTMLAttributes<HTMLSpanEleme
   siteUrl?: string;
   /** How an entity or multi_entity value draws: a chip, a link or bare text. */
   entityVariant?: EntityChipVariant;
-  /** The density of the collection around the value. Compact drops its chip and badge a step. */
+  /** The density of the collection around the value. Compact drops its chip and badge a step, and keeps free text to one line. */
   density?: FieldValueDensity;
   /** Field paths shown in a hover card on a linked row. Needs a context. */
   preview?: string[];
@@ -224,8 +224,14 @@ export function FieldValue({
       ) : kind === 'list' ? (
         <span className="truncate">{text}</span>
       ) : (
-        // `text` keeps its newlines: a description is free text and often multi-line.
-        <span className="min-w-0 break-words whitespace-pre-wrap">{text}</span>
+        // `text` keeps its newlines: a description is free text and often multi-line. Compact keeps it to one line, whole in the title.
+        density === 'compact' ? (
+          <span className="min-w-0 truncate" title={text}>
+            {text}
+          </span>
+        ) : (
+          <span className="min-w-0 break-words whitespace-pre-wrap">{text}</span>
+        )
       )}
     </span>
   );

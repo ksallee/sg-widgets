@@ -58,6 +58,7 @@ export default {
     { key: 'Enter in an editor', does: 'Commits the value. In a textarea it adds a line, and Cmd or Ctrl with Enter commits.' },
     { key: 'Escape in an editor', does: 'Cancels and restores the value.' },
     { key: 'Tab, Shift+Tab in an inline editor', does: 'Commits the value and moves to the next or the previous editable cell in the row.' },
+    { key: 'A pick in an inline list, status, entity or checkbox editor', does: 'Commits the value.' },
     { key: 'a press outside an editor', does: 'Commits the value.' },
     { key: 'Enter, Escape, Save, Cancel in a popover editor', does: 'The same: Enter and Save commit, Escape and Cancel restore.' },
     { key: 'Space on a checkbox or a cell', does: 'Toggles the row, or every loaded row from the header.' },

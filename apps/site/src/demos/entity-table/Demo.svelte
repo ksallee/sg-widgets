@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { CollapseState, CollectionColumn, EditorPlacement, EntityRef, FilterGroup, PagingMode, SortKey, StatusRecord } from 'sg-widgets-core';
+	import type { BulkEdit, CollapseState, CollectionColumn, EditorPlacement, EntityRef, EntityRow, FilterGroup, PagingMode, SortKey, StatusRecord } from 'sg-widgets-core';
 	import {
 		collapseAll,
 		condition,
@@ -11,6 +11,8 @@
 		toSortSpecs
 	} from 'sg-widgets-core';
 	import EntityTable from '$lib/registry/components/entity-table.svelte';
+	import { Button } from '$lib/components/ui/button/index.js';
+	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import FilterBar from '$lib/registry/components/filter-bar.svelte';
 	import SortPicker from '$lib/registry/components/sort-picker.svelte';
 	import { createDemoContext } from '../_shared/client';
@@ -91,6 +93,24 @@
 		selected = refs;
 	}
 
+	/** An approved Version keeps its description: one cell the table locks, with the reason on it. */
+	function editLock(row: EntityRow, column: CollectionColumn): string | null {
+		return column.path === 'description' && row.attributes['sg_status_list'] === 'apr' ? 'An approved Version keeps its description.' : null;
+	}
+
+	/** The bulk edit waiting on an answer, and how to give it. */
+	let asking = $state<{ edit: BulkEdit; answer: (ok: boolean) => void } | null>(null);
+	const askingHeader = $derived(asking ? (columns.find((column) => column.path === asking?.edit.path)?.header ?? asking.edit.path) : '');
+
+	function confirmBulkEdit(edit: BulkEdit): Promise<boolean> {
+		return new Promise((answer) => (asking = { edit, answer }));
+	}
+
+	function settle(ok: boolean): void {
+		asking?.answer(ok);
+		asking = null;
+	}
+
 	const toggle =
 		'inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-background px-2 text-sm shadow-xs ' +
 		'text-muted-foreground outline-none transition-colors duration-150 hover:bg-accent hover:text-accent-foreground ' +
@@ -155,6 +175,9 @@
 			selectable
 			columnPicker
 			editable
+			bulkEdit
+			{confirmBulkEdit}
+			{editLock}
 			{paging}
 			editorPlacement={placement}
 			density={compact ? 'compact' : 'default'}
@@ -168,6 +191,23 @@
 				<SortPicker entityType="Version" {context} size="sm" options={columns.map((column) => column.path)} bind:value={sortKeys} />
 			{/snippet}
 		</EntityTable>
+		<Dialog.Root open={asking !== null} onOpenChange={(open) => !open && settle(false)}>
+			<Dialog.Content class="sm:max-w-md" data-demo="bulk-confirm">
+				{#if asking}
+					<Dialog.Header>
+						<Dialog.Title>Change {askingHeader} on {asking.edit.rows.length} Versions?</Dialog.Title>
+						<Dialog.Description>
+							Every selected row gets the same value.
+							{#if asking.edit.skipped.length > 0}{asking.edit.skipped.length} selected {asking.edit.skipped.length === 1 ? 'row is' : 'rows are'} left as they are.{/if}
+						</Dialog.Description>
+					</Dialog.Header>
+					<Dialog.Footer>
+						<Button variant="outline" onclick={() => settle(false)}>Cancel</Button>
+						<Button data-demo="bulk-confirm-ok" onclick={() => settle(true)}>Change {asking.edit.rows.length}</Button>
+					</Dialog.Footer>
+				{/if}
+			</Dialog.Content>
+		</Dialog.Root>
 	</div>
 {:catch error}
 	<p class="text-destructive text-sm">{error.message}</p>

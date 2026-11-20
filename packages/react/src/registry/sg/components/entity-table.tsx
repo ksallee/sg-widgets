@@ -40,6 +40,7 @@ import {
   sameCollapse,
   selectionKeyIntent,
   stateLine,
+  fillWidths,
 } from 'sg-widgets-core';
 import {
   columnGroupingFeature,
@@ -525,6 +526,25 @@ export function EntityTable({
     },
   });
 
+  /** The scrolling box's inner width: the last column takes what the others leave of it. */
+  const [room, setRoom] = useState(0);
+  useEffect(() => {
+    const el = body.scrollRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver(() => setRoom(el.clientWidth));
+    observer.observe(el);
+    setRoom(el.clientWidth);
+    return () => observer.disconnect();
+  }, [body.scrollRef]);
+  const widths = fillWidths(
+    leafColumns.map((column) => column.getSize()),
+    room,
+  );
+  const tableWidth = Math.max(
+    totalWidth,
+    widths.reduce((sum, width) => sum + width, 0),
+  );
+
   const at = body.window;
   const window_ = !at
     ? { before: 0, after: 0, slice: modelRows }
@@ -890,10 +910,10 @@ export function EntityTable({
         style={{ maxHeight }}
         className="border-border relative w-full overflow-auto rounded-lg border [&>[data-slot=table-container]]:overflow-visible"
       >
-        <Table style={{ tableLayout: 'fixed', width: `${totalWidth}px` }}>
+        <Table style={{ tableLayout: 'fixed', width: `${tableWidth}px` }}>
           <colgroup>
-            {leafColumns.map((column) => (
-              <col key={column.id} style={{ width: `${column.getSize()}px` }} />
+            {leafColumns.map((column, i) => (
+              <col key={column.id} style={{ width: `${widths[i] ?? column.getSize()}px` }} />
             ))}
           </colgroup>
           <TableHeader className="bg-background sticky top-0 z-10">

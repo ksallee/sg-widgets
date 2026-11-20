@@ -194,6 +194,57 @@ describe('updateRow', () => {
   });
 });
 
+/** A mock that counts its batches and single writes. */
+class CountingClient extends MockClient {
+  batches = 0;
+  singles = 0;
+
+  override async batch(...args: Parameters<MockClient['batch']>) {
+    this.batches += 1;
+    return super.batch(...args);
+  }
+
+  override async update(...args: Parameters<MockClient['update']>) {
+    this.singles += 1;
+    return super.update(...args);
+  }
+}
+
+describe('updateRows', () => {
+  it('writes every row in one batch and reads each back in place', async () => {
+    const client = new CountingClient();
+    const s = source({ client, fields: ['code', 'description', 'entity.Shot.code'] });
+    await s.load();
+    const picked = s.rows.slice(0, 3);
+    const results = await s.updateRows!(picked.map((row) => ({ ref: { type: row.type, id: row.id }, patch: { description: 'all three' } })));
+    expect(client.batches).toBe(1);
+    expect(client.singles).toBe(0);
+    expect(results.map((r) => r.ok)).toEqual([true, true, true]);
+    for (const [i, row] of picked.entries()) {
+      expect(s.rows[i]?.attributes['description']).toBe('all three');
+      // The re-read carries the projection, which the batch's own answer never does.
+      expect(s.rows[i]?.attributes['entity.Shot.code']).toBe(row.attributes['entity.Shot.code']);
+    }
+  });
+
+  it('writes the rows of a refused batch one at a time and answers which were refused', async () => {
+    const client = new CountingClient();
+    const s = source({ client, fields: ['code', 'description'] });
+    await s.load();
+    const [a, b] = s.rows;
+    if (!a || !b) throw new Error('no rows');
+    const results = await s.updateRows!([
+      { ref: { type: 'Version', id: a.id }, patch: { description: 'kept' } },
+      { ref: { type: 'Version', id: b.id }, patch: { created_at: 'x' } },
+    ]);
+    expect(client.batches).toBe(1);
+    expect(client.singles).toBe(2);
+    expect(results[0]).toMatchObject({ ok: true });
+    expect(results[1]).toMatchObject({ ok: false });
+    expect(s.rows[0]?.attributes['description']).toBe('kept');
+  });
+});
+
 /** A mock that counts its reads and can withhold rows the site no longer answers. */
 class WatchingClient extends MockClient {
   searches = 0;

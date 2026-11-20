@@ -1,6 +1,6 @@
 <script lang="ts" module>
 	import type { Component } from 'svelte';
-	import type { CollectionColumn, EditorPlacement, EntityRow, FieldSchema } from 'sg-widgets-core';
+	import type { BulkEdit, CollectionColumn, EditorPlacement, EntityRow, FieldSchema, RowWriteResult } from 'sg-widgets-core';
 
 	export type EntityTableDensity = 'compact' | 'default';
 	export type EntityTableSize = 'sm' | 'md' | 'lg';
@@ -17,11 +17,23 @@
 	}
 
 	/**
-	 * The integration point for the per-type field editors: given a `data_type`,
-	 * return the component to open in a cell. Anything it does not answer for opens
-	 * FieldEditor.
+	 * The integration point for the per-type field editors: given a `data_type` and
+	 * the column, return the component to open in a cell. Anything it does not answer
+	 * for opens FieldEditor.
 	 */
-	export type EditorFor = (dataType: string) => Component<CellEditorProps> | null | undefined;
+	export type EditorFor = (dataType: string, column: CollectionColumn) => Component<CellEditorProps> | null | undefined;
+
+	/** Why one cell cannot be edited, or nothing when it can. */
+	export type EditLockFn = (row: EntityRow, column: CollectionColumn) => string | null | undefined;
+
+	/** Asked before a bulk edit writes. False leaves every row as it was. */
+	export type BulkEditConfirm = (edit: BulkEdit) => boolean | Promise<boolean>;
+
+	/** What an edit wrote: the plan, and a result per row it reached. */
+	export interface EntityTableEditResult {
+		edit: BulkEdit;
+		results: RowWriteResult[];
+	}
 
 	/** Row heights per density, so a virtualised list can be measured before it is drawn. */
 	const ROW_HEIGHT: Record<EntityTableDensity, number> = { compact: 33, default: 41 };
@@ -52,6 +64,11 @@
 		disabled: boolean;
 	}
 
+	/** What a `headerEnd` snippet is handed. It draws beside a header's label. */
+	export interface EntityTableHeaderContext {
+		column: CollectionColumn;
+	}
+
 	/** What a `groupHeader` snippet is handed. It draws the header's contents. */
 	export interface EntityTableGroupContext {
 		/** The value the run shares. */
@@ -69,12 +86,21 @@
 	/** Said on every editable cell, because nothing else on it says an edit is possible. */
 	const EDIT_HINT = 'Double-click or press Enter to edit';
 
+	/** Said on an editable cell of a selected row when an edit there reaches every selected row. */
+	const bulkHint = (count: number): string => `Double-click or press Enter to edit all ${count} selected rows`;
+
+	/** The key a cell's error and write state are held under. */
+	const cellKey = (key: string, path: string): string => `${key}\u0000${path}`;
+
+	/** Editors whose one pick is the whole edit: in the cell, the pick commits. */
+	const PICK_KINDS = new Set(['checkbox', 'list', 'status_list', 'entity']);
+
 	/** The popups a cell editor opens. Each is portalled out of the table's own tree. */
 	const EDITOR_POPUP = '[data-slot="popover-content"],[data-slot="select-content"],[data-picker]';
 </script>
 
 <script lang="ts">
-	import { untrack, type Snippet } from 'svelte';
+	import { tick, untrack, type Snippet } from 'svelte';
 	import type { HTMLAttributes } from 'svelte/elements';
 	import type {
 		CollapseState,
@@ -99,19 +125,25 @@
 		sameColumnPaths,
 		serializeColumnChoice,
 		unreadPaths,
+		editorKindFor,
 		editorPlacementFor,
 		errorText,
 		isEditableType,
 		nextEnabledIndex,
 		preferencesOf,
 		asCollapseState,
+		bulkUpdates,
 		collapseStateFrom,
+		planBulkEdit,
+		rowKey,
+		writeEach,
 		expandAll,
 		isCollapsed,
 		matchingOffer,
 		sameCollapse,
 		selectionKeyIntent,
-		stateLine
+		stateLine,
+		fillWidths
 	} from 'sg-widgets-core';
 	import {
 		columnGroupingFeature,
@@ -207,6 +239,17 @@
 		/** Opens an editor on a double-click or Enter in an editable cell. */
 		editable?: boolean;
 		editorFor?: EditorFor;
+		/** Why one cell cannot be edited, or nothing when it can. The reason is the cell's tooltip. */
+		editLock?: EditLockFn;
+		/**
+		 * An edit in a selected row reaches every selected row on screen whose cell can be
+		 * edited. Needs `selectable` and `editable`.
+		 */
+		bulkEdit?: boolean;
+		/** Asked before a bulk edit writes, with the rows it reaches and the ones it leaves. */
+		confirmBulkEdit?: BulkEditConfirm;
+		/** Called once an edit has written, with a result per row. */
+		onEditResult?: (result: EntityTableEditResult) => void;
 		/**
 		 * Where every cell editor opens. A column carrying its own `editorPlacement`
 		 * wins over it; with neither, the data type decides.
@@ -248,6 +291,8 @@
 		cell?: Snippet<[EntityTableCellContext]>;
 		/** Draws a group header's contents. */
 		groupHeader?: Snippet<[EntityTableGroupContext]>;
+		/** Draws beside a column's header label, outside its sort button: a mark or a note. */
+		headerEnd?: Snippet<[EntityTableHeaderContext]>;
 	};
 
 	let {
@@ -276,6 +321,10 @@
 		onFiltersChange,
 		editable = false,
 		editorFor,
+		editLock,
+		bulkEdit = false,
+		confirmBulkEdit,
+		onEditResult,
 		editorPlacement,
 		showCode = false,
 		columnMenu = false,
@@ -293,6 +342,7 @@
 		row: rowSnippet,
 		cell: cellSnippet,
 		groupHeader,
+		headerEnd,
 		class: className,
 		ref = $bindable(null),
 		...rest
@@ -348,7 +398,10 @@
 
 	let editing = $state<{ key: string; path: string; placement: EditorPlacement } | null>(null);
 	let draft = $state<unknown>(null);
-	let cellError = $state<{ key: string; path: string; message: string } | null>(null);
+	/** Why the last write to a cell was refused, by `cellKey`. */
+	let cellErrors = $state.raw<ReadonlyMap<string, string>>(new Map());
+	/** The cells a write is on its way to. Their value changes only once the row is read back. */
+	let writing = $state.raw<ReadonlySet<string>>(new Set());
 	let dragging = $state<string | null>(null);
 	let dropTarget = $state<string | null>(null);
 
@@ -485,9 +538,12 @@
 			};
 		});
 	});
+	/** The scrolling box's inner width: the last column takes what the others leave of it. */
+	let room = $state(0);
+	const widths = $derived(fillWidths(layout.map((entry) => entry.size), room));
 	const totalWidth = $derived.by(() => {
 		void sizing;
-		return table.getTotalSize();
+		return Math.max(table.getTotalSize(), widths.reduce((sum, width) => sum + width, 0));
 	});
 
 	/* rows, grouped or flat ------------------------------------------------ */
@@ -671,10 +727,31 @@
 
 	/* inline edit ---------------------------------------------------------- */
 
-	function canEditColumn(column: CollectionColumn, row: EntityRow): boolean {
-		if (!editable || !column.editable || control.rowDisabled(row)) return false;
-		return Boolean(editorFor?.(column.dataType)) || isEditableType(column.dataType);
+	/** Why a cell cannot be edited: a disabled row, a column that cannot, or the host's reason. */
+	function lockOf(column: CollectionColumn, row: EntityRow): string | null {
+		if (control.rowDisabled(row)) return 'This row cannot be edited.';
+		if (!column.editable || !(editorFor?.(column.dataType, column) || isEditableType(column.dataType))) {
+			return `${column.header} cannot be edited.`;
+		}
+		return editLock?.(row, column) || null;
 	}
+
+	/** The host's reason a cell cannot be edited, shown on it. A column that cannot be edited says nothing. */
+	function lockReason(column: CollectionColumn, row: EntityRow): string | null {
+		if (!editable || !column.editable || control.rowDisabled(row)) return null;
+		return editLock?.(row, column) || null;
+	}
+
+	function commitsOnPick(dataType: string): boolean {
+		return PICK_KINDS.has(editorKindFor(dataType));
+	}
+
+	function canEditColumn(column: CollectionColumn, row: EntityRow): boolean {
+		return editable && lockOf(column, row) === null;
+	}
+
+	/** Selected rows an edit in a selected row reaches, when that is more than one. */
+	const bulkCount = $derived(bulkEdit && selectable && editable && selection.length > 1 ? selection.length : 0);
 
 	/** The column's own placement, then the table's, then the data type's. */
 	function placementFor(column: CollectionColumn): EditorPlacement {
@@ -683,24 +760,48 @@
 
 	function openEditor(key: string, column: CollectionColumn, row: EntityRow, value: unknown): void {
 		if (!canEditColumn(column, row)) return;
-		cellError = null;
 		draft = value;
 		editing = { key, path: column.path, placement: placementFor(column) };
 	}
 
+	/**
+	 * Write a cell's value. In a selected row with `bulkEdit`, the value goes to every selected
+	 * row on screen whose cell can be edited, after the host's confirm. Each row's value changes
+	 * only once it is read back; a refused row keeps its value and says why in its cell.
+	 */
 	async function commit(row: EntityRow, column: CollectionColumn, value: unknown): Promise<void> {
-		const key = control.rowId(row);
-		const before = cellValue(row, column.path);
 		editing = null;
-		if (value === before) return;
+		const edit = planBulkEdit({
+			rows,
+			selection: bulkEdit && selectable ? selection : [],
+			edited: row,
+			path: column.path,
+			value,
+			lockOf: (candidate) => lockOf(column, candidate)
+		});
+		if (!edit.bulk && value === cellValue(row, column.path)) return;
+		if (edit.bulk && confirmBulkEdit && !(await confirmBulkEdit(edit))) return;
+		const keys = edit.rows.map((target) => cellKey(control.rowId(target), column.path));
+		writing = new Set([...writing, ...keys]);
+		const updates = bulkUpdates(edit);
+		const one = (update: (typeof updates)[number]) => source.updateRow(update.ref, update.patch);
+		let results: RowWriteResult[];
 		try {
-			await source.updateRow({ type: row.type, id: row.id }, { [column.path]: value });
-			cellError = null;
+			results = edit.bulk && source.updateRows ? await source.updateRows(updates) : await writeEach(updates, one);
 		} catch (error) {
-			// The write is refused, so the cell goes back to what the row still holds and
-			// says why beside it.
-			cellError = { key, path: column.path, message: errorText(error) };
+			results = updates.map((update) => ({ ref: update.ref, ok: false as const, message: errorText(error) }));
 		}
+		const ids = new Map(edit.rows.map((target) => [rowKey(target), control.rowId(target)]));
+		const errors = new Map(cellErrors);
+		for (const result of results) {
+			const id = ids.get(rowKey(result.ref));
+			if (id === undefined) continue;
+			if (result.ok) errors.delete(cellKey(id, column.path));
+			else errors.set(cellKey(id, column.path), result.message);
+		}
+		cellErrors = errors;
+		writing = new Set([...writing].filter((key) => !keys.includes(key)));
+		onEditResult?.({ edit, results });
 	}
 
 	function onCellKeydown(event: KeyboardEvent, row: EntityRow, column: CollectionColumn): void {
@@ -721,6 +822,16 @@
 		if (active instanceof HTMLElement && ref?.contains(active)) active.blur();
 	}
 
+	/** Focus the editable cell after `path` in the row, or the one before it. */
+	async function focusBeside(key: string, path: string, step: 1 | -1): Promise<void> {
+		await tick();
+		const cells = [
+			...(ref?.querySelectorAll<HTMLElement>(`tr[data-row-key="${CSS.escape(key)}"] td[data-editable]`) ?? [])
+		];
+		const at = cells.findIndex((cell) => cell.dataset['column'] === path);
+		(cells[at + step] ?? cells[at])?.focus({ preventScroll: true });
+	}
+
 	function editorKeydown(event: KeyboardEvent, row: EntityRow, column: CollectionColumn): void {
 		if (event.key === 'Enter') {
 			event.preventDefault();
@@ -730,6 +841,13 @@
 			event.preventDefault();
 			releaseEditor();
 			editing = null;
+		} else if (event.key === 'Tab') {
+			// Tab commits and moves along the row, as a spreadsheet does.
+			event.preventDefault();
+			const key = control.rowId(row);
+			releaseEditor();
+			void commit(row, column, draft);
+			void focusBeside(key, column.path, event.shiftKey ? -1 : 1);
 		}
 	}
 
@@ -950,7 +1068,13 @@
 	<div
 		{@attach (el: HTMLDivElement) => {
 			body.setScroller(el);
-			return () => body.setScroller(null);
+			const observer = new ResizeObserver(() => (room = el.clientWidth));
+			observer.observe(el);
+			room = el.clientWidth;
+			return () => {
+				observer.disconnect();
+				body.setScroller(null);
+			};
 		}}
 		onkeydown={onTableKeydown}
 		data-slot="entity-table-scroll"
@@ -959,8 +1083,8 @@
 	>
 		<Table.Root style="table-layout:fixed;width:{totalWidth}px">
 			<colgroup>
-				{#each layout as entry (entry.id)}
-					<col style="width:{entry.size}px" />
+				{#each layout as entry, i (entry.id)}
+					<col style="width:{widths[i] ?? entry.size}px" />
 				{/each}
 			</colgroup>
 			<Table.Header class="bg-background sticky top-0 z-10">
@@ -1027,6 +1151,7 @@
 											<ChevronsUpDown aria-hidden="true" class="size-4 shrink-0 opacity-50" />
 										{/if}
 									</button>
+									{#if headerEnd}{@render headerEnd({ column })}{/if}
 									{#if columnMenu}
 									<DropdownMenu.Root>
 										<DropdownMenu.Trigger
@@ -1224,14 +1349,20 @@
 											{@const column = byPath.get(entry.id)}
 											{#if column}
 												{@const canEdit = canEditColumn(column, row)}
-												{@const Editor = editorFor?.(column.dataType) ?? null}
+												{@const lock = lockReason(column, row)}
+												{@const Editor = editorFor?.(column.dataType, column) ?? null}
+												{@const error = cellErrors.get(cellKey(key, column.path))}
+												{@const busy = writing.has(cellKey(key, column.path))}
 												<Table.Cell
 													data-column={column.path}
 													data-pinned={pinned ? 'start' : undefined}
 													style={entry.style}
-													tabindex={canEdit ? 0 : undefined}
-													title={canEdit ? EDIT_HINT : undefined}
+													tabindex={canEdit || lock ? 0 : undefined}
+													title={canEdit ? (selected && bulkCount > 0 ? bulkHint(bulkCount) : EDIT_HINT) : (lock ?? undefined)}
 													data-editable={canEdit ? 'true' : undefined}
+													data-locked={lock ? 'true' : undefined}
+													data-writing={busy ? 'true' : undefined}
+													aria-busy={busy ? 'true' : undefined}
 													ondblclick={() => openEditor(key, column, row, cellValue(row, column.path))}
 													onkeydown={(event) => canEdit && onCellKeydown(event, row, column)}
 													class={cn(
@@ -1239,7 +1370,9 @@
 														'focus-visible:ring-ring focus-visible:ring-offset-background bg-inherit overflow-hidden outline-none focus-visible:ring-2 focus-visible:ring-inset',
 														column.align === 'right' && 'text-right',
 														// Nothing else on a cell says it can be edited, so hover and focus say it.
-														canEdit && 'hover:bg-accent/50 focus-visible:bg-accent/50 cursor-text transition-colors duration-150'
+														canEdit && 'hover:bg-accent/50 focus-visible:bg-accent/50 cursor-text transition-colors duration-150',
+														lock && 'cursor-not-allowed',
+														busy && 'opacity-60'
 													)}
 												>
 													{#if isEditing(key, column.path)}
@@ -1267,7 +1400,14 @@
 															>
 																<FieldEditor
 																	value={draft}
-																	onValueChange={(next) => (draft = next)}
+																	onValueChange={(next) => {
+																		draft = next;
+																		// A single pick in the cell is the edit itself, as a checkbox press is.
+																		if (placement === 'inline' && commitsOnPick(column.dataType)) {
+																			releaseEditor();
+																			void commit(row, column, next);
+																		}
+																	}}
 																	dataType={column.dataType}
 																	field={column.field}
 																	{statuses}
@@ -1303,11 +1443,12 @@
 															{context}
 															{density}
 														/>
-														{#if cellError && cellError.key === key && cellError.path === column.path}
-															<span class="text-destructive block truncate text-xs" title={cellError.message}>
-																{cellError.message}
-															</span>
-														{/if}
+													{/if}
+													{#if lock}<span class="sr-only">{lock}</span>{/if}
+													{#if error && !isEditing(key, column.path)}
+														<span data-slot="entity-table-cell-error" class="text-destructive block truncate text-xs" title={error}>
+															{error}
+														</span>
 													{/if}
 												</Table.Cell>
 											{/if}

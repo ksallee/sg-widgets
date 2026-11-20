@@ -16,6 +16,7 @@
  * sort path against the schema before offering it (026_result_order).
  */
 import type { EntityRow, SearchResult, SgClient } from './client.js';
+import type { RowUpdate, RowWriteResult } from './bulk-edit.js';
 import type { EditorPlacement } from './edit.js';
 import { isSortable } from './filter-ux.js';
 import { isNumericType } from './field-types.js';
@@ -111,6 +112,12 @@ export interface EntitySource {
   /** Write the named fields of one row and put the re-read row back in place. */
   updateRow(ref: EntityRef, patch: Record<string, unknown>): Promise<EntityRow>;
   /**
+   * Write several rows and answer one result per update, in order, each written row read back in
+   * place. A refused row is a result, not a throw, and keeps its value. A collection writes one
+   * `updateRow` per row where a source has none.
+   */
+  updateRows?(updates: RowUpdate[]): Promise<RowWriteResult[]>;
+  /**
    * Read these rows again with the source's own projection and swap them in place.
    * A row the site no longer answers (retired, or moved out of reach) leaves the list.
    * The filter is not applied, as on `updateRow`: a row that moved out of the filter
@@ -153,6 +160,9 @@ export function toWireGroup(filters: SourceFilters): WireGroup | null {
   if ('kind' in filters) return toApi3Hash(filters);
   return filters;
 }
+
+/** Requests per `_batch`: a batch of about 200 answers inside the response window (recipes/002). */
+export const BATCH_SIZE = 200;
 
 function asError(value: unknown): Error {
   return value instanceof Error ? value : new Error(String(value));
@@ -382,6 +392,51 @@ export function createEntitySource(options: EntitySourceOptions): EntitySource {
       const key = rowKey(ref);
       set({ rows: state.rows.map((row) => (rowKey(row) === key ? fresh : row)) });
       return fresh;
+    },
+
+    async updateRows(updates: RowUpdate[]): Promise<RowWriteResult[]> {
+      const refused = new Map<number, string>();
+      // One batch is all or nothing and answers in request order; about 200 requests stay inside
+      // the response window (recipes/002). A refused batch wrote nothing, so its rows are written
+      // one at a time to learn which of them the site refuses.
+      for (let start = 0; start < updates.length; start += BATCH_SIZE) {
+        const part = updates.slice(start, start + BATCH_SIZE);
+        try {
+          await client.batch(
+            part.map((update) => ({ request_type: 'update' as const, entity: update.ref.type, record_id: update.ref.id, data: update.patch })),
+          );
+        } catch {
+          for (const [offset, update] of part.entries()) {
+            try {
+              await client.update(update.ref.type, update.ref.id, update.patch);
+            } catch (error) {
+              refused.set(start + offset, asError(error).message);
+            }
+          }
+        }
+      }
+      // The write answers no dotted path, so the rows are read again with the projection
+      // (024_read_after_write), one read per type, the source's filter left out.
+      const fresh = new Map<string, EntityRow>();
+      const landed = updates.filter((_, index) => !refused.has(index));
+      for (const type of new Set(landed.map((update) => update.ref.type))) {
+        const ids = [...new Set(landed.filter((update) => update.ref.type === type).map((update) => update.ref.id))];
+        const result = await client.search(type, {
+          filters: { logical_operator: 'and', conditions: [['id', 'in', ids]] },
+          fields,
+          page: { size: ids.length, number: 1 },
+        });
+        for (const row of result.data) fresh.set(rowKey(row), row);
+      }
+      set({ rows: state.rows.map((row) => fresh.get(rowKey(row)) ?? row) });
+      return updates.map((update, index): RowWriteResult => {
+        const message = refused.get(index);
+        if (message !== undefined) return { ref: update.ref, ok: false, message };
+        const row = fresh.get(rowKey(update.ref));
+        return row
+          ? { ref: update.ref, ok: true, row }
+          : { ref: update.ref, ok: false, message: `${update.ref.type} ${update.ref.id} could not be read back after the write.` };
+      });
     },
 
     async rereadRows(ids: readonly number[]): Promise<void> {

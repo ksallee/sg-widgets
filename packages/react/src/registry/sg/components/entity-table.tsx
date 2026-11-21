@@ -48,6 +48,7 @@ import {
   selectionKeyIntent,
   stateLine,
   fillWidths,
+  tableGrouping,
 } from 'sg-widgets-core';
 import {
   columnGroupingFeature,
@@ -471,6 +472,8 @@ export function EntityTable({
 
   /* the table ------------------------------------------------------------ */
 
+  const { grouping, groupOnly } = useMemo(() => tableGrouping(groupBy, columnPaths(columns)), [groupBy, columns]);
+
   const columnDefs = useMemo(
     () => [
       ...(selectable
@@ -482,11 +485,21 @@ export function EntityTable({
         size: column.width ?? 180,
         minSize: 64,
       })),
+      // A group path no column shows is carried last, at no width, and never drawn.
+      ...(groupOnly
+        ? [{
+            id: groupOnly,
+            accessorFn: (row: EntityRow) => cellValue(row, groupOnly),
+            size: 0,
+            minSize: 0,
+            maxSize: 0,
+            enableResizing: false,
+            enablePinning: false,
+          }]
+        : []),
     ],
-    [columns, selectable],
+    [columns, selectable, groupOnly],
   );
-
-  const grouping = useMemo(() => (groupBy && byPath.has(groupBy) ? [groupBy] : []), [groupBy, byPath]);
 
   const table = useTable<typeof features, EntityRow>({
     features,
@@ -548,7 +561,7 @@ export function EntityTable({
   /** Leaf columns in render order: pinned to the start first, the rest as ordered. */
   const rank = (id: string, pinned: false | 'start' | 'end'): number =>
     id === SELECT ? -1 : pinned === 'start' ? 0 : 1;
-  const leafColumns = [...table.getAllLeafColumns()].sort(
+  const leafColumns = table.getAllLeafColumns().filter((leaf) => leaf.id !== groupOnly).sort(
     (a, b) => rank(a.id, a.getIsPinned()) - rank(b.id, b.getIsPinned()),
   );
   const headersById = new Map((table.getHeaderGroups()[0]?.headers ?? []).map((header) => [header.column.id, header]));

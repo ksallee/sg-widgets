@@ -143,7 +143,8 @@
 		sameCollapse,
 		selectionKeyIntent,
 		stateLine,
-		fillWidths
+		fillWidths,
+		tableGrouping
 	} from 'sg-widgets-core';
 	import {
 		columnGroupingFeature,
@@ -420,6 +421,10 @@
 		expandedRowModel: createExpandedRowModel()
 	});
 
+	const groupPlan = $derived(tableGrouping(groupBy, columnPaths(columns)));
+	const grouping = $derived(groupPlan.grouping);
+	const groupOnly = $derived(groupPlan.groupOnly);
+
 	const columnDefs = $derived([
 		...(selectable
 			? [{ id: SELECT, size: 40, minSize: 40, maxSize: 40, enableResizing: false, enablePinning: false, enableGrouping: false }]
@@ -429,10 +434,20 @@
 			accessorFn: (row: EntityRow) => cellValue(row, column.path),
 			size: column.width ?? 180,
 			minSize: 64
-		}))
+		})),
+		// A group path no column shows is carried last, at no width, and never drawn.
+		...(groupOnly
+			? [{
+					id: groupOnly,
+					accessorFn: (row: EntityRow) => cellValue(row, groupOnly),
+					size: 0,
+					minSize: 0,
+					maxSize: 0,
+					enableResizing: false,
+					enablePinning: false
+				}]
+			: [])
 	]);
-
-	const grouping = $derived(groupBy && byPath.has(groupBy) ? [groupBy] : []);
 
 	const table = createTable<typeof features, EntityRow>({
 		features,
@@ -519,7 +534,7 @@
 		);
 		const rank = (id: string, pinned: false | 'start' | 'end'): number =>
 			id === SELECT ? -1 : pinned === 'start' ? 0 : 1;
-		const ordered = [...table.getAllLeafColumns()].sort(
+		const ordered = table.getAllLeafColumns().filter((leaf) => leaf.id !== groupOnly).sort(
 			(a, b) => rank(a.id, a.getIsPinned()) - rank(b.id, b.getIsPinned())
 		);
 		return ordered.map((leaf) => {

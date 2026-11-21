@@ -250,6 +250,8 @@ the range reading "n to m" (020_summarize).
 Grouping collapses the loaded rows under headers, and the group path leads the source's sort so a
 group is not split across pages. A count is the rows loaded under that header, and a page that
 opens on the value the last header carries grows that group rather than opening a second one.
+The group path need not be a column: the rows group on its value and no column is drawn for it, so
+a header that already names the value costs no width. `groupHeader` then receives a null `column`.
 
 `collapsed` is a mode with exceptions rather than a list of ids, so Collapse all covers the headers
 the next page brings as well as the ones already loaded. A bare id list still works and reads as the

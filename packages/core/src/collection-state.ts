@@ -246,3 +246,17 @@ export function collapseStateFrom(
 export function sameCollapse(a: CollapseState, b: CollapseState): boolean {
   return a.all === b.all && sameIds(a.except, b.except);
 }
+
+/** What a table groups on, and the path that groups without a column of its own. */
+export interface TableGrouping {
+  /** The grouped paths, outermost first. */
+  grouping: string[];
+  /** The group path when no column shows it, so the table carries it undrawn. */
+  groupOnly: string | null;
+}
+
+/** A table's grouping from its group path and the paths of its columns. */
+export function tableGrouping(groupBy: string | null | undefined, columnPaths: readonly string[]): TableGrouping {
+  if (!groupBy) return { grouping: [], groupOnly: null };
+  return { grouping: [groupBy], groupOnly: columnPaths.includes(groupBy) ? null : groupBy };
+}

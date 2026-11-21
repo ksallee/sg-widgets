@@ -13,7 +13,7 @@ export default {
     { name: 'selectable', type: '`boolean`', default: '`false`', meaning: 'Draws a checkbox column; a press on a row selects it, with Shift for a range.' },
     { name: 'onSelectAllMatching', type: '`() => void | Promise<void>`', default: '—', meaning: 'Offers every row the filter matches once every loaded row is selected and the set holds more. The host reads the set and writes the selection.' },
     { name: 'isRowDisabled', type: '`(row) => boolean`', default: '—', meaning: 'True for a row that cannot be selected or edited.' },
-    { name: 'groupBy', type: '`string | null`', default: '`null`', meaning: 'Collapses rows under headers of a shared value at this path.' },
+    { name: 'groupBy', type: '`string | null`', default: '`null`', meaning: 'Collapses rows under headers of a shared value at this path. A path that is not a column groups without drawing one; the source must read it.' },
     { name: 'collapsed', type: '`string[] | CollapseState`', default: '`expandAll()`', meaning: 'Which group headers are shut, two-way. A bare id list is the open mode with those ids shut.' },
     { name: 'editable', type: '`boolean`', default: '`false`', meaning: 'Lets an editable cell open an editor.' },
     { name: 'editorFor', type: '`(dataType, column) => ComponentType<CellEditorProps> | null` / `(dataType, column) => Component<CellEditorProps> | null`', default: '—', meaning: 'The editor a cell opens, by data type and column. A cell it does not answer for opens FieldEditor.' },

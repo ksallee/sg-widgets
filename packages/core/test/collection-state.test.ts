@@ -20,6 +20,7 @@ import {
   sameIds,
   sameRefs,
   sameSort,
+  tableGrouping,
   toggleCollapsed,
   toggleId,
   toggleRef,
@@ -239,5 +240,27 @@ describe('collapse state', () => {
     expect(sameCollapse(collapseAll(), { all: true, except: [] })).toBe(true);
     expect(sameCollapse({ all: true, except: ['a', 'b'] }, { all: true, except: ['b', 'a'] })).toBe(true);
     expect(sameCollapse(collapseAll(), expandAll())).toBe(false);
+  });
+});
+
+describe('table grouping', () => {
+  it('groups on a column, with no column of its own', () => {
+    expect(tableGrouping('sg_status_list', ['code', 'sg_status_list'])).toEqual({
+      grouping: ['sg_status_list'],
+      groupOnly: null,
+    });
+  });
+
+  it('groups on a path that is not a column, which needs a hidden one', () => {
+    expect(tableGrouping('entity.Shot.code', ['code'])).toEqual({
+      grouping: ['entity.Shot.code'],
+      groupOnly: 'entity.Shot.code',
+    });
+  });
+
+  it('groups on nothing without a path', () => {
+    expect(tableGrouping(null, ['code'])).toEqual({ grouping: [], groupOnly: null });
+    expect(tableGrouping(undefined, ['code'])).toEqual({ grouping: [], groupOnly: null });
+    expect(tableGrouping('', ['code'])).toEqual({ grouping: [], groupOnly: null });
   });
 });

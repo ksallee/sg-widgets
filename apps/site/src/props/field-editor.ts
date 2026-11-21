@@ -21,6 +21,8 @@ export default {
     { name: 'symbol', type: '`string`', default: '`\'$\'`', meaning: 'Shown before a currency value.' },
     { name: 'projectId', type: '`number`', default: '—', meaning: 'Removes a list field\'s hidden values, and scopes a status or entity picker.' },
     { name: 'multiline', type: '`boolean`', default: '`true` in a popover', meaning: 'A textarea on a text field. In a textarea Enter adds a line and Cmd or Ctrl with Enter commits.' },
+    { name: 'steppers', type: '`boolean`', default: '`true`', meaning: 'A number draws its stepper buttons.' },
+    { name: 'align', type: '`\'left\' | \'right\'`', default: '`\'left\'`', meaning: 'Where a number sits in its field.' },
     { name: 'size', type: '`\'sm\' | \'md\' | \'lg\'`', default: '`\'md\'`', meaning: 'Control height.' },
     { name: 'disabled', type: '`boolean`', default: '`false`' },
     { name: 'readonly', type: '`boolean`', default: '`false`' },

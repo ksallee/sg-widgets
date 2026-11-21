@@ -123,6 +123,10 @@
 		locale?: string;
 		/** A textarea instead of an input, on a text field. */
 		multiline?: boolean;
+		/** A number draws its stepper buttons. */
+		steppers?: boolean;
+		/** Where a number sits in its field. */
+		align?: 'left' | 'right';
 		size?: FieldEditorSize;
 		disabled?: boolean;
 		readonly?: boolean;
@@ -154,6 +158,8 @@
 		timeZone,
 		locale,
 		multiline,
+		steppers,
+		align,
 		size = 'md',
 		disabled = false,
 		readonly = false,
@@ -461,6 +467,8 @@
 				hoursPerDay={prefs.hoursPerDay}
 				frameRate={prefs.frameRate}
 				symbol={symbol ?? '$'}
+				{steppers}
+				{align}
 				{size}
 				{disabled}
 				{readonly}

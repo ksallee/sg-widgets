@@ -25,12 +25,14 @@
 		sg_status_list: 150,
 		image: 90,
 		description: 260,
+		client_approved: 130,
+		frame_count: 90,
 		user: 160,
 		created_at: 170,
 		updated_at: 170
 	};
 	const PATHS = Object.keys(WIDTHS);
-	const SHOWN = ['code', 'entity', 'entity.Shot.sg_turnover_date', 'sg_status_list', 'image', 'description', 'user'];
+	const SHOWN = ['code', 'entity', 'entity.Shot.sg_turnover_date', 'sg_status_list', 'image', 'description', 'client_approved', 'frame_count', 'user'];
 	const FACETS = ['sg_status_list'];
 	const PAGING: Array<{ value: PagingMode; label: string }> = [
 		{ value: 'pages', label: 'Pages' },
@@ -64,6 +66,7 @@
 	let compact = $state(false);
 	let paging = $state<PagingMode>('pages');
 	let placement = $state<EditorPlacement>('popover');
+	let editOnClick = $state(false);
 	const PLACEMENTS: Array<{ value: EditorPlacement; label: string }> = [
 		{ value: 'popover', label: 'Popover editor' },
 		{ value: 'inline', label: 'Inline editor' }
@@ -159,6 +162,9 @@
 					</button>
 				{/each}
 			</div>
+			<button type="button" class={toggle} data-demo="edit-on-click" aria-pressed={editOnClick} onclick={() => (editOnClick = !editOnClick)}>
+				Edit on click
+			</button>
 			<span class="text-muted-foreground text-xs tabular-nums" data-testid="selection-count">
 				{selected.length} selected
 			</span>
@@ -180,6 +186,7 @@
 			{editLock}
 			{paging}
 			editorPlacement={placement}
+			editOn={editOnClick ? 'click' : 'dblclick'}
 			density={compact ? 'compact' : 'default'}
 			groupBy={grouped ? 'sg_status_list' : null}
 			bind:collapsed

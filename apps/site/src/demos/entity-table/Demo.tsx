@@ -16,12 +16,14 @@ const WIDTHS: Record<string, number> = {
   sg_status_list: 150,
   image: 90,
   description: 260,
+  client_approved: 130,
+  frame_count: 90,
   user: 160,
   created_at: 170,
   updated_at: 170,
 };
 const PATHS = Object.keys(WIDTHS);
-const SHOWN = ['code', 'entity', 'entity.Shot.sg_turnover_date', 'sg_status_list', 'image', 'description', 'user'];
+const SHOWN = ['code', 'entity', 'entity.Shot.sg_turnover_date', 'sg_status_list', 'image', 'description', 'client_approved', 'frame_count', 'user'];
 const FACETS = ['sg_status_list'];
 const PLACEMENTS: Array<{ value: EditorPlacement; label: string }> = [
   { value: 'popover', label: 'Popover editor' },
@@ -76,6 +78,7 @@ export default function EntityTableDemo() {
   const [compact, setCompact] = useState(false);
   const [paging, setPaging] = useState<PagingMode>('pages');
   const [placement, setPlacement] = useState<EditorPlacement>('popover');
+  const [editOnClick, setEditOnClick] = useState(false);
   const [selected, setSelected] = useState<EntityRef[]>([]);
   /** The bulk edit waiting on an answer, and how to give it. */
   const [asking, setAsking] = useState<{ edit: BulkEdit; answer: (ok: boolean) => void } | null>(null);
@@ -168,6 +171,15 @@ export default function EntityTableDemo() {
               </button>
             ))}
           </div>
+          <button
+            type="button"
+            className={toggle}
+            data-demo="edit-on-click"
+            aria-pressed={editOnClick}
+            onClick={() => setEditOnClick((on) => !on)}
+          >
+            Edit on click
+          </button>
           <span className="text-muted-foreground text-xs tabular-nums" data-testid="selection-count">
             {selected.length} selected
           </span>
@@ -191,6 +203,7 @@ export default function EntityTableDemo() {
           editLock={editLock}
           paging={paging}
           editorPlacement={placement}
+          editOn={editOnClick ? 'click' : 'dblclick'}
           density={compact ? 'compact' : 'default'}
           groupBy={grouped ? 'sg_status_list' : null}
           collapsed={collapsed}

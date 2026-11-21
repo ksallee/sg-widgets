@@ -12,6 +12,8 @@ export default {
     { name: 'frameRate', type: '`number`', default: '—', meaning: 'Frames per second, for the frame form of a timecode and its one-frame step.' },
     { name: 'symbol', type: '`string`', default: '`\'$\'`', meaning: 'Shown before the value on a currency field.' },
     { name: 'inline', type: '`boolean`', default: '`false`', meaning: 'Compact for one row: a fixed width for the data type, the steppers inside the input, no hint.' },
+    { name: 'steppers', type: '`boolean`', default: '`true`', meaning: 'Draws the stepper buttons. Without them the field takes the whole width; the arrow keys still step.' },
+    { name: 'align', type: '`\'left\' | \'right\'`', default: '`\'left\'`', meaning: 'Where the value sits in the field.' },
     { name: 'min / max', type: '`number`', default: '`0` and `100` on a percent, the 32-bit bounds elsewhere', meaning: 'Range the value is held in.' },
     { name: 'step', type: '`number`', default: 'the data type\'s', meaning: 'What one step moves.' },
     { name: 'scrub', type: '`boolean`', default: '`false`', meaning: 'Name the control and let a drag across that name change the value.' },

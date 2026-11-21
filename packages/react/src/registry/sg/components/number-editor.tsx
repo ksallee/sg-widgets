@@ -65,6 +65,10 @@ export interface NumberEditorProps extends Omit<React.HTMLAttributes<HTMLDivElem
   hint?: boolean;
   /** Compact for one row of a form or a filter: a fixed width for the type, no hint. */
   inline?: boolean;
+  /** Draw the stepper buttons. Without them the field takes the whole width; the arrow keys still step. */
+  steppers?: boolean;
+  /** Where the value sits in the field. */
+  align?: 'left' | 'right';
   min?: number;
   max?: number;
   /** What one step moves. Defaults to the step the data type reads in. */
@@ -112,6 +116,8 @@ export function NumberEditor({
   symbol = '$',
   hint: showHint = false,
   inline = false,
+  steppers: showSteppers = true,
+  align = 'left',
   min,
   max,
   step,
@@ -199,7 +205,7 @@ export function NumberEditor({
   };
 
   // Readonly keeps the value at full contrast and takes the affordances away.
-  const steppers = !readonly;
+  const steppers = showSteppers && !readonly;
   // Inline is a row of a table or a filter, where the row's width is spoken for: the
   // steppers move inside the input rather than widen the control.
   const stepperClass = cn(
@@ -299,6 +305,7 @@ export function NumberEditor({
                     CONTROL_BOX[size],
                     prefix && 'pl-7',
                     padRight,
+                    align === 'right' && 'text-right',
                     inline && 'shrink-0',
                     inline && (INLINE_WIDTH[dataType] ?? 'w-24'),
                   )}

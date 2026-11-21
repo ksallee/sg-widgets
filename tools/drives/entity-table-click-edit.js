@@ -2,7 +2,7 @@
 // cell flips on one click and on Space, leaving the selection. With Edit on click, one click opens
 // the editor with focus in it and leaves the selection; a click inside it keeps it; a click on
 // another cell commits it and opens that one; Shift, Ctrl or Meta and a click on a cell that cannot
-// be edited still select. Frame Count is a 90px column: its inline editor is a bare field the cell's
+// be edited still select. First Frame is a 90px column: its inline editor is a bare field the cell's
 // width, value selected, right aligned, arrows step, Escape restores, Enter writes. In a popover
 // the steppers stay and focus lands in the field. Against a live site nothing is written.
 //
@@ -39,6 +39,8 @@ function keydown(target, key, mods = {}) {
   target.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...mods }));
 }
 
+/** A number's digits, whatever separators the locale draws. */
+const digits = (value) => String(value).replace(/\D/g, '');
 const text = (cell) => cell?.querySelector('[data-slot="field-value"]')?.textContent.trim() ?? '';
 const button = (pane, label) => [...pane.querySelectorAll('button')].find((b) => b.textContent.trim() === label);
 
@@ -120,10 +122,17 @@ async function drive(pane, framework) {
     keydown(codeInput, 'Escape');
     await until(() => !editorIn(cell(5, 'code')), 20);
   }
-  press(cell(5, 'description'));
-  const description = await until(() => editorIn(cell(5, 'description')));
+  // The next editable cell along the row that is not a checkbox; on the mock, the description.
+  const nextColumn =
+    [...rows()[5].querySelectorAll('td[data-editable]')]
+      .map((td) => td.dataset.column)
+      .find((column) => column !== 'code' && !cell(5, column).querySelector('[data-slot="checkbox"]')) ?? 'description';
+  mine('click').next = nextColumn;
+  press(cell(5, nextColumn));
+  const description = await until(() => editorIn(cell(5, nextColumn)));
   if (!description) fail('a click on the next cell opened no editor there');
   if (editorIn(cell(5, 'code'))) fail('the code editor stayed open');
+  if (description && document.activeElement !== description) fail('focus did not move to the next editor');
   if (!live) {
     const committed = await until(() => text(cell(5, 'code')) === typed, 60);
     if (!committed) fail(`the code cell reads "${text(cell(5, 'code'))}" after the click away`);
@@ -131,7 +140,7 @@ async function drive(pane, framework) {
   }
   if (description) {
     keydown(description, 'Escape');
-    await until(() => !editorIn(cell(5, 'description')), 20);
+    await until(() => !editorIn(cell(5, nextColumn)), 20);
   }
 
   // Meta, Ctrl and Shift still select; so does a cell that cannot be edited; a locked cell opens nothing.
@@ -152,17 +161,20 @@ async function drive(pane, framework) {
   }
   mine('select').modified = 'Meta selects, Ctrl clears, image cell selects';
 
-  // The 90px Frame Count column: a bare field, value selected, right aligned.
-  const frames = cell(8, 'frame_count');
+  // The 90px First Frame column: a bare field, value selected, right aligned.
+  // A row with a First Frame, so the step has a number to start from; the mock fills every row.
+  const at = Math.max(8, rows().findIndex((row, index) => index >= 8 && digits(text(row.querySelector('td[data-column="sg_first_frame"]'))) !== ''));
+  const frames = cell(at, 'sg_first_frame');
   const shown = text(frames);
+  mine('number').row = at;
   mine('number').column = Math.round(frames.getBoundingClientRect().width);
   press(frames);
-  const field = await until(() => editorIn(cell(8, 'frame_count')));
-  if (!field) return fail('one click opened no editor on Frame Count');
-  const box8 = cell(8, 'frame_count').getBoundingClientRect();
+  const field = await until(() => editorIn(cell(at, 'sg_first_frame')));
+  if (!field) return fail('one click opened no editor on First Frame');
+  const box8 = cell(at, 'sg_first_frame').getBoundingClientRect();
   const fieldBox = field.getBoundingClientRect();
   const number = {
-    steppers: cell(8, 'frame_count').querySelectorAll('[data-slot="number-editor-decrement"],[data-slot="number-editor-increment"]').length,
+    steppers: cell(at, 'sg_first_frame').querySelectorAll('[data-slot="number-editor-decrement"],[data-slot="number-editor-increment"]').length,
     focused: document.activeElement === field,
     value: field.value,
     selection: [field.selectionStart, field.selectionEnd],
@@ -173,34 +185,34 @@ async function drive(pane, framework) {
   Object.assign(mine('number'), number);
   if (number.steppers !== 0) fail(`the inline number editor drew ${number.steppers} steppers`);
   if (!number.focused) fail(`focus is on ${document.activeElement?.tagName} ${document.activeElement?.dataset?.slot ?? ''}, not the number field`);
-  if (number.value !== shown) fail(`the number field reads "${number.value}", the cell read "${shown}"`);
+  if (digits(number.value) !== digits(shown)) fail(`the number field reads "${number.value}", the cell read "${shown}"`);
   if (number.selection[0] !== 0 || number.selection[1] !== number.value.length) fail(`the number's text is not selected: ${number.selection}`);
   if (number.align !== 'right') fail(`the number sits ${number.align}`);
   if (number.width < 40 || !number.inside) fail(`the number field is ${number.width}px wide, inside the cell: ${number.inside}`);
   keydown(field, 'ArrowUp');
   await wait(100);
   mine('number').arrowUp = field.value;
-  if (Number(field.value) !== Number(shown) + 1) fail(`ArrowUp made "${field.value}" from "${shown}"`);
+  if (digits(shown) !== '' && Number(digits(field.value)) !== Number(digits(shown)) + 1) fail(`ArrowUp made "${field.value}" from "${shown}"`);
   keydown(field, 'Escape');
-  await until(() => !editorIn(cell(8, 'frame_count')), 20);
-  if (text(cell(8, 'frame_count')) !== shown) fail(`Escape left Frame Count reading "${text(cell(8, 'frame_count'))}"`);
+  await until(() => !editorIn(cell(at, 'sg_first_frame')), 20);
+  if (text(cell(at, 'sg_first_frame')) !== shown) fail(`Escape left First Frame reading "${text(cell(at, 'sg_first_frame'))}"`);
   if (!live) {
-    press(cell(8, 'frame_count'));
-    const again = await until(() => editorIn(cell(8, 'frame_count')));
+    press(cell(at, 'sg_first_frame'));
+    const again = await until(() => editorIn(cell(at, 'sg_first_frame')));
     if (again) {
       type(again, '150');
       await wait(100);
       keydown(again, 'Enter');
-      const wrote = await until(() => text(cell(8, 'frame_count')) === '150', 60);
-      if (!wrote) fail(`Enter left Frame Count reading "${text(cell(8, 'frame_count'))}"`);
-      mine('number').enter = text(cell(8, 'frame_count'));
+      const wrote = await until(() => text(cell(at, 'sg_first_frame')) === '150', 60);
+      if (!wrote) fail(`Enter left First Frame reading "${text(cell(at, 'sg_first_frame'))}"`);
+      mine('number').enter = text(cell(at, 'sg_first_frame'));
     }
   }
 
   // In a popover the steppers stay and focus lands in the field.
   button(pane, 'Popover editor')?.click();
   await wait(250);
-  press(cell(9, 'frame_count'));
+  press(cell(9, 'sg_first_frame'));
   const popup = await until(() =>
     [...document.querySelectorAll('[data-slot="popover-content"]')].find((el) => el.querySelector('[data-slot="number-editor"]')),
   );
@@ -220,8 +232,8 @@ async function drive(pane, framework) {
   await wait(200);
   const scroller = pane.querySelector('[data-slot="entity-table-scroll"]');
   scroller.scrollLeft = cell(3, 'description').offsetLeft - 40;
-  press(cell(3, 'frame_count'));
-  await until(() => editorIn(cell(3, 'frame_count')));
+  press(cell(3, 'sg_first_frame'));
+  await until(() => editorIn(cell(3, 'sg_first_frame')));
 }
 
 for (const framework of ['svelte', 'react']) {

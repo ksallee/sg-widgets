@@ -17,13 +17,13 @@ const WIDTHS: Record<string, number> = {
   image: 90,
   description: 260,
   client_approved: 130,
-  frame_count: 90,
+  sg_first_frame: 90,
   user: 160,
   created_at: 170,
   updated_at: 170,
 };
 const PATHS = Object.keys(WIDTHS);
-const SHOWN = ['code', 'entity', 'entity.Shot.sg_turnover_date', 'sg_status_list', 'image', 'description', 'client_approved', 'frame_count', 'user'];
+const SHOWN = ['code', 'entity', 'entity.Shot.sg_turnover_date', 'sg_status_list', 'image', 'description', 'client_approved', 'sg_first_frame', 'user'];
 const FACETS = ['sg_status_list'];
 const PLACEMENTS: Array<{ value: EditorPlacement; label: string }> = [
   { value: 'popover', label: 'Popover editor' },

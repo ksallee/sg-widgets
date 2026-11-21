@@ -123,6 +123,10 @@ export interface FieldEditorProps extends Omit<React.HTMLAttributes<HTMLDivEleme
   locale?: string;
   /** A textarea instead of an input, on a text field. */
   multiline?: boolean;
+  /** A number draws its stepper buttons. */
+  steppers?: boolean;
+  /** Where a number sits in its field. */
+  align?: 'left' | 'right';
   size?: FieldEditorSize;
   disabled?: boolean;
   readonly?: boolean;
@@ -163,6 +167,8 @@ export function FieldEditor({
   timeZone,
   locale,
   multiline,
+  steppers,
+  align,
   size = 'md',
   disabled = false,
   readonly = false,
@@ -390,6 +396,8 @@ export function FieldEditor({
           hoursPerDay={prefs.hoursPerDay}
           frameRate={prefs.frameRate}
           symbol={symbol ?? '$'}
+          steppers={steppers}
+          align={align}
           onErrorChange={noteError}
           placeholder={placeholder}
           {...shared}

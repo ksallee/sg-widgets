@@ -39,3 +39,4 @@ export * from './list-chrome.js';
 export * from './table-width.js';
 export * from './bulk-edit.js';
 export * from './list-source.js';
+export * from './cell-edit.js';

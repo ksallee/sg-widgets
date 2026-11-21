@@ -1,6 +1,15 @@
 <script lang="ts" module>
 	import type { Component } from 'svelte';
-	import type { BulkEdit, CollectionColumn, EditorPlacement, EntityRow, FieldSchema, RowWriteResult } from 'sg-widgets-core';
+	import type {
+		BulkEdit,
+		CellGesture,
+		CollectionColumn,
+		EditGesture,
+		EditorPlacement,
+		EntityRow,
+		FieldSchema,
+		RowWriteResult
+	} from 'sg-widgets-core';
 
 	export type EntityTableDensity = 'compact' | 'default';
 	export type EntityTableSize = 'sm' | 'md' | 'lg';
@@ -83,11 +92,6 @@
 	/** The select column's id, which is never a field path. */
 	const SELECT = '__select';
 
-	/** Said on every editable cell, because nothing else on it says an edit is possible. */
-	const EDIT_HINT = 'Double-click or press Enter to edit';
-
-	/** Said on an editable cell of a selected row when an edit there reaches every selected row. */
-	const bulkHint = (count: number): string => `Double-click or press Enter to edit all ${count} selected rows`;
 
 	/** The key a cell's error and write state are held under. */
 	const cellKey = (key: string, path: string): string => `${key}\u0000${path}`;
@@ -133,6 +137,10 @@
 		preferencesOf,
 		asCollapseState,
 		bulkUpdates,
+		cellEditHint,
+		cellEditorShape,
+		cellGestureAction,
+		editorFocusIndex,
 		collapseStateFrom,
 		planBulkEdit,
 		rowKey,
@@ -237,8 +245,13 @@
 		/** The source's filter, two-way, so a FilterBar drops into the toolbar. */
 		filters?: SourceFilters;
 		onFiltersChange?: (filters: SourceFilters) => void;
-		/** Opens an editor on a double-click or Enter in an editable cell. */
+		/** Opens an editor on the `editOn` gesture or Enter in an editable cell. */
 		editable?: boolean;
+		/**
+		 * The pointer gesture that opens a cell's editor. `click` is the spreadsheet feel: a
+		 * plain click edits and leaves the selection. A checkbox flips on one click either way.
+		 */
+		editOn?: EditGesture;
 		editorFor?: EditorFor;
 		/** Why one cell cannot be edited, or nothing when it can. The reason is the cell's tooltip. */
 		editLock?: EditLockFn;
@@ -321,6 +334,7 @@
 		filters = $bindable(),
 		onFiltersChange,
 		editable = false,
+		editOn = 'dblclick',
 		editorFor,
 		editLock,
 		bulkEdit = false,
@@ -775,6 +789,14 @@
 
 	function openEditor(key: string, column: CollectionColumn, row: EntityRow, value: unknown): void {
 		if (!canEditColumn(column, row)) return;
+		// Another cell still open commits first: a popover may report its close after this.
+		const open = editing;
+		if (open !== null && !(open.key === key && open.path === column.path)) {
+			const openRow = rows.find((candidate) => control.rowId(candidate) === open.key);
+			const openColumn = byPath.get(open.path);
+			releaseEditor();
+			if (openRow && openColumn) void commit(openRow, openColumn, draft);
+		}
 		draft = value;
 		editing = { key, path: column.path, placement: placementFor(column) };
 	}
@@ -785,7 +807,7 @@
 	 * only once it is read back; a refused row keeps its value and says why in its cell.
 	 */
 	async function commit(row: EntityRow, column: CollectionColumn, value: unknown): Promise<void> {
-		editing = null;
+		if (isEditing(control.rowId(row), column.path)) editing = null;
 		const edit = planBulkEdit({
 			rows,
 			selection: bulkEdit && selectable ? selection : [],
@@ -820,11 +842,60 @@
 	}
 
 	function onCellKeydown(event: KeyboardEvent, row: EntityRow, column: CollectionColumn): void {
+		if (event.key === ' ' && !ownsKeys(event.target as HTMLElement | null)) {
+			// Space on a checkbox cell flips it; anywhere else it stays with the row.
+			if (onCellGesture(event, 'space', row, column)) event.preventDefault();
+			return;
+		}
 		// Only when the cell itself has focus. An editor's own Enter reaches this on the way
 		// up, after the commit has already closed it, and must not open it again.
 		if (event.key !== 'Enter' || editing || (event.target as HTMLElement).dataset['slot'] !== 'table-cell') return;
 		event.preventDefault();
 		openEditor(control.rowId(row), column, row, cellValue(row, column.path));
+	}
+
+	/** A checkbox the table flips itself, with no editor: one the host's `editorFor` leaves alone. */
+	function togglesInCell(column: CollectionColumn): boolean {
+		return editorKindFor(column.dataType) === 'checkbox' && !editorFor?.(column.dataType, column);
+	}
+
+	/**
+	 * A press on a cell, as core reads it. An edit or a flip keeps the press from the row,
+	 * so it leaves the selection; anything else goes on to the row. True when the cell took it.
+	 */
+	function onCellGesture(
+		event: MouseEvent | KeyboardEvent,
+		gesture: CellGesture,
+		row: EntityRow,
+		column: CollectionColumn
+	): boolean {
+		const key = control.rowId(row);
+		const action = cellGestureAction({
+			gesture,
+			editOn,
+			modified: event.shiftKey || event.ctrlKey || event.metaKey,
+			editable: canEditColumn(column, row),
+			toggles: togglesInCell(column),
+			open: isEditing(key, column.path)
+		});
+		if (action === 'select' || action === 'none') return false;
+		event.stopPropagation();
+		// A flip on its way keeps the cell until it is read back, so a second press waits for it.
+		if (action === 'edit') openEditor(key, column, row, cellValue(row, column.path));
+		else if (!writing.has(cellKey(key, column.path))) void commit(row, column, cellValue(row, column.path) !== true);
+		return true;
+	}
+
+	/**
+	 * Focus an inline editor's field, not a button drawn before it, and select a number's text.
+	 * Focus already inside is left where it is.
+	 */
+	function focusEditor(el: HTMLElement, column: CollectionColumn): void {
+		if (el.contains(document.activeElement)) return;
+		const controls = [...el.querySelectorAll<HTMLElement>('input,textarea,button')];
+		const target = controls[editorFocusIndex(controls.map((entry) => entry.tagName))];
+		target?.focus({ preventScroll: true });
+		if (target instanceof HTMLInputElement && cellEditorShape(column.dataType, 'inline').selectText) target.select();
 	}
 
 	/**
@@ -868,7 +939,8 @@
 
 	/** A popover editor drives its own close and reports it; the cell commits what it holds. */
 	function editorClosed(row: EntityRow, column: CollectionColumn, mode: 'display' | 'edit'): void {
-		if (mode !== 'display' || placementFor(column) !== 'popover') return;
+		// A cell another press already closed has committed.
+		if (mode !== 'display' || placementFor(column) !== 'popover' || !isEditing(control.rowId(row), column.path)) return;
 		releaseEditor();
 		void commit(row, column, draft);
 	}
@@ -1368,24 +1440,27 @@
 												{@const Editor = editorFor?.(column.dataType, column) ?? null}
 												{@const error = cellErrors.get(cellKey(key, column.path))}
 												{@const busy = writing.has(cellKey(key, column.path))}
+												{@const toggles = canEdit && togglesInCell(column)}
 												<Table.Cell
 													data-column={column.path}
 													data-pinned={pinned ? 'start' : undefined}
 													style={entry.style}
 													tabindex={canEdit || lock ? 0 : undefined}
-													title={canEdit ? (selected && bulkCount > 0 ? bulkHint(bulkCount) : EDIT_HINT) : (lock ?? undefined)}
+													title={canEdit ? cellEditHint({ editOn, toggles, bulkCount: selected ? bulkCount : 0 }) : (lock ?? undefined)}
 													data-editable={canEdit ? 'true' : undefined}
 													data-locked={lock ? 'true' : undefined}
 													data-writing={busy ? 'true' : undefined}
 													aria-busy={busy ? 'true' : undefined}
-													ondblclick={() => openEditor(key, column, row, cellValue(row, column.path))}
+													onclick={(event: MouseEvent) => onCellGesture(event, 'click', row, column)}
+													ondblclick={(event: MouseEvent) => onCellGesture(event, 'dblclick', row, column)}
 													onkeydown={(event) => canEdit && onCellKeydown(event, row, column)}
 													class={cn(
 														cellClass,
 														'focus-visible:ring-ring focus-visible:ring-offset-background bg-inherit overflow-hidden outline-none focus-visible:ring-2 focus-visible:ring-inset',
 														column.align === 'right' && 'text-right',
 														// Nothing else on a cell says it can be edited, so hover and focus say it.
-														canEdit && 'hover:bg-accent/50 focus-visible:bg-accent/50 cursor-text transition-colors duration-150',
+														canEdit && 'hover:bg-accent/50 focus-visible:bg-accent/50 transition-colors duration-150',
+														canEdit && (toggles ? 'cursor-pointer' : 'cursor-text'),
 														lock && 'cursor-not-allowed',
 														busy && 'opacity-60'
 													)}
@@ -1402,16 +1477,12 @@
 														{:else}
 															<!-- The default editor is the type's own control from the field-editor item. -->
 															{@const placement = placementFor(column)}
+															{@const shape = cellEditorShape(column.dataType, placement)}
 															<div
 																data-slot="entity-table-editor"
 																role="presentation"
 																onkeydown={(event) => placement === 'inline' && editorKeydown(event, row, column)}
-																{@attach (el: HTMLElement) =>
-																	placement === 'inline'
-																		? el
-																				.querySelector<HTMLElement>('input,textarea,button')
-																				?.focus({ preventScroll: true })
-																		: undefined}
+																{@attach (el: HTMLElement) => (placement === 'inline' ? focusEditor(el, column) : undefined)}
 															>
 																<FieldEditor
 																	value={draft}
@@ -1437,10 +1508,20 @@
 																	mode="edit"
 																	onModeChange={(next) => editorClosed(row, column, next)}
 																	editorPlacement={placement}
+																	steppers={shape.steppers}
+																	align={column.align}
 																	size="sm"
 																/>
 															</div>
 														{/if}
+													{:else if toggles && !cellSnippet}
+														<!-- The cell takes the press and Space, so the box only shows the value. -->
+														<Checkbox
+															aria-label={column.header}
+															checked={cellValue(row, column.path) === true}
+															tabindex={-1}
+															onclick={(event: MouseEvent) => event.preventDefault()}
+														/>
 													{:else if cellSnippet}
 														{@render cellSnippet({
 															row,

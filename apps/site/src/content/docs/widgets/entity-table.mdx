@@ -9,13 +9,13 @@ import Props from '../../../components/Props.astro';
 
 Renders rows from an entity source as a table whose columns come from the schema, with server-side
 sorting and paging, a toolbar, a pagination footer, row selection, column sizing, resizing, ordering,
-pinning and grouping, and inline edit.
+pinning and grouping, and inline and bulk edit.
 
 ## Install
 
 <Install item="entity-table" />
 
-<Demo name="entity-table" title="Entity Table: 320 Versions in pages of 25, with a filter bar, a column picker and a sort picker in the toolbar. Pages, Load more and Scroll switch how the set is walked. An editable cell lights up under the pointer; a double-click or Enter opens its editor in a popover; Popover editor and Inline editor switch where every editor opens." />
+<Demo name="entity-table" title="Entity Table: 320 Versions in pages of 25, with a filter bar, a column picker and a sort picker in the toolbar. Pages, Load more and Scroll switch how the set is walked. An editable cell lights up under the pointer; a double-click or Enter opens its editor in a popover; Popover editor and Inline editor switch where every editor opens. Select several rows and edit a cell in one of them: a dialog asks, then every selected row takes the value. An approved Version's description is locked, with the reason on the cell." />
 
 Build the source and the columns once, then hand both to the table.
 
@@ -126,8 +126,59 @@ EntityMultiPicker, each reading through `context`. The cell editor takes `projec
 
 The editor opens in a popover anchored to the cell, carrying the field's name, the control and
 Cancel and Save, so a cell's width never squeezes it. A checkbox is one press and stays in the cell.
+In the cell, a list, a status and an entity commit on the pick, as a checkbox does.
 `editorPlacement` on the table forces one or the other everywhere, and `editorPlacement` on a column
-spec forces it for that column.
+spec forces it for that column. `editorFor` is handed the column as well as the data type, so one
+column can open an editor of its own.
+
+`editLock` says why one cell cannot be edited, or nothing when it can. A locked cell opens no editor,
+takes the keyboard cursor, and shows the reason on hover and to a screen reader.
+
+```ts
+const editLock = (row: EntityRow, column: CollectionColumn) =>
+  column.path === 'description' && row.attributes.sg_status_list === 'apr' ? 'An approved Version keeps its description.' : null;
+```
+
+`headerEnd` draws beside a header's label, outside its sort button: a mark or a short note on what the
+column is.
+
+## Bulk edit
+
+With `bulkEdit`, `selectable` and `editable`, an edit in a selected row reaches every selected row on
+screen whose cell can be edited, as Flow PT's own grid does. A cell of a selected row says so in its
+tooltip. An edit in a row outside the selection, or with one row selected, changes that row alone.
+
+Before it writes, the table hands `confirmBulkEdit` the plan: the column, the value, the rows it
+reaches with the edited one first, the selected rows it leaves and why, and how many selected rows
+are not loaded. False writes nothing. Without `confirmBulkEdit` the edit writes at once.
+
+```ts
+async function confirmBulkEdit(edit: BulkEdit): Promise<boolean> {
+  return ask(`Change ${edit.path} on ${edit.rows.length} Versions?`);
+}
+```
+
+The table writes through the source's `updateRows` when it has one, and one `updateRow` per row
+otherwise. Each row's value changes once it is read back, never before. A refused row keeps its value
+and says why in its cell, and `onEditResult` gets a result per row, so the host can offer a retry.
+
+## Rows a host holds
+
+`createListSource` is an entity source over rows the host holds: rows of more than one type, rows with
+no record behind them, cells the host owns beside the site's. Every row is there at once, so nothing
+pages, and a header sorts the list in memory. A write goes to the host's `update` or `updateMany`,
+which decide where each field lands and answer the row as it reads afterwards. Without either the rows
+are read only. `setRows` replaces them.
+
+```ts
+const source = createListSource({
+  entityType: 'Shot',
+  rows,
+  updateMany: async (updates) => writeWhereEachFieldLives(updates),
+});
+```
+
+Use `paging="scroll"` with it: there is no next page to ask for.
 
 
 ## Selection
@@ -199,6 +250,8 @@ the range reading "n to m" (020_summarize).
 Grouping collapses the loaded rows under headers, and the group path leads the source's sort so a
 group is not split across pages. A count is the rows loaded under that header, and a page that
 opens on the value the last header carries grows that group rather than opening a second one.
+The group path need not be a column: the rows group on its value and no column is drawn for it, so
+a header that already names the value costs no width. `groupHeader` then receives a null `column`.
 
 `collapsed` is a mode with exceptions rather than a list of ids, so Collapse all covers the headers
 the next page brings as well as the ones already loaded. A bare id list still works and reads as the
@@ -209,6 +262,13 @@ An edit writes one field with `PUT /entity/<type>/<id>`, which changes only the 
 leaves the rest alone (put_entity_type_id). The write answers the whole record but resolves no dotted
 path, so the row is read again afterwards (024_read_after_write). A dotted path is never editable: a
 write names one field of one row.
+
+`createEntitySource` writes a bulk edit with `POST /entity/_batch`, 200 requests to a batch. A batch is
+all or nothing and answers in request order; about 200 requests answer inside the response window, and
+a read timeout says nothing about what landed (recipes/002). A refused batch wrote nothing, so its rows
+are written one at a time to learn which of them the site refuses. Every written row is then read back
+with the source's own fields, one read per type. A 200 proves nothing on its own: a write is confirmed
+by the row read back (028_loud_and_silent).
 
 ## Reference
 

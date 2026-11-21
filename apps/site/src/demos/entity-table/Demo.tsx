@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { CollapseState, CollectionColumn, EditorPlacement, EntityRef, FilterGroup, PagingMode, SortKey, StatusRecord } from 'sg-widgets-core';
+import type { BulkEdit, CollapseState, CollectionColumn, EditorPlacement, EntityRef, EntityRow, FilterGroup, PagingMode, SortKey, StatusRecord } from 'sg-widgets-core';
 import { collapseAll, condition, createEntitySource, emptyFilter, expandAll, group, resolveColumns, toSortSpecs } from 'sg-widgets-core';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { EntityTable } from '@/registry/sg/components/entity-table';
 import { FilterBar } from '@/registry/sg/components/filter-bar';
 import { SortPicker } from '@/registry/sg/components/sort-picker';
@@ -31,6 +33,11 @@ const PAGING: Array<{ value: PagingMode; label: string }> = [
   { value: 'more', label: 'Load more' },
   { value: 'scroll', label: 'Scroll' },
 ];
+
+/** An approved Version keeps its description: one cell the table locks, with the reason on it. */
+function editLock(row: EntityRow, column: CollectionColumn): string | null {
+  return column.path === 'description' && row.attributes['sg_status_list'] === 'apr' ? 'An approved Version keeps its description.' : null;
+}
 
 const toggle =
   'inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-background px-2 text-sm shadow-xs ' +
@@ -70,6 +77,18 @@ export default function EntityTableDemo() {
   const [paging, setPaging] = useState<PagingMode>('pages');
   const [placement, setPlacement] = useState<EditorPlacement>('popover');
   const [selected, setSelected] = useState<EntityRef[]>([]);
+  /** The bulk edit waiting on an answer, and how to give it. */
+  const [asking, setAsking] = useState<{ edit: BulkEdit; answer: (ok: boolean) => void } | null>(null);
+  const askingHeader = asking ? (columns.find((column) => column.path === asking.edit.path)?.header ?? asking.edit.path) : '';
+
+  function confirmBulkEdit(edit: BulkEdit): Promise<boolean> {
+    return new Promise((answer) => setAsking({ edit, answer }));
+  }
+
+  function settle(ok: boolean): void {
+    asking?.answer(ok);
+    setAsking(null);
+  }
 
   /** Every row the filter matches, read a page of ids at a time: the table never reads past its own pages. */
   async function selectAllMatching(): Promise<void> {
@@ -167,6 +186,9 @@ export default function EntityTableDemo() {
           selectable
           columnPicker
           editable
+          bulkEdit
+          confirmBulkEdit={confirmBulkEdit}
+          editLock={editLock}
           paging={paging}
           editorPlacement={placement}
           density={compact ? 'compact' : 'default'}
@@ -188,6 +210,33 @@ export default function EntityTableDemo() {
             <SortPicker entityType="Version" context={context} size="sm" options={columns.map((column) => column.path)} value={sortKeys} onValueChange={setSortKeys} />
           }
         />
+        <Dialog open={asking !== null} onOpenChange={(open) => !open && settle(false)}>
+          <DialogContent className="sm:max-w-md" data-demo="bulk-confirm">
+            {asking ? (
+              <>
+                <DialogHeader>
+                  <DialogTitle>
+                    Change {askingHeader} on {asking.edit.rows.length} Versions?
+                  </DialogTitle>
+                  <DialogDescription>
+                    Every selected row gets the same value.
+                    {asking.edit.skipped.length > 0
+                      ? ` ${asking.edit.skipped.length} selected ${asking.edit.skipped.length === 1 ? 'row is' : 'rows are'} left as they are.`
+                      : null}
+                  </DialogDescription>
+                </DialogHeader>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => settle(false)}>
+                    Cancel
+                  </Button>
+                  <Button data-demo="bulk-confirm-ok" onClick={() => settle(true)}>
+                    Change {asking.edit.rows.length}
+                  </Button>
+                </DialogFooter>
+              </>
+            ) : null}
+          </DialogContent>
+        </Dialog>
       </div>
     </DemoContextProvider>
   );

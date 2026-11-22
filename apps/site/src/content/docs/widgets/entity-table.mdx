@@ -15,7 +15,7 @@ pinning and grouping, and inline and bulk edit.
 
 <Install item="entity-table" />
 
-<Demo name="entity-table" title="Entity Table: 320 Versions in pages of 25, with a filter bar, a column picker and a sort picker in the toolbar. Pages, Load more and Scroll switch how the set is walked. An editable cell lights up under the pointer; a double-click or Enter opens its editor in a popover; Popover editor and Inline editor switch where every editor opens. Select several rows and edit a cell in one of them: a dialog asks, then every selected row takes the value. An approved Version's description is locked, with the reason on the cell." />
+<Demo name="entity-table" title="Entity Table: 320 Versions in pages of 25, with a filter bar, a column picker and a sort picker in the toolbar. Pages, Load more and Scroll switch how the set is walked. An editable cell lights up under the pointer; a double-click or Enter opens its editor in a popover, and with Edit on click one click does; Popover editor and Inline editor switch where every editor opens. Client Approved is a checkbox: one click flips and writes it. First Frame is a 90px column: inline, its editor is a bare field with the value selected. Select several rows and edit a cell in one of them: a dialog asks, then every selected row takes the value. An approved Version's description is locked, with the reason on the cell." />
 
 Build the source and the columns once, then hand both to the table.
 
@@ -124,9 +124,19 @@ status cell opens StatusPicker, an entity cell EntityPicker and a multi-entity c
 EntityMultiPicker, each reading through `context`. The cell editor takes `projectId`, `precision`,
 `symbol` and the context's site preferences.
 
+A double-click or Enter opens a cell's editor. With `editOn="click"` one plain click opens it, which
+is the spreadsheet feel. Enter, typing and Tab work the same in both.
+
+```tsx
+<EntityTable source={source} columns={columns} editable editOn="click" />
+```
+
 The editor opens in a popover anchored to the cell, carrying the field's name, the control and
-Cancel and Save, so a cell's width never squeezes it. A checkbox is one press and stays in the cell.
-In the cell, a list, a status and an entity commit on the pick, as a checkbox does.
+Cancel and Save, so a cell's width never squeezes it. A checkbox cell is a checkbox in both modes:
+one click or Space flips it and writes at once, with no editor, and in a selected row with `bulkEdit`
+it reaches every selected row. In the cell, a list, a status and an entity commit on the pick. A
+number in the cell is a bare field the cell's width, its value selected, with no steppers; the arrow
+keys still step it.
 `editorPlacement` on the table forces one or the other everywhere, and `editorPlacement` on a column
 spec forces it for that column. `editorFor` is handed the column as well as the data type, so one
 column can open an editor of its own.
@@ -189,6 +199,10 @@ from the anchor to the one pressed, and selects or clears the range as the ancho
 Shift+press moves the far end rather than adding a second range. A press on a link, a button or an
 open editor inside a cell is left to it.
 
+With `editOn="click"`, a plain click on an editable cell edits it and leaves the selection, and a
+click on a checkbox cell flips it, in either mode. A click on a cell that cannot be edited still
+selects, and so does a click with Shift, Ctrl or Meta, a press on the row's checkbox, and Space.
+
 The header box adds or drops the loaded rows and keeps picks made on other pages; it reads
 indeterminate when some loaded rows are picked. `onSelectAllMatching` offers the rest of the set:
 once every loaded row is picked and the set holds more, a line above the table offers every
@@ -223,8 +237,9 @@ column list back through `columns`. Pinning sticks the column to the start of th
 <Props name="entity-table" kind="keyboard" />
 
 An editable cell says so: it washes to `bg-accent/50` under the pointer and under the keyboard
-cursor, and its tooltip reads "Double-click or press Enter to edit". A double-click opens the editor
-too. A press inside a popup the editor opened — a calendar, a status list, a picker's results —
+cursor, and its tooltip names the gesture: "Double-click or press Enter to edit", "Click or press
+Enter to edit" with `editOn="click"`, and "Click or press Space to toggle" on a checkbox. A click on
+another editable cell commits the open one first. A press inside a popup the editor opened — a calendar, a status list, a picker's results —
 leaves the cell open. A header drags onto another to reorder, and its right edge drags to resize.
 
 A disabled row takes no keys, no click and no checkbox, and none of its cells opens an editor.

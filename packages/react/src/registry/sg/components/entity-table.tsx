@@ -2,7 +2,9 @@ import type * as React from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type {
   BulkEdit,
+  CellGesture,
   CollectionColumn,
+  EditGesture,
   CollapseState,
   EditorPlacement,
   EntityRef,
@@ -22,6 +24,10 @@ import {
   arrangeColumns,
   asCollapseState,
   bulkUpdates,
+  cellEditHint,
+  cellEditorShape,
+  cellGestureAction,
+  editorFocusIndex,
   cellValue,
   columnPaths,
   columnsStorageKey,
@@ -157,11 +163,6 @@ const EDITOR_POPUP = '[data-slot="popover-content"],[data-slot="select-content"]
 /** The select column's id, which is never a field path. */
 const SELECT = '__select';
 
-/** Said on every editable cell, because nothing else on it says an edit is possible. */
-const EDIT_HINT = 'Double-click or press Enter to edit';
-
-/** Said on an editable cell of a selected row when an edit there reaches every selected row. */
-const bulkHint = (count: number): string => `Double-click or press Enter to edit all ${count} selected rows`;
 
 /** The key a cell's error and write state are held under. */
 const cellKey = (key: string, path: string): string => `${key}\u0000${path}`;
@@ -277,8 +278,13 @@ export interface EntityTableProps extends Omit<React.HTMLAttributes<HTMLDivEleme
   /** The source's filter, so a FilterBar drops into the toolbar. */
   filters?: SourceFilters;
   onFiltersChange?: (filters: SourceFilters) => void;
-  /** Opens an editor on a double-click or Enter in an editable cell. */
+  /** Opens an editor on the `editOn` gesture or Enter in an editable cell. */
   editable?: boolean;
+  /**
+   * The pointer gesture that opens a cell's editor. `click` is the spreadsheet feel: a
+   * plain click edits and leaves the selection. A checkbox flips on one click either way.
+   */
+  editOn?: EditGesture;
   editorFor?: EditorFor;
   /** Why one cell cannot be edited, or nothing when it can. The reason is the cell's tooltip. */
   editLock?: EditLockFn;
@@ -397,6 +403,7 @@ export function EntityTable({
   filters: filtersProp,
   onFiltersChange,
   editable = false,
+  editOn = 'dblclick',
   editorFor,
   editLock,
   bulkEdit = false,
@@ -459,6 +466,9 @@ export function EntityTable({
 
   const root = useRef<HTMLDivElement>(null);
   const [editing, setEditing] = useState<{ key: string; path: string; placement: EditorPlacement } | null>(null);
+  /** The open cell as last drawn, for a callback a press may outlive. */
+  const editingNow = useRef(editing);
+  editingNow.current = editing;
   // Enter can arrive in the same tick as the change that produced the value, before a
   // re-render, so the committed value is read off a ref rather than off state.
   const draft = useRef<unknown>(null);
@@ -825,6 +835,14 @@ export function EntityTable({
 
   function openEditor(key: string, column: CollectionColumn, row: EntityRow, value: unknown): void {
     if (!canEditColumn(column, row)) return;
+    // Another cell still open commits first: a popover may report its close after this.
+    const open = editingNow.current;
+    if (open !== null && !(open.key === key && open.path === column.path)) {
+      const openRow = rows.find((candidate) => control.rowId(candidate) === open.key);
+      const openColumn = byPath.get(open.path);
+      releaseEditor();
+      if (openRow && openColumn) void commit(openRow, openColumn, draft.current);
+    }
     draft.current = value;
     setDraftValue(value);
     setEditing({ key, path: column.path, placement: placementFor(column) });
@@ -836,7 +854,8 @@ export function EntityTable({
    * only once it is read back; a refused row keeps its value and says why in its cell.
    */
   async function commit(row: EntityRow, column: CollectionColumn, value: unknown): Promise<void> {
-    setEditing(null);
+    const id = control.rowId(row);
+    setEditing((open) => (open?.key === id && open.path === column.path ? null : open));
     const edit = planBulkEdit({
       rows,
       selection: bulkEdit && selectable ? control.selection : [],
@@ -873,11 +892,48 @@ export function EntityTable({
   }
 
   function onCellKeyDown(event: React.KeyboardEvent, row: EntityRow, column: CollectionColumn): void {
+    if (event.key === ' ' && !ownsKeys(event.target as HTMLElement | null)) {
+      // Space on a checkbox cell flips it; anywhere else it stays with the row.
+      if (onCellGesture(event, 'space', row, column)) event.preventDefault();
+      return;
+    }
     // Only when the cell itself has focus. An editor's own Enter reaches this on the way
     // up, after the commit has already closed it, and must not open it again.
     if (event.key !== 'Enter' || editing || (event.target as HTMLElement).dataset['slot'] !== 'table-cell') return;
     event.preventDefault();
     openEditor(control.rowId(row), column, row, cellValue(row, column.path));
+  }
+
+  /** A checkbox the table flips itself, with no editor: one the host's `editorFor` leaves alone. */
+  function togglesInCell(column: CollectionColumn): boolean {
+    return editorKindFor(column.dataType) === 'checkbox' && !editorFor?.(column.dataType, column);
+  }
+
+  /**
+   * A press on a cell, as core reads it. An edit or a flip keeps the press from the row,
+   * so it leaves the selection; anything else goes on to the row. True when the cell took it.
+   */
+  function onCellGesture(
+    event: React.MouseEvent | React.KeyboardEvent,
+    gesture: CellGesture,
+    row: EntityRow,
+    column: CollectionColumn,
+  ): boolean {
+    const key = control.rowId(row);
+    const action = cellGestureAction({
+      gesture,
+      editOn,
+      modified: event.shiftKey || event.ctrlKey || event.metaKey,
+      editable: canEditColumn(column, row),
+      toggles: togglesInCell(column),
+      open: isEditing(key, column.path),
+    });
+    if (action === 'select' || action === 'none') return false;
+    event.stopPropagation();
+    // A flip on its way keeps the cell until it is read back, so a second press waits for it.
+    if (action === 'edit') openEditor(key, column, row, cellValue(row, column.path));
+    else if (!writing.has(cellKey(key, column.path))) void commit(row, column, cellValue(row, column.path) !== true);
+    return true;
   }
 
   /**
@@ -921,13 +977,24 @@ export function EntityTable({
     }
   }
 
-  const focusEditor = (element: HTMLDivElement | null): void => {
-    element?.querySelector<HTMLElement>('input,textarea,button')?.focus({ preventScroll: true });
+  /**
+   * Focus an inline editor's field, not a button drawn before it, and select a number's text.
+   * Once: the ref runs again on every draw, and focus already inside is left where it is.
+   */
+  const focusEditor = (element: HTMLDivElement | null, column: CollectionColumn): void => {
+    if (!element || element.contains(document.activeElement)) return;
+    const controls = [...element.querySelectorAll<HTMLElement>('input,textarea,button')];
+    const target = controls[editorFocusIndex(controls.map((entry) => entry.tagName))];
+    target?.focus({ preventScroll: true });
+    if (target instanceof HTMLInputElement && cellEditorShape(column.dataType, 'inline').selectText) target.select();
   };
 
   /** A popover editor drives its own close and reports it; the cell commits what it holds. */
   function editorClosed(row: EntityRow, column: CollectionColumn, mode: 'display' | 'edit'): void {
+    // A cell another press already closed has committed.
+    const open = editingNow.current;
     if (mode !== 'display' || placementFor(column) !== 'popover') return;
+    if (open?.key !== control.rowId(row) || open.path !== column.path) return;
     releaseEditor();
     void commit(row, column, draft.current);
   }
@@ -1332,6 +1399,7 @@ export function EntityTable({
                           const Editor = editorFor?.(column.dataType, column) ?? null;
                           const error = cellErrors.get(cellKey(key, column.path));
                           const busy = writing.has(cellKey(key, column.path));
+                          const toggles = canEdit && togglesInCell(column);
                           return (
                             <TableCell
                               key={leaf.id}
@@ -1343,15 +1411,21 @@ export function EntityTable({
                               aria-busy={busy ? 'true' : undefined}
                               style={pinStyle(leaf)}
                               tabIndex={canEdit || lock ? 0 : undefined}
-                              title={canEdit ? (selected && bulkCount > 0 ? bulkHint(bulkCount) : EDIT_HINT) : (lock ?? undefined)}
-                              onDoubleClick={() => openEditor(key, column, row, cellValue(row, column.path))}
+                              title={
+                                canEdit
+                                  ? cellEditHint({ editOn, toggles, bulkCount: selected ? bulkCount : 0 })
+                                  : (lock ?? undefined)
+                              }
+                              onClick={(event) => onCellGesture(event, 'click', row, column)}
+                              onDoubleClick={(event) => onCellGesture(event, 'dblclick', row, column)}
                               onKeyDown={(event) => canEdit && onCellKeyDown(event, row, column)}
                               className={cn(
                                 cellClass,
                                 'focus-visible:ring-ring focus-visible:ring-offset-background bg-inherit overflow-hidden outline-none focus-visible:ring-2 focus-visible:ring-inset',
                                 column.align === 'right' && 'text-right',
                                 // Nothing else on a cell says it can be edited, so hover and focus say it.
-                                canEdit && 'hover:bg-accent/50 focus-visible:bg-accent/50 cursor-text transition-colors duration-150',
+                                canEdit && 'hover:bg-accent/50 focus-visible:bg-accent/50 transition-colors duration-150',
+                                canEdit && (toggles ? 'cursor-pointer' : 'cursor-text'),
                                 lock && 'cursor-not-allowed',
                                 busy && 'opacity-60',
                               )}
@@ -1370,7 +1444,7 @@ export function EntityTable({
                                   <div
                                     data-slot="entity-table-editor"
                                     role="presentation"
-                                    ref={placementFor(column) === 'inline' ? focusEditor : undefined}
+                                    ref={placementFor(column) === 'inline' ? (element) => focusEditor(element, column) : undefined}
                                     onKeyDown={(event) =>
                                       placementFor(column) === 'inline' && editorKeyDown(event, row, column)
                                     }
@@ -1400,10 +1474,19 @@ export function EntityTable({
                                       mode="edit"
                                       onModeChange={(next) => editorClosed(row, column, next)}
                                       editorPlacement={placementFor(column)}
+                                      steppers={cellEditorShape(column.dataType, placementFor(column)).steppers}
+                                      align={column.align}
                                       size="sm"
                                     />
                                   </div>
                                 )
+                              ) : toggles && !cellRender ? (
+                                // The cell takes the press and Space, so the box only shows the value.
+                                <Checkbox
+                                  aria-label={column.header}
+                                  checked={cellValue(row, column.path) === true}
+                                  tabIndex={-1}
+                                />
                               ) : cellRender ? (
                                 cellRender({ row, id: key, column, value: cellValue(row, column.path), disabled })
                               ) : (
